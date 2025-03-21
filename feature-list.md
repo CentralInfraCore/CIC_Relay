@@ -20,3 +20,10 @@ This document contains a list of all the features that are either planned, under
     - **Description**: This feature is focused on creating and managing the version control rules and the git workflow.
     - **Spec Document**: [spec.md](features/feature-002/spec.md)
     - **Completion Date**: 2025-03-05
+
+- **Feature-003**: Specification: CIC Relay
+    - **Status**: Completed 
+    - **Branch**: `d/feature-003`
+    - **Description**: This document outlines the specifications and expectations for the CIC Relay, to be merged under the feature-003 branch.
+    - **Spec Document**: [spec.md](features/feature-003/spec.md)
+    - **Completion Date**: 2025-03-21
