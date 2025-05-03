@@ -27,3 +27,10 @@ This document contains a list of all the features that are either planned, under
     - **Description**: This document outlines the specifications and expectations for the CIC Relay, to be merged under the feature-003 branch.
     - **Spec Document**: [spec.md](features/feature-003/spec.md)
     - **Completion Date**: 2025-03-21
+
+- **Feature-005**: Build Environment Initialization (Go-based CIC Relay)
+    - **Status**: In Progress
+    - **Branch**: `d/feature-005`
+    - **Description**: Defines and initializes the modular build and development environment for the CIC Relay component using Go. Supports containerized development, Makefile-driven workflows, and optional event propagation via MQ.
+    - **Spec Document**: [spec.md](features/feature-005/spec.md)
+    - **Completion Date**: *(TBD)*
