@@ -1,0 +1,6 @@
+/.idea
+/output
+/tmp
+/p_venv
+.coverage
+coverage.json
