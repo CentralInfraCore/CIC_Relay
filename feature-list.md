@@ -34,3 +34,9 @@ This document contains a list of all the features that are either planned, under
     - **Description**: Defines and initializes the modular build and development environment for the CIC Relay component using Go. Supports containerized development, Makefile-driven workflows, and optional event propagation via MQ.
     - **Spec Document**: [spec.md](features/feature-005/spec.md)
     - **Completion Date**: *(TBD)*
+- **Feature-006**: Introduction of the Cabinet Object
+    -  **Status**: Active
+    -  **Branch**: `d/feature-006`
+    -  **Description**: Implements the Cabinet object as the central static knowledge registry for schemas, plugins, and execution graphs.
+    - **Spec Document**: [spec.md](features/feature-006/spec.md)
+    - **Completion Date**: *(TBD)*
