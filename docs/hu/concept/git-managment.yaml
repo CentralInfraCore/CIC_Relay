@@ -1,35 +1,20 @@
-type: object
-title: Git kezelési szabályok (magyar)
-description: >
-  Ez a dokumentum rögzíti a CIC Relay projekt Git-alapú fejlesztési szabályait, branch-kezelési elveit, commit-konvencióit és release policy-jét.
-topics:
-  - branch_naming:
-      convention:
-        - "feature/ (új funkciók): feature/relay-plugin-support"
-        - "fix/ (hibajavítások): fix/yaml-schema-validation"
-        - "doc/ (dokumentáció): doc/hu-readme-update"
-        - "hotfix/ (kritikus javítás): hotfix/registry-lookup-error"
-        - "experiment/ (kísérlet, proof of concept): experiment/async-mq-adapter"
-  - commit_message:
-      convention: "Tömör, leíró commit üzenet. Ajánlott: <típus>: <leírás>"
-      example: "fix: javítva a plugin registry init race condition"
-  - pull_request:
-      steps:
-        - "Fejlesztés külön branch-en"
-        - "Kód vagy dokumentáció review legalább 1 csapattaggal"
-        - "Automatikus vagy manuális tesztek"
-        - "Merge a főágba csak review után"
-  - release_and_versioning:
-      rules:
-        - "Minden fejlesztői branch merge-ölése release előtt kötelező"
-        - "Release tagek: v1.0.0, v2.1.3 stb."
-        - "A főágban csak stabil, tesztelt kód lehet"
-  - rollback_and_hotfix:
-      rules:
-        - "Rollback: git revert vagy git reset"
-        - "Hotfix: külön hotfix branch-ről azonnali javítás"
-  - documentation:
-      rules:
-        - "README és docs frissítése minden releváns változtatásnál kötelező"
-note: >
-  A fejlesztési workflow részleteiért mindig lásd a docs/hu/concept/git-management.md vagy docs/en/concept/git-management.md állományt!
+tags:
+  - doc
+  - workflow
+  - schema
+  - validator
+related_nodes:
+  - concept/git_workflow
+  - concept/branch_naming
+  - cic/git-core
+category:
+  - modul
+  - elemző
+  - meta
+entrypoint: false
+used_in:
+  - validation
+  - onboarding
+  - generation
+description: |
+  Ez a dokumentum a CIC Relay projekt Git-alapú fejlesztési szabályait, branch-kezelési elveit, merge-stratégiáit és CI-visszacsatolási folyamatait rögzíti. Séma-alapú megközelítést ad a feature, hotfix és release branch-ek kezeléséhez, részletezi a törlési, merge- és visszacsatolási szabályokat, támogatva az automatizált validációt és onboardingot.
