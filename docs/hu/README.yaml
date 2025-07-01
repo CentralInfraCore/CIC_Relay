@@ -1,0 +1,74 @@
+type: object
+title: CIC Relay rendszerleíró
+description: |
+  A CIC Relay egy ultra-minimalista, deklaratív, plug-in-alapú végrehajtási motor decentralizált kommunikációhoz, konfigurációhoz és állapotkezeléshez.
+  Szorosan integrálódik a Séma Registry-vel, hogy egységes, sémaalapú megközelítést nyújtson a szolgáltatásspecifikus logika és workflow-k kezeléséhez.
+properties:
+  tags:
+    type: array
+    description: Tematikus címkék a modul kereséshez és AI-integrációhoz.
+    items:
+      type: string
+      enum:
+        - relay
+        - compliance
+        - workflow
+        - cictor
+        - schema
+        - parser
+        - guard
+        - core
+        - doc
+        - interface
+        - gateway
+        - builder
+        - test
+        - meta
+        - orchestrator
+        - decision
+        - reflector
+        - context
+        - validator
+        - executor
+        - hook
+        - template
+        - fallback
+        - session
+        - metrics
+        - storage
+        - loader
+        - renderer
+  related_nodes:
+    type: array
+    description: Kapcsolódó modulok, koncepciók vagy specifikációk hivatkozásai.
+    items:
+      type: string
+  category:
+    type: array
+    description: Funkcionális szerepkörök vagy fő kategóriák.
+    items:
+      type: string
+      enum:
+        - modul
+        - döntési
+        - morális
+        - belépési
+        - meta
+        - elemző
+  entrypoint:
+    type: boolean
+    description: Ez a dokumentum/modul belépési pont-e.
+  used_in:
+    type: array
+    description: Milyen workflow-kban/proc-okban van használva.
+    items:
+      type: string
+      enum:
+        - decision_flow
+        - validation
+        - generation
+        - onboarding
+        - fallback_process
+  description:
+    type: string
+    description: Emberi olvasásra szánt összefoglaló.

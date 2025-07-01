@@ -1,0 +1,32 @@
+# docs/en/index.yaml
+type: object
+title: CIC Relay Documentation (English)
+description: >
+  This documentation covers the CIC Relay system. Here you'll find comprehensive English-language descriptions of all major components, concepts, pipeline descriptors, and integration options.
+sections:
+  - name: Core Concepts & Architectural Models
+    path: concept/
+    description: "Fundamental architectural principles, key concepts, and modeling approaches."
+  - name: Pipeline Examples
+    path: pipeline/
+    description: "Practical examples, working pipeline YAML descriptors."
+  - name: Module Documentation & Metadata
+    path: module/
+    description: "Plugin and workflow module docs, AI/metadata descriptors."
+  - name: Schema Descriptors, AI/ops Metadata
+    path: schema/
+    description: "Schema definitions and standardized metadata files."
+  - name: Architecture Diagrams & Visuals
+    path: arch/
+    description: "Visual and ASCII architecture diagrams."
+  - name: Complex Usage Examples
+    path: examples/
+    description: "Complex system usage and implementation scenarios."
+  - name: Changelog
+    path: changelog.md
+    description: "Version tracking and major change log."
+  - name: Quick Start
+    path: README.md
+    description: "Core concepts, architecture, and pipeline/schema examples."
+note: >
+  When adding new pipelines, modules, or documentation, please provide both English and Hungarian versions in the respective folders!
