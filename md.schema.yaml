@@ -1,0 +1,44 @@
+type: object
+required:
+  - tags
+  - related_nodes
+  - category
+  - entrypoint
+  - used_in
+  - description
+  - topics            # <-- EZ ÚJ! (policy, workflow, steps, rules stb.)
+properties:
+  tags:
+    type: array
+    items:
+      type: string
+    description: Tematikus címkék (pl. doc, workflow, compliance, core, stb.)
+  related_nodes:
+    type: array
+    items:
+      type: string
+    description: Kapcsolódó fogalmak vagy modulok (pl. 'concept/relay_flow').
+  category:
+    type: array
+    items:
+      type: string
+    description: Funkcionális kategória (pl. doc, workflow, modul, meta stb.)
+  entrypoint:
+    type: boolean
+    description: Belépési pont-e ez a dokumentum?
+  used_in:
+    type: array
+    items:
+      type: string
+    description: Hol használják? (pl. onboarding, validation, documentation)
+  description:
+    type: string
+    description: Emberi olvasható összefoglaló (lehet magyar vagy angol)
+  topics:
+    type: array
+    items:
+      type: object
+    description: Részletes workflow, policy vagy szabályblokkok (pl. branch naming, commit, steps, rules, stb.)
+  note:
+    type: string
+    description: Szabad megjegyzés karbantartóknak (opcionális)
