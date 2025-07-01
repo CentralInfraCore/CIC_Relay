@@ -6,39 +6,73 @@ required:
   - entrypoint
   - used_in
   - description
-  - topics            # <-- EZ ÚJ! (policy, workflow, steps, rules stb.)
+  - topics            
 properties:
   tags:
     type: array
+    description: "Thematic tags for the module, helping AI integration into context. The following values are allowed:"
     items:
       type: string
-    description: Tematikus címkék (pl. doc, workflow, compliance, core, stb.)
+      enum:
+        - relay         # Related to AI relay modules
+        - compliance    # For compliance or validation logic
+        - workflow      # Handles process or pipeline logic
+        - cictor        # Part of the CICTOR decision system
+        - schema        # Related to schema processing
+        - parser        # Input parsing module
+        - guard         # Access or moral protection logic
+        - core          # Core system logic
+        - doc           # Documentation or explanatory content
+        - interface     # Interface logic with external systems
+        - gateway       # Entry or gateway-related logic
+        - builder       # Responsible for build or generation tasks
+        - test          # Validation, testing or debugging logic
+        - meta          # Meta-structures or internal definitions
+        - orchestrator  # Coordinates control or decision chains
+        - decision      # Contains decision logic
+        - reflector     # Feedback or reflection module
+        - context       # Contextual management module
+        - validator     # Performs data or schema validation
+        - executor      # Executes direct logic operations
+        - hook          # Event-triggered callable logic
+        - template      # Acts as a template component
+        - fallback      # Defines fallback or alternative behavior
+        - session       # Session or state-handling logic
+        - metrics       # For metric collection or monitoring
+        - storage       # Manages storage or persistence
+        - loader        # Loads configs or other modules
+        - renderer      # Generates output (text, code, HTML etc.)
   related_nodes:
     type: array
     items:
       type: string
-    description: Kapcsolódó fogalmak vagy modulok (pl. 'concept/relay_flow').
+    description: References to other concepts or modules (e.g., 'concept/relay_flow').
   category:
     type: array
+    description: "The functional role(s) of the document. The following values are allowed:"
     items:
       type: string
-    description: Funkcionális kategória (pl. doc, workflow, modul, meta stb.)
+      enum:
+        - modul         # General module
+        - decision      # Implements decision logic
+        - morális       # Represents moral or rule-based logic
+        - belépési      # Entry point (user or system)
+        - meta          # Internal meta structures or logic
+        - elemző        # Evaluation or analysis logic
   entrypoint:
     type: boolean
-    description: Belépési pont-e ez a dokumentum?
+    description: Indicates whether this document can act as an entry point.
   used_in:
     type: array
+    description: "Workflows or processes where this module is used. Choose from the following values:"
     items:
       type: string
-    description: Hol használják? (pl. onboarding, validation, documentation)
+      enum:
+        - decision_flow     # Runs decision logic
+        - validation        # Validation process
+        - generation        # Generative or build pipeline
+        - onboarding        # Loading or initializing into system
+        - fallback_process  # Fallback handling path
   description:
     type: string
-    description: Emberi olvasható összefoglaló (lehet magyar vagy angol)
-  topics:
-    type: array
-    items:
-      type: object
-    description: Részletes workflow, policy vagy szabályblokkok (pl. branch naming, commit, steps, rules, stb.)
-  note:
-    type: string
-    description: Szabad megjegyzés karbantartóknak (opcionális)
+    description: Human-readable summary of the document purpose (can be in Hungarian or English).
