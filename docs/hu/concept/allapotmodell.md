@@ -1,41 +1,44 @@
 # Állapotmodell a CIC rendszerben
 
-A CIC rendszer működésének egyik legfontosabb alapja az állapotok értelmezése és felhasználása. Mivel a relay komponensek nem tárolnak állapotot, minden állapottal kapcsolatos értékelés külső megfigyelés (plugin) alapján történik. Az állapotmodell tehát nem adatbázis, hanem **aktív lekérdezésen és deklarált elváráson** alapuló működési logika.
+A CIC rendszer működésének egyik legfontosabb alapja az állapotok értelmezése és felhasználása. A relay komponensek **nem tárolnak sem állapotot, sem múltbeli változásokat**, hanem kizárólag **külső plugin által megfigyelt és visszajelzett állapotokra** reagálnak. Ezért a rendszer állapotmodellje nem adatbázis-alapú, hanem **deklaratív lekérdezésen** és **kontextuális megfeleltetésen** alapul.
 
-## Állapot típusok
+## Állapottípusok és forrásuk
 
-| Állapottípus       | Forrás                          | Példa                     |
-| ------------------ | ------------------------------- | ------------------------- |
-| Elvárt állapot     | Séma `StateRequirement` mezője  | `host.state = alive`      |
-| Megfigyelt állapot | Plugin `ObserveState()` válasza | `{"host.state": "alive"}` |
+| Állapottípus       | Forrás                         | Példa                     |
+| ------------------ | ------------------------------ | ------------------------- |
+| Elvárt állapot     | Séma `StateRequirement`        | `host.state = alive`      |
+| Megfigyelt állapot | Plugin `ObserveState()` válasz | `{"host.state": "alive"}` |
 
-A relay az elvárt és a megfigyelt állapotot nem tárolja, hanem minden esetben **új lekérdezéssel** vagy **átadott adatlappal** dolgozik.
+A relay minden esetben **stateless módon** működik: minden lekérdezés vagy művelet során új állapoti adatlapra támaszkodik.
 
-## Hogyan értelmezzük az állapotot?
+## Állapotkiértékelés folyamata
 
-* A `StateRequirement` deklarálja, milyen állapotban kell lennie egy vagy több objektumnak
-* Az `ObserveState()` pluginfüggvény visszaadja az aktuális állapotot
-* A relay ezek között **egyszerű kulcs-érték egyezést** vizsgál
+1. A séma megadja az elvárt állapotot a `StateRequirement` mezőben
+2. A relay lekéri az aktuális állapotot a plugin `ObserveState()` függvényével
+3. A két állapotot kulcs-érték párok szerint összehasonlítja
+4. Ha minden egyezés megtörtént, a séma „futtathatóvá” válik
 
-Ez azt jelenti, hogy nincs logikai diff, nincs `state history`, csak az aktuális snapshot számít.
+> ⚠️ A relay semmit nem tárol, így nem tud diffelni vagy visszavonni: minden döntés **pillanatkép-alapú**
 
-## Mi nem része az állapotmodellnek?
+## Mi nem része a CIC állapotmodellnek?
 
-* Nincs tárolt diff vagy rollback
-* Nincs időbeli kontextus (nem vizsgálunk „előtte-utána” állapotot)
-* Nincs saját adatbázis – minden input kívülről jön
+* ❌ nincs állapottörténet (`state history`)
+* ❌ nincs rollback vagy korábbi verzió visszaállítása
+* ❌ nincs állandó cache vagy adatbázis
 
-## Mikor tekintünk egy objektumot „késznek”?
+Minden művelet **aktuálisan megfigyelt állapot** alapján történik.
 
-Ha:
+## Mit jelent, hogy egy objektum „kész”?
 
-* a `StateRequirement` teljesül
-* a hozzá tartozó plugin sikeres választ adott (pl. `ObserveState`, `ApplyState`)
-* a függőségeit már feldolgoztuk (lásd: dependency modell)
+Egy objektum akkor tekinthető késznek, ha:
 
-Ez a „kész” állapot **dinamikusan értékelt**, nem relészinten kerül bejegyzésre.
+* a `StateRequirement` mezőben megadott összes feltétel teljesül
+* a plugin `ObserveState()` visszajelzése ezt megerősíti
+* az összes `Dependencies` feltétel kiértékelése sikeres (lásd: dependency modell)
 
-## Példa
+Ez az állapot **nem globálisan kerül rögzítésre**, hanem **helyileg, műveletenként** kerül újraértelmezésre.
+
+## Példák YAML és JSON formában
 
 ```yaml
 StateRequirement:
@@ -50,7 +53,7 @@ StateRequirement:
 }
 ```
 
-Ha a plugin ezt visszaadja, a relay ezt „kész”-nek tekinti.
+Ha a fenti JSON visszatérés megfelel a YAML elvárásnak, a relay végrehajtja a következő lépést.
 
 ## Következő olvasmány
 

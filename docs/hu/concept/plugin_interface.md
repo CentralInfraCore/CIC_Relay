@@ -1,62 +1,66 @@
 # Plugin interfész a CIC rendszerben
 
-A CIC rendszerben a műveletek végrehajtását a relay komponensek nem maguk hajtják végre, hanem dinamikusan betöltött plugin modulokon keresztül. Ezek a pluginok `.so` fájlformátumban vannak jelen, és meghatározott függvényeket kell exportálniuk. A séma csak azt határozza meg, **melyik plugin melyik függvényét kell meghívni** – az implementáció részleteit maga a plugin tartalmazza.
+A CIC rendszer végrehajtási logikája plugineken keresztül valósul meg. A relay komponensek nem tartalmaznak konkrét üzleti logikát vagy állapotkezelést – minden műveletet a dinamikusan betöltött `.so` fájlokban definiált pluginfüggvények végeznek el. A séma deklarálja, **melyik plugin melyik függvényét** kell meghívni – a végrehajtás már a plugin felelőssége.
 
 ## A plugin szerepe
 
-A plugin egy imperatív végrehajtási egység, amely:
+A plugin egy jól körülhatárolt, stateless, tiszta függvényhalmaz, amely:
 
-* egy adott séma műveletét végrehajtja (`ApplyState`, `ObserveState`, stb.)
-* csak a neki átadott adatból dolgozik
-* semmit nem tárol vagy feltételez a teljes rendszer működéséről
+* a bemeneti állapotleírás alapján műveletet hajt végre,
+* visszajelzést ad (siker, hiba, aktuális állapot),
+* nem tárol adatot, nem lép kapcsolatba más komponensekkel,
+* izoláltan, csak a relay hívására működik.
 
-## Kötelező interfészek
+## Kötelező függvények (interfészek)
 
-A rendszer minden pluginjától az alábbi függvények legalább egyikének megléte elvárt (a plugin típusától függően):
+Egy plugin akkor használható a CIC-ben, ha az alábbi függvények közül egyet vagy többet exportál:
 
 ### `ApplyState(input []byte) ([]byte, error)`
 
-A megadott állapotot végrehajtja. Általában deklaratív → imperatív átalakítás.
+Állapot végrehajtása – tipikusan konfigurációk, változások, telepítések esetén.
 
 ### `ObserveState(input []byte) ([]byte, error)`
 
-Megfigyeli a jelenlegi állapotot és visszaadja. Eredménye `map[string]string` vagy hasonló.
+Megfigyelés – az aktuális állapot visszajelzése egy strukturált objektumként (pl. JSON).
 
 ### `Notify(input []byte) error`
 
-Egy állapotváltozás vagy esemény közlése (pl. webhook vagy log).
+Riasztás, eseményküldés – webhook, log vagy más értesítés plugin oldalról.
 
 ### `Identify() (string, string, string)`
 
-A plugin azonosító metaadatai: név, típus, verzió. A relay ezt használja `LibraryMeta` feltöltéshez.
+Azonosító – a plugin neve, verziója és típusa (pl. `prometheus-agent`, `1.0.0`, `agent`).
+Ez kötelező minden modulnál a regisztrációhoz.
 
-## Technikai elvárások
+## Technikai követelmények
 
-* A plugin `go build -buildmode=plugin` móddal épül
-* Egy `.so` fájl csak egy plugin modult tartalmaz
-* Export függvényeknek pontosan kell egyezniük
-* A rendszer a `plugin.Open()` és `Lookup()` Go-függvényeket használja a betöltéshez
+* A plugin `go build -buildmode=plugin` opcióval épül
+* Minden `.so` fájl egy plugin modult tartalmaz
+* Exportált függvények pontos szignatúrával rendelkeznek
+* A relay `plugin.Open()` + `Lookup()` segítségével tölti be őket
 
-## Plugin működési példa
+## Példakód (Go)
 
 ```go
 func ApplyState(input []byte) ([]byte, error) {
-    var req ConfigRequest
-    if err := json.Unmarshal(input, &req); err != nil {
+    var cfg map[string]string
+    if err := json.Unmarshal(input, &cfg); err != nil {
         return nil, err
     }
-    // Végrehajtás logika itt
+    // konfiguráció alkalmazása itt
     return []byte(`{"result":"ok"}`), nil
 }
 ```
 
-## További szabályok
+## Plugin korlátai (tudatosan)
 
-* A plugin csak a paraméterként kapott adatot használhatja
-* Nem tárolhat állapotot sem globálisan, sem lemezen
-* Nem kommunikálhat közvetlenül más pluginokkal vagy relékkel
+* ❌ Nem tarthat fenn saját állapotot (sem globálisan, sem lemezen)
+* ❌ Nem kommunikálhat más pluginokkal vagy relékkel közvetlenül
+* ❌ Nem férhet hozzá külső forrásokhoz, hacsak az inputban nincs deklarálva
+
+Ez biztosítja a teljes determinizmust, auditálhatóságot és újrafuttathatóságot.
 
 ## Következő olvasmány
 
-* [`dependency_modell.md`](./dependency_modell.md): hogyan értékeljük ki a séma futtathatóságát
-* [`graf_vegrehajtas.md`](./graf_vegrehajtas.md): hogyan történik a relay szintű végrehajtási folyamat
+* [`schema_kezeles.md`](./schema_kezeles.md): hogyan deklarálja a séma, hogy mit kell végrehajtani
+* [`graf_vegrehajtas.md`](./graf_vegrehajtas.md): hogyan épül be a plugin a relay műveleti gráfjába

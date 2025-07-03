@@ -1,16 +1,17 @@
 tags:
   - schema
-  - logic
-  - concept
+  - declarative
+  - execution
 category:
-  - működés
-  - séma
+  - definition
+  - control
 related_nodes:
-  - concept/dependency_modell
   - concept/plugin_interface
+  - concept/dependency_modell
+  - concept/graf_vegrehajtas
 used_in:
   - validation
-  - execution
+  - relay_control
 description: >
-  A sémák definíciója és szerepe a CIC rendszer működésében. Meghatározza a
-  végrehajtási logikát, függőségeket és következő lépéseket.
+  Describes schema structure and behavior. Explains how plugins, state, and dependencies
+  are declared and executed as part of a unified declarative execution unit.

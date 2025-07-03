@@ -1,21 +1,21 @@
 tags:
   - doc
   - concept
-  - introduction
+  - overview
 category:
-  - belépési
-  - meta
-  - stratégiai
+  - entrypoint
+  - strategic
 related_nodes:
   - concept/relay_pozicionalas
   - concept/schema_kezeles
-  - meta/indexelesi_minta
+  - concept/plugin_interface
+  - concept/dependency_modell
 entrypoint: true
 used_in:
   - onboarding
   - ai_summary
-  - decision_support
+  - cic_design
 description: >
-  A CIC rendszer belépési nézete. Áttekinti a rendszer működésének célját, struktúráját,
-  a relay komponens szerepét, és összeköti a koncepcionális dokumentációt az AI-kompatibilis
-  tudásábrázolási modellel.
+  High-level introduction to the Central Infrastructure Core (CIC) system.
+  It outlines the layered structure, declarative operation model, and core execution logic.
+  Serves as the entrypoint to all conceptual documents in the system.

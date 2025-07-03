@@ -1,37 +1,44 @@
-# CIC rendszer – áttekintés
+# CIC rendszer áttekintése
 
-A CentralInfraCore (CIC) egy moduláris, plug-in-alapú infrastruktúra-végrehajtási rendszer, amely a deklaratív állapotleírást végrehajtási gráfokra fordítja, és azokat decentralizált relay komponenseken keresztül hajtja végre. A rendszer célja nem csupán egy eszköz biztosítása az infrastruktúra kezelésére, hanem egy elméletileg megalapozott és gépi értelmezésre is optimalizált kontrollmodell létrehozása.
+A Central Infrastructure Core (CIC) egy **declaratív állapotalapú infrastruktúra-végrehajtási modell**, amely lehetővé teszi, hogy bármely rendszer, szolgáltatás vagy környezet **sémaalapúan leírható**, és **determináltan kivitelezhető** legyen. A cél: a környezetek újrateremthetősége, auditálhatósága és aszinkron, skálázható működtethetősége.
 
-## Általános cél
+## A rendszer logikai felépítése
 
-A CIC célja, hogy az infrastruktúra bármely elemének állapotát és konfigurációját deklaratívan lehessen megadni, majd ezt a definíciót egy vagy több relay komponens hajtsa végre, aszinkron módon, plugin-modulokon keresztül. A relay nem vezérlő komponens, hanem végrehajtó végpont.
+A CIC négy rétegben működik:
 
-## Fő jellemzők
+1. **Leíró réteg**: YAML fájlokban leírt sémák, gráfok, állapotok, kapcsolatok
+2. **Relay**: végrehajtó motor, amely plugineken keresztül hajtja végre a leírt műveleteket
+3. **Plugin**: `.so` alapú dinamikusan betöltött függvények, amelyek konkrét műveletet végeznek
+4. **Objektumok**: a végrehajtás célpontjai – VM-ek, szolgáltatások, konfigurációk stb.
 
-* **Deklaratív működés**: az elvárt állapot YAML-leírásban jelenik meg
-* **Plug-in architektúra**: a műveleti logika `.so` fájlokban definiálható
-* **Relay végrehajtás**: nincs központi vezérlés, a relay csak végrehajt
-* **Gráfalapú működés**: a végrehajtás lépésről lépésre, műveleti gráf alapján történik
-* **Állapot-feltételes működés**: minden lépés csak akkor fut, ha a függőségei teljesülnek
+## A működés alapelvei
 
-## A Relay szerepe
+* **Stateless végrehajtás** – a relay nem tárol semmit
+* **Plugin-alapú kivitelezés** – minden műveletet plugin végez
+* **Séma-alapú deklaráció** – minden elvárás és cél előre leírt YAML séma alapján történik
+* **Függőségi gráf** – meghatározza, mit lehet mikor futtatni
+* **Állapotkiértékelés** – a rendszer pillanatkép alapján dönt, nem múltbeli változások alapján
 
-A relay a CIC rendszer „idegvégződése” – nem dönt, nem tárol, nem vezérel. Feladata:
+## Miért fontos a CIC?
 
-1. **Sémák értelmezése**: meghatározza, milyen műveletet kell végrehajtani
-2. **Függőségek kiértékelése**: megnézi, teljesültek-e a `Dependencies` vagy `StateRequirement` mezők
-3. **Plugin meghívása**: ha kell, betölti a megfelelő `.so` modult és meghívja a benne lévő függvényt
-4. **Következő lépések kiszámítása**: `NextHops` alapján továbbhalad
+* ✅ Teljes átláthatóság: minden művelet, feltétel és eredmény deklarált
+* ✅ Újraépíthetőség: egy YAML-ból újraalkotható teljes infrastruktúra
+* ✅ Automatizálhatóság: AI vagy CI/CD rendszerek általi vezérelhetőség
+* ✅ Paralelizálhatóság: async relay-futtatás több szálon
 
-## További dokumentáció
+## Mire nem való a CIC?
 
-A rendszer részletes architektúráját, objektumtípusait és interfészeit a hivatalos dokumentáció tartalmazza:
+* ❌ Adattárolásra vagy konzisztens replikációra
+* ❌ Rendszerek tanítására vagy automatizált döntéshozatalra
+* ❌ Imperatív szkriptek közvetlen végrehajtására
 
-👉 [https://github.com/CentralInfraCore/.github](https://github.com/CentralInfraCore/.github)
+## A dokumentáció szerkezete
 
-## Következő lépések a dokumentációban
+Ez a fájl a `docs/hu/concept/` könyvtár belépési pontja. További témák:
 
-* [`relay_pozicionalas.md`](./relay_pozicionalas.md): a relay komponens részletes bemutatása
-* [`schema_kezeles.md`](./schema_kezeles.md): hogyan működik a séma, milyen mezők vannak
-* [`plugin_interface.md`](./plugin_interface.md): mit vár el a rendszer egy `.so` modultól
-* [`dependency_modell.md`](./dependency_modell.md): hogyan kezeljük a függőségi viszonyokat
+* [`relay_pozicionalas.md`](./relay_pozicionalas.md): a végrehajtómotor működése
+* [`schema_kezeles.md`](./schema_kezeles.md): hogyan épül fel egy séma
+* [`plugin_interface.md`](./plugin_interface.md): mit vár el egy plugin-től a rendszer
+* [`dependency_modell.md`](./dependency_modell.md): hogyan kezeljük a függőségeket
+* [`graf_vegrehajtas.md`](./graf_vegrehajtas.md): a műveleti gráf feldolgozása
+* [`allapotmodell.md`](./allapotmodell.md): hogyan definiáljuk és értékeljük az állapotokat

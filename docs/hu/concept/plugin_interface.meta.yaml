@@ -1,16 +1,16 @@
 tags:
   - plugin
-  - api
-  - execution
+  - interface
+  - .so
 category:
-  - implementáció
-  - interfész
+  - interface
+  - execution_module
 related_nodes:
   - concept/schema_kezeles
-  - implementation/dynamic_loader
+  - implementation/plugin_loader
 used_in:
-  - execution
-  - extension
+  - plugin_dev
+  - dynamic_execution
 description: >
-  A pluginek által implementálandó interfészek. Meghatározza a relay által
-  elvárt funkciókat (ApplyState, ObserveState, Notify, Identify).
+  Defines the minimal exported functions a plugin must implement to operate within the CIC system.
+  Enforces isolation, statelessness, and compatibility through strict interfaces.
