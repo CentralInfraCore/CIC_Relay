@@ -1,15 +1,16 @@
 tags:
   - state
-  - validation
-  - logic
+  - observation
+  - runtime
 category:
-  - működés
-  - állapot
+  - behavior
+  - validation
 related_nodes:
-  - concept/dependency_modell
   - concept/plugin_interface
+  - concept/dependency_modell
 used_in:
-  - decision_support
-  - runtime_validation
+  - snapshot_logic
+  - runtime_eval
 description: >
-  A rendszerben megfigyelt és elvárt állapotok értelmezése, és ezek szerepe a futási döntésekben.
+  Clarifies the meaning of expected and observed states in the CIC model.
+  Emphasizes snapshot-based stateless evaluation and how state affects execution decisions.

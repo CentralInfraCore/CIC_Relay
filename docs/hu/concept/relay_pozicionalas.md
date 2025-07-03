@@ -1,52 +1,55 @@
-# Relay pozicionálása a CIC rendszerben
+# Relay komponens pozíciója a CIC rendszerben
 
-A relay a CentralInfraCore (CIC) rendszerben egy speciális végrehajtó entitás, amely deklaratív sémaalapú logika mentén működik, de nem birtokol sem állapotot, sem vezérlőlogikát. Nem egy kontroller, hanem egy futtató. Minden relay egy konkrét végrehajtási egységet képvisel, amely az adott rendszer- vagy környezeti elemre vonatkozó sémák értelmezését végzi el.
+A relay a CIC rendszer központi végrehajtó egysége. Feladata, hogy a deklarált séma-, gráf- és állapotleírások alapján meghatározza, **milyen műveletet kell végrehajtani, milyen sorrendben, milyen feltételekkel**, és mindezt **stateless, determinisztikus módon** végzi.
 
-## A relay célja
+## A relay mint végrehajtó motor
 
-* **Dekódolás**: a relay értelmezi a `SchemaDefinition`-öket
-* **Kiértékelés**: meghatározza, teljesülnek-e a `Dependencies` vagy `StateRequirement` feltételek
-* **Végrehajtás**: meghívja a séma által meghatározott plugint (pl. `ApplyState`)
-* **Továbbítás**: `NextHops` alapján aszinkron módon továbblép a következő séma felé
+A relay:
 
-## A relay tulajdonságai
+* nem tartalmaz állapotgépet,
+* nem módosítja a sémákat vagy gráfokat,
+* nem tárol adatot,
+* nem tanul,
+* nem hoz döntést.
 
-| Tulajdonság      | Leírás                                              |
-| ---------------- | --------------------------------------------------- |
-| Stateless        | Nem tárol előzményt vagy állapotot                  |
-| Aszinkron        | A végrehajtás nem blokkol más ágakat                |
-| Determinisztikus | Csak a séma, a plugin és az állapot alapján működik |
-| Modularizált     | Több különálló relay működhet párhuzamosan          |
+Ehelyett:
 
-## Fő interfészei
+* végrehajtja a deklarált műveleti gráfot,
+* kiértékeli a függőségeket és állapotokat,
+* pluginokon keresztül meghívja a konkrét műveleteket,
+* továbbhalad a `NextHops` mezők alapján.
 
-A relay az alábbi műveleteket várja el a plugintól (például `.so` fájlokból):
+## A relay szerepe a rendszer architektúrájában
 
-* `ApplyState()` – egy állapot végrehajtása
-* `ObserveState()` – aktuális állapot megfigyelése
-* `Notify()` – események vagy állapotváltozások közlése
-* `Identify()` – metaadat szolgáltatása (név, verzió, típus)
+A relay **nem csak egy folyamat**, hanem egy újrafelhasználható végrehajtási egység:
 
-## Relay típusok
+* akár több példányban futtatható (pl. host-onként, cluster-szinten),
+* minden példány ugyanazt az `ExecutionGraph` + `SchemaSet` + `PluginSet` kombinációt használja,
+* minden példány determinisztikusan ugyanazokat a döntéseket hozza, ha az input állapot megegyezik.
 
-Bár maga a relay logikailag egységes, implementáció szerint több típus is kialakítható:
+## Mit nem csinál a relay
 
-* **Lokális relay** – egy géphez vagy szolgáltatáshoz kapcsolódik
-* **Átjáró relay** – külső rendszerekhez csatlakozik (pl. API gateway)
-* **Aggregáló relay** – több gyermekállapotot egyesít (pl. `host -> services`)
-* **Meta-relay** – diagnosztikai vagy elemző szerep (pl. coverage, logikaellenőrzés)
+* ❌ nem hajt végre kódot közvetlenül
+* ❌ nem ír fájlt, nem módosít konfigurációt
+* ❌ nem tárol semmilyen belső állapotot
+* ❌ nem old meg konfliktust vagy versenyhelyzetet
 
-## Elhatárolás az orchestrátortól
+## Mikor van szükség relay-re?
 
-A CIC-ben a relay **nem vezérlő**, hanem egy végrehajtási pont. A rendszer viselkedését:
+Bármikor, ha:
 
-* **a séma** határozza meg (deklaratív)
-* **a plugin** végzi el (imperatív)
-* **a relay** végrehajtja (passzív végpont)
+* egy struktúrált műveleti gráfot kell végrehajtani
+* pluginokra épülő, dinamikus végrehajtás szükséges
+* egy központi „agent” kell, ami nem önhatalmú, hanem deklaratív sémák szerint dolgozik
 
-Ez a három réteg tudatosan elválasztásra került, így a relay nem lép ki a saját hatásköréből.
+## Példák a relay használatára
+
+* VM-ek hálózatba illesztése (host → network)
+* Szolgáltatások telepítése host-on belül
+* Konfigurációk alkalmazása állapot alapján
+* Aszinkron párhuzamos futtatás relay-példányonként
 
 ## Következő olvasmány
 
-* [`schema_kezeles.md`](./schema_kezeles.md): hogyan működik egy séma és annak mezői
-* [`plugin_interface.md`](./plugin_interface.md): mit jelent a plugin és hogyan kapcsolódik be
+* [`cic_attekintes.md`](./cic_attekintes.md): hogyan illeszkedik a relay a teljes CIC architektúrába
+* [`graf_vegrehajtas.md`](./graf_vegrehajtas.md): hogyan halad a relay a deklarált lépések mentén

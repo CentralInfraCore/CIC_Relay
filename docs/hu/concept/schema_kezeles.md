@@ -1,57 +1,67 @@
-# Séma-kezelés a CIC rendszerben
+# Séma kezelés a CIC rendszerben
 
-A CIC rendszer központi működési egysége a séma (`SchemaDefinition`), amely meghatározza, hogy mit, mikor és milyen feltételekkel kell végrehajtani. A séma nem kódot tartalmaz, hanem egy deklarációs objektum, amelyet a relay értelmez és a megfelelő plugin-modulon keresztül végrehajt.
+A CIC végrehajtási logikájának alapegysége a **séma**, amely egy objektum vagy művelet deklarációja. A relay nem „értelmez” programkódot vagy állapotgépet – minden végrehajtás egy sémán alapul, amely előírja, **mit kell végrehajtani, milyen állapotban, milyen feltételekkel**.
 
-## Séma szerepe
-
-Egy séma nem más, mint egy absztrakt leírás:
-
-* **Mit kell végrehajtani** – plugin hívás típusa (pl. `ApplyState`, `ObserveState`)
-* **Mikor** – feltételek (`Dependencies`, `StateRequirement`)
-* **Hogyan tovább** – `NextHops` mezők definiálása
-
-A séma egy sorozatban (`ExecutionGraph`) jelenik meg, amely lépésről lépésre kerül feldolgozásra a relay által.
-
-## A séma mezői
-
-| Mező               | Típus              | Leírás                                                                          |
-| ------------------ | ------------------ | ------------------------------------------------------------------------------- |
-| `Name`             | string             | A séma egyedi neve a gráfon belül                                               |
-| `PluginRef`        | string             | A hivatkozott plugin azonosítója (név/verzió)                                   |
-| `Function`         | string             | A pluginon belüli meghívandó függvény neve                                      |
-| `Dependencies`     | \[]string          | Milyen más objektum(ok) kell(ene), hogy teljesüljenek                           |
-| `StateRequirement` | map\[string]string | Kulcs-érték alapú elvárás az állapottérben                                      |
-| `NextHops`         | \[]string          | A következő sémák (vagy `local.*::relay`, `service.*` regex alapú hivatkozások) |
-
-## Állapottal való kapcsolat
-
-A `StateRequirement` mező határozza meg, hogy az adott séma mikor tekinthető futtathatónak. Például:
+## A séma fő mezői
 
 ```yaml
-StateRequirement:
-  host.state: alive
-  host.services.psql: running
+Schema:
+  Name: host-init
+  PluginRef: host/init@v1.0.0
+  StateRequirement:
+    host.state: init
+  Dependencies:
+    - infra.network
+  NextHops:
+    - host.services.*
 ```
 
-Ha bármelyik feltétel nem teljesül, a relay nem hajtja végre a sémát.
+### `Name`
 
-## NextHop működése
+A séma egyedi azonosítója – ez alapján hivatkoznak rá a gráfok, más sémák, vagy relay-ek.
 
-A `NextHops` mező nem konkrét sémanevet vár mindig, hanem lehetőséget ad:
+### `PluginRef`
 
-* Statikus hivatkozásra: `setup-networking`
-* Regex/absztrakcióra: `local.*::relay`, `service.*`
-* Függvényalapú kiterjesztésre (pl. `ExpandNextHops()` belső logika)
+A meghívandó plugin referencia. Tartalmazhat nevet, verziót, típust. Pl.: `package/function@verzió` vagy `host/init@v1.0.0`.
 
-Ezzel a relay async módon tovább tud haladni több ágon is, a konkrét objektumok függvényében.
+### `StateRequirement`
 
-## Séma és plugin kapcsolata
+A relay csak akkor hajtja végre a sémát, ha ezek a kulcs-érték állapotok teljesülnek. A kulcsok `ObserveState()` által visszaadott mezőkre vonatkoznak.
 
-A séma csak deklarálja, hogy **melyik plugin** melyik **függvényét** kell meghívni. Maga a plugin `.so` fájl formájában van jelen, és dinamikusan kerül betöltésre a futtatás során.
+### `Dependencies`
 
-Ez biztosítja a **szigorú szétválasztást a vezérlés (schema) és végrehajtás (plugin) között**.
+Más sémákra, objektumokra való függőség. Csak akkor lép életbe ez a séma, ha a hivatkozott objektumok „kész” állapotba kerültek.
+
+### `NextHops`
+
+Következő műveleti egységek. Ezek lehetnek konkrét sémanevek, minták (pl. `service.*`), vagy strukturált mezők (pl. `local.services`). A relay ezt a mezőt elemzi aszinkron ágak indításához.
+
+## A séma célja
+
+* Műveleti szándék és feltételek egy helyen
+* Plugin-hívás és továbbhaladás vezérlése
+* Függőségek kiértékelése és validáció
+
+> A séma nem végrehajtási utasítás, hanem deklaráció – a relay és plugin együttműködése hozza létre a végrehajtást.
+
+## Belső viselkedés
+
+A relay minden séma esetében:
+
+* kiértékeli a `StateRequirement` mezőt a plugin válasza alapján,
+* ellenőrzi a `Dependencies`-t,
+* ha minden teljesül, meghívja a `PluginRef`-hez tartozó plugin függvényt,
+* a `NextHops` mező szerint folytatja a végrehajtást.
+
+## Séma mint kapu – és nem script
+
+A CIC szemantikában a séma nem végrehajtandó „program”, hanem egy **deklaratív műveleti csomópont**, amely megmondja:
+
+* mit vár el a rendszerállapottól,
+* mit kell meghívni (plugin),
+* mi történik, ha kész vagyunk (next).
 
 ## Következő olvasmány
 
-* [`plugin_interface.md`](./plugin_interface.md): hogyan kell egy pluginnak viselkednie
-* [`dependency_modell.md`](./dependency_modell.md): mikor tekintünk egy sémát futtathatónak
+* [`plugin_interface.md`](./plugin_interface.md): hogyan épül fel egy plugin
+* [`dependency_modell.md`](./dependency_modell.md): mikor tekinthető egy séma futtathatónak

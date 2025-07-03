@@ -1,16 +1,17 @@
 tags:
   - dependency
   - logic
-  - validation
+  - state
 category:
-  - logikai
-  - futtatási feltétel
+  - condition
+  - relation_model
 related_nodes:
   - concept/schema_kezeles
   - concept/allapotmodell
+  - concept/graf_vegrehajtas
 used_in:
-  - decision_flow
-  - execution_blocking
+  - execution_block
+  - condition_evaluation
 description: >
-  A sémafüggőségek kezelésének módja, és annak meghatározása, hogy mikor tekinthető egy objektum
-  futtathatónak vagy késznek.
+  Explains how schema-to-schema dependencies are declared and evaluated.
+  Covers readiness conditions and how dependency fulfillment controls execution flow.

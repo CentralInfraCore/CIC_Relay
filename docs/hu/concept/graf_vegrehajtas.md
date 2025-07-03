@@ -1,51 +1,77 @@
 # Gráf-alapú végrehajtás a CIC relay-ben
 
-A CIC relay komponensei nem véletlenszerű vagy állandó sorrendben hajtanak végre műveleteket, hanem egy deklaratívan leírt, determinisztikus műveleti gráf mentén. Ez a gráf (`ExecutionGraph`) határozza meg, milyen sémákat kell feldolgozni, milyen sorrendben, és milyen elágazásokkal.
+A CIC rendszer végrehajtási logikája egy deklarált, sémákból felépülő **irányított gráf** mentén történik. Ez a gráf határozza meg, hogy egy adott relay milyen műveleti sémákat hajtson végre, milyen sorrendben, milyen függőségek teljesülése esetén.
 
-## Gráf felépítése
+A relay minden végrehajtási folyamatot **determinált módon** kezel: nem dönt önállóan, hanem kizárólag a `ExecutionGraph`, a séma definíciók és az aktuális állapot alapján működik.
 
-A gráf egy sor sémanév (vagy sémacímke), amelyek sorrendje és kapcsolata a YAML definícióban jelenik meg. A séma definíciók egymásra hivatkozhatnak `NextHops` mezőn keresztül.
+## A végrehajtási gráf felépítése
+
+Egy `ExecutionGraph` az alábbi elemekből áll:
 
 ```yaml
 ExecutionGraph:
-  Name: setup-cluster
+  Name: example-setup
   Steps:
-    - create-host
-    - install-services
+    - init-host
     - configure-network
+    - install-services
 ```
 
-A `Steps` lista lineárisan írja le a sorrendet, de a `NextHops` mezők segítségével a relay elágazásokat is képes kezelni.
+A `Steps` mező lineáris sorrendet definiál, de minden lépés saját séma alapján határozza meg, hogy:
 
-## Végrehajtási logika
+* milyen állapotot vár el (`StateRequirement`),
+* milyen függőségeknek kell teljesülniük (`Dependencies`),
+* mikor és hová lép tovább (`NextHops`).
 
-1. **Indulás**: A relay betölti az adott nevű gráfot
-2. **Séma-feldolgozás**: Sorra végigmegy az adott `Steps` mentén
-3. **Dependency és állapot ellenőrzés**: Minden séma csak akkor hajtható végre, ha:
+## A végrehajtás menete
 
-    * a `Dependencies` teljesültek
-    * a `StateRequirement` igaz
-4. **Plugin meghívás**: Meghívja a séma által hivatkozott plugin függvényt
-5. **NextHop kiterjesztés**: A `NextHops` mező alapján továbblép (akár async is)
+1. A relay betölti a hozzárendelt `ExecutionGraph` definíciót.
+2. A `Steps` mező alapján feldolgozza az egyes sémákat.
+3. Minden sémánál:
 
-## Aszinkron működés
+   * Kiértékeli a `Dependencies` és `StateRequirement` mezőket.
+   * Ha teljesülnek, meghívja a megfelelő plugin függvényt (`ApplyState`, `ObserveState`, stb.).
+   * A `NextHops` mező alapján azonosítja a következő művelete(ke)t.
+4. Async módban folytatódhat több irányban is, ha a gráf ezt lehetővé teszi.
 
-A relay nem vár meg minden korábbi lépést, ha a függőségek teljesülnek, a `NextHops` mentén akár párhuzamos ágak is elindulhatnak.
+## Aszinkron ágkezelés
+
+A relay nem lineáris queue-ként működik, hanem lehetősége van **ágankénti elágazásra és párhuzamos végrehajtásra**:
+
+* A `NextHops` lehet több célpontból álló lista
+* Regex-alapú vagy struktúrált `NextHop` minták is megadhatók (pl. `local.services.*`)
+* Minden relay példány önállóan, de azonos szabályrendszer szerint hajt végre
+
+Ezáltal:
+
+* különböző szolgáltatások egyidejűleg telepíthetők,
+* a relay nem blokkolja a többi ágat, ha egy sémára még várni kell,
+* a párhuzamos futtatás determinisztikus marad, amíg a függőségek teljesülnek.
+
+## Elágazás és értékelési logika
+
+A `NextHops` mező lehet:
+
+* konkrét sémanév (pl. `start-database`)
+* leképezett kulcs (pl. `local.children` vagy `host.services.*`)
+* függvényalapú kiértékelés (pl. `ExpandNextHop()` belső logika alapján)
 
 Ez lehetővé teszi:
 
-* szolgáltatások egyidejű telepítését
-* host-szintű és cluster-szintű műveletek elkülönítését
-* relay-ek közti paralel működést
+* logikai szétágazást anélkül, hogy a gráf explicit módon Y-alakú lenne
+* többszörös példányosítást (pl. több szolgáltatásra párhuzamosan)
+* dinamikus objektumhivatkozást (minták alapján)
 
-## Determinizmus és validáció
+## Determinizmus és ellenőrizhetőség
 
-A gráf futása determinisztikus, ha:
+Minden relay példány ugyanazt az `ExecutionGraph` + `SchemaSet` + állapot snapshot alapján hajtja végre a folyamatot.
+Ez garantálja:
 
-* a séma definíciók egyértelműek
-* nincs rejtett vagy külső függőség
-* a pluginok tisztán és állapotmentesen működnek
+* reprodukálhatóságot (ugyanabból ugyanaz lesz)
+* validálhatóságot (külső rendszer visszaellenőrizheti)
+* transzparenciát (minden lépés előre jelezhető)
 
 ## Következő olvasmány
 
-* [`allapotmodell.md`](./allapotmodell.md): hogyan mérhető az „elért állapot”
+* [`plugin_interface.md`](./plugin_interface.md): hogyan hajtanak végre a relay által hívott pluginek
+* [`allapotmodell.md`](./allapotmodell.md): hogyan értelmezzük az állapotot futtatás előtt

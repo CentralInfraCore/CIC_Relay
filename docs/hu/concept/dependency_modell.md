@@ -1,29 +1,27 @@
 # Függőségi modell a CIC rendszerben
 
-A CIC rendszer deklaratív sémáinak egyik kulcsfontosságú mezője a `Dependencies`, amely meghatározza, hogy egy adott művelet végrehajtása csak akkor történhet meg, ha bizonyos más objektumok már „kész” állapotban vannak. Ez a megközelítés biztosítja, hogy a rendszer egésze determinisztikusan és logikusan haladjon előre.
+A CIC rendszer deklaratív működésének kulcseleme a `Dependencies` mező, amely meghatározza, hogy egy adott műveleti séma **csak akkor** hajtható végre, ha más objektumok már elérték a működőképes (azaz „kész”) állapotot. Ez a modell biztosítja a rendszer **determinálható**, **időben rendezett** és **állapotalapú** végrehajtását.
 
 ## Két szintű feltételrendszer
 
-A futtathatóságot két mező befolyásolja:
+A relay végrehajtási logikája két típusú feltételt értékel:
 
-* `Dependencies` – más objektumok szükséges állapota (pl. `host`, `network`, `service.*`)
-* `StateRequirement` – konkrét kulcs-érték feltételek az állapottérből (pl. `host.state = alive`)
+* `Dependencies` – más objektumokra való hivatkozás, amelyeknek teljesíteniük kell a saját állapotelvárásaikat
+* `StateRequirement` – lokális állapotfeltételek a jelenlegi sémán belül
 
-Ezek kombinálása lehetővé teszi:
+> A `Dependencies` más entitásokra utal, míg a `StateRequirement` a saját objektumra vonatkozó konkrét állapotot vár el.
 
-* strukturális függőségek (objektumközi kapcsolat)
-* tényleges állapotvizsgálat (az adott séma saját feltételei)
+## Mikor tekinthető egy dependency teljesültnek?
 
-## Mikor tekinthető teljesültnek egy dependency?
+Egy függőség akkor minősül teljesültnek, ha:
 
-Egy `Dependency` akkor tekinthető teljesültnek, ha az adott objektum:
+* **a hivatkozott objektum létezik** (pl. deklarálva van egy sémában, és a relay értelmezni tudja),
+* **az objektum állapota megfelel** a saját séma `StateRequirement` mezőjének,
+* **a kapcsolódó plugin `ObserveState()` visszajelzése alapján** az objektum „késznek” tekinthető.
 
-* már létrejött (létezik egy relay által értelmezett séma hozzá)
-* állapota megfelel a saját sémájában előírt kritériumoknak (pl. `ApplyState` sikeres, `ObserveState` szerint működőképes)
+Ez azt jelenti, hogy a relay nem „emlékszik” a teljesítésre, hanem minden esetben újra kiértékel.
 
-A „készre jelentés” tehát **nem fix szabály alapján történik**, hanem a séma és plugin visszajelzése alapján.
-
-## Példa
+## Példa dependency-re és állapotra együtt
 
 ```yaml
 Dependencies:
@@ -34,11 +32,30 @@ StateRequirement:
   host.services.postgresql: running
 ```
 
-Ebben a példában a séma csak akkor hajtható végre, ha a `host` és `postgresql` már deklarált és működőképes.
+Ebben az esetben a séma csak akkor kerül végrehajtásra, ha a `host` és `host.services.postgresql` objektumok:
 
-## Függőségek és gráf
+* léteznek,
+* a plugin `ObserveState()` szerint működő állapotban vannak,
+* és a `StateRequirement` mezőben megadott értékek egyeznek a lekért állapottal.
 
-A `Dependencies` információ önmagában nem írja át a gráf szerkezetét, de **kiváltja vagy blokkolja** a `NextHop` mezőből származó lépések indítását. Tehát a relay nem halad tovább, ha a dependency-k nem teljesülnek.
+## Hatása a gráfra és a NextHop működésre
+
+A `Dependencies` **nem módosítja a végrehajtási gráf topológiáját**, de hatással van annak aktiválására:
+
+* Ha egy dependency **nem teljesül**, a relay **nem hajtja végre** az adott sémát
+* Ez blokkolhatja a `NextHops` lépéseit is, így elágazások vagy párhuzamos ágak is feltartódhatnak
+
+Ez a mechanizmus lehetővé teszi:
+
+* szigorú sorrend biztosítását (pl. VM → szolgáltatás)
+* feltételes futtatást (csak ha más elem működik)
+* akár környezetfüggő végrehajtási logikát is
+
+## Reláció az állapotmodellel
+
+A `Dependencies` mező **csak akkor értelmezhető**, ha létezik egy állapotmodell, amely alapján az objektum „készre jelentett”. Ezért a dependency és az állapotlogika **szoros kapcsolatban áll**.
+
+> A `Dependencies` mindig más entitás „készre jelentésére” támaszkodik, nem a saját séma dönt róla.
 
 ## Következő olvasmány
 
