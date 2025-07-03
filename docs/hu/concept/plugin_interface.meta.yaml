@@ -1,0 +1,16 @@
+tags:
+  - plugin
+  - api
+  - execution
+category:
+  - implementáció
+  - interfész
+related_nodes:
+  - concept/schema_kezeles
+  - implementation/dynamic_loader
+used_in:
+  - execution
+  - extension
+description: >
+  A pluginek által implementálandó interfészek. Meghatározza a relay által
+  elvárt funkciókat (ApplyState, ObserveState, Notify, Identify).

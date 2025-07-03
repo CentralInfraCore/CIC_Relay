@@ -89,7 +89,7 @@ cic-relay/
 ## Fogalomjegyzék (rendszer-szintű kulcsfogalmak)
 
 | Típus    | Sablon (template)                | Példány (instance/object)                |
-| -------- | -------------------------------- | ---------------------------------------- |
+|----------|----------------------------------|------------------------------------------|
 | Workflow | workflow\_template               | workflow\_instance / workflow\_obj       |
 | Modul    | modul\_template                  | modul\_obj (workflow instance-ben)       |
 | Séma     | schema\_template                 | (csak validáció eredmény, nincs példány) |

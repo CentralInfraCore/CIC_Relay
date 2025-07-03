@@ -1,0 +1,16 @@
+tags:
+  - dependency
+  - logic
+  - validation
+category:
+  - logikai
+  - futtatási feltétel
+related_nodes:
+  - concept/schema_kezeles
+  - concept/allapotmodell
+used_in:
+  - decision_flow
+  - execution_blocking
+description: >
+  A sémafüggőségek kezelésének módja, és annak meghatározása, hogy mikor tekinthető egy objektum
+  futtathatónak vagy késznek.

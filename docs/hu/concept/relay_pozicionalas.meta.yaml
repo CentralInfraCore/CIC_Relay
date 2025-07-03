@@ -1,0 +1,16 @@
+tags:
+  - doc
+  - relay
+  - concept
+category:
+  - komponens
+  - architektúra
+related_nodes:
+  - concept/schema_kezeles
+  - implementation/plugin_interface
+used_in:
+  - execution
+  - ai_azonositas
+description: >
+  A relay komponens pozíciója és szerepe a CIC rendszeren belül.
+  Végrehajtó szerepű, stateless egység, amely séma és plugin alapján működik.
