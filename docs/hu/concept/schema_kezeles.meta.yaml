@@ -1,0 +1,16 @@
+tags:
+  - schema
+  - logic
+  - concept
+category:
+  - működés
+  - séma
+related_nodes:
+  - concept/dependency_modell
+  - concept/plugin_interface
+used_in:
+  - validation
+  - execution
+description: >
+  A sémák definíciója és szerepe a CIC rendszer működésében. Meghatározza a
+  végrehajtási logikát, függőségeket és következő lépéseket.

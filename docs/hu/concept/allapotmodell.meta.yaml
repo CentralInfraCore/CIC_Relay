@@ -1,0 +1,15 @@
+tags:
+  - state
+  - validation
+  - logic
+category:
+  - működés
+  - állapot
+related_nodes:
+  - concept/dependency_modell
+  - concept/plugin_interface
+used_in:
+  - decision_support
+  - runtime_validation
+description: >
+  A rendszerben megfigyelt és elvárt állapotok értelmezése, és ezek szerepe a futási döntésekben.

@@ -1,0 +1,15 @@
+tags:
+  - graph
+  - execution
+  - flow
+category:
+  - működés
+  - async
+related_nodes:
+  - concept/dependency_modell
+  - concept/schema_kezeles
+used_in:
+  - execution
+  - concurrency
+description: >
+  A végrehajtási gráf feldolgozása a relay által, sorrend és elágazás kezelés aszinkron módon.
