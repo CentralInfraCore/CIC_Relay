@@ -1,0 +1,13 @@
+title: Cabinet API Test Specification
+category: test-spec
+tags:
+  - cabinet
+  - test
+  - validation
+description: >
+  Test specification for unit and integration level validation of Cabinet API behavior.
+related_nodes:
+  - Cabinet_Api_definition
+  - Cabinet_Specification
+used_in:
+  - PoC validation

@@ -1,0 +1,14 @@
+title: Cabinet API Definition
+category: specification
+tags:
+  - cabinet
+  - api
+  - relay-integration
+description: >
+  Detailed definition of the Cabinet module's API-level interfaces and their expected behavior.
+related_nodes:
+  - Cabinet_Specification
+  - CIC_Relay_Specification
+used_in:
+  - PoC v1
+  - backend interface for test systems
