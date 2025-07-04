@@ -1,0 +1,14 @@
+title: CIC Relay Specification
+category: specification
+tags:
+  - relay
+  - cic
+  - validator
+  - execution-graph
+description: >
+  Detailed functional and architectural description of the Relay module used in the CIC system.
+related_nodes:
+  - Cabinet_Specification
+used_in:
+  - PoC v1
+  - integration architecture

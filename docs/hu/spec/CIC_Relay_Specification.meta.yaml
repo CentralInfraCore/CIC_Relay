@@ -1,0 +1,14 @@
+title: CIC Relay specifikáció
+category: specification
+tags:
+  - relay
+  - cic
+  - validátor
+  - végrehajtási gráf
+description: >
+  A Relay modul működésének részletes leírása, komponensszintű bontásban és PoC-re szabva.
+related_nodes:
+  - Cabinet_Specification
+used_in:
+  - PoC v1
+  - integrációs architektúra
