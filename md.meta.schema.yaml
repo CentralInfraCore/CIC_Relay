@@ -13,34 +13,38 @@ properties:
     items:
       type: string
       enum:
-        - relay         # Related to AI relay modules
-        - compliance    # For compliance or validation logic
-        - workflow      # Handles process or pipeline logic
-        - cictor        # Part of the CICTOR decision system
-        - schema        # Related to schema processing
-        - parser        # Input parsing module
-        - guard         # Access or moral protection logic
-        - core          # Core system logic
-        - doc           # Documentation or explanatory content
-        - interface     # Interface logic with external systems
-        - gateway       # Entry or gateway-related logic
-        - builder       # Responsible for build or generation tasks
-        - test          # Validation, testing or debugging logic
-        - meta          # Meta-structures or internal definitions
-        - orchestrator  # Coordinates control or decision chains
-        - decision      # Contains decision logic
-        - reflector     # Feedback or reflection module
-        - context       # Contextual management module
-        - validator     # Performs data or schema validation
-        - executor      # Executes direct logic operations
-        - hook          # Event-triggered callable logic
-        - template      # Acts as a template component
-        - fallback      # Defines fallback or alternative behavior
-        - session       # Session or state-handling logic
-        - metrics       # For metric collection or monitoring
-        - storage       # Manages storage or persistence
-        - loader        # Loads configs or other modules
-        - renderer      # Generates output (text, code, HTML etc.)
+        - api               # API-related module or logic
+        - async             # Asynchronous operations
+        - cabinet           # Cabinet component or logic
+        - cic               # Core CIC logic or integration
+        - component         # Subcomponent or logical unit
+        - concept           # Conceptual documentation or model
+        - core
+        - declarative       # Declarative approach or descriptor
+        - dependency        # Dependency logic, requirement or relation
+        - doc               # Documentation or human explanation
+        - execution         # Execution, runtime handling
+        - execution_graph   # Execution flow or dependency graph
+        - executor          # Responsible for running logic
+        - graph             # Any graph-related structure/model
+        - interface         # Interface logic or API
+        - logic             # General logic or rules
+        - module            # Module, pluggable component
+        - modulee           # (Possible typo, keep if used)
+        - observation       # State observation, monitoring
+        - overview          # High-level overview, summary
+        - plugin            # Plugin, pluggable extension
+        - relay             # Relay, forwarding logic
+        - relay-integration # Relay system integration
+        - runtime           # Runtime operation, state
+        - schema            # Schema, structure, validation logic
+        - .so               # Shared object (binary extension)
+        - state             # State, statemachine, condition
+        - structure         # Structural logic, hierarchy
+        - test              # Testing, validation
+        - validation        # Validation process, verification
+        - validator         # Validator component
+        - workflow          # Workflow, pipeline, process
   related_nodes:
     type: array
     items:
@@ -52,26 +56,57 @@ properties:
     items:
       type: string
       enum:
-        - modul         # General module
-        - decision      # Implements decision logic
-        - morális       # Represents moral or rule-based logic
-        - belépési      # Entry point (user or system)
-        - meta          # Internal meta structures or logic
-        - elemző        # Evaluation or analysis logic
+        - architecture     # System architecture and structural design
+        - behavior        # Behavioral or operational logic
+        - condition       # Condition or state-related logic
+        - control         # Control or orchestration logic
+        - definition      # Definitions, conceptual description
+        - documentation
+        - analysis        # Analytical or evaluation logic
+        - entrypoint      # Entry point or main interface
+        - execution       # Execution or runtime operation
+        - execution_module # Dedicated execution module
+        - graph_structure # Graph structure or topology
+        - interface       # Interface or connectivity
+        - meta            # Meta-information or metadata layer
+        - module          # General module logic
+        - overview
+        - relation_model  # Relationship or dependency model
+        - specification
+        - strategic       # Strategic or coordination role
+        - test-spec
+        - validation      # Validation or verification logic
   entrypoint:
     type: boolean
     description: Indicates whether this document can act as an entry point.
+    default: false
   used_in:
     type: array
     description: "Workflows or processes where this module is used. Choose from the following values:"
     items:
       type: string
       enum:
-        - decision_flow     # Runs decision logic
-        - validation        # Validation process
-        - generation        # Generative or build pipeline
-        - onboarding        # Loading or initializing into system
-        - fallback_process  # Fallback handling path
+        - ai_summary                     # High-level AI-generated summary workflow
+        - architecture                   # General system or component architecture
+        - backend_interface_for_test_systems   # Interface for test system backends
+        - cic_design                     # CIC system design/structure
+        - condition_evaluation           # Condition/if-logic evaluation in workflow
+        - dynamic_execution              # Dynamic/adaptive execution block
+        - execution_block                # Direct code/workflow execution segment
+        - future_modular_extensions      # Placeholder for future/planned modular features
+        - generation                     # Content or structure generation process
+        - integration_architecture       # Architecture for integrations/interop
+        - onboarding                     # Workflow for bringing into system/init
+        - overview
+        - plugin_dev                     # Plugin development/extension process
+        - poc_validation                 # PoC validation/testing steps
+        - relay_control                  # Relay-specific control logic or workflow
+        - runtime                        # General runtime process
+        - runtime_eval                   # Runtime evaluation/logic
+        - snapshot_logic                 # Snapshot-based state logic
+        - state_transition               # State transition process
+        - validation                     # Validation/QA/consistency checks
+        - workflow_engine                # Workflow/process orchestration engine
   description:
     type: string
     description: Human-readable summary of the document purpose (can be in Hungarian or English).

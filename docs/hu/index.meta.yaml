@@ -3,6 +3,14 @@ type: object
 title: CIC Relay Dokumentáció (magyar)
 description: >
   Ez a dokumentáció a CIC Relay rendszerhez készült. Az oldalon minden fő komponensről, koncepcióról, pipeline-leíróról és integrációs lehetőségről magyar nyelvű leírást találsz.
+tags:
+  - doc
+related_nodes:
+  - doc
+category:
+  - meta
+used_in:
+  - cic_design
 sections:
   - name: Fő elvek, modell-leírások
     path: concept/
@@ -11,7 +19,7 @@ sections:
     path: pipeline/
     description: "Gyakorlati példák, működő pipeline YAML-leírók."
   - name: Modul dokumentációk, metaadatok
-    path: module/
+    path: modul/
     description: "Plug-inek, workflow-modulok, AI/metaadatos leírások."
   - name: Sémaalapú leírók, AI/ops meta
     path: schema/
@@ -27,4 +35,4 @@ sections:
     description: "Verziókövetés, főbb változások naplója."
   - name: Gyors kezdés
     path: README.md
-    description: "Alapfogalmak, architektúra, pipeline
+    description: "Alapfogalmak, architektúra, pipeline"

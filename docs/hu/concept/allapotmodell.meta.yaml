@@ -1,3 +1,4 @@
+entrypoint: false
 tags:
   - state
   - observation
