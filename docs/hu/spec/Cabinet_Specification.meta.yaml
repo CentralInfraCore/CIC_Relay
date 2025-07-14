@@ -1,9 +1,10 @@
 title: Cabinet modul specifikáció
-category: specification
+category:
+  - specification
 tags:
   - cabinet
-  - modul
-  - struktúra
+  - module
+  - structure
   - relay
 description: >
   A Cabinet modul architekturális felépítése, komponensei és működésének leírása.
@@ -11,5 +12,5 @@ related_nodes:
   - CIC_Relay_Specification
   - Cabinet_Api_definition
 used_in:
-  - PoC v1
-  - későbbi moduláris bővítések
+  - poc_validation
+  - future_modular_extensions
