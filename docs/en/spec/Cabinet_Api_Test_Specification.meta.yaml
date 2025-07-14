@@ -1,5 +1,6 @@
 title: Cabinet API Test Specification
-category: test-spec
+category:
+  - test-spec
 tags:
   - cabinet
   - test
@@ -10,4 +11,4 @@ related_nodes:
   - Cabinet_Api_definition
   - Cabinet_Specification
 used_in:
-  - PoC validation
+  - poc_validation

@@ -1,0 +1,22 @@
+tags:
+  - relay
+  - execution_graph
+  - concept
+  - trusted_supply_chain
+related_nodes:
+  - release_workflow
+  - auditlog_engine
+  - CA_chain
+  - config_store
+  - ci_cd_pipeline
+category: supply_chain
+entrypoint: relay
+used_in:
+  - release
+  - audit
+  - compliance
+  - build
+description: >
+  Ez a metaállomány a canvasban található CIC Relay Trusted Supply Chain koncepcióhoz tartozik.
+  Célja, hogy a release workflow minden kritikus pontját (aláírás, audit, CA-chain) dokumentáltan, visszakövethetően és kompromisszummentesen kezelje.
+

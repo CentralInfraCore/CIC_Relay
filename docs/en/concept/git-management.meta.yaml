@@ -8,8 +8,8 @@ related_nodes:
   - concept/branch_naming
   - cic/git-core
 category:
-  - modul
-  - elemző
+  - module
+  - analysis
   - meta
 entrypoint: false
 used_in:
