@@ -1,16 +1,16 @@
 package cabinet
 
-// ID visszaadja a séma egyedi azonosítóját a név és verzió alapján.
+// ID returns the unique schema identifier in the form "name@version".
 func (s *Schema) ID() string {
-	return s.Meta.Name + "@" + s.Meta.Version
+    return s.Meta.Name + "@" + s.Meta.Version
 }
 
-// Checksum újraszámolja a sémára vonatkozó hash-t a Meta és Spec mező alapján.
-func (s *Schema) Checksum() (string, error) {
-	return calculateChecksum(&s.Meta, s.Spec)
+// GetData returns the schema's specification for checksum purposes.
+func (s *Schema) GetData() any {
+    return s.Spec
 }
 
-// Validate ellenőrzi a kötelező mezők meglétét, újraszámolja a checksumot, ellenőrzi a signature-t és frissíti a Valid mezőt.
+// Validate runs common meta validation for the schema.
 func (s *Schema) Validate() error {
-	return ValidateMeta(&s.Meta, s.Spec)
+    return ValidateMeta(&s.Meta, s.GetData())
 }
