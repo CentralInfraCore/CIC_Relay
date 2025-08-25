@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - pipeline
+  - build
+related_nodes:
+  - docs/hu/meta/philosophy
+  - docs/hu/concept/cic_egyszeruen
+  - docs/hu/concept/cic_onvedelem_es_nyilt_kod
+category:
+  - process
+  - build
+entrypoint: false
+used_in:
+  - build
+  - validation
+description: |
+  This document describes the Relay build process, covering preparation, compilation, artifact management, publishing, and validation steps. It ensures consistency, traceability, and secure verification of all build outputs.

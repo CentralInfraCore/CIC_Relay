@@ -1,0 +1,16 @@
+tags:
+  - doc
+  - validation
+  - artifact
+related_nodes:
+  - docs/hu/meta/philosophy
+  - docs/hu/concept/cic_egyszeruen
+  - docs/hu/concept/cic_onvedelem_es_nyilt_kod
+category:
+  - process
+  - validation
+entrypoint: false
+used_in:
+  - validation
+description: |
+  This document describes the validation process for Relay build artifacts, ensuring integrity, authenticity, and compliance with RootCA requirements.
