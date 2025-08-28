@@ -12,5 +12,9 @@ func (w *Workflow) GetData() any {
 
 // Validate runs common meta validation for the workflow.
 func (w *Workflow) Validate() error {
-    return ValidateMeta(&w.Meta, w.GetData())
+    return validateMetaFunc(&w.Meta, w.GetData())
+}
+
+func (s *Workflow) Checksum() (string, error) {
+	return calculateChecksum(&s.Meta, s.Steps)
 }

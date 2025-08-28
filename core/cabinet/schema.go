@@ -12,5 +12,10 @@ func (s *Schema) GetData() any {
 
 // Validate runs common meta validation for the schema.
 func (s *Schema) Validate() error {
-    return ValidateMeta(&s.Meta, s.GetData())
+    return validateMetaFunc(&s.Meta, s.GetData())
+}
+
+// Checksum újraszámolja a sémára vonatkozó hash-t a Meta és Spec mező alapján.
+func (s *Schema) Checksum() (string, error) {
+	return calculateChecksum(&s.Meta, s.Spec)
 }

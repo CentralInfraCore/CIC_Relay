@@ -1,0 +1,101 @@
+package cabinet
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"testing"
+)
+
+func TestSentinelPredicates(t *testing.T) {
+	t.Run("IsInvalid true for ErrInvalid", func(t *testing.T) {
+		if !IsInvalid(ErrInvalid) {
+			t.Fatalf("IsInvalid(ErrInvalid) = false, want true")
+		}
+	})
+	t.Run("IsInvalid true for wrapped ErrInvalid", func(t *testing.T) {
+		w := fmt.Errorf("wrap: %w", ErrInvalid)
+		if !IsInvalid(w) {
+			t.Fatalf("IsInvalid(wrapped ErrInvalid) = false, want true")
+		}
+	})
+	t.Run("IsInvalid false for others", func(t *testing.T) {
+		if IsInvalid(ErrConflict) || IsInvalid(ErrNotFound) || IsInvalid(errors.New("x")) {
+			t.Fatalf("IsInvalid returned true for non-ErrInvalid")
+		}
+	})
+
+	t.Run("IsConflict works", func(t *testing.T) {
+		w := fmt.Errorf("wrap: %w", ErrConflict)
+		if !IsConflict(w) {
+			t.Fatalf("IsConflict(wrapped ErrConflict) = false, want true")
+		}
+		if IsConflict(ErrInvalid) || IsConflict(ErrNotFound) {
+			t.Fatalf("IsConflict returned true for other errors")
+		}
+	})
+
+	t.Run("IsNotFound works", func(t *testing.T) {
+		w := fmt.Errorf("wrap: %w", ErrNotFound)
+		if !IsNotFound(w) {
+			t.Fatalf("IsNotFound(wrapped ErrNotFound) = false, want true")
+		}
+		if IsNotFound(ErrInvalid) || IsNotFound(ErrConflict) {
+			t.Fatalf("IsNotFound returned true for other errors")
+		}
+	})
+}
+
+func TestValidationError_Error_EmptyReturnsErrInvalid(t *testing.T) {
+	var ve ValidationError // zero value, empty Cause
+	got := ve.Error()
+	want := ErrInvalid.Error()
+	if got != want {
+		t.Fatalf("Error() = %q, want %q", got, want)
+	}
+}
+
+func TestValidationError_Error_WithCauses_JSONPrefixed(t *testing.T) {
+	ve := ValidationError{
+		Cause: []FieldError{
+			{Field: "meta.name", Msg: "required"},
+			{Field: "meta.version", Msg: "invalid semver"},
+		},
+	}
+
+	got := ve.Error()
+
+	b, err := json.Marshal(ve.Cause) // marshallal állítjuk elő az elvárt JSON-t
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+	want := fmt.Sprintf("%s: %s", ErrInvalid.Error(), string(b))
+
+	if got != want {
+		t.Fatalf("Error() = %q, want %q", got, want)
+	}
+}
+
+func TestNewValidationError_ConstructsAsExpected(t *testing.T) {
+	fe1 := FieldError{Field: "meta.name", Msg: "required"}
+	fe2 := FieldError{Field: "meta.version", Msg: "invalid semver"}
+
+	ve := NewValidationError(fe1, fe2)
+	if ve == nil {
+		t.Fatalf("NewValidationError returned nil")
+	}
+	if len(ve.Cause) != 2 {
+		t.Fatalf("len(Cause) = %d, want 2", len(ve.Cause))
+	}
+	if ve.Cause[0] != fe1 || ve.Cause[1] != fe2 {
+		t.Fatalf("Cause slice mismatch: %#v", ve.Cause)
+	}
+}
+
+func TestValidationError_IsInvalidPredicateDoesNotMatch(t *testing.T) {
+	// ValidationError nem wrap-eli az ErrInvalid-et, csak a szövegben használja → IsInvalid false.
+	ve := &ValidationError{Cause: []FieldError{{Field: "x", Msg: "y"}}}
+	if IsInvalid(ve) {
+		t.Fatalf("IsInvalid(ValidationError) = true, want false")
+	}
+}
