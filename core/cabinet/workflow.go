@@ -15,6 +15,6 @@ func (w *Workflow) Validate() error {
     return validateMetaFunc(&w.Meta, w.GetData())
 }
 
-func (s *Workflow) Checksum() (string, error) {
-	return calculateChecksum(&s.Meta, s.Steps)
+func (w *Workflow) Checksum() (string, error) {
+	return calculateChecksum(&w.Meta, w.Steps)
 }
