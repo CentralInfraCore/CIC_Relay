@@ -1,5 +1,14 @@
 package cabinet
 
+import "fmt"
+
+// test seam: unit tesztben felülírható (alapértelmezetten a ValidateMeta fut)
+var validateMetaFunc = ValidateMeta
+
+func (m *ModuleDescriptor) ID() string {
+    return fmt.Sprintf("%s@%s", m.Meta.Name, m.Meta.Version)
+}
+
 // GetData returns a stable copy of the module's key data fields, omitting volatile meta fields.
 func (m *ModuleDescriptor) GetData() any {
     return struct {
@@ -15,5 +24,5 @@ func (m *ModuleDescriptor) GetData() any {
 
 // Validate runs common meta validation for the module.
 func (m *ModuleDescriptor) Validate() error {
-    return ValidateMeta(&m.Meta, m.GetData())
+    return validateMetaFunc(&m.Meta, m.GetData())
 }
