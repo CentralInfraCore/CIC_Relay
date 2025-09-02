@@ -6,6 +6,90 @@ import (
 	"testing"
 )
 
+
+// -- NewSchema() --
+
+func TestNewSchema_Success(t *testing.T) {
+	defer func(prev func(*BaseBlock, any) error, prevSum func(*BaseBlock, SchemaDef) (string, error)) {
+		validateMetaFunc = prev
+		calculateChecksum = prevSum
+	}(validateMetaFunc, calculateChecksum)
+
+	validateMetaFunc = func(meta *BaseBlock, data any) error {
+		return nil
+	}
+	calculateChecksum = func(meta *BaseBlock, spec SchemaDef) (string, error) {
+		return "sum123", nil
+	}
+
+	spec := SchemaDef{
+		StateRequirement: map[string]string{"x": "y"},
+		Dependencies:     []string{"d"},
+		NextHops:         []string{"n"},
+	}
+	meta := BaseBlock{Name: "m", Version: "1.0.0"}
+
+	schema, err := NewSchema(meta, spec)
+	if err != nil {
+		t.Fatalf("NewSchema() error = %v, want nil", err)
+	}
+	if got, want := schema.Meta.Checksum, "sum123"; got != want {
+		t.Errorf("Checksum = %q, want %q", got, want)
+	}
+	if got, want := schema.Meta.Name, "m"; got != want {
+		t.Errorf("Name = %q, want %q", got, want)
+	}
+	if !reflect.DeepEqual(schema.Spec, spec) {
+		t.Errorf("Spec mismatch: got=%#v want=%#v", schema.Spec, spec)
+	}
+}
+
+func TestNewSchema_ValidateMetaFails(t *testing.T) {
+	defer func(prev func(*BaseBlock, any) error) {
+		validateMetaFunc = prev
+	}(validateMetaFunc)
+
+	validateMetaFunc = func(meta *BaseBlock, data any) error {
+		return errors.New("validation error")
+	}
+
+	meta := BaseBlock{Name: "x", Version: "1"}
+	spec := SchemaDef{}
+
+	schema, err := NewSchema(meta, spec)
+	if err == nil || err.Error() != "validation error" {
+		t.Fatalf("NewSchema() err = %v, want validation error", err)
+	}
+	if schema != nil {
+		t.Errorf("NewSchema() = %v, want nil", schema)
+	}
+}
+
+func TestNewSchema_ChecksumFails(t *testing.T) {
+	defer func(prevVal func(*BaseBlock, any) error, prevSum func(*BaseBlock, SchemaDef) (string, error)) {
+		validateMetaFunc = prevVal
+		calculateChecksum = prevSum
+	}(validateMetaFunc, calculateChecksum)
+
+	validateMetaFunc = func(meta *BaseBlock, data any) error {
+		return nil
+	}
+	calculateChecksum = func(meta *BaseBlock, spec SchemaDef) (string, error) {
+		return "", errors.New("checksum error")
+	}
+
+	meta := BaseBlock{Name: "x", Version: "1"}
+	spec := SchemaDef{}
+
+	schema, err := NewSchema(meta, spec)
+	if err == nil || err.Error() != "checksum error" {
+		t.Fatalf("NewSchema() err = %v, want checksum error", err)
+	}
+	if schema != nil {
+		t.Errorf("NewSchema() = %v, want nil", schema)
+	}
+}
+
 // -- ID() --
 
 func TestSchema_ID_Basic(t *testing.T) {
