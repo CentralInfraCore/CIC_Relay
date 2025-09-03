@@ -1,0 +1,3 @@
+# MANIFEST of critical/golden files (sha256)
+# Ezt a fájlt a scripts/gen_manifest.sh generálja. Ne szerkeszd kézzel.
+# Példa futtatás: scripts/gen_manifest.sh . MANIFEST.sha256
