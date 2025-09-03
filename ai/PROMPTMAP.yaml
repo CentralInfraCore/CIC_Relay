@@ -1,0 +1,10 @@
+version: 1
+entries:
+  - task: "cabinet-canonicalize"
+    prompt: |
+      Készíts determinisztikus, rendezett (canonical) JSON kimenetet a cabinet grafból a CONTRACT szerint.
+      Ne legyen idő/locale/RNG mellékhatás. A GOLDEN inputokkal ellenőrizd.
+    tests:
+      - GOLDEN/cabinet_case01.in
+      - GOLDEN/cabinet_case02.in
+    accept: make verify
