@@ -13,9 +13,9 @@ func TestCalculateChecksum_DeterministicAndIgnoresVolatile(t *testing.T) {
 	data1 := map[string]any{"a": 1, "b": 2}
 	data2 := map[string]any{"b": 2, "a": 1}
 
-	sum1, err := calculateChecksum(&meta, data1)
+	sum1, err := genericChecksum(&meta, data1)
 	if err != nil { t.Fatal(err) }
-	sum2, err := calculateChecksum(&meta, data2)
+	sum2, err := genericChecksum(&meta, data2)
 	if err != nil { t.Fatal(err) }
 
 	if sum1 != sum2 {
@@ -24,7 +24,7 @@ func TestCalculateChecksum_DeterministicAndIgnoresVolatile(t *testing.T) {
 
 	// Ha az adat változik, változzon a checksum is
 	data3 := map[string]any{"a": 1, "b": 3}
-	sum3, _ := calculateChecksum(&meta, data3)
+	sum3, _ := genericChecksum(&meta, data3)
 	if sum3 == sum1 {
 		t.Fatal("checksum should change when data changes")
 	}

@@ -16,5 +16,5 @@ func (w *Workflow) Validate() error {
 }
 
 func (w *Workflow) Checksum() (string, error) {
-	return calculateChecksum(&w.Meta, w.Steps)
+	return genericChecksum(&w.Meta, w.Steps)
 }
