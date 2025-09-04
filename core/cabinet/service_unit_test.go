@@ -100,3 +100,28 @@ func TestCabinetService_Get_FoundWhenPreStored(t *testing.T) {
 		t.Fatalf("GetWorkflow error: %v", err)
 	}
 }
+
+func TestCabinetService_Put_ValidReturnsNil(t *testing.T) {
+	s := NewMemSchemaStore()
+	m := NewMemModuleStore()
+	w := NewMemWorkflowStore()
+	c := NewCabinetService(s, m, w)
+
+	sc, err := NewSchema(BaseBlock{Name: "sch", Version: "1"}, SchemaDef{})
+	if err != nil {
+		t.Fatalf("NewSchema err: %v", err)
+	}
+	if err := c.PutSchema(sc); err != nil {
+		t.Fatalf("PutSchema: want nil, got %v", err)
+	}
+
+	md := &ModuleDescriptor{Meta: BaseBlock{Name: "mod", Version: "1"}, Type: "executor"}
+	if err := c.PutModule(md); err != nil {
+		t.Fatalf("PutModule: want nil, got %v", err)
+	}
+
+	wf := &Workflow{Meta: BaseBlock{Name: "wf", Version: "1"}, Steps: []string{"sch"}}
+	if err := c.PutWorkflow(wf); err != nil {
+		t.Fatalf("PutWorkflow: want nil, got %v", err)
+	}
+}
