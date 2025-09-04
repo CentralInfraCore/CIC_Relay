@@ -19,7 +19,7 @@ func TestValidateMeta_SetsChecksumAndValid(t *testing.T) {
 		L []string `json:"l"`
 	}{A: 42, L: []string{"x", "y"}}
 
-	want, err := calculateChecksum(meta, payload)
+	want, err := genericChecksum(meta, payload)
 	if err != nil {
 		t.Fatalf("pre-calc failed: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestCalculateChecksum_IgnoresVolatileMetaFields(t *testing.T) {
 	}
 	payload := struct{ P int }{P: 1}
 
-	c1, err := calculateChecksum(meta, payload)
+	c1, err := genericChecksum(meta, payload)
 	if err != nil {
 		t.Fatalf("calculateChecksum err: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestCalculateChecksum_IgnoresVolatileMetaFields(t *testing.T) {
 	meta.CRLRef = "ocsp2"
 	meta.Valid = false
 
-	c2, err := calculateChecksum(meta, payload)
+	c2, err := genericChecksum(meta, payload)
 	if err != nil {
 		t.Fatalf("calculateChecksum err: %v", err)
 	}
@@ -133,14 +133,14 @@ func TestCalculateChecksum_ChangesWhenStableMetaOrDataChanges(t *testing.T) {
 	}
 	payload := struct{ P int }{P: 1}
 
-	c1, err := calculateChecksum(meta, payload)
+	c1, err := genericChecksum(meta, payload)
 	if err != nil {
 		t.Fatalf("calculateChecksum err: %v", err)
 	}
 
 	// stabil meta mező változik → checksum változik
 	meta.Description = "d2"
-	c2, _ := calculateChecksum(meta, payload)
+	c2, _ := genericChecksum(meta, payload)
 	if c1 == c2 {
 		t.Fatalf("checksum did not change after stable meta change")
 	}
@@ -148,7 +148,7 @@ func TestCalculateChecksum_ChangesWhenStableMetaOrDataChanges(t *testing.T) {
 	// payload változik → checksum változik
 	meta.Description = "d" // vissza
 	payload.P = 2
-	c3, _ := calculateChecksum(meta, payload)
+	c3, _ := genericChecksum(meta, payload)
 	if c1 == c3 {
 		t.Fatalf("checksum did not change after payload change")
 	}
