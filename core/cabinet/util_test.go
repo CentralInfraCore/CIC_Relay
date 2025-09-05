@@ -14,9 +14,13 @@ func TestCalculateChecksum_DeterministicAndIgnoresVolatile(t *testing.T) {
 	data2 := map[string]any{"b": 2, "a": 1}
 
 	sum1, err := genericChecksum(&meta, data1)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	sum2, err := genericChecksum(&meta, data2)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if sum1 != sum2 {
 		t.Fatalf("checksum should be deterministic, got %s vs %s", sum1, sum2)
