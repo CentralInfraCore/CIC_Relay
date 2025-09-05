@@ -35,7 +35,6 @@ type ModuleDescriptor struct {
 	OutputKeys []string // milyen kulcsokat figyelhet meg vagy generálhat
 }
 
-
 // Workflow: végrehajtási lépések listája, gráf formában – sémákra hivatkozva.
 type Workflow struct {
 	Meta  BaseBlock

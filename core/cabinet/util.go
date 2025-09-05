@@ -1,19 +1,19 @@
 package cabinet
 
 import (
-//    "crypto/sha256"
-//    "encoding/json"
-//    "fmt"
+// "crypto/sha256"
+// "encoding/json"
+// "fmt"
 )
 
 // metaForChecksum creates a stable view of BaseBlock for checksum purposes.
 // Volatile fields (Signature, Certificate, CRLRef, Valid, Checksum) are intentionally omitted.
 type metaForChecksum struct {
-    Name        string `json:"name"`
-    Version     string `json:"version"`
-    Description string `json:"description"`
-    CreatedBy   string `json:"createdBy"`
-    Timestamp   string `json:"timestamp"`
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
+	CreatedBy   string `json:"createdBy"`
+	Timestamp   string `json:"timestamp"`
 }
 
 // calculateChecksum produces a deterministic HEX sha256 over a canonical JSON {meta,data}.

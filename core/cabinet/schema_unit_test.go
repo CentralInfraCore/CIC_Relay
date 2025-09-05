@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-
 // -- NewSchema() --
 
 func TestNewSchema_Success(t *testing.T) {
