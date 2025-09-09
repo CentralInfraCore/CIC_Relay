@@ -1,0 +1,114 @@
+package cabinet
+
+import (
+	"context"
+	"errors"
+	"testing"
+)
+
+func TestCanonicalizeSetPayload(t *testing.T) {
+	in := &SetPayload{
+		WorkflowID: "  wf-1  ",
+		Modules:    []ModuleID{"m2", "m1", "m2"},
+		Options:    &SetOptions{},
+	}
+	CanonicalizeSetPayload(in)
+
+	if got, want := in.WorkflowID, "wf-1"; got != want {
+		t.Fatalf("workflow trim failed: got %q want %q", got, want)
+	}
+	if len(in.Modules) != 2 || string(in.Modules[0]) != "m1" || string(in.Modules[1]) != "m2" {
+		t.Fatalf("modules dedup/sort failed: %+v", in.Modules)
+	}
+	if in.Options.Priority != "normal" {
+		t.Fatalf("default priority failed: %q", in.Options.Priority)
+	}
+}
+
+func TestValidateSet_Required(t *testing.T) {
+	// NOTE: This test doesn't need a fully initialized API/Cabinet service
+	// as it tests the initial nil/empty checks.
+	api := &API{}
+	ctx := context.Background()
+
+	testCases := []struct {
+		name    string
+		payload *SetPayload
+	}{
+		{
+			name: "empty workflow_id",
+			payload: &SetPayload{
+				WorkflowID: "",
+				Modules:    []ModuleID{"m1"},
+			},
+		},
+		{
+			name: "empty modules",
+			payload: &SetPayload{
+				WorkflowID: "wf",
+				Modules:    nil,
+			},
+		},
+		{
+			name: "invalid priority",
+			payload: &SetPayload{
+				WorkflowID: "wf",
+				Modules:    []ModuleID{"m1"},
+				Options:    &SetOptions{Priority: "weird"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := api.ValidateSet(ctx, tc.payload); err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestValidateSet_NotFound(t *testing.T) {
+	// Setup: create stores and populate them with valid objects.
+	wfStore := NewMemWorkflowStore()
+	wfStore.Put(&Workflow{Meta: BaseBlock{Name: "wf-exists", Version: "v1"}}) // ID: wf-exists@v1
+
+	modStore := NewMemModuleStore()
+	modStore.Put(&ModuleDescriptor{Meta: BaseBlock{Name: "mod-exists", Version: "v1"}}) // ID: mod-exists@v1
+
+	svc := NewCabinetService(nil, modStore, wfStore)
+	api := NewAPI(svc)
+	ctx := context.Background()
+
+	testCases := []struct {
+		name    string
+		payload *SetPayload
+	}{
+		{
+			name: "nonexistent workflow_id",
+			payload: &SetPayload{
+				WorkflowID: "wf-nonexistent",
+				Modules:    []ModuleID{"mod-exists@v1"},
+			},
+		},
+		{
+			name: "nonexistent module_id",
+			payload: &SetPayload{
+				WorkflowID: "wf-exists@v1",
+				Modules:    []ModuleID{"mod-nonexistent"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := api.ValidateSet(ctx, tc.payload)
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !errors.Is(err, ErrInvalid) {
+				t.Fatalf("expected error type %v, got %v", ErrInvalid, err)
+			}
+		})
+	}
+}
