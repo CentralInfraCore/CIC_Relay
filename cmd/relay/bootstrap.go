@@ -1,0 +1,150 @@
+package main
+
+import (
+	"embed"
+	"fmt"
+	"io/fs"
+	"log"
+	"os"
+
+	"centralrelay/core/cabinet"
+	"gopkg.in/yaml.v3"
+)
+
+// ComponentHeader defines the common fields for identifying a component type.
+type ComponentHeader struct {
+	APIVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+}
+
+// SchemaFile defines the structure of a Schema YAML file.
+type SchemaFile struct {
+	Metadata cabinet.BaseBlock `yaml:"metadata"`
+	Spec     cabinet.SchemaDef `yaml:"spec"`
+}
+
+// WorkflowFile defines the structure of a Workflow YAML file.
+type WorkflowFile struct {
+	Metadata cabinet.BaseBlock `yaml:"metadata"`
+	Spec     struct {
+		Steps []string `yaml:"steps"`
+	} `yaml:"spec"`
+}
+
+// loadEmbeddedComponents loads components from the embedded filesystem.
+// It fails hard on any error, as embedded components are considered critical.
+func loadEmbeddedComponents(svc cabinet.Cabinet, schemas embed.FS, workflows embed.FS) error {
+	if err := loadComponentsFromFS(svc, schemas, ".", true); err != nil {
+		return fmt.Errorf("failed to load embedded schemas: %w", err)
+	}
+	if err := loadComponentsFromFS(svc, workflows, ".", true); err != nil {
+		return fmt.Errorf("failed to load embedded workflows: %w", err)
+	}
+	log.Println("Successfully loaded all embedded components.")
+	return nil
+}
+
+// loadInstalledComponents loads components from a given filesystem path.
+// It logs errors for individual files but does not fail hard.
+func loadInstalledComponents(svc cabinet.Cabinet, path string) error {
+	// Check if the directory exists. If not, it's not a fatal error.
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		log.Printf("Installed components directory not found at %s, skipping.", path)
+		return nil
+	}
+
+	installedFS := os.DirFS(path)
+	if err := loadComponentsFromFS(svc, installedFS, ".", false); err != nil {
+		// This would only be a filesystem-level error, which should be fatal.
+		return fmt.Errorf("failed to load installed components from %s: %w", path, err)
+	}
+	log.Printf("Successfully loaded installed components from %s.", path)
+	return nil
+}
+
+// loadComponentsFromFS walks a filesystem and loads all valid components.
+// It can be configured to either fail hard on parsing errors or just log them.
+func loadComponentsFromFS(svc cabinet.Cabinet, fsys fs.FS, root string, failOnError bool) error {
+	return fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err // Propagate filesystem errors
+		}
+		if d.IsDir() {
+			return nil // Skip directories
+		}
+
+		content, err := fs.ReadFile(fsys, path)
+		if err != nil {
+			log.Printf("WARN: Could not read file %s: %v", path, err)
+			return nil // Continue with the next file
+		}
+
+		var header ComponentHeader
+		if err := yaml.Unmarshal(content, &header); err != nil {
+			log.Printf("WARN: Could not unmarshal component header from %s: %v", path, err)
+			return nil // Continue with the next file
+		}
+
+		var loadErr error
+		switch header.Kind {
+		case "Schema":
+			loadErr = loadSchema(svc, content)
+		case "Workflow":
+			loadErr = loadWorkflow(svc, content)
+		default:
+			log.Printf("WARN: Unknown component kind '%s' in file %s", header.Kind, path)
+		}
+
+		if loadErr != nil {
+			formattedErr := fmt.Errorf("error loading component from %s: %w", path, loadErr)
+			if failOnError {
+				return formattedErr // Fail hard
+			}
+			log.Printf("WARN: %v", formattedErr) // Log and continue
+		}
+
+		return nil
+	})
+}
+
+// loadSchema unmarshals and loads a single schema component.
+func loadSchema(svc cabinet.Cabinet, content []byte) error {
+	var file SchemaFile
+	if err := yaml.Unmarshal(content, &file); err != nil {
+		return fmt.Errorf("unmarshal schema file: %w", err)
+	}
+
+	schema, err := cabinet.NewSchema(file.Metadata, file.Spec)
+	if err != nil {
+		return fmt.Errorf("schema validation: %w", err)
+	}
+
+	if _, err := svc.GetSchema(schema.ID()); err == nil {
+		log.Printf("INFO: Overwriting existing schema with ID: %s", schema.ID())
+	}
+
+	return svc.PutSchema(schema)
+}
+
+// loadWorkflow unmarshals and loads a single workflow component.
+func loadWorkflow(svc cabinet.Cabinet, content []byte) error {
+	var file WorkflowFile
+	if err := yaml.Unmarshal(content, &file); err != nil {
+		return fmt.Errorf("unmarshal workflow file: %w", err)
+	}
+
+	workflow := &cabinet.Workflow{
+		Meta:  file.Metadata,
+		Steps: file.Spec.Steps,
+	}
+
+	if err := workflow.Validate(); err != nil {
+		return fmt.Errorf("workflow validation: %w", err)
+	}
+
+	if _, err := svc.GetWorkflow(workflow.ID()); err == nil {
+		log.Printf("INFO: Overwriting existing workflow with ID: %s", workflow.ID())
+	}
+
+	return svc.PutWorkflow(workflow)
+}

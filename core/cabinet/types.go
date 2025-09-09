@@ -1,5 +1,8 @@
 package cabinet
 
+// ModuleID a modul egyedi azonosítója (string alias).
+type ModuleID string
+
 // BaseBlock: minden objektum közös metaadatait és validációs jellemzőit tartalmazza.
 type BaseBlock struct {
 	Name        string

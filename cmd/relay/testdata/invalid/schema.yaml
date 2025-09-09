@@ -1,0 +1,4 @@
+kind: Schema
+metadata:
+  # Name is missing, this will cause a validation error
+  version: "1.0"

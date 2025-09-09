@@ -26,9 +26,9 @@ func (c *cabinetService) PutSchema(s *Schema) error {
 	if err := s.Validate(); err != nil {
 		return err
 	}
-	//    if prev, exists := c.schemas.Put(s); exists && prev.Checksum != s.Checksum {
-	//        return ErrConflict
-	//    }
+	// The store's Put method handles the actual storage.
+	// The overwrite logic is handled by the caller (e.g., in bootstrap.go).
+	c.schemas.Put(s)
 	return nil
 }
 
@@ -43,9 +43,7 @@ func (c *cabinetService) PutModule(m *ModuleDescriptor) error {
 	if err := m.Validate(); err != nil {
 		return err
 	}
-	//    if prev, exists := c.modules.Put(m); exists && prev.Checksum != m.Checksum {
-	//        return ErrConflict
-	//    }
+	c.modules.Put(m)
 	return nil
 }
 
@@ -60,9 +58,7 @@ func (c *cabinetService) PutWorkflow(w *Workflow) error {
 	if err := w.Validate(); err != nil {
 		return err
 	}
-	//    if prev, exists := c.workflows.Put(w); exists && prev.Checksum != w.Checksum {
-	//        return ErrConflict
-	//    }
+	c.workflows.Put(w)
 	return nil
 }
 
