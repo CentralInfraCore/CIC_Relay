@@ -36,6 +36,7 @@ type ModuleDescriptor struct {
 	Type       string   // pl. "executor", "validator"
 	Accepts    []string // mely sémákat tud kezelni
 	OutputKeys []string // milyen kulcsokat figyelhet meg vagy generálhat
+	WasmCode   []byte   // A WASM modul bináris tartalma
 }
 
 // Workflow: végrehajtási lépések listája, gráf formában – sémákra hivatkozva.

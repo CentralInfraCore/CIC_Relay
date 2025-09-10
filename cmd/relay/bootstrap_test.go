@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"embed"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,6 +28,10 @@ var invalidSchemaFS embed.FS
 
 //go:embed testdata/invalid/workflow.yaml
 var invalidWorkflowFS embed.FS
+
+//go:embed testdata/modules/test_module.yaml
+//go:embed testdata/modules/test_module.wasm
+var testModuleFS embed.FS
 
 func TestLoadEmbeddedComponents(t *testing.T) {
 	// 1. Setup
@@ -61,6 +66,65 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 		err := loadEmbeddedComponents(svc, testSchemas, invalidWorkflowFS)
 		assert.Error(t, err, "expected an error when loading invalid embedded workflow components")
 		assert.Contains(t, err.Error(), "failed to load embedded workflows", "error message should indicate which part failed")
+	})
+}
+
+func TestLoadModule(t *testing.T) {
+	// 1. Setup
+	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+
+	// Read the expected WASM code directly from the embedded FS for comparison
+	expectedWasmCode, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.wasm")
+	require.NoError(t, err)
+
+	t.Run("successful module load", func(t *testing.T) {
+		// Load the module YAML and WASM from the embedded FS
+		yamlContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.yaml")
+		require.NoError(t, err)
+
+		// 2. Execute
+		err = loadModule(svc, testModuleFS, "testdata/modules/test_module.yaml", yamlContent)
+		require.NoError(t, err, "loadModule should not return an error for a valid module")
+
+		// 3. Verify
+		loadedModule, err := svc.GetModule("test.module@1.0")
+		assert.NoError(t, err, "Module should be loaded into the cabinet")
+		assert.Equal(t, expectedWasmCode, loadedModule.WasmCode, "Loaded module should contain the correct WASM code")
+		assert.True(t, loadedModule.Meta.Valid, "Loaded module should be valid")
+	})
+
+	t.Run("missing wasm file", func(t *testing.T) {
+		// Create a temporary FS that contains only the YAML, but no WASM
+		tempFS := os.DirFS(t.TempDir())
+		missingWasmYamlPath := "missing_wasm.yaml"
+		missingWasmYamlContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: missing.wasm
+  version: "1.0"
+  checksum: "any"
+`)
+		require.NoError(t, os.WriteFile(filepath.Join(t.TempDir(), missingWasmYamlPath), missingWasmYamlContent, 0644))
+
+		// Execute loadModule with a FS that doesn't contain the WASM file
+		err := loadModule(svc, tempFS, missingWasmYamlPath, missingWasmYamlContent)
+		assert.Error(t, err, "loadModule should return an error if WASM file is missing")
+		assert.Contains(t, err.Error(), "read WASM file", "Error message should indicate WASM file read issue")
+	})
+
+	t.Run("checksum mismatch", func(t *testing.T) {
+		// Load the module YAML from the embedded FS
+		yamlContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.yaml")
+		require.NoError(t, err)
+
+		// Modify the YAML content to have an incorrect checksum
+		modifiedYamlContent := strings.Replace(string(yamlContent), "checksum: \"c8244585941d285659e23525cdcd35bf16fee357831e563498759cef4364d00a\"", "checksum: \"badchecksum\"", 1)
+
+		// Execute loadModule with the modified YAML content and the actual WASM code
+		err = loadModule(svc, testModuleFS, "testdata/modules/test_module.yaml", []byte(modifiedYamlContent))
+		assert.Error(t, err, "loadModule should return an error for checksum mismatch")
+		assert.Contains(t, err.Error(), "checksum mismatch", "Error message should indicate checksum mismatch")
 	})
 }
 

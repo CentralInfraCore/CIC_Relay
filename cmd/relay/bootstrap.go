@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"centralrelay/core/cabinet"
 	"gopkg.in/yaml.v3"
@@ -25,10 +27,18 @@ type SchemaFile struct {
 
 // WorkflowFile defines the structure of a Workflow YAML file.
 type WorkflowFile struct {
-	Metadata cabinet.BaseBlock `yaml:"metadata"`
+	Metadata cabinet.BaseBlock `yaml:"metadata"`	
 	Spec     struct {
 		Steps []string `yaml:"steps"`
 	} `yaml:"spec"`
+}
+
+// ModuleFile defines the structure of a Module YAML file.
+type ModuleFile struct {
+	Metadata cabinet.BaseBlock `yaml:"metadata"`
+	Type       string   `yaml:"type"`
+	Accepts    []string `yaml:"accepts"`
+	OutputKeys []string `yaml:"outputKeys"`
 }
 
 // loadEmbeddedComponents loads components from the embedded filesystem.
@@ -91,6 +101,8 @@ func loadComponentsFromFS(svc cabinet.Cabinet, fsys fs.FS, root string, failOnEr
 			loadErr = loadSchema(svc, content)
 		case "Workflow":
 			loadErr = loadWorkflow(svc, content)
+		case "Module":
+			loadErr = loadModule(svc, fsys, path, content)
 		default:
 			log.Printf("WARN: Unknown component kind '%s' in file %s", header.Kind, path)
 		}
@@ -147,4 +159,40 @@ func loadWorkflow(svc cabinet.Cabinet, content []byte) error {
 	}
 
 	return svc.PutWorkflow(workflow)
+}
+
+// loadModule unmarshals a module descriptor, reads its associated WASM file,
+// and loads the module into the cabinet.
+func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []byte) error {
+	var file ModuleFile
+	if err := yaml.Unmarshal(yamlContent, &file); err != nil {
+		return fmt.Errorf("unmarshal module file: %w", err)
+	}
+
+	// Construct the WASM file path based on the YAML file path.
+	// Assumes WASM file has the same base name but with .wasm extension.
+	wasmPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".wasm"
+
+	wasmCode, err := fs.ReadFile(fsys, wasmPath)
+	if err != nil {
+		return fmt.Errorf("read WASM file %q: %w", wasmPath, err)
+	}
+
+	moduleDesc := &cabinet.ModuleDescriptor{
+		Meta:       file.Metadata,
+		Type:       file.Type,
+		Accepts:    file.Accepts,
+		OutputKeys: file.OutputKeys,
+		WasmCode:   wasmCode,
+	}
+
+	if err := moduleDesc.Validate(); err != nil {
+		return fmt.Errorf("module validation: %w", err)
+	}
+
+	if _, err := svc.GetModule(moduleDesc.ID()); err == nil {
+		log.Printf("INFO: Overwriting existing module with ID: %s", moduleDesc.ID())
+	}
+
+	return svc.PutModule(moduleDesc)
 }
