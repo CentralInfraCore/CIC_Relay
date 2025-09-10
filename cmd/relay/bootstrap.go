@@ -83,6 +83,11 @@ func loadComponentsFromFS(svc cabinet.Cabinet, fsys fs.FS, root string, failOnEr
 			return nil // Skip directories
 		}
 
+		// Skip non-YAML files, especially .wasm files, as they are handled by loadModule
+		if filepath.Ext(path) != ".yaml" && filepath.Ext(path) != ".yml" {
+			return nil // Skip non-YAML files
+		}
+
 		content, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			log.Printf("WARN: Could not read file %s: %v", path, err)

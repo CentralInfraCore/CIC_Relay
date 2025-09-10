@@ -272,7 +272,7 @@ metadata:
   name: test.module
   version: "1.0"
   description: "This is the OVERWRITTEN module."
-  checksum: "c8244585941d285659e23525cdcd35bf16fee357831e563498759cef4364d00a"
+  checksum: "5077136a4499d093d4fc0efecd075f855dfd404835c8e0b61a14d8517dd53808"
 type: executor
 accepts:
   - "test.schema@1.0"
@@ -285,8 +285,8 @@ outputKeys:
 
 		// Write the YAML and WASM to the temporary directory
 		moduleYamlPath := filepath.Join(tempDir, "overwrite_module.yaml")
-		moduleWasmPath := filepath.Join(tempDir, "overwrite_module.wasm") // Corrected WASM file name
 		require.NoError(t, os.WriteFile(moduleYamlPath, overwriteContent, 0644))
+		moduleWasmPath := filepath.Join(tempDir, "overwrite_module.wasm") // Corrected WASM file name
 		require.NoError(t, os.WriteFile(moduleWasmPath, wasmContent, 0644))
 
 		// 2. Execute
