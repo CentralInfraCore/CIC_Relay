@@ -15,10 +15,10 @@ type SetOptions struct {
 // SetPayload a Set belépési kérés kanonikus reprezentációja.
 // A Modules csak hivatkozás; semmi sincs példányosítva.
 type SetPayload struct {
-	WorkflowID string                 `json:"workflow_id" yaml:"workflow_id"`
-	Modules    []ModuleID             `json:"modules"     yaml:"modules"`
-	Payload    map[string]any         `json:"payload"     yaml:"payload"`
-	Options    *SetOptions            `json:"options,omitempty" yaml:"options,omitempty"`
+	WorkflowID string         `json:"workflow_id" yaml:"workflow_id"`
+	Modules    []ModuleID     `json:"modules"     yaml:"modules"`
+	Payload    map[string]any `json:"payload"     yaml:"payload"`
+	Options    *SetOptions    `json:"options,omitempty" yaml:"options,omitempty"`
 }
 
 // CanonicalizeSetPayload normalizálja a bemenetet (trim, dedup/sort, defaultok).
@@ -48,4 +48,3 @@ func CanonicalizeSetPayload(in *SetPayload) {
 		in.Modules = uniq
 	}
 }
-

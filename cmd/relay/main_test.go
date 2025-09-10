@@ -2,14 +2,49 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"centralrelay/core/cabinet"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// --- Mock Cabinet Service for testing error propagation ---
+// This mock implements the full cabinet.Cabinet interface.
+type mockCabinetService struct {
+	SetFunc func(ctx context.Context, p *cabinet.SetPayload) (*cabinet.SetResponse, error)
+}
+
+func (m *mockCabinetService) Set(ctx context.Context, p *cabinet.SetPayload) (*cabinet.SetResponse, error) {
+	if m.SetFunc != nil {
+		return m.SetFunc(ctx, p)
+	}
+	return &cabinet.SetResponse{}, nil // Default success
+}
+
+// GetWorkflow simulates finding a workflow to allow ValidateSet to pass.
+func (m *mockCabinetService) GetWorkflow(id string) (*cabinet.Workflow, error) {
+	return &cabinet.Workflow{}, nil
+}
+
+// GetModule simulates finding a module to allow ValidateSet to pass.
+func (m *mockCabinetService) GetModule(id string) (*cabinet.ModuleDescriptor, error) {
+	return &cabinet.ModuleDescriptor{}, nil
+}
+
+// Other interface methods are stubbed out.
+func (m *mockCabinetService) PutSchema(s *cabinet.Schema) error             { return nil }
+func (m *mockCabinetService) GetSchema(id string) (*cabinet.Schema, error) { return &cabinet.Schema{}, nil }
+func (m *mockCabinetService) PutModule(md *cabinet.ModuleDescriptor) error { return nil }
+func (m *mockCabinetService) PutWorkflow(w *cabinet.Workflow) error         { return nil }
 
 func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 	// stub ListenAndServe: ne nyisson portot, csak ellenőrizzük a paramétereket
@@ -30,7 +65,11 @@ func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 	var logBuf bytes.Buffer
 	logger := log.New(&logBuf, "", 0)
 
-	err := run(":12345", logger)
+	// Create a dummy relayServer for the test
+	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Use mock for safety
+	dummyServer := &relayServer{api: dummyAPI}
+
+	err := run(":12345", logger, dummyServer)
 	if err != nil {
 		t.Fatalf("run returned error: %v", err)
 	}
@@ -82,8 +121,112 @@ func TestRun_PropagatesListenError(t *testing.T) {
 	var logBuf bytes.Buffer
 	logger := log.New(&logBuf, "", 0)
 
-	err := run(":0", logger)
+	// Create a dummy relayServer for the test
+	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Use mock for safety
+	dummyServer := &relayServer{api: dummyAPI}
+
+	err := run(":0", logger, dummyServer)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("run err = %v, want %v", err, wantErr)
 	}
+}
+
+// --- New tests for setHandler ---
+
+func TestSetHandler(t *testing.T) {
+	// 1. Setup
+	// Create a real cabinet service and load the embedded components
+	// so we have a valid workflow to call.
+	schemaStore := cabinet.NewMemSchemaStore()
+	workflowStore := cabinet.NewMemWorkflowStore()
+	moduleStore := cabinet.NewMemModuleStore()
+	cabinetSvc := cabinet.NewCabinetService(schemaStore, moduleStore, workflowStore)
+	// We need to load the components used in the test payload
+	require.NoError(t, cabinetSvc.PutSchema(&cabinet.Schema{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}}))
+	require.NoError(t, cabinetSvc.PutWorkflow(&cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "core.ping.flow", Version: "1.0.0"}, Steps: []string{"core.ping@1.0.0"}}))
+	require.NoError(t, cabinetSvc.PutModule(&cabinet.ModuleDescriptor{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}}))
+
+	api := cabinet.NewAPI(cabinetSvc)
+	server := &relayServer{api: api}
+
+	t.Run("successful set", func(t *testing.T) {
+		payload := `{
+			"workflow_id": "core.ping.flow@1.0.0",
+			"modules": ["core.ping@1.0.0"]
+		}`
+
+		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
+		w := httptest.NewRecorder()
+
+		server.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+
+		var respBody cabinet.SetResponse
+		require.NoError(t, json.NewDecoder(res.Body).Decode(&respBody))
+		assert.NotNil(t, respBody.Results)
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		payload := `{"workflow_id": "test"` // Malformed JSON
+
+		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
+		w := httptest.NewRecorder()
+
+		server.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+		body, _ := io.ReadAll(res.Body)
+		assert.Contains(t, string(body), "Invalid JSON payload")
+	})
+
+	t.Run("validation error from cabinet", func(t *testing.T) {
+		// This workflow does not exist in the store
+		payload := `{"workflow_id": "non.existent.flow@1.0.0", "modules": ["core.ping@1.0.0"]}`
+
+		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
+		w := httptest.NewRecorder()
+
+		server.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+		body, _ := io.ReadAll(res.Body)
+		assert.Contains(t, string(body), "Invalid request")
+		assert.Contains(t, string(body), "workflow_id not found")
+	})
+
+	t.Run("unsupported method", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/set", nil)
+		w := httptest.NewRecorder()
+
+		server.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
+	})
+
+	t.Run("internal server error", func(t *testing.T) {
+		// Setup a mock service that always returns a generic error
+		mockSvc := &mockCabinetService{
+			SetFunc: func(ctx context.Context, p *cabinet.SetPayload) (*cabinet.SetResponse, error) {
+				return nil, errors.New("a generic internal error")
+			},
+		}
+		mockAPI := cabinet.NewAPI(mockSvc)
+		mockServer := &relayServer{api: mockAPI}
+
+		payload := `{"workflow_id": "any", "modules": ["any"]}`
+		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
+		w := httptest.NewRecorder()
+
+		mockServer.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+		body, _ := io.ReadAll(res.Body)
+		assert.Contains(t, string(body), "Internal server error")
+	})
 }

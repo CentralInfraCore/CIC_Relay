@@ -18,8 +18,8 @@ func ExampleAPI_Set_minimal() {
 	api := NewAPI(svc)
 
 	req := &SetPayload{
-		WorkflowID: "wf.compile@v1", // Corrected to match ID() format
-		Modules:    []ModuleID{"modA@v1"},    // Corrected to match ID() format
+		WorkflowID: "wf.compile@v1",       // Corrected to match ID() format
+		Modules:    []ModuleID{"modA@v1"}, // Corrected to match ID() format
 		Payload:    map[string]any{"source": "int main(){}"},
 	}
 
@@ -27,7 +27,6 @@ func ExampleAPI_Set_minimal() {
 	// For a minimal example, we can put them directly into the stores
 	wfStore.Put(&Workflow{Meta: BaseBlock{Name: "wf.compile", Version: "v1"}})
 	modStore.Put(&ModuleDescriptor{Meta: BaseBlock{Name: "modA", Version: "v1"}})
-
 
 	res, err := api.Set(context.Background(), req)
 	if err != nil {

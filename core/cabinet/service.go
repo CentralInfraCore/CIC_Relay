@@ -1,5 +1,7 @@
 package cabinet
 
+import "context"
+
 // Cabinet defines the central API for schema/module/workflow management.
 type Cabinet interface {
 	PutSchema(s *Schema) error
@@ -10,6 +12,9 @@ type Cabinet interface {
 
 	PutWorkflow(w *Workflow) error
 	GetWorkflow(id string) (*Workflow, error)
+
+	// Set executes a workflow based on the payload.
+	Set(ctx context.Context, in *SetPayload) (*SetResponse, error)
 }
 
 type cabinetService struct {
@@ -22,12 +27,19 @@ func NewCabinetService(schemas SchemaStore, modules ModuleStore, workflows Workf
 	return &cabinetService{schemas: schemas, modules: modules, workflows: workflows}
 }
 
+// Set is the service-level implementation. The actual workflow execution is not yet implemented.
+func (c *cabinetService) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
+	// TODO: Implement workflow execution logic here.
+	return &SetResponse{
+		Results:  map[string]any{},
+		Warnings: nil,
+	}, nil
+}
+
 func (c *cabinetService) PutSchema(s *Schema) error {
 	if err := s.Validate(); err != nil {
 		return err
 	}
-	// The store's Put method handles the actual storage.
-	// The overwrite logic is handled by the caller (e.g., in bootstrap.go).
 	c.schemas.Put(s)
 	return nil
 }
