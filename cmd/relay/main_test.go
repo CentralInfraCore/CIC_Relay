@@ -135,21 +135,26 @@ func TestRun_PropagatesListenError(t *testing.T) {
 
 func TestSetHandler(t *testing.T) {
 	// 1. Setup
-	// Create a real cabinet service and load the embedded components
-	// so we have a valid workflow to call.
+	// Create a real cabinet service and load the necessary components for the tests.
 	schemaStore := cabinet.NewMemSchemaStore()
 	workflowStore := cabinet.NewMemWorkflowStore()
 	moduleStore := cabinet.NewMemModuleStore()
 	cabinetSvc := cabinet.NewCabinetService(schemaStore, moduleStore, workflowStore)
+
 	// We need to load the components used in the test payload
-	require.NoError(t, cabinetSvc.PutSchema(&cabinet.Schema{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}}))
-	require.NoError(t, cabinetSvc.PutWorkflow(&cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "core.ping.flow", Version: "1.0.0"}, Steps: []string{"core.ping@1.0.0"}}))
-	require.NoError(t, cabinetSvc.PutModule(&cabinet.ModuleDescriptor{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}}))
+	pingSchema := &cabinet.Schema{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}}
+	pingModule := &cabinet.ModuleDescriptor{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}, Accepts: []string{pingSchema.ID()}}
+	pingWorkflow := &cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "core.ping.flow", Version: "1.0.0"}, Steps: []string{pingSchema.ID()}}
+
+	require.NoError(t, cabinetSvc.PutSchema(pingSchema))
+	require.NoError(t, cabinetSvc.PutWorkflow(pingWorkflow))
+	require.NoError(t, cabinetSvc.PutModule(pingModule))
 
 	api := cabinet.NewAPI(cabinetSvc)
 	server := &relayServer{api: api}
 
 	t.Run("successful set", func(t *testing.T) {
+		// Corrected payload with modules as a simple array of strings
 		payload := `{
 			"workflow_id": "core.ping.flow@1.0.0",
 			"modules": ["core.ping@1.0.0"]
@@ -183,7 +188,7 @@ func TestSetHandler(t *testing.T) {
 	})
 
 	t.Run("validation error from cabinet", func(t *testing.T) {
-		// This workflow does not exist in the store
+		// Corrected payload with modules as a simple array of strings
 		payload := `{"workflow_id": "non.existent.flow@1.0.0", "modules": ["core.ping@1.0.0"]}`
 
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))

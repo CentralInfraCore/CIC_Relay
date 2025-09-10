@@ -1,6 +1,9 @@
 package cabinet
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Cabinet defines the central API for schema/module/workflow management.
 type Cabinet interface {
@@ -27,9 +30,61 @@ func NewCabinetService(schemas SchemaStore, modules ModuleStore, workflows Workf
 	return &cabinetService{schemas: schemas, modules: modules, workflows: workflows}
 }
 
-// Set is the service-level implementation. The actual workflow execution is not yet implemented.
+// Set resolves the execution plan and (in the future) runs the workflow.
 func (c *cabinetService) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
-	// TODO: Implement workflow execution logic here.
+	// 1. Resolve the workflow itself.
+	workflow, err := c.GetWorkflow(in.WorkflowID)
+	if err != nil {
+		// This should have been caught by ValidateSet, but we check again for safety.
+		return nil, fmt.Errorf("failed to resolve workflow %q: %w", in.WorkflowID, err)
+	}
+
+	// 2. Build the execution plan by resolving each step.
+	var executionPlan []map[string]string
+
+	for _, schemaID := range workflow.Steps {
+		// 2a. Resolve the schema for the current step.
+		schema, err := c.GetSchema(schemaID)
+		if err != nil {
+			return nil, fmt.Errorf("workflow %q failed: could not resolve step schema %q: %w", workflow.ID(), schemaID, err)
+		}
+
+		// 2b. Find a suitable module from the payload that accepts this schema.
+		var foundModuleID ModuleID = ""
+		for _, moduleID := range in.Modules {
+			moduleDesc, err := c.GetModule(string(moduleID))
+			if err != nil {
+				// This should also be caught by ValidateSet.
+				return nil, fmt.Errorf("workflow %q failed: could not resolve provided module %q: %w", workflow.ID(), moduleID, err)
+			}
+
+			for _, acceptedSchemaID := range moduleDesc.Accepts {
+				if acceptedSchemaID == schema.ID() {
+					foundModuleID = moduleID
+					break
+				}
+			}
+			if foundModuleID != "" {
+				break
+			}
+		}
+
+		if foundModuleID == "" {
+			return nil, fmt.Errorf("%w: no suitable module provided for schema %q in workflow %q", ErrInvalid, schema.ID(), workflow.ID())
+		}
+
+		planStep := map[string]string{
+			"step":   schemaID,
+			"schema": schema.ID(),
+			"module": string(foundModuleID),
+		}
+		executionPlan = append(executionPlan, planStep)
+	}
+
+	// TODO: Implement the actual execution of the plan (e.g., dispatching to WASM modules).
+	// For now, return an empty Results map to conform to existing tests.
+	// The executionPlan can be logged or used internally in the future.
+
 	return &SetResponse{
 		Results:  map[string]any{},
 		Warnings: nil,
