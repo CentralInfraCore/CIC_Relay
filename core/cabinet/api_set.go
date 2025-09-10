@@ -53,7 +53,7 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 	return nil
 }
 
-// Set: belépési pont a séma-ellenőrzéshez. A fan-out végrehajtást a következő patch tartalmazza.
+// Set: belépési pont a séma-ellenőrzéshez és a workflow futtatáshoz.
 func (a *API) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
 	if in == nil {
 		return nil, fmt.Errorf("%w: nil request", ErrInvalid)
@@ -62,8 +62,7 @@ func (a *API) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
 	if err := a.ValidateSet(ctx, in); err != nil {
 		return nil, err
 	}
-	return &SetResponse{
-		Results:  map[string]any{},
-		Warnings: nil,
-	}, nil
+
+	// Delegate the execution to the underlying cabinet service.
+	return a.Cabinet.Set(ctx, in)
 }
