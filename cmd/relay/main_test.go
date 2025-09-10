@@ -46,6 +46,11 @@ func (m *mockCabinetService) GetSchema(id string) (*cabinet.Schema, error) { ret
 func (m *mockCabinetService) PutModule(md *cabinet.ModuleDescriptor) error { return nil }
 func (m *mockCabinetService) PutWorkflow(w *cabinet.Workflow) error         { return nil }
 
+// Close implements the Close method of the cabinet.Cabinet interface.
+func (m *mockCabinetService) Close(ctx context.Context) error {
+	return nil // No-op for mock
+}
+
 func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 	// stub ListenAndServe: ne nyisson portot, csak ellenőrizzük a paramétereket
 	called := false
@@ -66,7 +71,7 @@ func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 	logger := log.New(&logBuf, "", 0)
 
 	// Create a dummy relayServer for the test
-	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Use mock for safety
+	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
 	dummyServer := &relayServer{api: dummyAPI}
 
 	err := run(":12345", logger, dummyServer)
@@ -122,7 +127,7 @@ func TestRun_PropagatesListenError(t *testing.T) {
 	logger := log.New(&logBuf, "", 0)
 
 	// Create a dummy relayServer for the test
-	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Use mock for safety
+	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
 	dummyServer := &relayServer{api: dummyAPI}
 
 	err := run(":0", logger, dummyServer)
@@ -140,7 +145,6 @@ func TestSetHandler(t *testing.T) {
 	workflowStore := cabinet.NewMemWorkflowStore()
 	moduleStore := cabinet.NewMemModuleStore()
 	cabinetSvc := cabinet.NewCabinetService(schemaStore, moduleStore, workflowStore)
-
 	// We need to load the components used in the test payload
 	pingSchema := &cabinet.Schema{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}}
 	pingModule := &cabinet.ModuleDescriptor{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}, Accepts: []string{pingSchema.ID()}}
@@ -188,7 +192,7 @@ func TestSetHandler(t *testing.T) {
 	})
 
 	t.Run("validation error from cabinet", func(t *testing.T) {
-		// Corrected payload with modules as a simple array of strings
+		// This workflow does not exist in the store
 		payload := `{"workflow_id": "non.existent.flow@1.0.0", "modules": ["core.ping@1.0.0"]}`
 
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))

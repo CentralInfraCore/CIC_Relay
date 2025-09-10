@@ -3,6 +3,8 @@ package cabinet
 import (
 	"context"
 	"fmt"
+
+	"github.com/tetratelabs/wazero"
 )
 
 // Cabinet defines the central API for schema/module/workflow management.
@@ -18,16 +20,22 @@ type Cabinet interface {
 
 	// Set executes a workflow based on the payload.
 	Set(ctx context.Context, in *SetPayload) (*SetResponse, error)
+
+	// Close closes the underlying resources, like the WASM runtime.
+	Close(ctx context.Context) error
 }
 
 type cabinetService struct {
 	schemas   SchemaStore
 	modules   ModuleStore
 	workflows WorkflowStore
+	runtime   wazero.Runtime
 }
 
 func NewCabinetService(schemas SchemaStore, modules ModuleStore, workflows WorkflowStore) Cabinet {
-	return &cabinetService{schemas: schemas, modules: modules, workflows: workflows}
+	// Create a new WebAssembly Runtime.
+	r := wazero.NewRuntime(context.Background())
+	return &cabinetService{schemas: schemas, modules: modules, workflows: workflows, runtime: r}
 }
 
 // Set resolves the execution plan and (in the future) runs the workflow.
@@ -82,13 +90,15 @@ func (c *cabinetService) Set(ctx context.Context, in *SetPayload) (*SetResponse,
 	}
 
 	// TODO: Implement the actual execution of the plan (e.g., dispatching to WASM modules).
-	// For now, return an empty Results map to conform to existing tests.
-	// The executionPlan can be logged or used internally in the future.
 
 	return &SetResponse{
 		Results:  map[string]any{},
 		Warnings: nil,
 	}, nil
+}
+
+func (c *cabinetService) Close(ctx context.Context) error {
+	return c.runtime.Close(ctx)
 }
 
 func (c *cabinetService) PutSchema(s *Schema) error {
