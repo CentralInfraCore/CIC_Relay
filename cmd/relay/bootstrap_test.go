@@ -108,7 +108,7 @@ metadata:
 		require.NoError(t, os.WriteFile(filepath.Join(t.TempDir(), missingWasmYamlPath), missingWasmYamlContent, 0644))
 
 		// Execute loadModule with a FS that doesn't contain the WASM file
-		err := loadModule(svc, tempFS, missingWasmYamlPath, missingWasmYamlContent)
+		err = loadModule(svc, tempFS, missingWasmYamlPath, missingWasmYamlContent)
 		assert.Error(t, err, "loadModule should return an error if WASM file is missing")
 		assert.Contains(t, err.Error(), "read WASM file", "Error message should indicate WASM file read issue")
 	})
@@ -121,8 +121,9 @@ metadata:
 		// Modify the YAML content to have an incorrect checksum
 		modifiedYamlContent := strings.Replace(string(yamlContent), "checksum: \"c8244585941d285659e23525cdcd35bf16fee357831e563498759cef4364d00a\"", "checksum: \"badchecksum\"", 1)
 
-		// Execute loadModule with the modified YAML content and the actual WASM code
-		err = loadModule(svc, testModuleFS, "testdata/modules/test_module.yaml", []byte(modifiedYamlContent))
+                // IMPORTANT: keep the original embedded YAML path so loadModule finds the WASM next to it in testModuleFS
+                embeddedYamlPath := "testdata/modules/test_module.yaml"
+                err = loadModule(svc, testModuleFS, embeddedYamlPath, []byte(modifiedYamlContent))
 		assert.Error(t, err, "loadModule should return an error for checksum mismatch")
 		assert.Contains(t, err.Error(), "checksum mismatch", "Error message should indicate checksum mismatch")
 	})
@@ -139,6 +140,8 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	defer func() {
 		log.SetOutput(os.Stderr)
 	}()
+
+	var err error // Declare err here once
 
 	testCases := []struct {
 		name              string
@@ -190,15 +193,13 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	}
 
 	// 2. Execute
-	err := loadInstalledComponents(svc, tempDir)
+	err = loadInstalledComponents(svc, tempDir)
 	require.NoError(t, err, "loadInstalledComponents should not return a fatal error for invalid files")
 
 	// 3. Verify log output
 	logOutput := logBuf.String()
 	for _, tc := range testCases {
-		t.Run(tc.name+"_log_check", func(t *testing.T) {
 			assert.True(t, strings.Contains(logOutput, tc.expectedLogString), "expected log to contain %q, but it was:\n%s", tc.expectedLogString, logOutput)
-		})
 	}
 }
 
@@ -209,6 +210,8 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 
 	// Load embedded components first
 	require.NoError(t, loadEmbeddedComponents(svc, testSchemas, testWorkflows))
+
+	var err error // Declare err here once
 
 	t.Run("overwrite schema", func(t *testing.T) {
 		// Create an installed schema that overwrites the embedded one
@@ -225,7 +228,7 @@ spec: {}
 		require.NoError(t, os.WriteFile(path, []byte(overwriteContent), 0644))
 
 		// 2. Execute
-		err := loadInstalledComponents(svc, tempDir)
+		err = loadInstalledComponents(svc, tempDir)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -250,7 +253,7 @@ spec:
 		require.NoError(t, os.WriteFile(path, []byte(overwriteContent), 0644))
 
 		// 2. Execute
-		err := loadInstalledComponents(svc, tempDir)
+		err = loadInstalledComponents(svc, tempDir)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -259,14 +262,54 @@ spec:
 		assert.Equal(t, "This is the OVERWRITTEN workflow.", loadedWorkflow.Meta.Description, "The workflow should have been overwritten by the installed version")
 		assert.Equal(t, []string{"new.step"}, loadedWorkflow.Steps, "The workflow steps should have been overwritten")
 	})
+
+	t.Run("overwrite module", func(t *testing.T) {
+		// Create an installed module that overwrites the embedded one
+		overwriteContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: test.module
+  version: "1.0"
+  description: "This is the OVERWRITTEN module."
+  checksum: "c8244585941d285659e23525cdcd35bf16fee357831e563498759cef4364d00a"
+type: executor
+accepts:
+  - "test.schema@1.0"
+outputKeys:
+  - "new.result"
+`)
+		// Need to also provide the WASM file for the overwrite to work
+		wasmContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.wasm")
+		require.NoError(t, err)
+
+		// Write the YAML and WASM to the temporary directory
+		moduleYamlPath := filepath.Join(tempDir, "overwrite_module.yaml")
+		moduleWasmPath := filepath.Join(tempDir, "overwrite_module.wasm") // Corrected WASM file name
+		require.NoError(t, os.WriteFile(moduleYamlPath, overwriteContent, 0644))
+		require.NoError(t, os.WriteFile(moduleWasmPath, wasmContent, 0644))
+
+		// 2. Execute
+		err = loadInstalledComponents(svc, tempDir)
+		require.NoError(t, err)
+
+		// 3. Verify
+		loadedModule, err := svc.GetModule("test.module@1.0")
+		require.NoError(t, err)
+		assert.Equal(t, "This is the OVERWRITTEN module.", loadedModule.Meta.Description, "The module should have been overwritten by the installed version")
+		assert.Contains(t, loadedModule.OutputKeys, "new.result", "The module output keys should have been overwritten")
+	})
 }
 
 func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 
+	// Declare err here once
+	var err error
+
 	t.Run("non-existent path", func(t *testing.T) {
 		// A non-existent path should be skipped and not return an error.
-		err := loadInstalledComponents(svc, "/path/to/non/existent/dir")
+		err = loadInstalledComponents(svc, "/path/to/non/existent/dir")
 		assert.NoError(t, err)
 	})
 

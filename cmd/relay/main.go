@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -95,6 +96,7 @@ func main() {
 	moduleStore := cabinet.NewMemModuleStore()
 
 	cabinetSvc := cabinet.NewCabinetService(schemaStore, moduleStore, workflowStore)
+	defer cabinetSvc.Close(context.Background()) // Ensure WASM runtime is closed
 	log.Println("Cabinet service initialized.")
 
 	// --- Component Loading ---
