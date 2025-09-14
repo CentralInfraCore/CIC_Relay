@@ -18,15 +18,25 @@ func ExampleAPI_Set_minimal() {
 	api := NewAPI(svc)
 
 	req := &SetPayload{
-		WorkflowID: "wf.compile@v1",       // Corrected to match ID() format
-		Modules:    []ModuleID{"modA@v1"}, // Corrected to match ID() format
+		WorkflowID: "wf.compile@v1",
+		Modules:    []ModuleID{"modA@v1"},
 		Payload:    map[string]any{"source": "int main(){}"},
 	}
 
-	// To make the example pass, we need to ensure "wf.compile" and "modA" exist in the stores
-	// For a minimal example, we can put them directly into the stores
-	wfStore.Put(&Workflow{Meta: BaseBlock{Name: "wf.compile", Version: "v1"}})
-	modStore.Put(&ModuleDescriptor{Meta: BaseBlock{Name: "modA", Version: "v1"}})
+	// To make the example pass, we must use the constructors to create valid objects with checksums.
+	wf, err := NewWorkflow(BaseBlock{Name: "wf.compile", Version: "v1"}, nil)
+	if err != nil {
+		fmt.Println("setup error (workflow):", err)
+		return
+	}
+	wfStore.Put(wf)
+
+	mod, err := NewModuleDescriptor(BaseBlock{Name: "modA", Version: "v1"}, "", nil, nil, nil)
+	if err != nil {
+		fmt.Println("setup error (module):", err)
+		return
+	}
+	modStore.Put(mod)
 
 	res, err := api.Set(context.Background(), req)
 	if err != nil {

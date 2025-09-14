@@ -1,5 +1,33 @@
 package cabinet
 
+// NewModuleDescriptor constructs a ModuleDescriptor by calling the single central entry point for validation and checksum calculation.
+func NewModuleDescriptor(meta BaseBlock, moduleType string, accepts []string, outputKeys []string, wasmCode []byte) (*ModuleDescriptor, error) {
+	// Create a temporary descriptor to use its GetData() method, which contains the correct data selection logic.
+	tempDescriptorForData := &ModuleDescriptor{
+		Type:       moduleType,
+		Accepts:    accepts,
+		OutputKeys: outputKeys,
+		WasmCode:   wasmCode,
+	}
+	data := tempDescriptorForData.GetData()
+
+	// Call the single central entry point to validate and compute the checksum.
+	sum, err := validateAndChecksum(&meta, KindModule, data)
+	if err != nil {
+		return nil, err
+	}
+	meta.Checksum = sum
+	meta.Valid = true
+
+	return &ModuleDescriptor{
+		Meta:       meta,
+		Type:       moduleType,
+		Accepts:    accepts,
+		OutputKeys: outputKeys,
+		WasmCode:   wasmCode,
+	}, nil
+}
+
 // ID returns the unique module identifier in the form "name@version".
 func (m *ModuleDescriptor) ID() string {
 	return m.Meta.Name + "@" + m.Meta.Version
@@ -9,14 +37,10 @@ func (m *ModuleDescriptor) ID() string {
 // For WASM modules, the checksum is calculated over the binary code itself,
 // not the descriptive spec fields.
 func (m *ModuleDescriptor) GetData() any {
-	// If WasmCode is present, it's the data we want to checksum.
 	if len(m.WasmCode) > 0 {
 		return m.WasmCode
 	}
 
-	// Fallback for non-WASM modules or modules without code.
-	// The checksum covers the descriptive fields. To ensure immutability,
-	// we return copies of the slices.
 	acceptsCopy := make([]string, len(m.Accepts))
 	copy(acceptsCopy, m.Accepts)
 
@@ -34,8 +58,7 @@ func (m *ModuleDescriptor) GetData() any {
 	}
 }
 
-// Validate runs common meta validation for the module descriptor.
-// It implicitly validates the checksum of the WasmCode if it's present.
-func (m *ModuleDescriptor) Validate() error {
-	return validateMetaFunc(&m.Meta, m.GetData())
+// Checksum returns the pre-computed checksum from the Meta block.
+func (m *ModuleDescriptor) Checksum() string {
+	return m.Meta.Checksum
 }

@@ -1,24 +1,18 @@
 package cabinet
 
-// NewSchema constructs a Schema with validated metadata and canonical checksum.
-// NOTE: If your Schema embeds BaseBlock instead of using a Meta field,
-// replace assignments to Meta accordingly.
-func NewSchema(meta BaseBlock, Spec SchemaDef) (*Schema, error) {
-	// Validate meta + data together.
-	if err := validateMetaFunc(&meta, Spec); err != nil {
-		return nil, err
-	}
-
-	// Compute canonical checksum and set it.
-	sum, err := calculateChecksum(&meta, Spec)
+// NewSchema constructs a Schema by calling the single central entry point for validation and checksum calculation.
+func NewSchema(meta BaseBlock, spec SchemaDef) (*Schema, error) {
+	// Call the single central entry point to validate and compute the checksum.
+	sum, err := validateAndChecksum(&meta, KindSpec, spec)
 	if err != nil {
 		return nil, err
 	}
 	meta.Checksum = sum
+	meta.Valid = true
 
 	return &Schema{
-		Meta: meta, // ← if you embed BaseBlock, replace with the embedded field.
-		Spec: Spec,
+		Meta: meta,
+		Spec: spec,
 	}, nil
 }
 
@@ -32,13 +26,8 @@ func (s *Schema) GetData() any {
 	return s.Spec
 }
 
-// Validate checks meta+data invariants, verifies checksum if present,
-// and delegates to ValidateMeta for schema-level rules.
-func (s *Schema) Validate() error {
-	return validateMetaFunc(&s.Meta, s.GetData())
-}
-
-// Checksum újraszámolja a sémára vonatkozó hash-t a Meta és Spec mező alapján.
-func (s *Schema) Checksum() (string, error) {
-	return calculateChecksum(&s.Meta, s.Spec)
+// Checksum returns the pre-computed checksum from the Meta block.
+// It does not recalculate the hash, adhering to the "No shortcut" rule.
+func (s *Schema) Checksum() string {
+	return s.Meta.Checksum
 }
