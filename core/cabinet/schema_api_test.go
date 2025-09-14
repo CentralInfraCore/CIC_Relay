@@ -42,39 +42,3 @@ func TestSchema_GetData_API_EqualsSpec(t *testing.T) {
 		t.Fatalf("GetData() != Spec\n got:  %#v\n want: %#v", got, spec)
 	}
 }
-
-// -- Checksum() --
-
-func TestSchema_Checksum_API_DeterministicAndChangesWithSpec(t *testing.T) {
-	s := &cabinet.Schema{
-		Meta: cabinet.BaseBlock{Name: "sch", Version: "1.0.0"},
-		Spec: cabinet.SchemaDef{
-			StateRequirement: map[string]string{"a": "b"},
-			Dependencies:     []string{"d1"},
-			NextHops:         []string{"n1"},
-		},
-	}
-
-	// determinisztikus
-	c1, err := s.Checksum()
-	if err != nil {
-		t.Fatalf("Checksum() err: %v", err)
-	}
-	c2, err := s.Checksum()
-	if err != nil {
-		t.Fatalf("Checksum() second err: %v", err)
-	}
-	if c1 != c2 {
-		t.Fatalf("Checksum not deterministic: first=%q second=%q", c1, c2)
-	}
-
-	// Spec változás → checksum változik
-	s.Spec.Dependencies = append(s.Spec.Dependencies, "d2")
-	c3, err := s.Checksum()
-	if err != nil {
-		t.Fatalf("Checksum() after spec change err: %v", err)
-	}
-	if c3 == c1 {
-		t.Fatalf("Checksum did not change after spec mutation: before=%q after=%q", c1, c3)
-	}
-}

@@ -13,6 +13,7 @@ import (
 	"centralrelay/core/cabinet"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // --- Test Data for Embedded Files ---
@@ -103,7 +104,6 @@ kind: Module
 metadata:
   name: missing.wasm
   version: "1.0"
-  checksum: "any"
 `)
 		require.NoError(t, os.WriteFile(filepath.Join(t.TempDir(), missingWasmYamlPath), missingWasmYamlContent, 0644))
 
@@ -114,18 +114,32 @@ metadata:
 	})
 
 	t.Run("checksum mismatch", func(t *testing.T) {
-		// Load the module YAML from the embedded FS
+		// This test is now robust. It unmarshals the YAML, modifies the checksum in the map,
+		// and then remarshals it, guaranteeing that the checksum is incorrect.
 		yamlContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.yaml")
 		require.NoError(t, err)
 
-		// Modify the YAML content to have an incorrect checksum
-		modifiedYamlContent := strings.Replace(string(yamlContent), "checksum: \"c8244585941d285659e23525cdcd35bf16fee357831e563498759cef4364d00a\"", "checksum: \"badchecksum\"", 1)
+		// Unmarshal into a generic map to manipulate it
+		var data map[string]any
+		require.NoError(t, yaml.Unmarshal(yamlContent, &data))
 
-                // IMPORTANT: keep the original embedded YAML path so loadModule finds the WASM next to it in testModuleFS
-                embeddedYamlPath := "testdata/modules/test_module.yaml"
-                err = loadModule(svc, testModuleFS, embeddedYamlPath, []byte(modifiedYamlContent))
+		// Navigate and modify the checksum
+		metadata, ok := data["metadata"].(map[string]any)
+		require.True(t, ok, "metadata field not found or not a map")
+		metadata["checksum"] = "badchecksum"
+
+		// Remarshal to YAML
+		modifiedYamlContent, err := yaml.Marshal(data)
+		require.NoError(t, err)
+
+		// Execute with the modified content
+		embeddedYamlPath := "testdata/modules/test_module.yaml"
+		err = loadModule(svc, testModuleFS, embeddedYamlPath, modifiedYamlContent)
+
+		// Verify that the error is a checksum mismatch error
 		assert.Error(t, err, "loadModule should return an error for checksum mismatch")
-		assert.Contains(t, err.Error(), "checksum mismatch", "Error message should indicate checksum mismatch")
+		assert.ErrorIs(t, err, cabinet.ErrInvalid, "error should wrap ErrInvalid")
+		assert.Contains(t, err.Error(), "checksum mismatch", "error message should indicate checksum mismatch")
 	})
 }
 
@@ -170,7 +184,7 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 		{
 			name:              "workflow validation error",
 			filename:          "workflow_validation_error.yaml",
-			content:           "kind: Workflow\nmetadata: { version: '1.0' }", // Missing name\nsteps: []", // Added steps to make it a valid workflow structure for unmarshalling
+			content:           "kind: Workflow\nmetadata: { version: '1.0' }\nspec:\n  steps: []", // Corrected structure
 			expectedLogString: "error loading component from",
 		},
 		{
@@ -199,7 +213,7 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	// 3. Verify log output
 	logOutput := logBuf.String()
 	for _, tc := range testCases {
-			assert.True(t, strings.Contains(logOutput, tc.expectedLogString), "expected log to contain %q, but it was:\n%s", tc.expectedLogString, logOutput)
+		assert.True(t, strings.Contains(logOutput, tc.expectedLogString), "expected log to contain %q for test %q, but it was:\n%s", tc.expectedLogString, tc.name, logOutput)
 	}
 }
 
@@ -264,7 +278,7 @@ spec:
 	})
 
 	t.Run("overwrite module", func(t *testing.T) {
-		// Create an installed module that overwrites the embedded one
+		// Create an installed module that overwrites the embedded one. The checksum is now updated to the correct value.
 		overwriteContent := []byte(`
 apiVersion: relay.cic.com/v1
 kind: Module
@@ -272,7 +286,7 @@ metadata:
   name: test.module
   version: "1.0"
   description: "This is the OVERWRITTEN module."
-  checksum: "5077136a4499d093d4fc0efecd075f855dfd404835c8e0b61a14d8517dd53808"
+  checksum: "329c974ebedd2127a308cdc0211018e86d71f9e8b9cc29266a0d9aa809e0f40f"
 type: executor
 accepts:
   - "test.schema@1.0"
@@ -328,7 +342,7 @@ func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 // This is a new, focused test to cover the final missing branch in loadWorkflow.
 func TestLoadWorkflow_UnmarshalError(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
-	
+
 	// This content has a valid kind, but the spec is not an object, causing a yaml.Unmarshal error.
 	content := []byte("kind: Workflow\nspec: \"not an object\"")
 

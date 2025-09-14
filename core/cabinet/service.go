@@ -43,7 +43,6 @@ func (c *cabinetService) Set(ctx context.Context, in *SetPayload) (*SetResponse,
 	// 1. Resolve the workflow itself.
 	workflow, err := c.GetWorkflow(in.WorkflowID)
 	if err != nil {
-		// This should have been caught by ValidateSet, but we check again for safety.
 		return nil, fmt.Errorf("failed to resolve workflow %q: %w", in.WorkflowID, err)
 	}
 
@@ -62,7 +61,6 @@ func (c *cabinetService) Set(ctx context.Context, in *SetPayload) (*SetResponse,
 		for _, moduleID := range in.Modules {
 			moduleDesc, err := c.GetModule(string(moduleID))
 			if err != nil {
-				// This should also be caught by ValidateSet.
 				return nil, fmt.Errorf("workflow %q failed: could not resolve provided module %q: %w", workflow.ID(), moduleID, err)
 			}
 
@@ -102,9 +100,7 @@ func (c *cabinetService) Close(ctx context.Context) error {
 }
 
 func (c *cabinetService) PutSchema(s *Schema) error {
-	if err := s.Validate(); err != nil {
-		return err
-	}
+	// Validation is now handled by the constructor. The service trusts that a valid object is passed.
 	c.schemas.Put(s)
 	return nil
 }
@@ -117,9 +113,7 @@ func (c *cabinetService) GetSchema(id string) (*Schema, error) {
 }
 
 func (c *cabinetService) PutModule(m *ModuleDescriptor) error {
-	if err := m.Validate(); err != nil {
-		return err
-	}
+	// Validation is now handled by the constructor.
 	c.modules.Put(m)
 	return nil
 }
@@ -132,9 +126,7 @@ func (c *cabinetService) GetModule(id string) (*ModuleDescriptor, error) {
 }
 
 func (c *cabinetService) PutWorkflow(w *Workflow) error {
-	if err := w.Validate(); err != nil {
-		return err
-	}
+	// Validation is now handled by the constructor.
 	c.workflows.Put(w)
 	return nil
 }

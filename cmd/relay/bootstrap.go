@@ -27,7 +27,7 @@ type SchemaFile struct {
 
 // WorkflowFile defines the structure of a Workflow YAML file.
 type WorkflowFile struct {
-	Metadata cabinet.BaseBlock `yaml:"metadata"`	
+	Metadata cabinet.BaseBlock `yaml:"metadata"`
 	Spec     struct {
 		Steps []string `yaml:"steps"`
 	} `yaml:"spec"`
@@ -150,12 +150,9 @@ func loadWorkflow(svc cabinet.Cabinet, content []byte) error {
 		return fmt.Errorf("unmarshal workflow file: %w", err)
 	}
 
-	workflow := &cabinet.Workflow{
-		Meta:  file.Metadata,
-		Steps: file.Spec.Steps,
-	}
-
-	if err := workflow.Validate(); err != nil {
+	// Create the workflow using the constructor to ensure validation and checksumming.
+	workflow, err := cabinet.NewWorkflow(file.Metadata, file.Spec.Steps)
+	if err != nil {
 		return fmt.Errorf("workflow validation: %w", err)
 	}
 
@@ -183,15 +180,9 @@ func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []
 		return fmt.Errorf("read WASM file %q: %w", wasmPath, err)
 	}
 
-	moduleDesc := &cabinet.ModuleDescriptor{
-		Meta:       file.Metadata,
-		Type:       file.Type,
-		Accepts:    file.Accepts,
-		OutputKeys: file.OutputKeys,
-		WasmCode:   wasmCode,
-	}
-
-	if err := moduleDesc.Validate(); err != nil {
+	// Create the module descriptor using the constructor.
+	moduleDesc, err := cabinet.NewModuleDescriptor(file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
+	if err != nil {
 		return fmt.Errorf("module validation: %w", err)
 	}
 

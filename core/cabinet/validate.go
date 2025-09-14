@@ -8,52 +8,25 @@ import (
 	"centralrelay/pkg/canonicaljson"
 )
 
+// Kind constants for checksum discrimination.
+const (
+	KindSpec   = "spec|"
+	KindWf     = "wf|"
+	KindModule = "wasm|"
+)
+
 // metaForChecksum is a helper struct to select only the non-volatile fields from BaseBlock for checksum calculation.
 type metaForChecksum struct {
 	Name        string `json:"name"`
 	Version     string `json:"version"`
-	Description string `json:"description"`
-	CreatedBy   string `json:"createdBy"`
-	Timestamp   string `json:"timestamp"`
+	Description string `json:"description,omitempty"`
+	CreatedBy   string `json:"createdBy,omitempty"`
+	Timestamp   string `json:"timestamp,omitempty"`
 }
 
-// validateMeta is the internal implementation of the validation logic.
-func validateMeta(meta *BaseBlock, data any) error {
-	if meta.Name == "" || meta.Version == "" {
-		return fmt.Errorf("%w: name and version are required", ErrInvalid)
-	}
-
-	// If checksum is present, verify it.
-	if meta.Checksum != "" {
-		currentSum, err := genericChecksum(meta, data)
-		if err != nil {
-			return fmt.Errorf("failed to calculate checksum for validation: %w", err)
-		}
-		if currentSum != meta.Checksum {
-			meta.Valid = false
-			return fmt.Errorf("%w: checksum mismatch (got: %s, want: %s)", ErrInvalid, currentSum, meta.Checksum)
-		}
-		meta.Valid = true
-		return nil
-	}
-
-	// If checksum is not present, calculate and set it.
-	newSum, err := genericChecksum(meta, data)
-	if err != nil {
-		return fmt.Errorf("failed to calculate initial checksum: %w", err)
-	}
-	meta.Checksum = newSum
-	meta.Valid = true
-	return nil
-}
-
-// validateMetaFunc is a function variable that points to the validation implementation.
-// This acts as a "test seam" allowing tests to mock the validation logic.
-var validateMetaFunc = validateMeta
-
-// genericChecksum calculates the SHA256 checksum for a given component using canonical JSON.
-func genericChecksum(meta *BaseBlock, data any) (string, error) {
-	// Use a dedicated struct to select only the fields relevant for the checksum.
+// computeChecksum is a private helper that calculates the canonical checksum.
+// It now correctly handles raw byte slices (for WASM) vs other data types.
+func computeChecksum(meta *BaseBlock, kind string, data any) (string, error) {
 	metaForHash := metaForChecksum{
 		Name:        meta.Name,
 		Version:     meta.Version,
@@ -62,16 +35,59 @@ func genericChecksum(meta *BaseBlock, data any) (string, error) {
 		Timestamp:   meta.Timestamp,
 	}
 
-	// Canonicalize and hash.
 	metaBytes, err := canonicaljson.ToJSON(metaForHash)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to canonicalize meta: %w", err)
 	}
-	dataBytes, err := canonicaljson.ToJSON(data)
+
+	var dataBytes []byte
+	// Special handling for raw binary data (like WASM code).
+	if rawData, ok := data.([]byte); ok {
+		dataBytes = rawData
+	} else {
+		// For all other types, use canonical JSON serialization.
+		dataBytes, err = canonicaljson.ToJSON(data)
+		if err != nil {
+			return "", fmt.Errorf("failed to canonicalize data: %w", err)
+		}
+	}
+
+	kindBytes := []byte(kind)
+
+	hasher := sha256.New()
+	hasher.Write(kindBytes)
+	hasher.Write(metaBytes)
+	hasher.Write(dataBytes)
+	hash := hasher.Sum(nil)
+
+	return hex.EncodeToString(hash[:]), nil
+}
+
+// validateAndChecksum is the single central entry point for validation and checksum calculation.
+// It implements the "check-then-calculate" logic.
+func validateAndChecksum(meta *BaseBlock, kind string, data any) (string, error) {
+	// 1. Validate basic invariants.
+	if meta.Name == "" || meta.Version == "" {
+		return "", fmt.Errorf("%w: name and version are required", ErrInvalid)
+	}
+
+	// 2. Calculate the expected checksum based on the current data.
+	expectedSum, err := computeChecksum(meta, kind, data)
 	if err != nil {
 		return "", err
 	}
 
-	hash := sha256.Sum256(append(metaBytes, dataBytes...))
-	return hex.EncodeToString(hash[:]), nil
+	// 3. If a checksum is already present, verify it.
+	if meta.Checksum != "" {
+		if meta.Checksum != expectedSum {
+			meta.Valid = false
+			return "", fmt.Errorf("%w: checksum mismatch (existing: %s, calculated: %s)", ErrInvalid, meta.Checksum, expectedSum)
+		}
+		// If it matches, we're good. The object is valid.
+		meta.Valid = true
+		return meta.Checksum, nil
+	}
+
+	// 4. If no checksum is present, return the newly calculated one to be set by the constructor.
+	return expectedSum, nil
 }
