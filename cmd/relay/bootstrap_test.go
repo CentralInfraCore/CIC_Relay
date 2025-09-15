@@ -390,7 +390,7 @@ metadata:
   name: test.module
   version: "1.0"
   description: "This is the OVERWRITTEN module."
-  checksum: "e5c837c41629331d19d6317676b73759cda88b02b68414f6b5e51d9026cf69b2"
+  checksum: "8f958d52a119097ff3a8841aade73f92f59abb91f51c3c7ce26f7d87be5057b4"
 type: executor
 accepts:
   - "test.schema@1.0"
