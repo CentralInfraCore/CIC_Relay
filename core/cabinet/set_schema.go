@@ -29,7 +29,10 @@ func CanonicalizeSetPayload(in *SetPayload) {
 	in.WorkflowID = strings.TrimSpace(in.WorkflowID)
 
 	// Options defaultok
-	if in.Options != nil && in.Options.Priority == "" {
+	if in.Options == nil {
+		in.Options = &SetOptions{}
+	}
+	if in.Options.Priority == "" {
 		in.Options.Priority = "normal"
 	}
 

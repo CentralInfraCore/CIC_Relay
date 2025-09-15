@@ -24,7 +24,15 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 	if len(v.Modules) == 0 {
 		return fmt.Errorf("%w: modules must not be empty", ErrInvalid)
 	}
-	if v.Options != nil {
+
+	// Handle options priority validation
+	if v.Options == nil {
+		// Ha az opciók nil-ek, nincs szükség prioritás validációra.
+		// A "options nil should pass" teszt ezt az utat várja el, hibamentesen.
+	} else {
+		// Az opciók nem nil-ek, folytassuk a validációval.
+		// A hibaüzenet szerint itt történik a panic, ami azt jelenti,
+		// hogy v.Options nem nil, de érvénytelen memóriacímre mutat.
 		switch v.Options.Priority {
 		case "", "low", "normal", "high":
 		default:
@@ -39,6 +47,7 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 		}
 		return err // Kezeli a store egyéb lehetséges hibáit
 	}
+
 
 	// Ellenőrzés, hogy minden ModuleID feloldható.
 	for _, moduleID := range v.Modules {

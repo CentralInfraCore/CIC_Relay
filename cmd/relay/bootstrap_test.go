@@ -109,6 +109,34 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 	})
 }
 
+func TestLoadComponentsFromFS(t *testing.T) {
+	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+
+	t.Run("unmarshal component header error", func(t *testing.T) {
+		// Create a temporary FS with a malformed YAML file
+		tempDir := t.TempDir()
+		malformedYamlPath := "malformed.yaml"
+		malformedYamlContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata: "this should be a map"
+`)
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, malformedYamlPath), malformedYamlContent, 0644))
+
+		tempFS := os.DirFS(tempDir)
+		// Capture log output
+		var logBuf bytes.Buffer
+		log.SetOutput(&logBuf)
+		defer func() {
+			log.SetOutput(os.Stderr)
+		}()
+
+		err := loadComponentsFromFS(svc, tempFS, ".", false)
+		assert.NoError(t, err, "loadComponentsFromFS should not return a fatal error for unmarshal errors")
+		assert.Contains(t, logBuf.String(), "unmarshal module file", "log should contain unmarshal error")
+	})
+}
+
 func TestLoadModule(t *testing.T) {
 	// 1. Setup
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
@@ -234,6 +262,73 @@ metadata:
 		assert.Error(t, err, "loadModule should return an error if wasm file cannot be read")
 		assert.Contains(t, err.Error(), "read WASM file")
 		assert.ErrorIs(t, err, os.ErrPermission)
+	})
+
+	t.Run("wasm digest mismatch", func(t *testing.T) {
+		// Create a temporary FS with a module YAML that has a wrong digest
+		tempDir := t.TempDir()
+		wrongDigestYamlPath := "wrong_digest.yaml"
+		wrongDigestYamlContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: wrong.digest
+  version: "1.0"
+wasmDigest: "badhash"
+wasmSize: 8
+`)
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, wrongDigestYamlPath), wrongDigestYamlContent, 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "wrong_digest.wasm"), []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x02, 0x03, 0x04}, 0644))
+
+		tempFS := os.DirFS(tempDir)
+		err = loadModule(svc, tempFS, wrongDigestYamlPath, wrongDigestYamlContent)
+
+		assert.Error(t, err, "loadModule should return an error for WASM digest mismatch")
+		assert.Contains(t, err.Error(), "WASM digest mismatch")
+	})
+
+	t.Run("wasm size mismatch", func(t *testing.T) {
+		// Create a temporary FS with a module YAML that has a wrong size
+		tempDir := t.TempDir()
+		wrongSizeYamlPath := "wrong_size.yaml"
+		wrongSizeYamlContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: wrong.size
+  version: "1.0"
+wasmDigest: "292ed65ec666d77aa17f84777f83e6e5aca98d61ba75461ca76fe8313a44382c"
+wasmSize: 999
+`)
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, wrongSizeYamlPath), wrongSizeYamlContent, 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "wrong_size.wasm"), []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x02, 0x03, 0x04}, 0644))
+
+		tempFS := os.DirFS(tempDir)
+		err = loadModule(svc, tempFS, wrongSizeYamlPath, wrongSizeYamlContent)
+
+		assert.Error(t, err, "loadModule should return an error for WASM size mismatch")
+		assert.Contains(t, err.Error(), "WASM size mismatch")
+	})
+
+	t.Run("module validation error", func(t *testing.T) {
+		// Create a temporary FS with a module YAML that has invalid metadata
+		tempDir := t.TempDir()
+		invalidMetaYamlPath := "invalid_meta.yaml"
+		invalidMetaYamlContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  version: "1.0" # Missing name
+`)
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, invalidMetaYamlPath), invalidMetaYamlContent, 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid_meta.wasm"), []byte{0x00, 0x61, 0x73, 0x6d}, 0644))
+
+		tempFS := os.DirFS(tempDir)
+		err = loadModule(svc, tempFS, invalidMetaYamlPath, invalidMetaYamlContent)
+
+		assert.Error(t, err, "loadModule should return an error for module validation failure")
+		assert.Contains(t, err.Error(), "module validation")
+		assert.Contains(t, err.Error(), "name and version are required")
 	})
 }
 
