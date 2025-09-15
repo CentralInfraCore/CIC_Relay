@@ -34,27 +34,26 @@ func (m *ModuleDescriptor) ID() string {
 }
 
 // GetData returns the data part of the module descriptor for checksum calculation.
-// For WASM modules, the checksum is calculated over the binary code itself,
-// not the descriptive spec fields.
+// It now always returns a composite structure including policy fields and optional WASM code.
 func (m *ModuleDescriptor) GetData() any {
-	if len(m.WasmCode) > 0 {
-		return m.WasmCode
-	}
-
 	acceptsCopy := make([]string, len(m.Accepts))
 	copy(acceptsCopy, m.Accepts)
 
 	outputKeysCopy := make([]string, len(m.OutputKeys))
 	copy(outputKeysCopy, m.OutputKeys)
 
+	// Create a composite struct including all relevant fields for hashing.
+	// wasmCode is included only if present, using omitempty.
 	return struct {
 		Type       string   `json:"type"`
 		Accepts    []string `json:"accepts"`
 		OutputKeys []string `json:"outputKeys"`
+		WasmCode   []byte   `json:"wasmCode,omitempty"`
 	}{
 		Type:       m.Type,
 		Accepts:    acceptsCopy,
 		OutputKeys: outputKeysCopy,
+		WasmCode:   m.WasmCode,
 	}
 }
 

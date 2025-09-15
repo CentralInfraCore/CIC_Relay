@@ -33,37 +33,45 @@ func TestModuleDescriptor_ID_EmptyParts(t *testing.T) {
 	assert.Equal(t, "@v1", (&ModuleDescriptor{Meta: BaseBlock{Version: "v1"}}).ID(), "üres név -> @v1")
 }
 
-func TestModuleDescriptor_GetData_ReturnsSpecForNonWasm(t *testing.T) {
-	m := &ModuleDescriptor{
+func TestModuleDescriptor_GetData_ReturnsCompositeStruct(t *testing.T) {
+	// Test case with no WASM code
+	m1 := &ModuleDescriptor{
 		Type:       "executor",
 		Accepts:    []string{"schema-a"},
 		OutputKeys: []string{"key-a"},
 		WasmCode:   nil, // Explicitly nil
 	}
 
-	data := m.GetData()
-
-	// Convert the returned data to canonical JSON and compare
-	gotJSON, err := canonicaljson.ToJSON(data)
+	data1 := m1.GetData()
+	gotJSON1, err := canonicaljson.ToJSON(data1)
 	require.NoError(t, err)
+	expectedJSON1 := `{"accepts":["schema-a"],"outputKeys":["key-a"],"type":"executor"}`
+	assert.JSONEq(t, expectedJSON1, string(gotJSON1), "GetData should return correct JSON for non-WASM modules")
 
-	// The expected JSON should match the structure returned by GetData()
-	// Note: JSON keys are lowercase due to `json:"type"` tags in GetData()'s anonymous struct
-	expectedJSON := `{"accepts":["schema-a"],"outputKeys":["key-a"],"type":"executor"}`
-	assert.JSONEq(t, expectedJSON, string(gotJSON), "GetData should return the correct JSON representation for non-WASM modules")
-}
-
-func TestModuleDescriptor_GetData_ReturnsWasmCodeWhenPresent(t *testing.T) {
+	// Test case with WASM code
 	wasmBytes := []byte{0x00, 0x61, 0x73, 0x6d} // Minimal WASM header
-	m := &ModuleDescriptor{
-		Type:     "executor",
-		WasmCode: wasmBytes,
+	m2 := &ModuleDescriptor{
+		Type:       "executor",
+		Accepts:    []string{"schema-b"},
+		OutputKeys: []string{"key-b"},
+		WasmCode:   wasmBytes,
 	}
 
-	data := m.GetData()
+	data2 := m2.GetData()
+	gotJSON2, err := canonicaljson.ToJSON(data2)
+	require.NoError(t, err)
 
-	// Use type assertion to check the type
-	retrievedCode, ok := data.([]byte)
-	assert.True(t, ok, "GetData should return a byte slice for WASM modules")
-	assert.Equal(t, wasmBytes, retrievedCode, "The returned byte slice should be the WasmCode")
+	// json.Marshal encodes []byte to base64 string
+	expectedJSON2 := `{"accepts":["schema-b"],"outputKeys":["key-b"],"type":"executor","wasmCode":"AGFzbQ=="}`
+	assert.JSONEq(t, expectedJSON2, string(gotJSON2), "GetData should return correct JSON for WASM modules")
+
+	// Verify the underlying types are correct
+	compositeData, ok := data2.(struct {
+		Type       string   `json:"type"`
+		Accepts    []string `json:"accepts"`
+		OutputKeys []string `json:"outputKeys"`
+		WasmCode   []byte   `json:"wasmCode,omitempty"`
+	})
+	require.True(t, ok, "Returned data should be the composite struct")
+	assert.Equal(t, wasmBytes, compositeData.WasmCode, "WasmCode in composite struct should match original")
 }
