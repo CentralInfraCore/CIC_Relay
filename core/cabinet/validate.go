@@ -15,6 +15,21 @@ const (
 	KindModule = "wasm|"
 )
 
+// MaxWASMModuleSize defines the maximum allowed size for a WASM module in bytes (16MB).
+const MaxWASMModuleSize = 16 * 1024 * 1024
+
+// stripWasmModuleFunc is a function pointer that can be overridden for testing.
+// In production, this would point to a real WASM stripping utility.
+var stripWasmModuleFunc = func(rawData []byte) ([]byte, error) {
+	// Default no-op implementation. In a real scenario, this would perform the stripping.
+	return rawData, nil
+}
+
+// SetStripWasmModuleFunc allows overriding the default WASM stripping function for testing.
+func SetStripWasmModuleFunc(f func([]byte) ([]byte, error)) {
+	stripWasmModuleFunc = f
+}
+
 // metaForChecksum is a helper struct to select only the non-volatile fields from BaseBlock for checksum calculation.
 type metaForChecksum struct {
 	Name        string `json:"name"`
@@ -69,6 +84,22 @@ func validateAndChecksum(meta *BaseBlock, kind string, data any) (string, error)
 	// 1. Validate basic invariants.
 	if meta.Name == "" || meta.Version == "" {
 		return "", fmt.Errorf("%w: name and version are required", ErrInvalid)
+	}
+
+	// Add WASM module size limit check and canonicalization
+	if kind == KindModule {
+		if rawData, ok := data.([]byte); ok {
+			if len(rawData) > MaxWASMModuleSize {
+				return "", fmt.Errorf("%w: WASM module size exceeds limit of %d bytes", ErrInvalid, MaxWASMModuleSize)
+			}
+			
+			// Canonicalize the WASM module by stripping non-essential sections
+			strippedData, err := stripWasmModuleFunc(rawData)
+			if err != nil {
+				return "", fmt.Errorf("%w: failed to canonicalize WASM module: %v", ErrInvalid, err)
+			}
+			data = strippedData // Use the stripped data for checksum calculation
+		}
 	}
 
 	// 2. Calculate the expected checksum based on the current data.

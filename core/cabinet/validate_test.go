@@ -2,6 +2,7 @@ package cabinet
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"testing"
 
@@ -15,6 +16,10 @@ func TestValidateAndChecksum(t *testing.T) {
 	// Restore original function after all tests in this file
 	defer func() {
 		canonicaljson.SetToJSONMock(nil)
+		// Reset the stripWasmModuleFunc to its default no-op behavior
+		SetStripWasmModuleFunc(func(rawData []byte) ([]byte, error) {
+			return rawData, nil
+		})
 	}()
 
 	t.Run("missing name should fail", func(t *testing.T) {
@@ -66,6 +71,8 @@ func TestValidateAndChecksum(t *testing.T) {
 	})
 
 	t.Run("error from computeChecksum should be propagated", func(t *testing.T) {
+		defer canonicaljson.SetToJSONMock(nil) // Reset mock after this subtest
+
 		// Inject an error into the canonicalizer for the metadata part
 		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
 			return nil, errors.New("canonicalizer failed")
@@ -77,6 +84,64 @@ func TestValidateAndChecksum(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "canonicalizer failed")
 	})
+
+	t.Run("WASM module size exceeds limit should fail", func(t *testing.T) {
+		meta := &BaseBlock{Name: "large-wasm", Version: "1.0"}
+		// Create a byte slice larger than MaxWASMModuleSize
+		largeWasmData := make([]byte, MaxWASMModuleSize+1)
+		_, err := validateAndChecksum(meta, KindModule, largeWasmData)
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalid)
+		assert.Contains(t, err.Error(), fmt.Sprintf("WASM module size exceeds limit of %d bytes", MaxWASMModuleSize))
+	})
+
+	t.Run("WASM module size within limit should pass", func(t *testing.T) {
+		meta := &BaseBlock{Name: "small-wasm", Version: "1.0"}
+		// Create a byte slice exactly MaxWASMModuleSize
+		smallWasmData := make([]byte, MaxWASMModuleSize)
+		_, err := validateAndChecksum(meta, KindModule, smallWasmData)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("WASM module canonicalization should affect checksum", func(t *testing.T) {
+		meta := &BaseBlock{Name: "test-wasm", Version: "1.0"}
+		rawWasmData := []byte("some raw wasm data with extra sections")
+		strippedWasmData := []byte("stripped wasm data") // This is what the canonicalizer should produce
+
+		// Temporarily override the stripWasmModuleFunc for this test
+		SetStripWasmModuleFunc(func(rawData []byte) ([]byte, error) {
+			assert.Equal(t, rawWasmData, rawData, "stripWasmModuleFunc should receive the raw WASM data")
+			return strippedWasmData, nil
+		})
+
+		// Calculate expected checksum based on the stripped data
+		expectedChecksum, err := computeChecksum(meta, KindModule, strippedWasmData)
+		require.NoError(t, err)
+
+		// Call validateAndChecksum with the raw data
+		actualChecksum, err := validateAndChecksum(meta, KindModule, rawWasmData)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedChecksum, actualChecksum, "Checksum should be calculated based on stripped WASM data")
+	})
+
+	t.Run("WASM module canonicalization error should be propagated", func(t *testing.T) {
+		meta := &BaseBlock{Name: "test-wasm-error", Version: "1.0"}
+		rawWasmData := []byte("some raw wasm data")
+		
+		// Temporarily override the stripWasmModuleFunc to return an error
+		SetStripWasmModuleFunc(func(rawData []byte) ([]byte, error) {
+			return nil, errors.New("wasm stripping failed")
+		})
+
+		_, err := validateAndChecksum(meta, KindModule, rawWasmData)
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalid)
+		assert.Contains(t, err.Error(), "failed to canonicalize WASM module: wasm stripping failed")
+	})
 }
 
 func TestComputeChecksum_ErrorCases(t *testing.T) {
@@ -86,6 +151,7 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 	}()
 
 	t.Run("error on meta canonicalization should fail", func(t *testing.T) {
+		defer canonicaljson.SetToJSONMock(nil) // Reset mock after this subtest
 		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
 			// Fail only when trying to marshal the metaForChecksum struct
 			if _, ok := v.(metaForChecksum); ok {
@@ -102,6 +168,7 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 	})
 
 	t.Run("error on data canonicalization should fail", func(t *testing.T) {
+		defer canonicaljson.SetToJSONMock(nil) // Reset mock after this subtest
 		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
 			// Fail only for the data part (e.g., a string in this test)
 			if _, ok := v.(string); ok {
