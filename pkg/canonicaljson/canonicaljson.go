@@ -8,14 +8,35 @@ import (
 	"sort"
 )
 
-// ToJSON marshals a Go value into a canonical JSON string.
-// It ensures that map keys are sorted alphabetically for deterministic output.
-func ToJSON(v any) ([]byte, error) {
+// ToJSONFunc is the type for the ToJSON function, allowing it to be mocked.
+type ToJSONFunc func(v any) ([]byte, error)
+
+// ToJSONImpl is the actual implementation of ToJSON that can be swapped for testing.
+var ToJSONImpl ToJSONFunc = ToJSONOriginal
+
+// ToJSONOriginal is the original implementation of ToJSON.
+func ToJSONOriginal(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := writeCanonicalJSON(&buf, v); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// ToJSON marshals a Go value into a canonical JSON string.
+// It ensures that map keys are sorted alphabetically for deterministic output.
+func ToJSON(v any) ([]byte, error) {
+	return ToJSONImpl(v)
+}
+
+// SetToJSONMock sets the mock function for ToJSON.
+// Pass nil to restore the original implementation.
+func SetToJSONMock(mock ToJSONFunc) {
+	if mock == nil {
+		ToJSONImpl = ToJSONOriginal
+	} else {
+		ToJSONImpl = mock
+	}
 }
 
 func writeCanonicalJSON(w io.Writer, v any) error {
