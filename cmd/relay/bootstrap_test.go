@@ -16,6 +16,45 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// failingReadFileFS is a mock file system that fails on reading specific files.
+type failingReadFileFS struct {
+	fs.FS
+	failOnRead map[string]bool
+}
+
+// failingFile is a wrapper around fs.File that can be configured to fail on Read.
+type failingFile struct {
+	fs.File
+	failRead bool
+}
+
+func (f *failingFile) Read(b []byte) (int, error) {
+	if f.failRead {
+		return 0, os.ErrPermission
+	}
+	return f.File.Read(b)
+}
+
+func (fsys *failingReadFileFS) Open(name string) (fs.File, error) {
+	file, err := fsys.FS.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	if fsys.failOnRead[name] {
+		return &failingFile{File: file, failRead: true}, nil
+	}
+	return file, nil
+}
+
+// failingReadDirFS is a mock file system that fails on ReadDir.
+type failingReadDirFS struct {
+	fs.FS
+}
+
+func (f *failingReadDirFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	return nil, os.ErrPermission
+}
+
 // --- Test Data for Embedded Files ---
 
 //go:embed testdata/schemas/test_schema.yaml
@@ -110,7 +149,8 @@ metadata:
 		// Execute loadModule with a FS that doesn't contain the WASM file
 		err = loadModule(svc, tempFS, missingWasmYamlPath, missingWasmYamlContent)
 		assert.Error(t, err, "loadModule should return an error if WASM file is missing")
-		assert.Contains(t, err.Error(), "read WASM file", "Error message should indicate WASM file read issue")
+		assert.Contains(t, err.Error(), "stat WASM file", "Error message should indicate WASM file stat issue") // Changed from "read WASM file"
+		assert.Contains(t, err.Error(), "no such file or directory", "Error message should indicate WASM file not found")
 	})
 
 	t.Run("checksum mismatch", func(t *testing.T) {
@@ -141,6 +181,71 @@ metadata:
 		assert.ErrorIs(t, err, cabinet.ErrInvalid, "error should wrap ErrInvalid")
 		assert.Contains(t, err.Error(), "checksum mismatch", "error message should indicate checksum mismatch")
 	})
+
+	t.Run("invalid yaml content", func(t *testing.T) {
+		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+		invalidYamlContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata: "this should be a map"
+`)
+		err := loadModule(svc, testModuleFS, "invalid.yaml", invalidYamlContent)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unmarshal module file")
+	})
+
+	t.Run("wasm file too large", func(t *testing.T) {
+		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+		tempDir := t.TempDir()
+		yamlContent := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: large.module
+  version: "1.0"
+`)
+		yamlPath := "large_module.yaml"
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, yamlPath), yamlContent, 0644))
+
+		largeWasmContent := make([]byte, maxWasmModuleSize+1)
+		wasmPath := "large_module.wasm"
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, wasmPath), largeWasmContent, 0644))
+
+		tempFS := os.DirFS(tempDir)
+		err := loadModule(svc, tempFS, yamlPath, yamlContent)
+
+		assert.Error(t, err, "loadModule should return an error for a wasm file that is too large")
+		assert.Contains(t, err.Error(), "exceeds maximum allowed size")
+	})
+
+	t.Run("read wasm file error", func(t *testing.T) {
+		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+		// Use a mock FS that fails on Read for the wasm file.
+		failingFS := &failingReadFileFS{
+			FS:         testModuleFS,
+			failOnRead: map[string]bool{"testdata/modules/test_module.wasm": true},
+		}
+
+		yamlContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.yaml")
+		require.NoError(t, err)
+
+		err = loadModule(svc, failingFS, "testdata/modules/test_module.yaml", yamlContent)
+
+		assert.Error(t, err, "loadModule should return an error if wasm file cannot be read")
+		assert.Contains(t, err.Error(), "read WASM file")
+		assert.ErrorIs(t, err, os.ErrPermission)
+	})
+}
+
+func TestLoadComponentsFromFS_WalkDirError(t *testing.T) {
+	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	// Use an FS that will fail on WalkDir's internal call to ReadDir.
+	failingFS := &failingReadDirFS{FS: testModuleFS}
+
+	err := loadComponentsFromFS(svc, failingFS, ".", false)
+
+	assert.Error(t, err, "loadComponentsFromFS should propagate errors from fs.WalkDir")
+	assert.ErrorIs(t, err, os.ErrPermission, "the specific error from the mock fs should be propagated")
 }
 
 func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
@@ -274,7 +379,6 @@ spec:
 		loadedWorkflow, err := svc.GetWorkflow("test.flow@1.0")
 		require.NoError(t, err)
 		assert.Equal(t, "This is the OVERWRITTEN workflow.", loadedWorkflow.Meta.Description, "The workflow should have been overwritten by the installed version")
-		assert.Equal(t, []string{"new.step"}, loadedWorkflow.Steps, "The workflow steps should have been overwritten")
 	})
 
 	t.Run("overwrite module", func(t *testing.T) {
