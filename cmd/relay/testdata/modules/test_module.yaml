@@ -10,3 +10,5 @@ accepts:
   - "test.schema@1.0"
 outputKeys:
   - "result"
+wasmDigest: "40096c6325699a99b1af0bfc4878bc36a072886530580bd5395f12802c37c1c8"
+wasmSize: 8
