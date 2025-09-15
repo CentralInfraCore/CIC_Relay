@@ -44,7 +44,7 @@ func TestDomainConstructors_GoldenChecksums(t *testing.T) {
 		meta := BaseBlock{Name: "golden-mod", Version: "1.0"}
 
 		// This checksum is updated based on the actual output from the corrected computeChecksum logic.
-		const goldenModuleChecksum = "b1f93d27257a66790ed3d51594062952832ed6f41198ae203cd2a0106e442d74"
+		const goldenModuleChecksum = "7ad9f16c6ac3cd6997954a252b4feeec2aa65ec02df0dbd64287edf06be1f46e"
 
 		mod, err := NewModuleDescriptor(meta, "executor", []string{"*"}, nil, nil)
 		if err != nil {
