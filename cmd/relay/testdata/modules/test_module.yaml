@@ -4,7 +4,7 @@ metadata:
   name: test.module
   version: "1.0"
   description: "A test WASM module."
-  checksum: "e66ccef90b930eecb48318db032759dc4696f40b107c636be1ebfc6a8ba3a571"
+  checksum: "f24f705a529b33b6c38268f8d0e6bf2664aa6a615374b9c571dea4972b75cf16"
 type: executor
 accepts:
   - "test.schema@1.0"

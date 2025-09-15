@@ -36,12 +36,24 @@ func writeCanonicalJSON(w io.Writer, v any) error {
 	case map[string]any:
 		return writeJSONMap(w, vv)
 	default:
-		// For any other type, fall back to standard json.Marshal
-		// This handles complex structs, other numeric types, etc.
+		// For other types (like structs or other numeric types), marshal them first.
 		b, err := json.Marshal(v)
 		if err != nil {
 			return err
 		}
+
+		// If the result is a JSON object, unmarshal it into a map to sort the keys.
+		// This handles structs correctly.
+		if len(b) > 0 && b[0] == '{' {
+			var m map[string]any
+			if err := json.Unmarshal(b, &m); err != nil {
+				// This should be unlikely if json.Marshal produced valid JSON.
+				return fmt.Errorf("failed to re-unmarshal for canonicalization: %w", err)
+			}
+			return writeJSONMap(w, m)
+		}
+
+		// Otherwise, it's a primitive (number, string) or an array, which is fine.
 		_, err = w.Write(b)
 		return err
 	}
