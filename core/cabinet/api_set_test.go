@@ -139,3 +139,55 @@ func TestAPI_ValidateSet_StoreErrors(t *testing.T) {
 		assert.Equal(t, genericErr, err)
 	})
 }
+
+func TestAPI_ValidateSet_Options(t *testing.T) {
+	api := NewAPI(&mockCabinet{}) // API needs a Cabinet to resolve workflows and modules
+
+	t.Run("options nil should pass", func(t *testing.T) {
+		payload := &SetPayload{
+			WorkflowID: "wf-1@1.0",
+			Modules:    []ModuleID{"mod-1"},
+			Options:    nil, // Explicitly nil options
+		}
+		err := api.ValidateSet(context.Background(), payload)
+		assert.NoError(t, err)
+	})
+
+	t.Run("options with valid priority should pass", func(t *testing.T) {
+		payload := &SetPayload{
+			WorkflowID: "wf-1@1.0",
+			Modules:    []ModuleID{"mod-1"},
+			Options:    &SetOptions{Priority: "low"},
+		}
+		err := api.ValidateSet(context.Background(), payload)
+		assert.NoError(t, err)
+
+		payload = &SetPayload{
+			WorkflowID: "wf-1@1.0",
+			Modules:    []ModuleID{"mod-1"},
+			Options:    &SetOptions{Priority: "normal"},
+		}
+		err = api.ValidateSet(context.Background(), payload)
+		assert.NoError(t, err)
+
+		payload = &SetPayload{
+			WorkflowID: "wf-1@1.0",
+			Modules:    []ModuleID{"mod-1"},
+			Options:    &SetOptions{Priority: "high"},
+		}
+		err = api.ValidateSet(context.Background(), payload)
+		assert.NoError(t, err)
+	})
+
+	t.Run("options with invalid priority should fail", func(t *testing.T) {
+		payload := &SetPayload{
+			WorkflowID: "wf-1@1.0",
+			Modules:    []ModuleID{"mod-1"},
+			Options:    &SetOptions{Priority: "invalid"},
+		}
+		err := api.ValidateSet(context.Background(), payload)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalid)
+		assert.Contains(t, err.Error(), "options.priority invalid")
+	})
+}
