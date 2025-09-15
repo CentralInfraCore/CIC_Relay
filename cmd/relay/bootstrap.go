@@ -13,6 +13,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// maxWasmModuleSize defines the maximum allowed size for a WASM module in bytes (e.g., 16 MB).
+const maxWasmModuleSize = 16 * 1024 * 1024
+
 // ComponentHeader defines the common fields for identifying a component type.
 type ComponentHeader struct {
 	APIVersion string `yaml:"apiVersion"`
@@ -36,7 +39,7 @@ type WorkflowFile struct {
 // ModuleFile defines the structure of a Module YAML file.
 type ModuleFile struct {
 	Metadata cabinet.BaseBlock `yaml:"metadata"`
-	Type       string   `yaml:"type"`
+	Type       string   `yaml:"type"`	
 	Accepts    []string `yaml:"accepts"`
 	OutputKeys []string `yaml:"outputKeys"`
 }
@@ -150,7 +153,6 @@ func loadWorkflow(svc cabinet.Cabinet, content []byte) error {
 		return fmt.Errorf("unmarshal workflow file: %w", err)
 	}
 
-	// Create the workflow using the constructor to ensure validation and checksumming.
 	workflow, err := cabinet.NewWorkflow(file.Metadata, file.Spec.Steps)
 	if err != nil {
 		return fmt.Errorf("workflow validation: %w", err)
@@ -175,12 +177,21 @@ func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []
 	// Assumes WASM file has the same base name but with .wasm extension.
 	wasmPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".wasm"
 
+	// Get file info to check size before reading.
+	fileInfo, err := fs.Stat(fsys, wasmPath)
+	if err != nil {
+		return fmt.Errorf("stat WASM file %q: %w", wasmPath, err)
+	}
+
+	if fileInfo.Size() > maxWasmModuleSize {
+		return fmt.Errorf("WASM module %q exceeds maximum allowed size of %d bytes (got %d)", wasmPath, maxWasmModuleSize, fileInfo.Size())
+	}
+
 	wasmCode, err := fs.ReadFile(fsys, wasmPath)
 	if err != nil {
 		return fmt.Errorf("read WASM file %q: %w", wasmPath, err)
 	}
 
-	// Create the module descriptor using the constructor.
 	moduleDesc, err := cabinet.NewModuleDescriptor(file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
 	if err != nil {
 		return fmt.Errorf("module validation: %w", err)
