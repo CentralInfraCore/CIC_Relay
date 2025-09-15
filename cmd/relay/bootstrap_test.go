@@ -212,7 +212,7 @@ metadata:
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, wasmPath), largeWasmContent, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err := loadModule(svc, tempFS, yamlPath, yamlContent)
+		err = loadModule(svc, tempFS, yamlPath, yamlContent)
 
 		assert.Error(t, err, "loadModule should return an error for a wasm file that is too large")
 		assert.Contains(t, err.Error(), "exceeds maximum allowed size")
@@ -396,6 +396,8 @@ accepts:
   - "test.schema@1.0"
 outputKeys:
   - "new.result"
+wasmDigest: "40096c6325699a99b1af0bfc4878bc36a072886530580bd5395f12802c37c1c8"
+wasmSize: 8
 `)
 		// Need to also provide the WASM file for the overwrite to work
 		wasmContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.wasm")

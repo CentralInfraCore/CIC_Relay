@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"log"
@@ -42,6 +44,8 @@ type ModuleFile struct {
 	Type       string   `yaml:"type"`	
 	Accepts    []string `yaml:"accepts"`
 	OutputKeys []string `yaml:"outputKeys"`
+	WasmDigest string   `yaml:"wasmDigest,omitempty"`	
+	WasmSize   int      `yaml:"wasmSize,omitempty"`
 }
 
 // loadEmbeddedComponents loads components from the embedded filesystem.
@@ -190,6 +194,21 @@ func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []
 	wasmCode, err := fs.ReadFile(fsys, wasmPath)
 	if err != nil {
 		return fmt.Errorf("read WASM file %q: %w", wasmPath, err)
+	}
+
+	// Calculate SHA-256 hash of the WASM code
+	hasher := sha256.New()
+	hasher.Write(wasmCode)
+	calculatedDigest := hex.EncodeToString(hasher.Sum(nil))
+
+	// Verify WASM digest if provided in YAML
+	if file.WasmDigest != "" && file.WasmDigest != calculatedDigest {
+		return fmt.Errorf("WASM digest mismatch for %q (expected: %s, got: %s)", wasmPath, file.WasmDigest, calculatedDigest)
+	}
+
+	// Verify WASM size if provided in YAML
+	if file.WasmSize != 0 && file.WasmSize != int(fileInfo.Size()) {
+		return fmt.Errorf("WASM size mismatch for %q (expected: %d, got: %d)", wasmPath, file.WasmSize, fileInfo.Size())
 	}
 
 	moduleDesc, err := cabinet.NewModuleDescriptor(file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
