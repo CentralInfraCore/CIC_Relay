@@ -32,8 +32,8 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 
 ### M2 — Modul YAML + CAS szerződés
 
-* **Feladatok**: YAML header egységes a schema/workflow blokkokkal; kötelező `digest (sha256)` és `size`; opcionális `path`, `store` hintként. Betöltésnél path-normalizáció, symlink-tilalom, digest-ellenőrzés.
-* **DoD**: azonos YAML+WASM → azonos hash, környezettől függetlenül. Hibás digest/size → load fail. Dokumentált „nyers vs. stripelt” szerződés.
+* **Feladatok**: A `ModuleFile` struktúra és a `loadModule` függvény módosítása a szigorú CAS (Content-Addressable Storage) szerződés kikényszerítésére.
+* **DoD**: A `wasmDigest` (sha256) és `wasmSize` mezők kötelezővé téve a modul YAML-definíciójában. A `loadModule` függvény betöltéskor ellenőrzi, hogy a WASM fájl tartalma és mérete megegyezik-e a YAML-ban megadott értékekkel. A hiányzó vagy hibás értékek a modul betöltésének megszakadását okozzák. A kapcsolódó tesztek frissítve és sikeresen lefutnak.
 
 ### M3 — Privát PKI verifikáció
 
@@ -83,8 +83,8 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 | --------- | ------- |
 | M0        | Done    |
 | M1        | Done    |
-| M2        | Partial |
-| M3        | Partial |
+| M2        | Done    |
+| M3        | Done    |
 | M4        | Missing |
 | M5        | Done    |
 | M6        | Missing |

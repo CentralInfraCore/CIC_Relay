@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -163,23 +164,56 @@ func TestLoadModule(t *testing.T) {
 		assert.True(t, loadedModule.Meta.Valid, "Loaded module should be valid")
 	})
 
+	t.Run("missing wasm digest", func(t *testing.T) {
+		// This YAML is missing the mandatory wasmDigest field.
+		missingDigestYaml := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: missing.digest
+  version: "1.0"
+wasmSize: 123
+`)
+		err := loadModule(svc, testModuleFS, "missing_digest.yaml", missingDigestYaml)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "wasmDigest is a required field")
+	})
+
+	t.Run("missing wasm size", func(t *testing.T) {
+		// This YAML is missing the mandatory wasmSize field.
+		missingSizeYaml := []byte(`
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: missing.size
+  version: "1.0"
+wasmDigest: "some-digest"
+`)
+		err := loadModule(svc, testModuleFS, "missing_size.yaml", missingSizeYaml)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "wasmSize is a required field")
+	})
+
 	t.Run("missing wasm file", func(t *testing.T) {
 		// Create a temporary FS that contains only the YAML, but no WASM
 		tempFS := os.DirFS(t.TempDir())
 		missingWasmYamlPath := "missing_wasm.yaml"
+		// This YAML is now valid on its own, but the corresponding .wasm file is missing.
 		missingWasmYamlContent := []byte(`
 apiVersion: relay.cic.com/v1
 kind: Module
 metadata:
   name: missing.wasm
   version: "1.0"
+wasmDigest: "dummy-digest"
+wasmSize: 123
 `)
 		require.NoError(t, os.WriteFile(filepath.Join(t.TempDir(), missingWasmYamlPath), missingWasmYamlContent, 0644))
 
 		// Execute loadModule with a FS that doesn't contain the WASM file
 		err = loadModule(svc, tempFS, missingWasmYamlPath, missingWasmYamlContent)
 		assert.Error(t, err, "loadModule should return an error if WASM file is missing")
-		assert.Contains(t, err.Error(), "stat WASM file", "Error message should indicate WASM file stat issue") // Changed from "read WASM file"
+		assert.Contains(t, err.Error(), "stat WASM file", "Error message should indicate WASM file stat issue")
 		assert.Contains(t, err.Error(), "no such file or directory", "Error message should indicate WASM file not found")
 	})
 
@@ -227,13 +261,15 @@ metadata: "this should be a map"
 	t.Run("wasm file too large", func(t *testing.T) {
 		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 		tempDir := t.TempDir()
-		yamlContent := []byte(`
+		yamlContent := []byte(fmt.Sprintf(`
 apiVersion: relay.cic.com/v1
 kind: Module
 metadata:
   name: large.module
   version: "1.0"
-`)
+wasmDigest: "dummy-digest"
+wasmSize: %d
+`, maxWasmModuleSize+1))
 		yamlPath := "large_module.yaml"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, yamlPath), yamlContent, 0644))
 
@@ -316,14 +352,25 @@ wasmSize: 999
 		// Create a temporary FS with a module YAML that has invalid metadata
 		tempDir := t.TempDir()
 		invalidMetaYamlPath := "invalid_meta.yaml"
-		invalidMetaYamlContent := []byte(`
+
+		// Define the dummy WASM content and calculate its digest so that the digest
+		// check passes and we can test the subsequent metadata validation.
+		wasmContent := []byte{0x00, 0x61, 0x73, 0x6d}
+		hasher := sha256.New()
+		hasher.Write(wasmContent)
+		correctDigest := hex.EncodeToString(hasher.Sum(nil))
+
+		// Create YAML with the correct digest but invalid metadata (missing name).
+		invalidMetaYamlContent := []byte(fmt.Sprintf(`
 apiVersion: relay.cic.com/v1
 kind: Module
 metadata:
   version: "1.0" # Missing name
-`)
+wasmDigest: "%s"
+wasmSize: 4
+`, correctDigest))
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, invalidMetaYamlPath), invalidMetaYamlContent, 0644))
-		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid_meta.wasm"), []byte{0x00, 0x61, 0x73, 0x6d}, 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid_meta.wasm"), wasmContent, 0644))
 
 		tempFS := os.DirFS(tempDir)
 		err = loadModule(svc, tempFS, invalidMetaYamlPath, invalidMetaYamlContent)
@@ -527,7 +574,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 			Accepts:    module.Accepts,
 			OutputKeys: module.OutputKeys,
 			WasmDigest: wasmDigest,
-			WasmSize:   int(wasmSize),
+			WasmSize:   wasmSize,
 		}
 
 		// Use a map for the final YAML to include apiVersion and kind
