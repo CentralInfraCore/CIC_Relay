@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os" // Import os package for environment variable manipulation
 	"strings"
 	"testing"
 
@@ -75,7 +76,9 @@ func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 
 	// Create a dummy relayServer for the test
 	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
-	dummyServer := &relayServer{api: dummyAPI}
+	// Initialize a default config for the test server
+	defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig}
 
 	err := run(":12345", logger, dummyServer)
 	if err != nil {
@@ -131,7 +134,9 @@ func TestRun_PropagatesListenError(t *testing.T) {
 
 	// Create a dummy relayServer for the test
 	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
-	dummyServer := &relayServer{api: dummyAPI}
+	// Initialize a default config for the test server
+	defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig}
 
 	err := run(":0", logger, dummyServer)
 	if !errors.Is(err, wantErr) {
@@ -158,7 +163,9 @@ func TestSetHandler(t *testing.T) {
 	require.NoError(t, cabinetSvc.PutModule(pingModule))
 
 	api := cabinet.NewAPI(cabinetSvc)
-	server := &relayServer{api: api}
+	// Initialize a default config for the test server
+	defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+	server := &relayServer{api: api, config: defaultConfig}
 
 	t.Run("successful set", func(t *testing.T) {
 		// Corrected payload with modules as a simple array of strings
@@ -228,7 +235,9 @@ func TestSetHandler(t *testing.T) {
 			},
 		}
 		mockAPI := cabinet.NewAPI(mockSvc)
-		mockServer := &relayServer{api: mockAPI}
+		// Initialize a default config for the mock server
+		defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+		mockServer := &relayServer{api: mockAPI, config: defaultConfig}
 
 		payload := `{"workflow_id": "any", "modules": ["any"]}`
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
@@ -244,7 +253,7 @@ func TestSetHandler(t *testing.T) {
 
 	t.Run("request body too large", func(t *testing.T) {
 		// Create a request body that exceeds MaxJSONInputSize
-		largePayload := strings.Repeat("a", MaxJSONInputSize+1) // One byte over the limit
+		largePayload := strings.Repeat("a", int(server.config.MaxJSONInputSize)+1) // One byte over the limit
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(largePayload))
 		w := httptest.NewRecorder()
 
@@ -253,6 +262,34 @@ func TestSetHandler(t *testing.T) {
 		res := w.Result()
 		assert.Equal(t, http.StatusRequestEntityTooLarge, res.StatusCode)
 		body, _ := io.ReadAll(res.Body)
-		assert.Contains(t, string(body), fmt.Sprintf("Request body too large, exceeds %d bytes", MaxJSONInputSize))
+		assert.Contains(t, string(body), fmt.Sprintf("Request body too large, exceeds %d bytes", server.config.MaxJSONInputSize))
+	})
+}
+
+func TestLoadConfig(t *testing.T) {
+	// Save original environment variable and restore it after test
+	originalEnv := os.Getenv("MAX_JSON_INPUT_SIZE")
+	defer os.Setenv("MAX_JSON_INPUT_SIZE", originalEnv)
+
+	t.Run("default value when env var is not set", func(t *testing.T) {
+		os.Unsetenv("MAX_JSON_INPUT_SIZE")
+		cfg, err := loadConfig()
+		require.NoError(t, err)
+		assert.Equal(t, int64(4*1024*1024), cfg.MaxJSONInputSize)
+	})
+
+	t.Run("valid value from env var", func(t *testing.T) {
+		os.Setenv("MAX_JSON_INPUT_SIZE", "1048576") // 1 MB
+		cfg, err := loadConfig()
+		require.NoError(t, err)
+		assert.Equal(t, int64(1048576), cfg.MaxJSONInputSize)
+	})
+
+	t.Run("invalid value from env var", func(t *testing.T) {
+		os.Setenv("MAX_JSON_INPUT_SIZE", "not-a-number")
+		cfg, err := loadConfig()
+		assert.Error(t, err)
+		assert.Nil(t, cfg)
+		assert.Contains(t, err.Error(), "invalid value for MAX_JSON_INPUT_SIZE")
 	})
 }

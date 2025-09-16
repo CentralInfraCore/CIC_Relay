@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/google/uuid"
 
@@ -23,12 +25,31 @@ var embeddedWorkflows embed.FS
 // test seam: unit tesztben felülírható
 var listenAndServe = http.ListenAndServe
 
-// MaxJSONInputSize defines the maximum allowed size for JSON request bodies (4 MB).
-const MaxJSONInputSize = 4 * 1024 * 1024
+// config holds the application's configuration.
+type config struct {
+	MaxJSONInputSize int64
+}
+
+// loadConfig loads configuration from environment variables.
+func loadConfig() (*config, error) {
+	cfg := &config{
+		MaxJSONInputSize: 4 * 1024 * 1024, // Default to 4 MB
+	}
+
+	if val := os.Getenv("MAX_JSON_INPUT_SIZE"); val != "" {
+		size, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for MAX_JSON_INPUT_SIZE: %w", err)
+		}
+		cfg.MaxJSONInputSize = size
+	}
+	return cfg, nil
+}
 
 // relayServer holds the dependencies for our HTTP handlers.
 type relayServer struct {
-	api *cabinet.API
+	api    *cabinet.API
+	config *config
 }
 
 // newMux creates a new HTTP multiplexer with all routes.
@@ -55,7 +76,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Limit the size of the request body to prevent abuse.
 	// We add 1 to the limit to detect if the body is *exactly* at the limit or exceeds it.
-	limitedReader := io.LimitReader(r.Body, MaxJSONInputSize+1)
+	limitedReader := io.LimitReader(r.Body, s.config.MaxJSONInputSize+1)
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
@@ -64,8 +85,8 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // Ensure the original body is closed
 
 	// If the body length is greater than the allowed size, return 413.
-	if len(body) > MaxJSONInputSize {
-		http.Error(w, fmt.Sprintf("Request body too large, exceeds %d bytes", MaxJSONInputSize), http.StatusRequestEntityTooLarge)
+	if int64(len(body)) > s.config.MaxJSONInputSize {
+		http.Error(w, fmt.Sprintf("Request body too large, exceeds %d bytes", s.config.MaxJSONInputSize), http.StatusRequestEntityTooLarge)
 		return
 	}
 
@@ -98,6 +119,12 @@ func run(port string, logger *log.Logger, s *relayServer) error {
 }
 
 func main() {
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("FATAL: Failed to load configuration: %v", err)
+	}
+	log.Printf("Loaded configuration: MaxJSONInputSize=%d bytes", cfg.MaxJSONInputSize)
+
 	// --- Cabinet Service Initialization ---
 	instanceID := uuid.New().String()
 	log.Printf("Instance ID: %s", instanceID)
@@ -123,7 +150,7 @@ func main() {
 
 	// --- HTTP Server Initialization ---
 	api := cabinet.NewAPI(cabinetSvc)
-	server := &relayServer{api: api}
+	server := &relayServer{api: api, config: cfg}
 
 	port := ":8080"
 	log.Fatal(run(port, log.Default(), server))
