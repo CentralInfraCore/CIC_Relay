@@ -15,9 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// maxWasmModuleSize defines the maximum allowed size for a WASM module in bytes (e.g., 16 MB).
-const maxWasmModuleSize = 16 * 1024 * 1024
-
 // ComponentHeader defines the common fields for identifying a component type.
 type ComponentHeader struct {
 	APIVersion string `yaml:"apiVersion"`
@@ -50,11 +47,11 @@ type ModuleFile struct {
 
 // loadEmbeddedComponents loads components from the embedded filesystem.
 // It fails hard on any error, as embedded components are considered critical.
-func loadEmbeddedComponents(svc cabinet.Cabinet, schemas embed.FS, workflows embed.FS) error {
-	if err := loadComponentsFromFS(svc, schemas, ".", true); err != nil {
+func loadEmbeddedComponents(svc cabinet.Cabinet, schemas embed.FS, workflows embed.FS, maxWasmModuleSize int64) error {
+	if err := loadComponentsFromFS(svc, schemas, ".", true, maxWasmModuleSize); err != nil {
 		return fmt.Errorf("failed to load embedded schemas: %w", err)
 	}
-	if err := loadComponentsFromFS(svc, workflows, ".", true); err != nil {
+	if err := loadComponentsFromFS(svc, workflows, ".", true, maxWasmModuleSize); err != nil {
 		return fmt.Errorf("failed to load embedded workflows: %w", err)
 	}
 	log.Println("Successfully loaded all embedded components.")
@@ -63,7 +60,7 @@ func loadEmbeddedComponents(svc cabinet.Cabinet, schemas embed.FS, workflows emb
 
 // loadInstalledComponents loads components from a given filesystem path.
 // It logs errors for individual files but does not fail hard.
-func loadInstalledComponents(svc cabinet.Cabinet, path string) error {
+func loadInstalledComponents(svc cabinet.Cabinet, path string, maxWasmModuleSize int64) error {
 	// Check if the directory exists. If not, it's not a fatal error.
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.Printf("Installed components directory not found at %s, skipping.", path)
@@ -71,7 +68,7 @@ func loadInstalledComponents(svc cabinet.Cabinet, path string) error {
 	}
 
 	installedFS := os.DirFS(path)
-	if err := loadComponentsFromFS(svc, installedFS, ".", false); err != nil {
+	if err := loadComponentsFromFS(svc, installedFS, ".", false, maxWasmModuleSize); err != nil {
 		// This would only be a filesystem-level error, which should be fatal.
 		return fmt.Errorf("failed to load installed components from %s: %w", path, err)
 	}
@@ -81,7 +78,7 @@ func loadInstalledComponents(svc cabinet.Cabinet, path string) error {
 
 // loadComponentsFromFS walks a filesystem and loads all valid components.
 // It can be configured to either fail hard on parsing errors or just log them.
-func loadComponentsFromFS(svc cabinet.Cabinet, fsys fs.FS, root string, failOnError bool) error {
+func loadComponentsFromFS(svc cabinet.Cabinet, fsys fs.FS, root string, failOnError bool, maxWasmModuleSize int64) error {
 	return fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err // Propagate filesystem errors
@@ -114,7 +111,7 @@ func loadComponentsFromFS(svc cabinet.Cabinet, fsys fs.FS, root string, failOnEr
 		case "Workflow":
 			loadErr = loadWorkflow(svc, content)
 		case "Module":
-			loadErr = loadModule(svc, fsys, path, content)
+			loadErr = loadModule(svc, fsys, path, content, maxWasmModuleSize)
 		default:
 			log.Printf("WARN: Unknown component kind '%s' in file %s", header.Kind, path)
 		}
@@ -171,7 +168,7 @@ func loadWorkflow(svc cabinet.Cabinet, content []byte) error {
 
 // loadModule unmarshals a module descriptor, reads its associated WASM file,
 // and loads the module into the cabinet.
-func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []byte) error {
+func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []byte, maxWasmModuleSize int64) error {
 	var file ModuleFile
 	if err := yaml.Unmarshal(yamlContent, &file); err != nil {
 		return fmt.Errorf("unmarshal module file: %w", err)

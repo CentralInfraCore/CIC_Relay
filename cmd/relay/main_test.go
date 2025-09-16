@@ -91,7 +91,7 @@ func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 		t.Fatalf("listenAndServe addr = %q, want %q", gotAddr, ":12345")
 	}
 
-	// Ellenőrizzük, hogy a handler valóban kiszolgálja a "/"-t a várt JSON-nal
+	// Ellenőrizzük, hogy a handler valóban kiszolgálja a "/"'-t a várt JSON-nal
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 	gotHandler.ServeHTTP(w, req)
@@ -189,6 +189,20 @@ func TestSetHandler(t *testing.T) {
 
 	t.Run("invalid json", func(t *testing.T) {
 		payload := `{"workflow_id": "test"` // Malformed JSON
+
+		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
+		w := httptest.NewRecorder()
+
+		server.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+		body, _ := io.ReadAll(res.Body)
+		assert.Contains(t, string(body), "Invalid JSON payload")
+	})
+
+	t.Run("empty json payload", func(t *testing.T) {
+		payload := "" // Empty JSON payload
 
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
 		w := httptest.NewRecorder()
