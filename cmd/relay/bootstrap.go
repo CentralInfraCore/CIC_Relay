@@ -44,8 +44,8 @@ type ModuleFile struct {
 	Type       string            `yaml:"type"`
 	Accepts    []string          `yaml:"accepts"`
 	OutputKeys []string          `yaml:"outputKeys"`
-	WasmDigest string            `yaml:"wasmDigest,omitempty"`
-	WasmSize   int               `yaml:"wasmSize,omitempty"`
+	WasmDigest string            `yaml:"wasmDigest"`
+	WasmSize   int64             `yaml:"wasmSize"`
 }
 
 // loadEmbeddedComponents loads components from the embedded filesystem.
@@ -177,6 +177,14 @@ func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []
 		return fmt.Errorf("unmarshal module file: %w", err)
 	}
 
+	// Enforce that wasmDigest and wasmSize are provided.
+	if file.WasmDigest == "" {
+		return fmt.Errorf("wasmDigest is a required field for module %q", file.Metadata.Name+"@"+file.Metadata.Version)
+	}
+	if file.WasmSize == 0 {
+		return fmt.Errorf("wasmSize is a required field for module %q", file.Metadata.Name+"@"+file.Metadata.Version)
+	}
+
 	// Construct the WASM file path based on the YAML file path.
 	// Assumes WASM file has the same base name but with .wasm extension.
 	wasmPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".wasm"
@@ -191,24 +199,24 @@ func loadModule(svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []
 		return fmt.Errorf("WASM module %q exceeds maximum allowed size of %d bytes (got %d)", wasmPath, maxWasmModuleSize, fileInfo.Size())
 	}
 
+	// Verify WASM size from YAML against actual file size.
+	if file.WasmSize != fileInfo.Size() {
+		return fmt.Errorf("WASM size mismatch for %q (expected: %d, got: %d)", wasmPath, file.WasmSize, fileInfo.Size())
+	}
+
 	wasmCode, err := fs.ReadFile(fsys, wasmPath)
 	if err != nil {
 		return fmt.Errorf("read WASM file %q: %w", wasmPath, err)
 	}
 
-	// Calculate SHA-256 hash of the WASM code
+	// Calculate SHA-256 hash of the WASM code.
 	hasher := sha256.New()
 	hasher.Write(wasmCode)
 	calculatedDigest := hex.EncodeToString(hasher.Sum(nil))
 
-	// Verify WASM digest if provided in YAML
-	if file.WasmDigest != "" && file.WasmDigest != calculatedDigest {
+	// Verify WASM digest from YAML against actual content hash.
+	if file.WasmDigest != calculatedDigest {
 		return fmt.Errorf("WASM digest mismatch for %q (expected: %s, got: %s)", wasmPath, file.WasmDigest, calculatedDigest)
-	}
-
-	// Verify WASM size if provided in YAML
-	if file.WasmSize != 0 && file.WasmSize != int(fileInfo.Size()) {
-		return fmt.Errorf("WASM size mismatch for %q (expected: %d, got: %d)", wasmPath, file.WasmSize, fileInfo.Size())
 	}
 
 	moduleDesc, err := cabinet.NewModuleDescriptor(file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
