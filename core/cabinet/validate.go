@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"centralrelay/pkg/canonicaljson"
+	"github.com/tetratelabs/wabin/binary"
+	"github.com/tetratelabs/wabin/wasm"
 )
 
 // Kind constants for checksum discrimination.
@@ -18,11 +20,24 @@ const (
 // MaxWASMModuleSize defines the maximum allowed size for a WASM module in bytes (16MB).
 const MaxWASMModuleSize = 16 * 1024 * 1024
 
-// stripWasmModuleFunc is a function pointer that can be overridden for testing.
-// In production, this would point to a real WASM stripping utility.
+// stripWasmModuleFunc uses wabin to strip all custom sections from a WASM module,
+// producing a canonical byte representation.
 var stripWasmModuleFunc = func(rawData []byte) ([]byte, error) {
-	// Default no-op implementation. In a real scenario, this would perform the stripping.
-	return rawData, nil
+	// 1. Decode the module using wabin's decoder.
+	// This also performs validation.
+	module, err := binary.DecodeModule(rawData, wasm.CoreFeaturesV2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode wasm module with wabin: %w", err)
+	}
+
+	// 2. Strip all custom sections by setting the field to nil.
+	// This includes potentially non-deterministic sections like 'name' and 'producers'.
+	module.CustomSections = nil
+
+	// 3. Re-encode the module without the custom sections.
+	encodedBytes := binary.EncodeModule(module)
+
+	return encodedBytes, nil
 }
 
 // SetStripWasmModuleFunc allows overriding the default WASM stripping function for testing.

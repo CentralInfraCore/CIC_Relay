@@ -6,11 +6,29 @@ import (
 	"math"
 	"testing"
 
+	"centralrelay/pkg/canonicaljson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"centralrelay/pkg/canonicaljson"
 )
+
+// wasmBase is the binary representation of a simple WASM module that exports a single function `add`.
+// wat: (module (func (export "add") (param i32 i32) (result i32) local.get 0 local.get 1 i32.add))
+var wasmBase = []byte{
+	0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x07, 0x01, 0x60, 0x02, 0x7f, 0x7f, 0x01, 0x7f,
+	0x03, 0x02, 0x01, 0x00, 0x07, 0x07, 0x01, 0x03, 0x61, 0x64, 0x64, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07,
+	0x00, 0x20, 0x00, 0x20, 0x01, 0x6a, 0x0b,
+}
+
+// wasmWithCustomSection is the same module but with an added, non-essential custom section.
+var wasmWithCustomSection = append(wasmBase, []byte{
+	0x00, // Section ID for custom sections
+	0x0d, // Section size (13 bytes)
+	0x07, // Name length (7 bytes)
+	'p', 'r', 'o', 'd', 'u', 'c', 'e', 'r', 's', // Section name: "producers"
+	0x01, // Number of producers
+	0x01, // Producer name length
+	'A',  // Producer name: "A"
+}...,)
 
 func TestValidateAndChecksum(t *testing.T) {
 	// Restore original function after all tests in this file
@@ -96,32 +114,22 @@ func TestValidateAndChecksum(t *testing.T) {
 		assert.Contains(t, err.Error(), fmt.Sprintf("WASM module size exceeds limit of %d bytes", MaxWASMModuleSize))
 	})
 
-	t.Run("WASM module size within limit should pass", func(t *testing.T) {
+	t.Run("valid WASM module should pass", func(t *testing.T) {
 		meta := &BaseBlock{Name: "small-wasm", Version: "1.0"}
-		// Create a byte slice exactly MaxWASMModuleSize
-		smallWasmData := make([]byte, MaxWASMModuleSize)
-		_, err := validateAndChecksum(meta, KindModule, smallWasmData)
-
+		// Use a structurally valid, minimal WASM module.
+		_, err := validateAndChecksum(meta, KindModule, wasmBase)
 		assert.NoError(t, err)
 	})
 
 	t.Run("WASM module canonicalization should affect checksum", func(t *testing.T) {
 		meta := &BaseBlock{Name: "test-wasm", Version: "1.0"}
-		rawWasmData := []byte("some raw wasm data with extra sections")
-		strippedWasmData := []byte("stripped wasm data") // This is what the canonicalizer should produce
 
-		// Temporarily override the stripWasmModuleFunc for this test
-		SetStripWasmModuleFunc(func(rawData []byte) ([]byte, error) {
-			assert.Equal(t, rawWasmData, rawData, "stripWasmModuleFunc should receive the raw WASM data")
-			return strippedWasmData, nil
-		})
-
-		// Calculate expected checksum based on the stripped data
-		expectedChecksum, err := computeChecksum(meta, KindModule, strippedWasmData)
+		// Calculate expected checksum based on the stripped data (which is wasmBase)
+		expectedChecksum, err := computeChecksum(meta, KindModule, wasmBase)
 		require.NoError(t, err)
 
-		// Call validateAndChecksum with the raw data
-		actualChecksum, err := validateAndChecksum(meta, KindModule, rawWasmData)
+		// Call validateAndChecksum with the non-canonical data (with custom section)
+		actualChecksum, err := validateAndChecksum(meta, KindModule, wasmWithCustomSection)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expectedChecksum, actualChecksum, "Checksum should be calculated based on stripped WASM data")
@@ -130,7 +138,7 @@ func TestValidateAndChecksum(t *testing.T) {
 	t.Run("WASM module canonicalization error should be propagated", func(t *testing.T) {
 		meta := &BaseBlock{Name: "test-wasm-error", Version: "1.0"}
 		rawWasmData := []byte("some raw wasm data")
-		
+
 		// Temporarily override the stripWasmModuleFunc to return an error
 		SetStripWasmModuleFunc(func(rawData []byte) ([]byte, error) {
 			return nil, errors.New("wasm stripping failed")

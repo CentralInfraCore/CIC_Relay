@@ -40,12 +40,12 @@ type WorkflowFile struct {
 
 // ModuleFile defines the structure of a Module YAML file.
 type ModuleFile struct {
-	Metadata cabinet.BaseBlock `yaml:"metadata"`
-	Type       string   `yaml:"type"`	
-	Accepts    []string `yaml:"accepts"`
-	OutputKeys []string `yaml:"outputKeys"`
-	WasmDigest string   `yaml:"wasmDigest,omitempty"`	
-	WasmSize   int      `yaml:"wasmSize,omitempty"`
+	Metadata   cabinet.BaseBlock `yaml:"metadata"`
+	Type       string            `yaml:"type"`
+	Accepts    []string          `yaml:"accepts"`
+	OutputKeys []string          `yaml:"outputKeys"`
+	WasmDigest string            `yaml:"wasmDigest,omitempty"`
+	WasmSize   int               `yaml:"wasmSize,omitempty"`
 }
 
 // loadEmbeddedComponents loads components from the embedded filesystem.

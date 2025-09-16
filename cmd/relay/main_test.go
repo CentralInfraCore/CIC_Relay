@@ -41,10 +41,12 @@ func (m *mockCabinetService) GetModule(id string) (*cabinet.ModuleDescriptor, er
 }
 
 // Other interface methods are stubbed out.
-func (m *mockCabinetService) PutSchema(s *cabinet.Schema) error             { return nil }
-func (m *mockCabinetService) GetSchema(id string) (*cabinet.Schema, error) { return &cabinet.Schema{}, nil }
+func (m *mockCabinetService) PutSchema(s *cabinet.Schema) error { return nil }
+func (m *mockCabinetService) GetSchema(id string) (*cabinet.Schema, error) {
+	return &cabinet.Schema{}, nil
+}
 func (m *mockCabinetService) PutModule(md *cabinet.ModuleDescriptor) error { return nil }
-func (m *mockCabinetService) PutWorkflow(w *cabinet.Workflow) error         { return nil }
+func (m *mockCabinetService) PutWorkflow(w *cabinet.Workflow) error        { return nil }
 
 // Close implements the Close method of the cabinet.Cabinet interface.
 func (m *mockCabinetService) Close(ctx context.Context) error {
