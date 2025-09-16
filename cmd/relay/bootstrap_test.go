@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"io/fs"
 	"log"
 	"os"
@@ -494,31 +496,59 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 	})
 
 	t.Run("overwrite module", func(t *testing.T) {
-		// This test still uses a hardcoded checksum, as per the plan to tackle it next.
-		overwriteContent := []byte(`
-apiVersion: relay.cic.com/v1
-kind: Module
-metadata:
-  name: test.module
-  version: "1.0"
-  description: "This is the OVERWRITTEN module."
-  checksum: "8f958d52a119097ff3a8841aade73f92f59abb91f51c3c7ce26f7d87be5057b4"
-type: executor
-accepts:
-  - "test.schema@1.0"
-outputKeys:
-  - "new.result"
-wasmDigest: "40096c6325699a99b1af0bfc4878bc36a072886530580bd5395f12802c37c1c8"
-wasmSize: 8
-`)
-		// Need to also provide the WASM file for the overwrite to work
+		// Dynamically create the module and its checksum
 		wasmContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.wasm")
+		require.NoError(t, err)
+
+		// Define the module's properties
+		meta := cabinet.BaseBlock{
+			Name:        "test.module",
+			Version:     "1.0",
+			Description: "This is the OVERWRITTEN module.",
+		}
+		moduleType := "executor"
+		accepts := []string{"test.schema@1.0"}
+		outputKeys := []string{"new.result"}
+
+		// Create a new module descriptor, which calculates the canonical checksum
+		module, err := cabinet.NewModuleDescriptor(meta, moduleType, accepts, outputKeys, wasmContent)
+		require.NoError(t, err, "NewModuleDescriptor should not fail")
+
+		// For the YAML file, we also need the WASM digest and size for CAS.
+		hasher := sha256.New()
+		hasher.Write(wasmContent)
+		wasmDigest := hex.EncodeToString(hasher.Sum(nil))
+		wasmSize := int64(len(wasmContent))
+
+		// Create the structure for the YAML file
+		finalYAML := ModuleFile{
+			Metadata:   module.Meta, // This now includes the correct checksum
+			Type:       module.Type,
+			Accepts:    module.Accepts,
+			OutputKeys: module.OutputKeys,
+			WasmDigest: wasmDigest,
+			WasmSize:   int(wasmSize),
+		}
+
+		// Use a map for the final YAML to include apiVersion and kind
+		finalYAMLMap := map[string]any{
+			"apiVersion": "relay.cic.com/v1",
+			"kind":       "Module",
+			"metadata":   finalYAML.Metadata,
+			"type":       finalYAML.Type,
+			"accepts":    finalYAML.Accepts,
+			"outputKeys": finalYAML.OutputKeys,
+			"wasmDigest": finalYAML.WasmDigest,
+			"wasmSize":   finalYAML.WasmSize,
+		}
+
+		overwriteContent, err := yaml.Marshal(finalYAMLMap)
 		require.NoError(t, err)
 
 		// Write the YAML and WASM to the temporary directory
 		moduleYamlPath := filepath.Join(tempDir, "overwrite_module.yaml")
 		require.NoError(t, os.WriteFile(moduleYamlPath, overwriteContent, 0644))
-		moduleWasmPath := filepath.Join(tempDir, "overwrite_module.wasm") // Corrected WASM file name
+		moduleWasmPath := filepath.Join(tempDir, "overwrite_module.wasm")
 		require.NoError(t, os.WriteFile(moduleWasmPath, wasmContent, 0644))
 
 		// 2. Execute
@@ -528,8 +558,9 @@ wasmSize: 8
 		// 3. Verify
 		loadedModule, err := svc.GetModule("test.module@1.0")
 		require.NoError(t, err)
-		assert.Equal(t, "This is the OVERWRITTEN module.", loadedModule.Meta.Description, "The module should have been overwritten by the installed version")
+		assert.Equal(t, "This is the OVERWRITTEN module.", loadedModule.Meta.Description, "The module should have been overwritten")
 		assert.Contains(t, loadedModule.OutputKeys, "new.result", "The module output keys should have been overwritten")
+		assert.Equal(t, module.Meta.Checksum, loadedModule.Meta.Checksum, "The checksum of the overwritten module should match the calculated one")
 	})
 }
 

@@ -9,8 +9,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
 
 ### M0 — Tesztek refaktorálása (dinamikus checksum)
 
-* **Feladatok**: A `bootstrap_test.go` tesztjeinek átalakítása, hogy a beégetett, statikus checksum-értékek helyett a program saját, kanonikus checksum-számítási logikáját (`cabinet.NewSchema`, `cabinet.NewWorkflow`) használják a tesztadatok előállításához.
-* **DoD**: A tesztek már nem tartalmaznak statikus hash-értékeket a sémák és workflow-k esetében. A tesztek a `cabinet` csomag `New...` konstruktorait hívják a helyes checksum dinamikus generálásához, így a tesztek ellenállóbbak a jövőbeli változásokkal szemben. A build sikeres.
+* **Feladatok**: A `bootstrap_test.go` tesztjeinek teljes körű átalakítása, hogy a beégetett, statikus checksum-értékek helyett a program saját, kanonikus checksum-számítási logikáját (`cabinet.NewSchema`, `cabinet.NewWorkflow`, `cabinet.NewModuleDescriptor`) használják a tesztadatok előállításához.
+* **DoD**: A tesztek már nem tartalmaznak statikus hash-értékeket egyetlen komponens (séma, workflow, modul) esetében sem. A tesztek a `cabinet` csomag `New...` konstruktorait hívják a helyes checksum dinamikus generálásához, így a tesztek ellenállóbbak a jövőbeli változásokkal szemben. A build sikeres.
 
 ### M1 — WASM checksum „készre”
 
