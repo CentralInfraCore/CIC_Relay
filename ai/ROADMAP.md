@@ -42,8 +42,25 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 
 ### M4 — LIMITS érvényesítés
 
-* **Feladatok**: JSON input cap (pl. 2–4 MB), WASM cap (M1 alapján), CPU/time budget a kanonizálás/hash során.
-* **DoD**: túlméret → 413/422; túl hosszú futás → megszakítás. Limitértékek konfigurálhatók, safe defaults mellett.
+A cél a rendszer robusztusságának növelése erőforrás-korlátok bevezetésével, megelőzve a DoS támadásokat és a túlzott erőforrás-felhasználást.
+
+**Részfeladatok (checklist):**
+
+*   **M4.1: JSON Input Méretkorlát**
+    *   [ ] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload méretét (pl. 2-4 MB).
+    *   [ ] **DoD**: Túlméretes JSON input esetén a rendszer 413-as vagy 422-es HTTP státuszkóddal válaszol, és a kérés feldolgozása megszakad. A limit konfigurálható.
+
+*   **M4.2: WASM Modul Méretkorlát**
+    *   [ ] **Feladat**: Kiterjeszteni az M1-ben bevezetett WASM méretellenőrzést, hogy az egy globálisan konfigurálható maximumot (pl. 16 MB) érvényesítsen.
+    *   [ ] **DoD**: Túlméretes WASM modul betöltésekor a rendszer hibát jelez, és a modul nem kerül feldolgozásra. A limit konfigurálható.
+
+*   **M4.3: CPU/Idő Korlát Kanonizálás/Hash Számítás Során**
+    *   [ ] **Feladat**: Bevezetni egy CPU/idő budget mechanizmust a kanonizálási és hash számítási műveletekhez, hogy megakadályozzuk a túl hosszú ideig tartó feldolgozást.
+    *   [ ] **DoD**: Ha a kanonizálás vagy hash számítás túllépi a megadott időkeretet, a művelet megszakad, és a rendszer megfelelő hibával válaszol. A budget konfigurálható.
+
+*   **M4.4: Limitértékek Konfigurálhatósága és Alapértelmezése**
+    *   [ ] **Feladat**: Biztosítani, hogy az összes bevezetett limit (JSON méret, WASM méret, CPU/idő budget) konfigurálható legyen, és biztonságos alapértelmezett értékekkel rendelkezzen.
+    *   [ ] **DoD**: A limitek könnyen módosíthatók a konfigurációban, és a rendszer stabilan működik az alapértelmezett értékekkel is.
 
 ### M5 — Hibamodel egységesítése
 
