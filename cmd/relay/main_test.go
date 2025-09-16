@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -239,5 +240,19 @@ func TestSetHandler(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 		body, _ := io.ReadAll(res.Body)
 		assert.Contains(t, string(body), "Internal server error")
+	})
+
+	t.Run("request body too large", func(t *testing.T) {
+		// Create a request body that exceeds MaxJSONInputSize
+		largePayload := strings.Repeat("a", MaxJSONInputSize+1) // One byte over the limit
+		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(largePayload))
+		w := httptest.NewRecorder()
+
+		server.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusRequestEntityTooLarge, res.StatusCode)
+		body, _ := io.ReadAll(res.Body)
+		assert.Contains(t, string(body), fmt.Sprintf("Request body too large, exceeds %d bytes", MaxJSONInputSize))
 	})
 }
