@@ -79,9 +79,10 @@ var testModuleFS embed.FS
 func TestLoadEmbeddedComponents(t *testing.T) {
 	// 1. Setup
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
 	// 2. Execute
-	err := loadEmbeddedComponents(svc, testSchemas, testWorkflows)
+	err := loadEmbeddedComponents(svc, testSchemas, testWorkflows, maxWasmSize)
 	require.NoError(t, err, "loadEmbeddedComponents should not return an error")
 
 	// 3. Verify
@@ -94,11 +95,12 @@ func TestLoadEmbeddedComponents(t *testing.T) {
 
 func TestLoadEmbeddedComponents_Error(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
 	t.Run("invalid schema", func(t *testing.T) {
 		// Execute with an embed.FS that contains an invalid schema file.
 		// The error from loadComponentsFromFS should be propagated up.
-		err := loadEmbeddedComponents(svc, invalidSchemaFS, testWorkflows)
+		err := loadEmbeddedComponents(svc, invalidSchemaFS, testWorkflows, maxWasmSize)
 		assert.Error(t, err, "expected an error when loading invalid embedded schema components")
 		assert.Contains(t, err.Error(), "failed to load embedded schemas", "error message should indicate which part failed")
 	})
@@ -106,7 +108,7 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 	t.Run("invalid workflow", func(t *testing.T) {
 		// Execute with an embed.FS that contains an invalid workflow file.
 		// The error from loadComponentsFromFS should be propagated up.
-		err := loadEmbeddedComponents(svc, testSchemas, invalidWorkflowFS)
+		err := loadEmbeddedComponents(svc, testSchemas, invalidWorkflowFS, maxWasmSize)
 		assert.Error(t, err, "expected an error when loading invalid embedded workflow components")
 		assert.Contains(t, err.Error(), "failed to load embedded workflows", "error message should indicate which part failed")
 	})
@@ -114,6 +116,7 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 
 func TestLoadComponentsFromFS(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
 	t.Run("unmarshal component header error", func(t *testing.T) {
 		// Create a temporary FS with a malformed YAML file
@@ -134,7 +137,7 @@ metadata: "this should be a map"
 			log.SetOutput(os.Stderr)
 		}()
 
-		err := loadComponentsFromFS(svc, tempFS, ".", false)
+		err := loadComponentsFromFS(svc, tempFS, ".", false, maxWasmSize)
 		assert.NoError(t, err, "loadComponentsFromFS should not return a fatal error for unmarshal errors")
 		assert.Contains(t, logBuf.String(), "unmarshal module file", "log should contain unmarshal error")
 	})
@@ -143,6 +146,8 @@ metadata: "this should be a map"
 func TestLoadModule(t *testing.T) {
 	// 1. Setup
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
+
 
 	// Read the expected WASM code directly from the embedded FS for comparison
 	expectedWasmCode, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.wasm")
@@ -154,7 +159,7 @@ func TestLoadModule(t *testing.T) {
 		require.NoError(t, err)
 
 		// 2. Execute
-		err = loadModule(svc, testModuleFS, "testdata/modules/test_module.yaml", yamlContent)
+		err = loadModule(svc, testModuleFS, "testdata/modules/test_module.yaml", yamlContent, maxWasmSize)
 		require.NoError(t, err, "loadModule should not return an error for a valid module")
 
 		// 3. Verify
@@ -174,7 +179,7 @@ metadata:
   version: "1.0"
 wasmSize: 123
 `)
-		err := loadModule(svc, testModuleFS, "missing_digest.yaml", missingDigestYaml)
+		err := loadModule(svc, testModuleFS, "missing_digest.yaml", missingDigestYaml, maxWasmSize)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "wasmDigest is a required field")
 	})
@@ -189,7 +194,7 @@ metadata:
   version: "1.0"
 wasmDigest: "some-digest"
 `)
-		err := loadModule(svc, testModuleFS, "missing_size.yaml", missingSizeYaml)
+		err := loadModule(svc, testModuleFS, "missing_size.yaml", missingSizeYaml, maxWasmSize)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "wasmSize is a required field")
 	})
@@ -211,7 +216,7 @@ wasmSize: 123
 		require.NoError(t, os.WriteFile(filepath.Join(t.TempDir(), missingWasmYamlPath), missingWasmYamlContent, 0644))
 
 		// Execute loadModule with a FS that doesn't contain the WASM file
-		err = loadModule(svc, tempFS, missingWasmYamlPath, missingWasmYamlContent)
+		err = loadModule(svc, tempFS, missingWasmYamlPath, missingWasmYamlContent, maxWasmSize)
 		assert.Error(t, err, "loadModule should return an error if WASM file is missing")
 		assert.Contains(t, err.Error(), "stat WASM file", "Error message should indicate WASM file stat issue")
 		assert.Contains(t, err.Error(), "no such file or directory", "Error message should indicate WASM file not found")
@@ -238,7 +243,7 @@ wasmSize: 123
 
 		// Execute with the modified content
 		embeddedYamlPath := "testdata/modules/test_module.yaml"
-		err = loadModule(svc, testModuleFS, embeddedYamlPath, modifiedYamlContent)
+		err = loadModule(svc, testModuleFS, embeddedYamlPath, modifiedYamlContent, maxWasmSize)
 
 		// Verify that the error is a checksum mismatch error
 		assert.Error(t, err, "loadModule should return an error for checksum mismatch")
@@ -253,7 +258,7 @@ apiVersion: relay.cic.com/v1
 kind: Module
 metadata: "this should be a map"
 `)
-		err := loadModule(svc, testModuleFS, "invalid.yaml", invalidYamlContent)
+		err := loadModule(svc, testModuleFS, "invalid.yaml", invalidYamlContent, maxWasmSize)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal module file")
 	})
@@ -269,16 +274,16 @@ metadata:
   version: "1.0"
 wasmDigest: "dummy-digest"
 wasmSize: %d
-`, maxWasmModuleSize+1))
+`, maxWasmSize+1))
 		yamlPath := "large_module.yaml"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, yamlPath), yamlContent, 0644))
 
-		largeWasmContent := make([]byte, maxWasmModuleSize+1)
+		largeWasmContent := make([]byte, maxWasmSize+1)
 		wasmPath := "large_module.wasm"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, wasmPath), largeWasmContent, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(svc, tempFS, yamlPath, yamlContent)
+		err = loadModule(svc, tempFS, yamlPath, yamlContent, maxWasmSize)
 
 		assert.Error(t, err, "loadModule should return an error for a wasm file that is too large")
 		assert.Contains(t, err.Error(), "exceeds maximum allowed size")
@@ -295,7 +300,7 @@ wasmSize: %d
 		yamlContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.yaml")
 		require.NoError(t, err)
 
-		err = loadModule(svc, failingFS, "testdata/modules/test_module.yaml", yamlContent)
+		err = loadModule(svc, failingFS, "testdata/modules/test_module.yaml", yamlContent, maxWasmSize)
 
 		assert.Error(t, err, "loadModule should return an error if wasm file cannot be read")
 		assert.Contains(t, err.Error(), "read WASM file")
@@ -319,7 +324,7 @@ wasmSize: 8
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "wrong_digest.wasm"), []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x02, 0x03, 0x04}, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(svc, tempFS, wrongDigestYamlPath, wrongDigestYamlContent)
+		err = loadModule(svc, tempFS, wrongDigestYamlPath, wrongDigestYamlContent, maxWasmSize)
 
 		assert.Error(t, err, "loadModule should return an error for WASM digest mismatch")
 		assert.Contains(t, err.Error(), "WASM digest mismatch")
@@ -342,7 +347,7 @@ wasmSize: 999
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "wrong_size.wasm"), []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x02, 0x03, 0x04}, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(svc, tempFS, wrongSizeYamlPath, wrongSizeYamlContent)
+		err = loadModule(svc, tempFS, wrongSizeYamlPath, wrongSizeYamlContent, maxWasmSize)
 
 		assert.Error(t, err, "loadModule should return an error for WASM size mismatch")
 		assert.Contains(t, err.Error(), "WASM size mismatch")
@@ -373,7 +378,7 @@ wasmSize: 4
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid_meta.wasm"), wasmContent, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(svc, tempFS, invalidMetaYamlPath, invalidMetaYamlContent)
+		err = loadModule(svc, tempFS, invalidMetaYamlPath, invalidMetaYamlContent, maxWasmSize)
 
 		assert.Error(t, err, "loadModule should return an error for module validation failure")
 		assert.Contains(t, err.Error(), "module validation")
@@ -383,10 +388,12 @@ wasmSize: 4
 
 func TestLoadComponentsFromFS_WalkDirError(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
+
 	// Use an FS that will fail on WalkDir's internal call to ReadDir.
 	failingFS := &failingReadDirFS{FS: testModuleFS}
 
-	err := loadComponentsFromFS(svc, failingFS, ".", false)
+	err := loadComponentsFromFS(svc, failingFS, ".", false, maxWasmSize)
 
 	assert.Error(t, err, "loadComponentsFromFS should propagate errors from fs.WalkDir")
 	assert.ErrorIs(t, err, os.ErrPermission, "the specific error from the mock fs should be propagated")
@@ -396,6 +403,8 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	// 1. Setup
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	tempDir := t.TempDir()
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
+
 
 	// Capture log output
 	var logBuf bytes.Buffer
@@ -454,7 +463,7 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	}
 
 	// 2. Execute
-	err := loadInstalledComponents(svc, tempDir)
+	err := loadInstalledComponents(svc, tempDir, maxWasmSize)
 	require.NoError(t, err, "loadInstalledComponents should not return a fatal error for invalid files")
 
 	// 3. Verify log output
@@ -468,9 +477,11 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 	// 1. Setup
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	tempDir := t.TempDir()
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
+
 
 	// Load embedded components first to have something to overwrite
-	require.NoError(t, loadEmbeddedComponents(svc, testSchemas, testWorkflows))
+	require.NoError(t, loadEmbeddedComponents(svc, testSchemas, testWorkflows, maxWasmSize))
 
 	t.Run("overwrite schema", func(t *testing.T) {
 		// Dynamically create the schema and its checksum
@@ -497,7 +508,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 		require.NoError(t, os.WriteFile(path, overwriteContent, 0644))
 
 		// 2. Execute
-		err = loadInstalledComponents(svc, tempDir)
+		err = loadInstalledComponents(svc, tempDir, maxWasmSize)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -525,6 +536,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 			"metadata":   workflow.Meta,
 			"spec":       map[string]any{"steps": workflow.Steps},
 		}
+
 		overwriteContent, err := yaml.Marshal(finalYAML)
 		require.NoError(t, err)
 
@@ -532,7 +544,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 		require.NoError(t, os.WriteFile(path, overwriteContent, 0644))
 
 		// 2. Execute
-		err = loadInstalledComponents(svc, tempDir)
+		err = loadInstalledComponents(svc, tempDir, maxWasmSize)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -599,7 +611,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 		require.NoError(t, os.WriteFile(moduleWasmPath, wasmContent, 0644))
 
 		// 2. Execute
-		err = loadInstalledComponents(svc, tempDir)
+		err = loadInstalledComponents(svc, tempDir, maxWasmSize)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -613,10 +625,11 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 
 func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
 	t.Run("non-existent path", func(t *testing.T) {
 		// A non-existent path should be skipped and not return an error.
-		err := loadInstalledComponents(svc, "/path/to/non/existent/dir")
+		err := loadInstalledComponents(svc, "/path/to/non/existent/dir", maxWasmSize)
 		assert.NoError(t, err)
 	})
 
@@ -627,7 +640,7 @@ func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 		tempFile.Close()
 
 		// Trying to load from a file path should result in an error.
-		loadErr := loadInstalledComponents(svc, tempFile.Name())
+		loadErr := loadInstalledComponents(svc, tempFile.Name(), maxWasmSize)
 		assert.Error(t, loadErr, "expected an error when path is a file, not a directory")
 	})
 }
