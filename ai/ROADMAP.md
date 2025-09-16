@@ -1,7 +1,7 @@
 # Relay Roadmap (AI snapshot)
 
 Ez a fájl az AI-támogatott roadmap állapota.
-→ Részletes fejlesztői doksi: [docs/roadmap/relay\_milestones.md](../docs/roadmap/relay_milestones.md)
+→ Részletes fejlesztői doksi: [docs/roadmap/relay_milestones.md](../docs/roadmap/relay_milestones.md)
 
 ---
 
@@ -47,8 +47,8 @@ A cél a rendszer robusztusságának növelése erőforrás-korlátok bevezetés
 **Részfeladatok (checklist):**
 
 *   **M4.1: JSON Input Méretkorlát**
-    *   [ ] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload méretét (pl. 2-4 MB).
-    *   [ ] **DoD**: Túlméretes JSON input esetén a rendszer 413-as vagy 422-es HTTP státuszkóddal válaszol, és a kérés feldolgozása megszakad. A limit konfigurálható.
+    *   [x] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload méretét (pl. 2-4 MB).
+    *   [x] **DoD**: Túlméretes JSON input esetén a rendszer 413-as vagy 422-es HTTP státuszkóddal válaszol, és a kérés feldolgozása megszakad. A limit konfigurálható.
 
 *   **M4.2: WASM Modul Méretkorlát**
     *   [ ] **Feladat**: Kiterjeszteni az M1-ben bevezetett WASM méretellenőrzést, hogy az egy globálisan konfigurálható maximumot (pl. 16 MB) érvényesítsen.
@@ -102,7 +102,7 @@ A cél a rendszer robusztusságának növelése erőforrás-korlátok bevezetés
 | M1        | Done    |
 | M2        | Done    |
 | M3        | Done    |
-| M4        | Missing |
+| M4        | Partial |
 | M5        | Done    |
 | M6        | Missing |
 | M7        | Partial |
