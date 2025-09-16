@@ -23,12 +23,12 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
     *   [x] **CAS-gyorsítás:** A modul YAML-jában megadott `digest` (sha256) és `size` alapján ellenőrizni kell, hogy a modul már szerepel-e a belső tárolóban (Content-Addressable Store). Ha igen, a feldolgozás kihagyható. *(Kész)*
 
 *   **M1.2: WASM Kanonizálás (a "lényeg" megőrzése)**
-    *   [ ] **WASM-parsoló könyvtár integrálása:** Egy megfelelő Go könyvtár kiválasztása és beillesztése a projektbe, amely képes a WASM bináris formátumot olvasni, elemezni és módosítani. *(Blokker)*
-    *   [ ] **Szekciók eltávolítása (`strip` logika):** A parsoló segítségével egy olyan `stripWasmModuleFunc` függvény implementálása, amely eltávolítja a futás szempontjából irreleváns, de a hash-t befolyásoló szekciókat (pl. `name`, `producers`, custom szekciók).
-    *   [ ] **`CanonWasmBytes` előállítása:** A `strip` logika kimenete egy kanonizált bájtsorozat (`CanonWasmBytes`), amely már csak a futtatható kódot és a szükséges definíciókat tartalmazza.
+    *   [x] **WASM-parsoló könyvtár integrálása:** A `github.com/tetratelabs/wabin` könyvtár hozzáadva a projekthez a stabil és publikus API-n keresztüli WASM-kezeléshez. *(Kész)*
+    *   [x] **Szekciók eltávolítása (`strip` logika):** A `stripWasmModuleFunc` függvény implementálva a `wabin` segítségével. A logika dekódolja a modult, eltávolítja az összes `CustomSection`-t, majd újraenkódolja a binárist. *(Kész)*
+    *   [x] **`CanonWasmBytes` előállítása:** A `strip` logika kimenete a kanonizált bájtsorozat, amely a determinisztikus checksum-számítás alapja. *(Kész)*
 
 *   **M1.3: Definition of Done (DoD) teljesítése**
-    *   [ ] **Golden Test implementálása:** Egy olyan teszteset létrehozása, amely két, funkcionálisan azonos, de eltérő metaadatokkal (pl. más toolchain-nel fordított) WASM modulból indul ki, és ellenőrzi, hogy a kanonizálás után a checksum-juk megegyezik-e.
+    *   [x] **Golden Test implementálása:** A `TestCanonicalWasmGolden` teszt igazolja, hogy két, funkcionálisan azonos, de eltérő metaadatokkal rendelkező WASM modul kanonizálás után azonos checksumot kap. *(Kész)*
 
 ### M2 — Modul YAML + CAS szerződés
 
@@ -82,7 +82,7 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 | Milestone | State   |
 | --------- | ------- |
 | M0        | Done    |
-| M1        | Partial |
+| M1        | Done    |
 | M2        | Partial |
 | M3        | Partial |
 | M4        | Missing |

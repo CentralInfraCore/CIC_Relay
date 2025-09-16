@@ -57,9 +57,9 @@ func TestToJSON_DataTypes(t *testing.T) {
 			expected: "0",
 		},
 		{
-			name:     "float64 NaN",
-			input:    math.NaN(),
-			wantErr:  true, // json.Marshal fails on NaN
+			name:    "float64 NaN",
+			input:   math.NaN(),
+			wantErr: true, // json.Marshal fails on NaN
 		},
 		{
 			name:     "string",

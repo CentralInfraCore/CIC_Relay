@@ -48,7 +48,6 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 		return err // Kezeli a store egyéb lehetséges hibáit
 	}
 
-
 	// Ellenőrzés, hogy minden ModuleID feloldható.
 	for _, moduleID := range v.Modules {
 		if _, err := a.GetModule(string(moduleID)); err != nil {
