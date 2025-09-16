@@ -14,8 +14,21 @@ Ez a fájl az AI-támogatott roadmap állapota.
 
 ### M1 — WASM checksum „készre”
 
-* **Feladatok**: WASM modulok kanonizálása (pl. `name`, `producers`, custom szekciók szűrése), méretlimit (pl. 16 MB), egységes `CanonWasmBytes` előállítása. CAS gyorsítás opcionálisan YAML digest/size alapján.
-* **DoD**: két toolchainből készült azonos modul → azonos hash; túlméret → 413/422 hiba; golden test: inline vs. fájl-betöltött WASM hash egyezés.
+A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, hogy a funkcionálisan azonos WASM modulok, függetlenül a fordítási környezettől, azonos hash-t kapjanak.
+
+**Részfeladatok (checklist):**
+
+*   **M1.1: Méret- és CAS-alapú validáció (gyorsítótárazás)**
+    *   [x] **Méretlimit ellenőrzés:** A WASM modul betöltésekor ellenőrizni kell, hogy a mérete nem haladja-e meg a globális maximumot (pl. 16 MB). Túlméretes modul esetén a betöltésnek hibával meg kell szakadnia. *(Kész)*
+    *   [x] **CAS-gyorsítás:** A modul YAML-jában megadott `digest` (sha256) és `size` alapján ellenőrizni kell, hogy a modul már szerepel-e a belső tárolóban (Content-Addressable Store). Ha igen, a feldolgozás kihagyható. *(Kész)*
+
+*   **M1.2: WASM Kanonizálás (a "lényeg" megőrzése)**
+    *   [ ] **WASM-parsoló könyvtár integrálása:** Egy megfelelő Go könyvtár kiválasztása és beillesztése a projektbe, amely képes a WASM bináris formátumot olvasni, elemezni és módosítani. *(Blokker)*
+    *   [ ] **Szekciók eltávolítása (`strip` logika):** A parsoló segítségével egy olyan `stripWasmModuleFunc` függvény implementálása, amely eltávolítja a futás szempontjából irreleváns, de a hash-t befolyásoló szekciókat (pl. `name`, `producers`, custom szekciók).
+    *   [ ] **`CanonWasmBytes` előállítása:** A `strip` logika kimenete egy kanonizált bájtsorozat (`CanonWasmBytes`), amely már csak a futtatható kódot és a szükséges definíciókat tartalmazza.
+
+*   **M1.3: Definition of Done (DoD) teljesítése**
+    *   [ ] **Golden Test implementálása:** Egy olyan teszteset létrehozása, amely két, funkcionálisan azonos, de eltérő metaadatokkal (pl. más toolchain-nel fordított) WASM modulból indul ki, és ellenőrzi, hogy a kanonizálás után a checksum-juk megegyezik-e.
 
 ### M2 — Modul YAML + CAS szerződés
 
