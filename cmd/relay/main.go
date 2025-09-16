@@ -23,6 +23,9 @@ var embeddedWorkflows embed.FS
 // test seam: unit tesztben felülírható
 var listenAndServe = http.ListenAndServe
 
+// MaxJSONInputSize defines the maximum allowed size for JSON request bodies (4 MB).
+const MaxJSONInputSize = 4 * 1024 * 1024
+
 // relayServer holds the dependencies for our HTTP handlers.
 type relayServer struct {
 	api *cabinet.API
@@ -50,12 +53,21 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	// Limit the size of the request body to prevent abuse.
+	// We add 1 to the limit to detect if the body is *exactly* at the limit or exceeds it.
+	limitedReader := io.LimitReader(r.Body, MaxJSONInputSize+1)
+	body, err := io.ReadAll(limitedReader)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 		return
 	}
-	defer r.Body.Close()
+	defer r.Body.Close() // Ensure the original body is closed
+
+	// If the body length is greater than the allowed size, return 413.
+	if len(body) > MaxJSONInputSize {
+		http.Error(w, fmt.Sprintf("Request body too large, exceeds %d bytes", MaxJSONInputSize), http.StatusRequestEntityTooLarge)
+		return
+	}
 
 	var payload cabinet.SetPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
