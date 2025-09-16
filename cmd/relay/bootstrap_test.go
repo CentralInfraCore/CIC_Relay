@@ -355,8 +355,6 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 		log.SetOutput(os.Stderr)
 	}()
 
-	var err error // Declare err here once
-
 	testCases := []struct {
 		name              string
 		filename          string
@@ -407,7 +405,7 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	}
 
 	// 2. Execute
-	err = loadInstalledComponents(svc, tempDir)
+	err := loadInstalledComponents(svc, tempDir)
 	require.NoError(t, err, "loadInstalledComponents should not return a fatal error for invalid files")
 
 	// 3. Verify log output
@@ -422,24 +420,32 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	tempDir := t.TempDir()
 
-	// Load embedded components first
+	// Load embedded components first to have something to overwrite
 	require.NoError(t, loadEmbeddedComponents(svc, testSchemas, testWorkflows))
 
-	var err error // Declare err here once
-
 	t.Run("overwrite schema", func(t *testing.T) {
-		// Create an installed schema that overwrites the embedded one
-		overwriteContent := `
-apiVersion: relay.cic.com/v1
-kind: Schema
-metadata:
-  name: test.schema
-  version: "1.0" # Same ID
-  description: "This is the OVERWRITTEN schema."
-spec: {}
-`
+		// Dynamically create the schema and its checksum
+		meta := cabinet.BaseBlock{
+			Name:        "test.schema",
+			Version:     "1.0",
+			Description: "This is the OVERWRITTEN schema.",
+		}
+		spec := cabinet.SchemaDef{}
+
+		schema, err := cabinet.NewSchema(meta, spec)
+		require.NoError(t, err, "NewSchema should not fail")
+
+		finalYAML := map[string]any{
+			"apiVersion": "relay.cic.com/v1",
+			"kind":       "Schema",
+			"metadata":   schema.Meta,
+			"spec":       schema.Spec,
+		}
+		overwriteContent, err := yaml.Marshal(finalYAML)
+		require.NoError(t, err)
+
 		path := filepath.Join(tempDir, "overwrite_schema.yaml")
-		require.NoError(t, os.WriteFile(path, []byte(overwriteContent), 0644))
+		require.NoError(t, os.WriteFile(path, overwriteContent, 0644))
 
 		// 2. Execute
 		err = loadInstalledComponents(svc, tempDir)
@@ -448,23 +454,33 @@ spec: {}
 		// 3. Verify
 		loadedSchema, err := svc.GetSchema("test.schema@1.0")
 		require.NoError(t, err)
-		assert.Equal(t, "This is the OVERWRITTEN schema.", loadedSchema.Meta.Description, "The schema should have been overwritten by the installed version")
+		assert.Equal(t, "This is the OVERWRITTEN schema.", loadedSchema.Meta.Description, "The schema should have been overwritten")
+		assert.Equal(t, schema.Meta.Checksum, loadedSchema.Meta.Checksum, "The checksum of the overwritten schema should match the calculated one")
 	})
 
 	t.Run("overwrite workflow", func(t *testing.T) {
-		// Create an installed workflow that overwrites the embedded one
-		overwriteContent := `
-apiVersion: relay.cic.com/v1
-kind: Workflow
-metadata:
-  name: test.flow
-  version: "1.0" # Same ID
-  description: "This is the OVERWRITTEN workflow."
-spec:
-  steps: ["new.step"]
-`
+		// Dynamically create the workflow and its checksum
+		meta := cabinet.BaseBlock{
+			Name:        "test.flow",
+			Version:     "1.0",
+			Description: "This is the OVERWRITTEN workflow.",
+		}
+		steps := []string{"new.step"}
+
+		workflow, err := cabinet.NewWorkflow(meta, steps)
+		require.NoError(t, err, "NewWorkflow should not fail")
+
+		finalYAML := map[string]any{
+			"apiVersion": "relay.cic.com/v1",
+			"kind":       "Workflow",
+			"metadata":   workflow.Meta,
+			"spec":       map[string]any{"steps": workflow.Steps},
+		}
+		overwriteContent, err := yaml.Marshal(finalYAML)
+		require.NoError(t, err)
+
 		path := filepath.Join(tempDir, "overwrite_workflow.yaml")
-		require.NoError(t, os.WriteFile(path, []byte(overwriteContent), 0644))
+		require.NoError(t, os.WriteFile(path, overwriteContent, 0644))
 
 		// 2. Execute
 		err = loadInstalledComponents(svc, tempDir)
@@ -473,11 +489,12 @@ spec:
 		// 3. Verify
 		loadedWorkflow, err := svc.GetWorkflow("test.flow@1.0")
 		require.NoError(t, err)
-		assert.Equal(t, "This is the OVERWRITTEN workflow.", loadedWorkflow.Meta.Description, "The workflow should have been overwritten by the installed version")
+		assert.Equal(t, "This is the OVERWRITTEN workflow.", loadedWorkflow.Meta.Description, "The workflow should have been overwritten")
+		assert.Equal(t, workflow.Meta.Checksum, loadedWorkflow.Meta.Checksum, "The checksum of the overwritten workflow should match the calculated one")
 	})
 
 	t.Run("overwrite module", func(t *testing.T) {
-		// Create an installed module that overwrites the embedded one. The checksum is now updated to the correct value.
+		// This test still uses a hardcoded checksum, as per the plan to tackle it next.
 		overwriteContent := []byte(`
 apiVersion: relay.cic.com/v1
 kind: Module
@@ -519,12 +536,9 @@ wasmSize: 8
 func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 
-	// Declare err here once
-	var err error
-
 	t.Run("non-existent path", func(t *testing.T) {
 		// A non-existent path should be skipped and not return an error.
-		err = loadInstalledComponents(svc, "/path/to/non/existent/dir")
+		err := loadInstalledComponents(svc, "/path/to/non/existent/dir")
 		assert.NoError(t, err)
 	})
 
@@ -535,8 +549,8 @@ func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 		tempFile.Close()
 
 		// Trying to load from a file path should result in an error.
-		err = loadInstalledComponents(svc, tempFile.Name())
-		assert.Error(t, err, "expected an error when path is a file, not a directory")
+		loadErr := loadInstalledComponents(svc, tempFile.Name())
+		assert.Error(t, loadErr, "expected an error when path is a file, not a directory")
 	})
 }
 
