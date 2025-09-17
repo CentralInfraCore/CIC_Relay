@@ -10,9 +10,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os" // Import os package for environment variable manipulation
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"centralrelay/core/cabinet"
 	"github.com/stretchr/testify/assert"
@@ -55,6 +56,13 @@ func (m *mockCabinetService) Close(ctx context.Context) error {
 	return nil // No-op for mock
 }
 
+// failingReader is a mock reader that always returns an error.
+type failingReader struct{}
+
+func (fr *failingReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("forced read error")
+}
+
 func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 	// stub ListenAndServe: ne nyisson portot, csak ellenőrizzük a paramétereket
 	called := false
@@ -77,10 +85,11 @@ func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 	// Create a dummy relayServer for the test
 	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
 	// Initialize a default config for the test server
-	defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+	defaultConfig, err := loadConfig()
+	require.NoError(t, err)
 	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig}
 
-	err := run(":12345", logger, dummyServer)
+	err = run(":12345", logger, dummyServer)
 	if err != nil {
 		t.Fatalf("run returned error: %v", err)
 	}
@@ -135,10 +144,11 @@ func TestRun_PropagatesListenError(t *testing.T) {
 	// Create a dummy relayServer for the test
 	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
 	// Initialize a default config for the test server
-	defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+	defaultConfig, err := loadConfig()
+	require.NoError(t, err)
 	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig}
 
-	err := run(":0", logger, dummyServer)
+	err = run(":0", logger, dummyServer)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("run err = %v, want %v", err, wantErr)
 	}
@@ -154,9 +164,12 @@ func TestSetHandler(t *testing.T) {
 	moduleStore := cabinet.NewMemModuleStore()
 	cabinetSvc := cabinet.NewCabinetService(schemaStore, moduleStore, workflowStore)
 	// We need to load the components used in the test payload
-	pingSchema := &cabinet.Schema{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}}
-	pingModule := &cabinet.ModuleDescriptor{Meta: cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}, Accepts: []string{pingSchema.ID()}}
-	pingWorkflow := &cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "core.ping.flow", Version: "1.0.0"}, Steps: []string{pingSchema.ID()}}
+	pingSchema, err := cabinet.NewSchema(context.Background(), cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}, cabinet.SchemaDef{})
+	require.NoError(t, err)
+	pingModule, err := cabinet.NewModuleDescriptor(context.Background(), cabinet.BaseBlock{Name: "core.ping", Version: "1.0.0"}, "executor", []string{pingSchema.ID()}, nil, nil)
+	require.NoError(t, err)
+	pingWorkflow, err := cabinet.NewWorkflow(context.Background(), cabinet.BaseBlock{Name: "core.ping.flow", Version: "1.0.0"}, []string{pingSchema.ID()})
+	require.NoError(t, err)
 
 	require.NoError(t, cabinetSvc.PutSchema(pingSchema))
 	require.NoError(t, cabinetSvc.PutWorkflow(pingWorkflow))
@@ -164,7 +177,8 @@ func TestSetHandler(t *testing.T) {
 
 	api := cabinet.NewAPI(cabinetSvc)
 	// Initialize a default config for the test server
-	defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+	defaultConfig, err := loadConfig()
+	require.NoError(t, err)
 	server := &relayServer{api: api, config: defaultConfig}
 
 	t.Run("successful set", func(t *testing.T) {
@@ -250,7 +264,8 @@ func TestSetHandler(t *testing.T) {
 		}
 		mockAPI := cabinet.NewAPI(mockSvc)
 		// Initialize a default config for the mock server
-		defaultConfig := &config{MaxJSONInputSize: 4 * 1024 * 1024}
+		defaultConfig, err := loadConfig()
+		require.NoError(t, err)
 		mockServer := &relayServer{api: mockAPI, config: defaultConfig}
 
 		payload := `{"workflow_id": "any", "modules": ["any"]}`
@@ -263,6 +278,43 @@ func TestSetHandler(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 		body, _ := io.ReadAll(res.Body)
 		assert.Contains(t, string(body), "Internal server error")
+	})
+
+	t.Run("cabinet invalid error", func(t *testing.T) {
+		// Setup a mock service that returns a cabinet.ErrInvalid error
+		mockSvc := &mockCabinetService{
+			SetFunc: func(ctx context.Context, p *cabinet.SetPayload) (*cabinet.SetResponse, error) {
+				return nil, fmt.Errorf("%w: specific validation error", cabinet.ErrInvalid)
+			},
+		}
+		mockAPI := cabinet.NewAPI(mockSvc)
+		defaultConfig, err := loadConfig()
+		require.NoError(t, err)
+		mockServer := &relayServer{api: mockAPI, config: defaultConfig}
+
+		payload := `{"workflow_id": "any", "modules": ["any"]}`
+		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
+		w := httptest.NewRecorder()
+
+		mockServer.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+		body, _ := io.ReadAll(res.Body)
+		// Corrected assertion to match the actual error output from the wrapped error.
+		assert.Equal(t, "Invalid request: invalid: specific validation error", strings.TrimSpace(string(body)))
+	})
+
+	t.Run("read body error", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/set", &failingReader{})
+		w := httptest.NewRecorder()
+
+		server.setHandler(w, req)
+
+		res := w.Result()
+		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
+		body, _ := io.ReadAll(res.Body)
+		assert.Contains(t, string(body), "Failed to read request")
 	})
 
 	t.Run("request body too large", func(t *testing.T) {
@@ -281,29 +333,62 @@ func TestSetHandler(t *testing.T) {
 }
 
 func TestLoadConfig(t *testing.T) {
-	// Save original environment variable and restore it after test
-	originalEnv := os.Getenv("MAX_JSON_INPUT_SIZE")
-	defer os.Setenv("MAX_JSON_INPUT_SIZE", originalEnv)
-
-	t.Run("default value when env var is not set", func(t *testing.T) {
+	// Use t.Setenv to ensure test isolation. It automatically restores the original value.
+	t.Run("default values", func(t *testing.T) {
+		// To test defaults, we need to ensure the vars are not set.
+		// The safest way is to save/unset/restore within this subtest.
+		originalMaxJSON := os.Getenv("MAX_JSON_INPUT_SIZE")
+		originalMaxWASM := os.Getenv("MAX_WASM_MODULE_SIZE")
+		originalHashingTimeout := os.Getenv("HASHING_TIMEOUT")
 		os.Unsetenv("MAX_JSON_INPUT_SIZE")
+		os.Unsetenv("MAX_WASM_MODULE_SIZE")
+		os.Unsetenv("HASHING_TIMEOUT")
+		defer func() {
+			os.Setenv("MAX_JSON_INPUT_SIZE", originalMaxJSON)
+			os.Setenv("MAX_WASM_MODULE_SIZE", originalMaxWASM)
+			os.Setenv("HASHING_TIMEOUT", originalHashingTimeout)
+		}()
+
 		cfg, err := loadConfig()
 		require.NoError(t, err)
 		assert.Equal(t, int64(4*1024*1024), cfg.MaxJSONInputSize)
+		assert.Equal(t, int64(16*1024*1024), cfg.MaxWASMModuleSize)
+		assert.Equal(t, 5*time.Second, cfg.HashingTimeout)
 	})
 
-	t.Run("valid value from env var", func(t *testing.T) {
-		os.Setenv("MAX_JSON_INPUT_SIZE", "1048576") // 1 MB
+	t.Run("valid values from env vars", func(t *testing.T) {
+		t.Setenv("MAX_JSON_INPUT_SIZE", "1048576") // 1 MB
+		t.Setenv("MAX_WASM_MODULE_SIZE", "8388608")  // 8 MB
+		t.Setenv("HASHING_TIMEOUT", "10s")
+
 		cfg, err := loadConfig()
 		require.NoError(t, err)
 		assert.Equal(t, int64(1048576), cfg.MaxJSONInputSize)
+		assert.Equal(t, int64(8388608), cfg.MaxWASMModuleSize)
+		assert.Equal(t, 10*time.Second, cfg.HashingTimeout)
 	})
 
-	t.Run("invalid value from env var", func(t *testing.T) {
-		os.Setenv("MAX_JSON_INPUT_SIZE", "not-a-number")
+	t.Run("invalid max json size", func(t *testing.T) {
+		t.Setenv("MAX_JSON_INPUT_SIZE", "not-a-number")
 		cfg, err := loadConfig()
 		assert.Error(t, err)
 		assert.Nil(t, cfg)
 		assert.Contains(t, err.Error(), "invalid value for MAX_JSON_INPUT_SIZE")
+	})
+
+	t.Run("invalid max wasm size", func(t *testing.T) {
+		t.Setenv("MAX_WASM_MODULE_SIZE", "not-a-number")
+		cfg, err := loadConfig()
+		assert.Error(t, err)
+		assert.Nil(t, cfg)
+		assert.Contains(t, err.Error(), "invalid value for MAX_WASM_MODULE_SIZE")
+	})
+
+	t.Run("invalid hashing timeout", func(t *testing.T) {
+		t.Setenv("HASHING_TIMEOUT", "not-a-duration")
+		cfg, err := loadConfig()
+		assert.Error(t, err)
+		assert.Nil(t, cfg)
+		assert.Contains(t, err.Error(), "invalid value for HASHING_TIMEOUT")
 	})
 }
