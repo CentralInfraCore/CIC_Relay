@@ -1,6 +1,7 @@
 package cabinet
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,7 @@ func TestNewModuleDescriptor_Error(t *testing.T) {
 		// Create a BaseBlock with a missing Name to trigger the validation error
 		meta := BaseBlock{Version: "1.0"}
 
-		descriptor, err := NewModuleDescriptor(meta, "executor", nil, nil, nil)
+		descriptor, err := NewModuleDescriptor(context.Background(), meta, "executor", nil, nil, nil)
 
 		assert.Error(t, err, "NewModuleDescriptor should return an error for invalid metadata")
 		assert.Nil(t, descriptor, "ModuleDescriptor should be nil on error")

@@ -24,14 +24,14 @@ func ExampleAPI_Set_minimal() {
 	}
 
 	// To make the example pass, we must use the constructors to create valid objects with checksums.
-	wf, err := NewWorkflow(BaseBlock{Name: "wf.compile", Version: "v1"}, nil)
+	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.compile", Version: "v1"}, nil)
 	if err != nil {
 		fmt.Println("setup error (workflow):", err)
 		return
 	}
 	wfStore.Put(wf)
 
-	mod, err := NewModuleDescriptor(BaseBlock{Name: "modA", Version: "v1"}, "", nil, nil, nil)
+	mod, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "modA", Version: "v1"}, "", nil, nil, nil)
 	if err != nil {
 		fmt.Println("setup error (module):", err)
 		return

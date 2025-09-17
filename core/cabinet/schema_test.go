@@ -1,6 +1,7 @@
 package cabinet
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,7 @@ func TestNewSchema_Error(t *testing.T) {
 		meta := BaseBlock{Version: "1.0"}
 		spec := SchemaDef{}
 
-		schema, err := NewSchema(meta, spec)
+		schema, err := NewSchema(context.Background(), meta, spec)
 
 		assert.Error(t, err, "NewSchema should return an error for invalid metadata")
 		assert.Nil(t, schema, "Schema should be nil on error")

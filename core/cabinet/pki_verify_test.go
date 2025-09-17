@@ -153,6 +153,44 @@ func TestVerifyCertificateChain(t *testing.T) {
 		assert.Contains(t, err.Error(), "certificate with serial number 3 is revoked", "Error message should specify the revoked serial number")
 	})
 
+	t.Run("successful verification with non-revoked certificate and CRL", func(t *testing.T) {
+		// Create a CRL that revokes a *different* certificate
+		revokedCerts := []pkix.RevokedCertificate{
+			{
+				SerialNumber:   big.NewInt(99),
+				RevocationTime: time.Now(),
+			},
+		}
+
+		crlBytes, err := intermediateCA.CreateCRL(rand.Reader, intermediateKey, revokedCerts, time.Now(), time.Now().Add(24*time.Hour))
+		require.NoError(t, err)
+
+		crl, err := x509.ParseCRL(crlBytes)
+		require.NoError(t, err)
+
+		// Setup verification options including the CRL
+		opts := VerifyOptions{
+			Roots:         rootPool,
+			Intermediates: intermediatePool,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+			CRLs:          []*pkix.CertificateList{crl},
+		}
+
+		// Execute and verify that it succeeds
+		_, err = VerifyCertificateChain(leafCert, opts)
+		assert.NoError(t, err, "Should succeed as the certificate is not in the CRL")
+	})
+
+	t.Run("fails when no root CA pool is provided", func(t *testing.T) {
+		opts := VerifyOptions{
+			Roots: nil, // No root pool
+		}
+
+		_, err := VerifyCertificateChain(leafCert, opts)
+		assert.Error(t, err, "Should fail because no root CA pool is provided")
+		assert.Contains(t, err.Error(), "a root CA pool must be provided", "Error message should indicate missing root pool")
+	})
+
 	// --- SPKI Pinning Tests ---
 	// Calculate the SPKI hash for the intermediate CA
 	spkiHash := sha256.Sum256(intermediateCA.RawSubjectPublicKeyInfo)

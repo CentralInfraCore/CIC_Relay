@@ -1,6 +1,9 @@
 package cabinet
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 // TestDomainConstructors_GoldenChecksums verifies that the New... constructors
 // for all domain types correctly calculate and assign the deterministic checksum
@@ -13,7 +16,7 @@ func TestDomainConstructors_GoldenChecksums(t *testing.T) {
 		// This checksum is updated based on the actual output from the corrected computeChecksum logic.
 		const goldenSchemaChecksum = "9a3c6f45df100e63e0d9b692f9df871de3749e5b940f4074ee51c4f22be5f611"
 
-		schema, err := NewSchema(meta, spec)
+		schema, err := NewSchema(context.Background(), meta, spec)
 		if err != nil {
 			t.Fatalf("NewSchema() failed: %v", err)
 		}
@@ -30,7 +33,7 @@ func TestDomainConstructors_GoldenChecksums(t *testing.T) {
 		// This checksum is updated based on the actual output from the corrected computeChecksum logic.
 		const goldenWorkflowChecksum = "ae4f2fa9f7df1b506177b1475979f7366285c3386dde7766a53e38e2aa135efb"
 
-		wf, err := NewWorkflow(meta, steps)
+		wf, err := NewWorkflow(context.Background(), meta, steps)
 		if err != nil {
 			t.Fatalf("NewWorkflow() failed: %v", err)
 		}
@@ -46,7 +49,7 @@ func TestDomainConstructors_GoldenChecksums(t *testing.T) {
 		// This checksum is updated based on the actual output from the corrected computeChecksum logic.
 		const goldenModuleChecksum = "7ad9f16c6ac3cd6997954a252b4feeec2aa65ec02df0dbd64287edf06be1f46e"
 
-		mod, err := NewModuleDescriptor(meta, "executor", []string{"*"}, nil, nil)
+		mod, err := NewModuleDescriptor(context.Background(), meta, "executor", []string{"*"}, nil, nil)
 		if err != nil {
 			t.Fatalf("NewModuleDescriptor() failed: %v", err)
 		}

@@ -1,9 +1,11 @@
 package cabinet
 
+import "context"
+
 // NewSchema constructs a Schema by calling the single central entry point for validation and checksum calculation.
-func NewSchema(meta BaseBlock, spec SchemaDef) (*Schema, error) {
+func NewSchema(ctx context.Context, meta BaseBlock, spec SchemaDef) (*Schema, error) {
 	// Call the single central entry point to validate and compute the checksum.
-	sum, err := validateAndChecksum(&meta, KindSpec, spec)
+	sum, err := validateAndChecksum(ctx, &meta, KindSpec, spec)
 	if err != nil {
 		return nil, err
 	}

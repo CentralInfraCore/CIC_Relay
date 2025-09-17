@@ -1,12 +1,15 @@
 package cabinet
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestMemStores_Basic(t *testing.T) {
 	// Schema store
 	ss := NewMemSchemaStore()
 	meta := BaseBlock{Name: "s", Version: "1"}
-	sc, err := NewSchema(meta, SchemaDef{})
+	sc, err := NewSchema(context.Background(), meta, SchemaDef{})
 	if err != nil {
 		t.Fatalf("NewSchema err: %v", err)
 	}
