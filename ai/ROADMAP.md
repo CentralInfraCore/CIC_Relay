@@ -19,16 +19,16 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 **Részfeladatok (checklist):**
 
 *   **M1.1: Méret- és CAS-alapú validáció (gyorsítótárazás)**
-    *   [x] **Méretlimit ellenőrzés:** A WASM modul betöltésekor ellenőrizni kell, hogy a mérete nem haladja-e meg a globális maximumot (pl. 16 MB). Túlméretes modul esetén a betöltésnek hibával meg kell szakadnia. *(Kész)*
-    *   [x] **CAS-gyorsítás:** A modul YAML-jában megadott `digest` (sha256) és `size` alapján ellenőrizni kell, hogy a modul már szerepel-e a belső tárolóban (Content-Addressable Store). Ha igen, a feldolgozás kihagyható. *(Kész)*
+    *   [x] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload méretét (pl. 2-4 MB). Túlméretes modul esetén a betöltésnek hibával meg kell szakadnia.
+    *   [x] **DoD**: Túlméretes JSON input esetén a rendszer 413-as vagy 422-es HTTP státuszkóddal válaszol, és a kérés feldolgozása megszakad. A limit konfigurálható.
 
-*   **M1.2: WASM Kanonizálás (a "lényeg" megőrzése)**
-    *   [x] **WASM-parsoló könyvtár integrálása:** A `github.com/tetratelabs/wabin` könyvtár hozzáadva a projekthez a stabil és publikus API-n keresztüli WASM-kezeléshez. *(Kész)*
-    *   [x] **Szekciók eltávolítása (`strip` logika):** A `stripWasmModuleFunc` függvény implementálva a `wabin` segítségével. A logika dekódolja a modult, eltávolítja az összes `CustomSection`-t, majd újraenkódolja a binárist. *(Kész)*
-    *   [x] **`CanonWasmBytes` előállítása:** A `strip` logika kimenete a kanonizált bájtsorozat, amely a determinisztikus checksum-számítás alapja. *(Kész)*
+*   **M1.2: WASM Kanonizálás (a \"lényeg\" megőrzése)**
+    *   [x] **Feladat**: A `stripWasmModuleFunc` függvény implementálva a `wabin` segítségével. A logika dekódolja a modult, eltávolítja az összes `CustomSection`-t, majd újraenkódolja a binárist.
+    *   [x] **DoD**: A `strip` logika kimenete a kanonizált bájtsorozat, amely a determinisztikus checksum-számítás alapja.
 
 *   **M1.3: Definition of Done (DoD) teljesítése**
-    *   [x] **Golden Test implementálása:** A `TestCanonicalWasmGolden` teszt igazolja, hogy két, funkcionálisan azonos, de eltérő metaadatokkal rendelkező WASM modul kanonizálás után azonos checksumot kap. *(Kész)*
+    *   [x] **Feladat**: A `TestCanonicalWasmGolden` teszt igazolja, hogy két, funkcionálisan azonos, de eltérő metaadatokkal rendelkező WASM modul kanonizálás után azonos checksumot kap.
+    *   [x] **DoD**: A `github.com/tetratelabs/wabin` könyvtár hozzáadva a projekthez a stabil és publikus API-n keresztüli WASM-kezeléshez.
 
 ### M2 — Modul YAML + CAS szerződés
 
@@ -69,33 +69,72 @@ A cél a rendszer hibakezelésének sztenderdizálása és konzisztenssé tétel
 **Részfeladatok (checklist):**
 
 *   **M5.1: Sentinel hibák namespacing**
-  *  [ ] **Feladat**: A hibák egy jól definiált névtérbe kerülnek (pl. `cabinet.ErrInvalidInput`), segítve a hibák azonosítását és kezelését a kódban.
-  *  [ ] **DoD**: A rendszerben használt összes sentinel hiba konzisztensen névtérbe van rendezve, és a kód könnyen azonosítja és kezeli őket.
+    *   [x] **Feladat**: A hibák egy jól definiált névtérbe kerülnek (pl. `cabinet.ErrInvalidInput`), segítve a hibák azonosítását és kezelését a kódban.
+    *   [x] **DoD**: A rendszerben használt összes sentinel hiba konzisztensen névtérbe van rendezve, és a kód könnyen azonosítja és kezeli őket.
 
 *   **M5.2: Egységes JSON-payload**
-  *  [ ] **Feladat**: A rendszer által visszaadott hibáknak egységes JSON struktúrával kell rendelkezniük (code, message, details), amely tartalmazza a hibakódot, egy üzenetet és opcionálisan további részleteket.
-  *  [ ] **DoD**: Minden API válaszban azonos JSON hibaformátumot használunk, ami megkönnyíti a kliens oldali feldolgozást.
+    *   [x] **Feladat**: A rendszer által visszaadott hibáknak egységes JSON struktúrával kell rendelkezniük (code, message, details), amely tartalmazza a hibakódot, egy üzenetet és opcionálisan további részleteket.
+    *   [x] **DoD**: Minden API válaszban azonos JSON hibaformátumot használunk, ami megkönnyíti a kliens oldali feldolgozást.
+    *   **Részfeladatok (checklist):**
+        *   [x] **M5.2.1: `APIError` struktúra definiálása**: Hozzon létre egy `APIError` struktúrát `Code` (string), `Message` (string) és `Details` ([]FieldError) mezőkkel.
+        *   [x] **M5.2.2: Konverziós logika implementálása**: Készítsen egy függvényt vagy metódust, amely a belső hibákat (pl. `ValidationError`) átalakítja `APIError` objektummá.
+        *   [x] **M5.2.3: JSON szerializáció**: Biztosítsa, hogy az `APIError` objektum JSON-né szerializálva kerüljön vissza az API válaszokban.
 
 *   **M5.3: HTTP status mapping**
-  *  [ ] **Feladat**: A különböző típusú hibákhoz megfelelő HTTP státuszkódokat kell rendelni (400/409/413/422/500), hogy a kliensek a státuszkód alapján is tudjanak reagálni a hibákra.
-  *  [ ] **DoD**: A hibákhoz rendelt HTTP státuszkódok konzisztensek és a HTTP specifikációnak megfelelnek.
+    *   [x] **Feladat**: A különböző típusú hibákhoz megfelelő HTTP státuszkódokat kell rendelni (400/409/413/422/500), hogy a kliensek a státuszkód alapján is tudjanak reagálni a hibákra.
+    *   [x] **DoD**: A hibákhoz rendelt HTTP státuszkódok konzisztensek és a HTTP specifikációnak megfelelnek.
 
 *   **M5.4: Általános hibakezelési elvek**
-  *  [ ] **Feladat**: Biztosítani, hogy az egységes hibakezelési modell teljesüljön a teljes rendszerben.
-  *  [ ] **DoD**:
-    *   Minden útvonal azonos szerkezetű hibát ad vissza.
-    *   `errors.Is/As` működik a hibák ellenőrzésére.
-    *   A logokban egyértelmű, gépileg olvasható hibakódok jelennek meg.
+    *   [x] **Feladat**: Biztosítani, hogy az egységes hibakezelési modell teljesüljön a teljes rendszerben.
+    *   [x] **DoD**:
+        *   Minden útvonal azonos szerkezetű hibát ad vissza.
+        *   `errors.Is/As` működik a hibák ellenőrzésére.
+        *   A logokban egyértelmű, gépileg olvasható hibakódok jelennek meg.
 
 ### M6 — Observability & üzemeltethetőség
 
-* **Feladatok**: strukturált log (req-id, path, kind, méret, latency, outcome, checksum), audit trail (betöltött modul signer, chain fingerprint, végső hash), `/healthz` és `/readyz` endpointok (trust store, policy, storage ellenőrzés).
-* **DoD**: incidens esetén 1 percen belül rekonstruálható: mit töltöttünk, ki írta alá, miért ment át vagy bukott.
+A cél a rendszer megfigyelhetőségének és üzemeltethetőségének javítása, biztosítva, hogy incidens esetén gyorsan rekonstruálható legyen a történtek.
+
+**Részfeladatok (checklist):**
+
+*   **M6.1: Strukturált logolás**
+    *   [ ] **Feladat**: Implementálni a strukturált logolást, beleértve a `req-id`, `path`, `kind`, `méret`, `latency`, `outcome`, `checksum` mezőket.
+    *   [ ] **DoD**: A rendszer minden releváns eseményről konzisztens, strukturált logokat generál, amelyek tartalmazzák a megadott mezőket.
+
+*   **M6.2: Audit trail**
+    *   [ ] **Feladat**: Létrehozni egy audit trail mechanizmust, amely rögzíti a betöltött modulok aláíróját, a lánc ujjlenyomatát és a végső hash-t.
+    *   [ ] **DoD**: Az audit trail adatok alapján incidens esetén 1 percen belül rekonstruálható, hogy mit töltöttek be, ki írta alá, miért ment át vagy bukott.
+
+*   **M6.3: `/healthz` és `/readyz` endpointok**
+    *   [ ] **Feladat**: Implementálni a `/healthz` és `/readyz` HTTP endpointokat, amelyek ellenőrzik a rendszer állapotát (trust store, policy, storage).
+    *   [ ] **DoD**: A `/healthz` és `/readyz` endpointok pontosan tükrözik a rendszer működőképességét és függőségeinek állapotát.
 
 ### M7 — CI-őrségek (gates)
 
-* **Feladatok**: symbols-sync (`SYMBOLS.md` drift=0), lint/staticcheck/go vet, per-csomag coverage küszöbök, coverage riport HTML artifact.
-* **DoD**: API drift és quality regresszió CI-ban megfogva. Coverage stabil.
+A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása automatizált ellenőrzésekkel.
+
+**Részfeladatok (checklist):**
+
+*   **M7.1: Symbols synchronization**
+    *   [ ] **Feladat**: Implementálni egy CI ellenőrzést, amely biztosítja, hogy a `SYMBOLS.md` fájl szinkronban van a kódbázis publikus szimbólumaival (drift=0).
+    *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a `SYMBOLS.md` tartalma eltér a kódbázisban definiált publikus szimbólumoktól.
+
+*   **M7.2: Code quality checks (lint/staticcheck/go vet)**
+    *   [ ] **Feladat**: Integrálni a lint, staticcheck és go vet eszközöket a CI/CD pipeline-ba a kódminőség automatikus ellenőrzésére.
+    *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a kód nem felel meg a lintelési, statikus analízis és go vet ellenőrzéseknek.
+    *   **Részfeladatok (checklist):**
+        *   [ ] **M7.2.1: CI lépések hozzáadása**: Módosítsa a fő CI workflow fájlt (pl. `verify.yml`), hogy tartalmazzon dedikált lépéseket a `lint`, `staticcheck` és `go vet` futtatására a teljes kódbázison.
+        *   [ ] **M7.2.2: Hiba esetén leállítás**: Konfigurálja ezeket a CI lépéseket úgy, hogy hiba esetén (pl. ha a lint/staticcheck/go vet hibát talál) a CI pipeline sikertelen legyen.
+        *   [ ] **M7.2.3: Konfiguráció**: Biztosítsa, hogy az eszközök konfigurációja (ha van ilyen) a projekt gyökerében legyen, és a CI környezetben is elérhető legyen.
+        *   [ ] **M7.2.4: Függőségek kezelése**: Győződjön meg róla, hogy a CI környezetben telepítve vannak a szükséges eszközök (pl. `staticcheck`).
+
+*   **M7.3: Per-package coverage thresholds**
+    *   [x] **Feladat**: Bevezetni per-package alapú kódlefedettségi küszöböket a CI/CD pipeline-ba.
+    *   [x] **DoD**: A CI/CD pipeline sikertelen, ha bármely package kódlefedettsége a meghatározott küszöb alá esik.
+
+*   **M7.4: Coverage report HTML artifact**
+    *   [ ] **Feladat**: Konfigurálni a CI/CD pipeline-t, hogy generáljon HTML kódlefedettségi riportot artifactként.
+    *   [ ] **DoD**: A CI/CD pipeline minden futtatás után generál egy hozzáférhető HTML kódlefedettségi riportot.
 
 ### M8 — Konfiguráció & biztonság
 
@@ -118,13 +157,13 @@ A cél a rendszer hibakezelésének sztenderdizálása és konzisztenssé tétel
 ## Jelenlegi állapot (STATE)
 
 | Milestone | State   |
-| --------- |---------|
+| --------- | ------- |
 | M0        | Done    |
 | M1        | Done    |
 | M2        | Done    |
 | M3        | Done    |
 | M4        | Done    |
-| M5        | Partial |
+| M5        | Done    |
 | M6        | Missing |
 | M7        | Partial |
 | M8        | Missing |
@@ -136,4 +175,5 @@ A cél a rendszer hibakezelésének sztenderdizálása és konzisztenssé tétel
 ## Sync-megjegyzés
 
 Ezt a fájlt az AI támogatott beszélgetések frissítik.
-A hivatalos, részletes forrás: `docs/roadmap/relay_milestones.md`.
+A hivatalos, részletes forrás: `docs/roadmap/relay_milestones.md`.\
+

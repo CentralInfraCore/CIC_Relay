@@ -99,3 +99,83 @@ func TestValidationError_IsInvalidPredicateDoesNotMatch(t *testing.T) {
 		t.Fatalf("IsInvalid(ValidationError) = true, want false")
 	}
 }
+
+func TestValidationError_Error_MarshalFails(t *testing.T) {
+	originalJSONMarshal := jsonMarshal
+	t.Cleanup(func() { jsonMarshal = originalJSONMarshal })
+
+	// Mock jsonMarshal to return an error
+	jsonMarshal = func(v any) ([]byte, error) {
+		return nil, errors.New("mock marshal error")
+	}
+
+	ve := ValidationError{
+		Cause: []FieldError{
+			{Field: "field1", Msg: "message1"},
+		},
+	}
+
+	got := ve.Error()
+	want := fmt.Sprintf("%s: %v", ErrInvalid.Error(), ve.Cause)
+
+	if got != want {
+		t.Fatalf("Error() = %q, want %q", got, want)
+	}
+}
+
+func TestNewAPIError(t *testing.T) {
+	t.Run("ValidationError", func(t *testing.T) {
+		validationErr := NewValidationError(FieldError{Field: "test", Msg: "error"})
+		apiErr := NewAPIError(validationErr)
+
+		if apiErr.Code != ErrInvalid.Error() {
+			t.Errorf("Code got %q, want %q", apiErr.Code, ErrInvalid.Error())
+		}
+		if apiErr.Message != "Validation failed" {
+			t.Errorf("Message got %q, want %q", apiErr.Message, "Validation failed")
+		}
+		if len(apiErr.Details) != 1 || apiErr.Details[0].Field != "test" {
+			t.Errorf("Details got %#v, want validation details", apiErr.Details)
+		}
+	})
+
+	t.Run("ErrConflict", func(t *testing.T) {
+		apiErr := NewAPIError(ErrConflict)
+		if apiErr.Code != ErrConflict.Error() {
+			t.Errorf("Code got %q, want %q", apiErr.Code, ErrConflict.Error())
+		}
+		if apiErr.Message != "Resource conflict" {
+			t.Errorf("Message got %q, want %q", apiErr.Message, "Resource conflict")
+		}
+		if apiErr.Details != nil {
+			t.Errorf("Details got %#v, want nil", apiErr.Details)
+		}
+	})
+
+	t.Run("ErrNotFound", func(t *testing.T) {
+		apiErr := NewAPIError(ErrNotFound)
+		if apiErr.Code != ErrNotFound.Error() {
+			t.Errorf("Code got %q, want %q", apiErr.Code, ErrNotFound.Error())
+		}
+		if apiErr.Message != "Resource not found" {
+			t.Errorf("Message got %q, want %q", apiErr.Message, "Resource not found")
+		}
+		if apiErr.Details != nil {
+			t.Errorf("Details got %#v, want nil", apiErr.Details)
+		}
+	})
+
+	t.Run("OtherError", func(t *testing.T) {
+		otherErr := errors.New("something unexpected happened")
+		apiErr := NewAPIError(otherErr)
+		if apiErr.Code != "internal_error" {
+			t.Errorf("Code got %q, want %q", apiErr.Code, "internal_error")
+		}
+		if apiErr.Message != otherErr.Error() {
+			t.Errorf("Message got %q, want %q", apiErr.Message, otherErr.Error())
+		}
+		if apiErr.Details != nil {
+			t.Errorf("Details got %#v, want nil", apiErr.Details)
+		}
+	})
+}
