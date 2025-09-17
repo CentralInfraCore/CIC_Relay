@@ -188,3 +188,12 @@ func TestCabinetService_Set_Errors(t *testing.T) {
 		assert.ErrorIs(t, err, ErrInvalid, "Error should wrap ErrInvalid")
 	})
 }
+
+func TestCabinetService_Close(t *testing.T) {
+	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
+
+	// Call Close and assert no error is returned.
+	// The actual implementation of Close for MemStores is a no-op, so it should always succeed.
+	err := svc.Close(context.Background())
+	assert.NoError(t, err, "Close should not return an error")
+}

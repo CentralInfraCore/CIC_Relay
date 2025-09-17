@@ -201,4 +201,26 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to canonicalize data")
 	})
+
+	t.Run("SetToJSONMock should set and reset mock", func(t *testing.T) {
+		// Ensure the mock is reset after this subtest
+		defer canonicaljson.SetToJSONMock(nil)
+
+		// Set a mock that always returns an error
+		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
+			return nil, errors.New("mocked canonicalization error")
+		})
+
+		// Try to compute a checksum, which should now fail due to the mock
+		meta := &BaseBlock{Name: "mock-test", Version: "1.0"}
+		_, err := computeChecksum(context.Background(), meta, KindSpec, "dummy-data")
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "mocked canonicalization error")
+
+		// Reset the mock and verify that canonicalization works again
+		canonicaljson.SetToJSONMock(nil)
+		_, err = computeChecksum(context.Background(), meta, KindSpec, "dummy-data")
+		assert.NoError(t, err, "Canonicalization should work after resetting the mock")
+	})
 }

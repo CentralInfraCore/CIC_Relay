@@ -218,3 +218,24 @@ func TestToJSON_ErrorCases(t *testing.T) {
 		})
 	})
 }
+
+func TestSetToJSONMock(t *testing.T) {
+	// Ensure the mock is reset after this test
+	defer SetToJSONMock(nil)
+
+	// Set a mock function
+	mockFunc := func(v any) ([]byte, error) {
+		return []byte("mocked_output"), nil
+	}
+	SetToJSONMock(mockFunc)
+
+	// Verify that ToJSON now uses the mock
+	result, err := ToJSON("some_input")
+	require.NoError(t, err)
+	assert.Equal(t, "mocked_output", string(result))
+
+	// Verify that ToJSONOriginal still uses the original behavior
+	originalResult, err := ToJSONOriginal("some_input")
+	require.NoError(t, err)
+	assert.Equal(t, `"some_input"`, string(originalResult))
+}
