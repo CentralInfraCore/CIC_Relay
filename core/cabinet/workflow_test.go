@@ -1,6 +1,7 @@
 package cabinet
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,7 @@ func TestNewWorkflow_Error(t *testing.T) {
 		meta := BaseBlock{Version: "1.0"}
 		steps := []string{"step1"}
 
-		workflow, err := NewWorkflow(meta, steps)
+		workflow, err := NewWorkflow(context.Background(), meta, steps)
 
 		assert.Error(t, err, "NewWorkflow should return an error for invalid metadata")
 		assert.Nil(t, workflow, "Workflow should be nil on error")

@@ -1,9 +1,11 @@
 package cabinet
 
+import "context"
+
 // NewWorkflow constructs a Workflow by calling the single central entry point for validation and checksum calculation.
-func NewWorkflow(meta BaseBlock, steps []string) (*Workflow, error) {
+func NewWorkflow(ctx context.Context, meta BaseBlock, steps []string) (*Workflow, error) {
 	// Call the single central entry point to validate and compute the checksum.
-	sum, err := validateAndChecksum(&meta, KindWf, steps)
+	sum, err := validateAndChecksum(ctx, &meta, KindWf, steps)
 	if err != nil {
 		return nil, err
 	}

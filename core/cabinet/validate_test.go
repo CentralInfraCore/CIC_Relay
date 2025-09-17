@@ -1,6 +1,7 @@
 package cabinet
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -42,7 +43,7 @@ func TestValidateAndChecksum(t *testing.T) {
 
 	t.Run("missing name should fail", func(t *testing.T) {
 		meta := &BaseBlock{Version: "1.0"}
-		_, err := validateAndChecksum(meta, KindSpec, nil)
+		_, err := validateAndChecksum(context.Background(), meta, KindSpec, nil)
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalid)
 		assert.Contains(t, err.Error(), "name and version are required")
@@ -50,7 +51,7 @@ func TestValidateAndChecksum(t *testing.T) {
 
 	t.Run("missing version should fail", func(t *testing.T) {
 		meta := &BaseBlock{Name: "test"}
-		_, err := validateAndChecksum(meta, KindSpec, nil)
+		_, err := validateAndChecksum(context.Background(), meta, KindSpec, nil)
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalid)
 		assert.Contains(t, err.Error(), "name and version are required")
@@ -58,7 +59,7 @@ func TestValidateAndChecksum(t *testing.T) {
 
 	t.Run("checksum mismatch should fail and set valid=false", func(t *testing.T) {
 		meta := &BaseBlock{Name: "test", Version: "1.0", Checksum: "bad-checksum"}
-		_, err := validateAndChecksum(meta, KindSpec, "data")
+		_, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalid)
 		assert.Contains(t, err.Error(), "checksum mismatch")
@@ -70,7 +71,7 @@ func TestValidateAndChecksum(t *testing.T) {
 		const correctChecksum = "45e1aee2cbd9775261601c55a041d9228f0cc6a764ffb7b9be218a719fec6276"
 		meta := &BaseBlock{Name: "test", Version: "1.0", Checksum: correctChecksum}
 
-		sum, err := validateAndChecksum(meta, KindSpec, "data")
+		sum, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
 
 		require.NoError(t, err)
 		assert.Equal(t, correctChecksum, sum)
@@ -81,7 +82,7 @@ func TestValidateAndChecksum(t *testing.T) {
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
 		const expectedChecksum = "45e1aee2cbd9775261601c55a041d9228f0cc6a764ffb7b9be218a719fec6276"
 
-		sum, err := validateAndChecksum(meta, KindSpec, "data")
+		sum, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
 
 		require.NoError(t, err)
 		assert.Equal(t, expectedChecksum, sum)
@@ -97,7 +98,7 @@ func TestValidateAndChecksum(t *testing.T) {
 		})
 
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
-		_, err := validateAndChecksum(meta, KindSpec, "data")
+		_, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "canonicalizer failed")
@@ -107,7 +108,7 @@ func TestValidateAndChecksum(t *testing.T) {
 		meta := &BaseBlock{Name: "large-wasm", Version: "1.0"}
 		// Create a byte slice larger than MaxWASMModuleSize
 		largeWasmData := make([]byte, MaxWASMModuleSize+1)
-		_, err := validateAndChecksum(meta, KindModule, largeWasmData)
+		_, err := validateAndChecksum(context.Background(), meta, KindModule, largeWasmData)
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalid)
@@ -117,7 +118,7 @@ func TestValidateAndChecksum(t *testing.T) {
 	t.Run("valid WASM module should pass", func(t *testing.T) {
 		meta := &BaseBlock{Name: "small-wasm", Version: "1.0"}
 		// Use a structurally valid, minimal WASM module.
-		_, err := validateAndChecksum(meta, KindModule, wasmBase)
+		_, err := validateAndChecksum(context.Background(), meta, KindModule, wasmBase)
 		assert.NoError(t, err)
 	})
 
@@ -125,11 +126,11 @@ func TestValidateAndChecksum(t *testing.T) {
 		meta := &BaseBlock{Name: "test-wasm", Version: "1.0"}
 
 		// Calculate expected checksum based on the stripped data (which is wasmBase)
-		expectedChecksum, err := computeChecksum(meta, KindModule, wasmBase)
+		expectedChecksum, err := computeChecksum(context.Background(), meta, KindModule, wasmBase)
 		require.NoError(t, err)
 
 		// Call validateAndChecksum with the non-canonical data (with custom section)
-		actualChecksum, err := validateAndChecksum(meta, KindModule, wasmWithCustomSection)
+		actualChecksum, err := validateAndChecksum(context.Background(), meta, KindModule, wasmWithCustomSection)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expectedChecksum, actualChecksum, "Checksum should be calculated based on stripped WASM data")
@@ -144,7 +145,7 @@ func TestValidateAndChecksum(t *testing.T) {
 			return nil, errors.New("wasm stripping failed")
 		})
 
-		_, err := validateAndChecksum(meta, KindModule, rawWasmData)
+		_, err := validateAndChecksum(context.Background(), meta, KindModule, rawWasmData)
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalid)
@@ -169,7 +170,7 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 		})
 
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
-		_, err := computeChecksum(meta, KindSpec, "data")
+		_, err := computeChecksum(context.Background(), meta, KindSpec, "data")
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to canonicalize meta")
@@ -186,7 +187,7 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 		})
 
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
-		_, err := computeChecksum(meta, KindSpec, "some-data")
+		_, err := computeChecksum(context.Background(), meta, KindSpec, "some-data")
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to canonicalize data")
@@ -195,7 +196,7 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 	t.Run("unsupported type in data should fail", func(t *testing.T) {
 		// No mock needed, let the original function fail on an unsupported type
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
-		_, err := computeChecksum(meta, KindSpec, math.NaN())
+		_, err := computeChecksum(context.Background(), meta, KindSpec, math.NaN())
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to canonicalize data")

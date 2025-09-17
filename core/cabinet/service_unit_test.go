@@ -15,7 +15,7 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
 
 	t.Run("Schema Put/Get", func(t *testing.T) {
-		schema, err := NewSchema(BaseBlock{Name: "s1", Version: "v1"}, SchemaDef{})
+		schema, err := NewSchema(context.Background(), BaseBlock{Name: "s1", Version: "v1"}, SchemaDef{})
 		require.NoError(t, err, "NewSchema should succeed for valid input")
 
 		err = svc.PutSchema(schema)
@@ -28,7 +28,7 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	})
 
 	t.Run("Module Put/Get", func(t *testing.T) {
-		module, err := NewModuleDescriptor(BaseBlock{Name: "m1", Version: "v1"}, "executor", nil, nil, nil)
+		module, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "m1", Version: "v1"}, "executor", nil, nil, nil)
 		require.NoError(t, err, "NewModuleDescriptor should succeed for valid input")
 
 		err = svc.PutModule(module)
@@ -41,7 +41,7 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	})
 
 	t.Run("Workflow Put/Get", func(t *testing.T) {
-		workflow, err := NewWorkflow(BaseBlock{Name: "wf1", Version: "v1"}, nil)
+		workflow, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf1", Version: "v1"}, nil)
 		require.NoError(t, err, "NewWorkflow should succeed for valid input")
 
 		err = svc.PutWorkflow(workflow)
@@ -76,17 +76,17 @@ func TestCabinetService_Set_Success(t *testing.T) {
 	moduleID := "mod.test@1.0"
 
 	// Create and put schema
-	schema, err := NewSchema(BaseBlock{Name: "schema.step1", Version: "1.0"}, SchemaDef{})
+	schema, err := NewSchema(context.Background(), BaseBlock{Name: "schema.step1", Version: "1.0"}, SchemaDef{})
 	require.NoError(t, err)
 	require.NoError(t, svc.PutSchema(schema))
 
 	// Create and put module that accepts the schema
-	module, err := NewModuleDescriptor(BaseBlock{Name: "mod.test", Version: "1.0"}, "executor", []string{schemaID}, nil, nil)
+	module, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "mod.test", Version: "1.0"}, "executor", []string{schemaID}, nil, nil)
 	require.NoError(t, err)
 	require.NoError(t, svc.PutModule(module))
 
 	// Create and put workflow that uses the schema
-	workflow, err := NewWorkflow(BaseBlock{Name: "wf.test", Version: "1.0"}, []string{schemaID})
+	workflow, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.test", Version: "1.0"}, []string{schemaID})
 	require.NoError(t, err)
 	require.NoError(t, svc.PutWorkflow(workflow))
 
@@ -116,17 +116,17 @@ func TestCabinetService_Set_Errors(t *testing.T) {
 	moduleID := "mod.test@1.0"
 
 	// Create and put schema
-	schema, err := NewSchema(BaseBlock{Name: "schema.step1", Version: "1.0"}, SchemaDef{})
+	schema, err := NewSchema(context.Background(), BaseBlock{Name: "schema.step1", Version: "1.0"}, SchemaDef{})
 	require.NoError(t, err)
 	require.NoError(t, svc.PutSchema(schema))
 
 	// Create and put module that accepts the schema
-	module, err := NewModuleDescriptor(BaseBlock{Name: "mod.test", Version: "1.0"}, "executor", []string{schemaID}, nil, nil)
+	module, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "mod.test", Version: "1.0"}, "executor", []string{schemaID}, nil, nil)
 	require.NoError(t, err)
 	require.NoError(t, svc.PutModule(module))
 
 	// Create and put workflow that uses the schema
-	workflow, err := NewWorkflow(BaseBlock{Name: "wf.test", Version: "1.0"}, []string{schemaID})
+	workflow, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.test", Version: "1.0"}, []string{schemaID})
 	require.NoError(t, err)
 	require.NoError(t, svc.PutWorkflow(workflow))
 
@@ -144,7 +144,7 @@ func TestCabinetService_Set_Errors(t *testing.T) {
 
 	t.Run("schema not found in workflow steps", func(t *testing.T) {
 		// Create a workflow that references a nonexistent schema
-		badWorkflow, err := NewWorkflow(BaseBlock{Name: "wf.bad", Version: "1.0"}, []string{"nonexistent.schema@1.0"})
+		badWorkflow, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.bad", Version: "1.0"}, []string{"nonexistent.schema@1.0"})
 		require.NoError(t, err)
 		require.NoError(t, svc.PutWorkflow(badWorkflow))
 
@@ -173,7 +173,7 @@ func TestCabinetService_Set_Errors(t *testing.T) {
 
 	t.Run("no suitable module for schema", func(t *testing.T) {
 		// Create a module that does NOT accept schema.step1
-		otherModule, err := NewModuleDescriptor(BaseBlock{Name: "mod.other", Version: "1.0"}, "executor", []string{"schema.other@1.0"}, nil, nil)
+		otherModule, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "mod.other", Version: "1.0"}, "executor", []string{"schema.other@1.0"}, nil, nil)
 		require.NoError(t, err)
 		require.NoError(t, svc.PutModule(otherModule))
 

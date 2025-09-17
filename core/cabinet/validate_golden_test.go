@@ -1,7 +1,9 @@
 package cabinet
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +29,7 @@ func TestCanonicalWasmGolden(t *testing.T) {
 		'p', 'r', 'o', 'd', 'u', 'c', 'e', 'r', 's', // Section name: "producers"
 		0x01, // Number of producers
 		0x01, // Producer name length
-		'A',  // Producer name: "A"
+		'A',  // Producer name: "A",
 	}
 	wasmWithCustomSection := append(wasmBase, customSection...)
 
@@ -47,4 +49,25 @@ func TestCanonicalWasmGolden(t *testing.T) {
 
 	// 4. As a final check, ensure the base module is unchanged by the stripping process (as it has no custom sections).
 	assert.Equal(t, wasmBase, strippedBase, "Stripping a module with no custom sections should result in an identical binary")
+}
+
+// TestHashingTimeout verifies that the checksum calculation respects the context timeout.
+func TestHashingTimeout(t *testing.T) {
+	// 1. Create a context that is already cancelled.
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	defer cancel()
+
+	// Wait for the timeout to surely expire.
+	time.Sleep(2 * time.Nanosecond)
+
+	// 2. Prepare dummy data for a schema.
+	meta := BaseBlock{Name: "timeout.test", Version: "1.0"}
+	spec := SchemaDef{}
+
+	// 3. Call a constructor function with the cancelled context.
+	_, err := NewSchema(ctx, meta, spec)
+
+	// 4. Verify that the error is due to the context deadline being exceeded.
+	require.Error(t, err, "Expected an error due to timeout")
+	assert.ErrorIs(t, err, context.DeadlineExceeded, "The error should be context.DeadlineExceeded")
 }

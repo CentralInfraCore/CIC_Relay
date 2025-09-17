@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -29,6 +30,7 @@ var listenAndServe = http.ListenAndServe
 type config struct {
 	MaxJSONInputSize  int64
 	MaxWASMModuleSize int64
+	HashingTimeout    time.Duration // Added for M4
 }
 
 // loadConfig loads configuration from environment variables.
@@ -36,6 +38,7 @@ func loadConfig() (*config, error) {
 	cfg := &config{
 		MaxJSONInputSize:  4 * 1024 * 1024,  // Default to 4 MB
 		MaxWASMModuleSize: 16 * 1024 * 1024, // Default to 16 MB
+		HashingTimeout:    5 * time.Second,      // Default to 5 seconds
 	}
 
 	if val := os.Getenv("MAX_JSON_INPUT_SIZE"); val != "" {
@@ -52,6 +55,14 @@ func loadConfig() (*config, error) {
 			return nil, fmt.Errorf("invalid value for MAX_WASM_MODULE_SIZE: %w", err)
 		}
 		cfg.MaxWASMModuleSize = size
+	}
+
+	if val := os.Getenv("HASHING_TIMEOUT"); val != "" {
+		timeout, err := time.ParseDuration(val)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for HASHING_TIMEOUT: %w", err)
+		}
+		cfg.HashingTimeout = timeout
 	}
 
 	return cfg, nil
@@ -134,7 +145,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("FATAL: Failed to load configuration: %v", err)
 	}
-	log.Printf("Loaded configuration: MaxJSONInputSize=%d bytes, MaxWASMModuleSize=%d bytes", cfg.MaxJSONInputSize, cfg.MaxWASMModuleSize)
+	log.Printf("Loaded configuration: MaxJSONInputSize=%d bytes, MaxWASMModuleSize=%d bytes, HashingTimeout=%s", cfg.MaxJSONInputSize, cfg.MaxWASMModuleSize, cfg.HashingTimeout)
 
 	// --- Cabinet Service Initialization ---
 	instanceID := uuid.New().String()
@@ -150,12 +161,16 @@ func main() {
 	log.Println("Cabinet service initialized.")
 
 	// --- Component Loading ---
-	if err := loadEmbeddedComponents(cabinetSvc, embeddedSchemas, embeddedWorkflows, cfg.MaxWASMModuleSize); err != nil {
+	// Create a context with a timeout for all loading/hashing operations.
+	loadCtx, cancel := context.WithTimeout(context.Background(), cfg.HashingTimeout)
+	defer cancel()
+
+	if err := loadEmbeddedComponents(loadCtx, cabinetSvc, embeddedSchemas, embeddedWorkflows, cfg.MaxWASMModuleSize); err != nil {
 		log.Fatalf("FATAL: Failed to load embedded components: %v", err)
 	}
 	// The path for installed components can be made configurable later (e.g., via flags or env vars)
 	// For now, it's hardcoded to /etc/cic-relay/components.d
-	if err := loadInstalledComponents(cabinetSvc, "/etc/cic-relay/components.d", cfg.MaxWASMModuleSize); err != nil {
+	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", cfg.MaxWASMModuleSize); err != nil {
 		log.Fatalf("FATAL: Failed to load installed components: %v", err)
 	}
 

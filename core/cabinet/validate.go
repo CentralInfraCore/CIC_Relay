@@ -1,6 +1,7 @@
 package cabinet
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -55,8 +56,8 @@ type metaForChecksum struct {
 }
 
 // computeChecksum is a private helper that calculates the canonical checksum.
-// It now correctly handles raw byte slices (for WASM) vs other data types.
-func computeChecksum(meta *BaseBlock, kind string, data any) (string, error) {
+// It now accepts a context to handle timeouts during long-running operations.
+func computeChecksum(ctx context.Context, meta *BaseBlock, kind string, data any) (string, error) {
 	metaForHash := metaForChecksum{
 		Name:        meta.Name,
 		Version:     meta.Version,
@@ -65,6 +66,10 @@ func computeChecksum(meta *BaseBlock, kind string, data any) (string, error) {
 		Timestamp:   meta.Timestamp,
 	}
 
+	// Check for context cancellation before serialization
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	metaBytes, err := canonicaljson.ToJSON(metaForHash)
 	if err != nil {
 		return "", fmt.Errorf("failed to canonicalize meta: %w", err)
@@ -75,6 +80,10 @@ func computeChecksum(meta *BaseBlock, kind string, data any) (string, error) {
 	if rawData, ok := data.([]byte); ok {
 		dataBytes = rawData
 	} else {
+		// Check for context cancellation before serialization
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		// For all other types, use canonical JSON serialization.
 		dataBytes, err = canonicaljson.ToJSON(data)
 		if err != nil {
@@ -85,6 +94,11 @@ func computeChecksum(meta *BaseBlock, kind string, data any) (string, error) {
 	kindBytes := []byte(kind)
 
 	hasher := sha256.New()
+
+	// Check for context cancellation before writing to the hasher
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	hasher.Write(kindBytes)
 	hasher.Write(metaBytes)
 	hasher.Write(dataBytes)
@@ -94,20 +108,29 @@ func computeChecksum(meta *BaseBlock, kind string, data any) (string, error) {
 }
 
 // validateAndChecksum is the single central entry point for validation and checksum calculation.
-// It implements the "check-then-calculate" logic.
-func validateAndChecksum(meta *BaseBlock, kind string, data any) (string, error) {
-	// 1. Validate basic invariants.
+// It now accepts a context to handle timeouts.
+func validateAndChecksum(ctx context.Context, meta *BaseBlock, kind string, data any) (string, error) {
+	// 1. Check for context cancellation at the beginning.
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
+	// 2. Validate basic invariants.
 	if meta.Name == "" || meta.Version == "" {
 		return "", fmt.Errorf("%w: name and version are required", ErrInvalid)
 	}
 
-	// Add WASM module size limit check and canonicalization
+	// 3. Add WASM module size limit check and canonicalization
 	if kind == KindModule {
 		if rawData, ok := data.([]byte); ok {
 			if len(rawData) > MaxWASMModuleSize {
 				return "", fmt.Errorf("%w: WASM module size exceeds limit of %d bytes", ErrInvalid, MaxWASMModuleSize)
 			}
-			
+
+			// Check for context cancellation before stripping WASM
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
 			// Canonicalize the WASM module by stripping non-essential sections
 			strippedData, err := stripWasmModuleFunc(rawData)
 			if err != nil {
@@ -117,13 +140,13 @@ func validateAndChecksum(meta *BaseBlock, kind string, data any) (string, error)
 		}
 	}
 
-	// 2. Calculate the expected checksum based on the current data.
-	expectedSum, err := computeChecksum(meta, kind, data)
+	// 4. Calculate the expected checksum based on the current data.
+	expectedSum, err := computeChecksum(ctx, meta, kind, data)
 	if err != nil {
 		return "", err
 	}
 
-	// 3. If a checksum is already present, verify it.
+	// 5. If a checksum is already present, verify it.
 	if meta.Checksum != "" {
 		if meta.Checksum != expectedSum {
 			meta.Valid = false
@@ -134,6 +157,6 @@ func validateAndChecksum(meta *BaseBlock, kind string, data any) (string, error)
 		return meta.Checksum, nil
 	}
 
-	// 4. If no checksum is present, return the newly calculated one to be set by the constructor.
+	// 6. If no checksum is present, return the newly calculated one to be set by the constructor.
 	return expectedSum, nil
 }

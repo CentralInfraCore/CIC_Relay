@@ -1,7 +1,9 @@
 package cabinet
 
+import "context"
+
 // NewModuleDescriptor constructs a ModuleDescriptor by calling the single central entry point for validation and checksum calculation.
-func NewModuleDescriptor(meta BaseBlock, moduleType string, accepts []string, outputKeys []string, wasmCode []byte) (*ModuleDescriptor, error) {
+func NewModuleDescriptor(ctx context.Context, meta BaseBlock, moduleType string, accepts []string, outputKeys []string, wasmCode []byte) (*ModuleDescriptor, error) {
 	// Create a temporary descriptor to use its GetData() method, which contains the correct data selection logic.
 	tempDescriptorForData := &ModuleDescriptor{
 		Type:       moduleType,
@@ -12,7 +14,7 @@ func NewModuleDescriptor(meta BaseBlock, moduleType string, accepts []string, ou
 	data := tempDescriptorForData.GetData()
 
 	// Call the single central entry point to validate and compute the checksum.
-	sum, err := validateAndChecksum(&meta, KindModule, data)
+	sum, err := validateAndChecksum(ctx, &meta, KindModule, data)
 	if err != nil {
 		return nil, err
 	}
