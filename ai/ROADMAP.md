@@ -64,8 +64,28 @@ A cél a rendszer robusztusságának növelése erőforrás-korlátok bevezetés
 
 ### M5 — Hibamodel egységesítése
 
-* **Feladatok**: sentinel hibák namespacing (pl. `cabinet.ErrInvalidInput`), egységes JSON-payload (code, message, details), HTTP status mapping (400/409/413/422/500).
-* **DoD**: minden útvonal azonos szerkezetű hibát ad vissza. `errors.Is/As` működik, logban egyértelmű hibakódok.
+A cél a rendszer hibakezelésének sztenderdizálása és konzisztenssé tétele, mind a belső logikában, mind a külső kommunikációban.
+
+**Részfeladatok (checklist):**
+
+*   **M5.1: Sentinel hibák namespacing**
+  *  [ ] **Feladat**: A hibák egy jól definiált névtérbe kerülnek (pl. `cabinet.ErrInvalidInput`), segítve a hibák azonosítását és kezelését a kódban.
+  *  [ ] **DoD**: A rendszerben használt összes sentinel hiba konzisztensen névtérbe van rendezve, és a kód könnyen azonosítja és kezeli őket.
+
+*   **M5.2: Egységes JSON-payload**
+  *  [ ] **Feladat**: A rendszer által visszaadott hibáknak egységes JSON struktúrával kell rendelkezniük (code, message, details), amely tartalmazza a hibakódot, egy üzenetet és opcionálisan további részleteket.
+  *  [ ] **DoD**: Minden API válaszban azonos JSON hibaformátumot használunk, ami megkönnyíti a kliens oldali feldolgozást.
+
+*   **M5.3: HTTP status mapping**
+  *  [ ] **Feladat**: A különböző típusú hibákhoz megfelelő HTTP státuszkódokat kell rendelni (400/409/413/422/500), hogy a kliensek a státuszkód alapján is tudjanak reagálni a hibákra.
+  *  [ ] **DoD**: A hibákhoz rendelt HTTP státuszkódok konzisztensek és a HTTP specifikációnak megfelelnek.
+
+*   **M5.4: Általános hibakezelési elvek**
+  *  [ ] **Feladat**: Biztosítani, hogy az egységes hibakezelési modell teljesüljön a teljes rendszerben.
+  *  [ ] **DoD**:
+    *   Minden útvonal azonos szerkezetű hibát ad vissza.
+    *   `errors.Is/As` működik a hibák ellenőrzésére.
+    *   A logokban egyértelmű, gépileg olvasható hibakódok jelennek meg.
 
 ### M6 — Observability & üzemeltethetőség
 
@@ -80,6 +100,7 @@ A cél a rendszer robusztusságának növelése erőforrás-korlátok bevezetés
 ### M8 — Konfiguráció & biztonság
 
 * **Feladatok**: kötelező flag/env (trust store path, max-sizes, policy file, log level). Safe defaults: prod → deny-by-default; dev → lazább. Fail-fast hibás konfig esetén.
+
 * **DoD**: félkonfig esetén nem indul; hibaüzenet egyértelmű, auditálható.
 
 ### M9 — Release & dokumentáció
@@ -97,13 +118,13 @@ A cél a rendszer robusztusságának növelése erőforrás-korlátok bevezetés
 ## Jelenlegi állapot (STATE)
 
 | Milestone | State   |
-| --------- | ------- |
+| --------- |---------|
 | M0        | Done    |
 | M1        | Done    |
 | M2        | Done    |
 | M3        | Done    |
 | M4        | Done    |
-| M5        | Done    |
+| M5        | Partial |
 | M6        | Missing |
 | M7        | Partial |
 | M8        | Missing |
