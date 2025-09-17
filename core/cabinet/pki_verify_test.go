@@ -4,8 +4,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"math/big"
 	"testing"
 	"time"
@@ -119,5 +121,68 @@ func TestVerifyCertificateChain(t *testing.T) {
 		_, err := VerifyCertificateChain(leafCert, opts)
 		assert.Error(t, err, "Should fail because the chain is incomplete")
 		assert.Contains(t, err.Error(), "certificate signed by unknown authority", "Error message should indicate a break in the trust chain")
+	})
+
+	t.Run("fails with revoked certificate", func(t *testing.T) {
+		// Create a CRL that revokes the leaf certificate
+		revokedCerts := []pkix.RevokedCertificate{
+			{
+				SerialNumber:   leafCert.SerialNumber,
+				RevocationTime: time.Now(),
+			},
+		}
+
+		crlBytes, err := intermediateCA.CreateCRL(rand.Reader, intermediateKey, revokedCerts, time.Now(), time.Now().Add(24*time.Hour))
+		require.NoError(t, err)
+
+		crl, err := x509.ParseCRL(crlBytes)
+		require.NoError(t, err)
+
+		// Setup verification options including the CRL
+		opts := VerifyOptions{
+			Roots:         rootPool,
+			Intermediates: intermediatePool,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+			CRLs:          []*pkix.CertificateList{crl},
+		}
+
+		// Execute and verify
+		_, err = VerifyCertificateChain(leafCert, opts)
+		assert.Error(t, err, "Should fail because the certificate is revoked")
+		assert.Contains(t, err.Error(), "revocation check failed", "Error message should indicate revocation issue")
+		assert.Contains(t, err.Error(), "certificate with serial number 3 is revoked", "Error message should specify the revoked serial number")
+	})
+
+	// --- SPKI Pinning Tests ---
+	// Calculate the SPKI hash for the intermediate CA
+	spkiHash := sha256.Sum256(intermediateCA.RawSubjectPublicKeyInfo)
+	correctPin := base64.StdEncoding.EncodeToString(spkiHash[:])
+
+	t.Run("successful verification with correct SPKI pin", func(t *testing.T) {
+		opts := VerifyOptions{
+			Roots:         rootPool,
+			Intermediates: intermediatePool,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+			PinnedSPKIs:   map[string]bool{correctPin: true},
+		}
+
+		chains, err := VerifyCertificateChain(leafCert, opts)
+		require.NoError(t, err)
+		assert.NotEmpty(t, chains, "Should return at least one valid chain with correct pinning")
+	})
+
+	t.Run("fails with incorrect SPKI pin", func(t *testing.T) {
+		incorrectPin := "dGVzdFBpbgo=\"" // "testPin" in base64
+		opts := VerifyOptions{
+			Roots:         rootPool,
+			Intermediates: intermediatePool,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+			PinnedSPKIs:   map[string]bool{incorrectPin: true},
+		}
+
+		_, err := VerifyCertificateChain(leafCert, opts)
+		assert.Error(t, err, "Should fail because of SPKI pin mismatch")
+		assert.Contains(t, err.Error(), "SPKI pinning validation failed", "Error message should indicate pinning issue")
+		assert.Contains(t, err.Error(), "no certificate in the chain matched any of the pinned SPKI hashes", "Error message should specify the pinning failure")
 	})
 }
