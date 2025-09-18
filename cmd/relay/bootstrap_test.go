@@ -163,6 +163,7 @@ func TestLoadModule(t *testing.T) {
 	// 1. Setup
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
+	logger := newDiscardLogger()
 
 	// Read the expected WASM code directly from the embedded FS for comparison
 	expectedWasmCode, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.wasm")
@@ -174,7 +175,7 @@ func TestLoadModule(t *testing.T) {
 		require.NoError(t, err)
 
 		// 2. Execute
-		err = loadModule(context.Background(), svc, testModuleFS, "testdata/modules/test_module.yaml", yamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, "testdata/modules/test_module.yaml", yamlContent, maxWasmSize, logger)
 		require.NoError(t, err, "loadModule should not return an error for a valid module")
 
 		// 3. Verify
@@ -194,7 +195,7 @@ metadata:
   version: "1.0"
 wasmSize: 123
 `)
-		err = loadModule(context.Background(), svc, testModuleFS, "missing_digest.yaml", missingDigestYaml, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, "missing_digest.yaml", missingDigestYaml, maxWasmSize, logger)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "wasmDigest is a required field")
 	})
@@ -209,7 +210,7 @@ metadata:
   version: "1.0"
 wasmDigest: "some-digest"
 `)
-		err = loadModule(context.Background(), svc, testModuleFS, "missing_size.yaml", missingSizeYaml, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, "missing_size.yaml", missingSizeYaml, maxWasmSize, logger)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "wasmSize is a required field")
 	})
@@ -231,7 +232,7 @@ wasmSize: 123
 		require.NoError(t, os.WriteFile(filepath.Join(t.TempDir(), missingWasmYamlPath), missingWasmYamlContent, 0644))
 
 		// Execute loadModule with a FS that doesn't contain the WASM file
-		err = loadModule(context.Background(), svc, tempFS, missingWasmYamlPath, missingWasmYamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, tempFS, missingWasmYamlPath, missingWasmYamlContent, maxWasmSize, logger)
 		assert.Error(t, err, "loadModule should return an error if WASM file is missing")
 		assert.Contains(t, err.Error(), "stat WASM file", "Error message should indicate WASM file stat issue")
 		assert.Contains(t, err.Error(), "no such file or directory", "Error message should indicate WASM file not found")
@@ -258,7 +259,7 @@ wasmSize: 123
 
 		// Execute with the modified content
 		embeddedYamlPath := "testdata/modules/test_module.yaml"
-		err = loadModule(context.Background(), svc, testModuleFS, embeddedYamlPath, modifiedYamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, embeddedYamlPath, modifiedYamlContent, maxWasmSize, logger)
 
 		// Verify that the error is a checksum mismatch error
 		assert.Error(t, err, "loadModule should return an error for checksum mismatch")
@@ -273,7 +274,7 @@ apiVersion: relay.cic.com/v1
 kind: Module
 metadata: "this should be a map"
 `)
-		err = loadModule(context.Background(), svc, testModuleFS, "invalid.yaml", invalidYamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, "invalid.yaml", invalidYamlContent, maxWasmSize, logger)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal module file")
 	})
@@ -298,7 +299,7 @@ wasmSize: %d
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, wasmPath), largeWasmContent, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(context.Background(), svc, tempFS, yamlPath, yamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, tempFS, yamlPath, yamlContent, maxWasmSize, logger)
 
 		assert.Error(t, err, "loadModule should return an error for a wasm file that is too large")
 		assert.Contains(t, err.Error(), "exceeds maximum allowed size")
@@ -315,7 +316,7 @@ wasmSize: %d
 		yamlContent, err := fs.ReadFile(testModuleFS, "testdata/modules/test_module.yaml")
 		require.NoError(t, err)
 
-		err = loadModule(context.Background(), svc, failingFS, "testdata/modules/test_module.yaml", yamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, failingFS, "testdata/modules/test_module.yaml", yamlContent, maxWasmSize, logger)
 
 		assert.Error(t, err, "loadModule should return an error if wasm file cannot be read")
 		assert.Contains(t, err.Error(), "read WASM file")
@@ -339,7 +340,7 @@ wasmSize: 8
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "wrong_digest.wasm"), []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x02, 0x03, 0x04}, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(context.Background(), svc, tempFS, wrongDigestYamlPath, wrongDigestYamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, tempFS, wrongDigestYamlPath, wrongDigestYamlContent, maxWasmSize, logger)
 
 		assert.Error(t, err, "loadModule should return an error for WASM digest mismatch")
 		assert.Contains(t, err.Error(), "WASM digest mismatch")
@@ -362,7 +363,7 @@ wasmSize: 999
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "wrong_size.wasm"), []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x02, 0x03, 0x04}, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(context.Background(), svc, tempFS, wrongSizeYamlPath, wrongSizeYamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, tempFS, wrongSizeYamlPath, wrongSizeYamlContent, maxWasmSize, logger)
 
 		assert.Error(t, err, "loadModule should return an error for WASM size mismatch")
 		assert.Contains(t, err.Error(), "WASM size mismatch")
@@ -393,7 +394,7 @@ wasmSize: 4
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid_meta.wasm"), wasmContent, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		err = loadModule(context.Background(), svc, tempFS, invalidMetaYamlPath, invalidMetaYamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, tempFS, invalidMetaYamlPath, invalidMetaYamlContent, maxWasmSize, logger)
 
 		assert.Error(t, err, "loadModule should return an error for module validation failure")
 		assert.Contains(t, err.Error(), "module validation")

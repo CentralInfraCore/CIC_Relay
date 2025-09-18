@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/x509"
 	"embed"
 	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -128,7 +131,7 @@ func loadComponentsFromFS(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, 
 		case "Workflow":
 			loadErr = loadWorkflow(ctx, svc, content)
 		case "Module":
-			loadErr = loadModule(ctx, svc, fsys, path, content, maxWasmModuleSize)
+			loadErr = loadModule(ctx, svc, fsys, path, content, maxWasmModuleSize, logger)
 		default:
 			logger.WithFields(logrus.Fields{
 				"kind": header.Kind,
@@ -188,7 +191,7 @@ func loadWorkflow(ctx context.Context, svc cabinet.Cabinet, content []byte) erro
 
 // loadModule unmarshals a module descriptor, reads its associated WASM file,
 // and loads the module into the cabinet.
-func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []byte, maxWasmModuleSize int64) error {
+func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []byte, maxWasmModuleSize int64, logger *logrus.Logger) error {
 	var file ModuleFile
 	if err := yaml.Unmarshal(yamlContent, &file); err != nil {
 		return fmt.Errorf("unmarshal module file: %w", err)
@@ -234,6 +237,38 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	// Verify WASM digest from YAML against actual content hash.
 	if file.WasmDigest != calculatedDigest {
 		return fmt.Errorf("WASM digest mismatch for %q (expected: %s, got: %s)", wasmPath, file.WasmDigest, calculatedDigest)
+	}
+
+	// --- Audit Logging & Signature Verification ---
+	moduleID := file.Metadata.Name + "@" + file.Metadata.Version
+	auditLogger := logger.WithFields(logrus.Fields{
+		"module_id": moduleID,
+		"checksum":  calculatedDigest,
+	})
+
+	sigPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".pem"
+	sigData, err := fs.ReadFile(fsys, sigPath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			auditLogger.WithField("outcome", "skipped").Warn("No signature file found, module is unsigned.")
+		} else {
+			auditLogger.WithField("outcome", "failure").WithError(err).Error("Failed to read signature file.")
+		}
+	} else {
+		block, _ := pem.Decode(sigData)
+		if block == nil || block.Type != "CERTIFICATE" {
+			auditLogger.WithField("outcome", "failure").Error("Invalid PEM format in signature file.")
+		} else {
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				auditLogger.WithField("outcome", "failure").WithError(err).Error("Failed to parse certificate from signature file.")
+			} else {
+				auditLogger.WithFields(logrus.Fields{
+					"outcome":        "success", // Placeholder, real verification is not yet implemented
+					"signer_subject": cert.Subject.String(),
+				}).Info("Signature check placeholder")
+			}
+		}
 	}
 
 	moduleDesc, err := cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
