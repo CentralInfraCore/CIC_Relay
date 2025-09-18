@@ -80,6 +80,8 @@ func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.rootHandler)
 	mux.HandleFunc("/set", s.setHandler)
+	mux.HandleFunc("/healthz", s.healthzHandler)
+	mux.HandleFunc("/readyz", s.readyzHandler)
 	return mux
 }
 
@@ -96,6 +98,22 @@ func (s *relayServer) rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	response := `{"status": "ok", "message": "central relay responding"}`
 	fmt.Fprintln(w, response)
+}
+
+// healthzHandler serves the health check endpoint.
+func (s *relayServer) healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+// readyzHandler serves the readiness check endpoint.
+func (s *relayServer) readyzHandler(w http.ResponseWriter, r *http.Request) {
+	// For now, readiness is the same as liveness.
+	// This can be expanded to check dependencies like the cabinet service.
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 // setHandler processes incoming SetPayload requests.

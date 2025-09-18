@@ -158,6 +158,59 @@ func TestRun_PropagatesListenError(t *testing.T) {
 	}
 }
 
+func TestHealthAndReadyzEndpoints(t *testing.T) {
+	// Setup a minimal server
+	logger := logrus.New()
+	logger.SetOutput(io.Discard) // Don't pollute test output
+	config, err := loadConfig()
+	require.NoError(t, err)
+	server := &relayServer{
+		api:    cabinet.NewAPI(&mockCabinetService{}),
+		config: config,
+		logger: logger,
+	}
+	mux := newMux(server)
+
+	testCases := []struct {
+		name       string
+		path       string
+		wantStatus int
+		wantBody   string
+	}{
+		{
+			name:       "healthz endpoint",
+			path:       "/healthz",
+			wantStatus: http.StatusOK,
+			wantBody:   `{"status":"ok"}`,
+		},
+		{
+			name:       "readyz endpoint",
+			path:       "/readyz",
+			wantStatus: http.StatusOK,
+			wantBody:   `{"status":"ok"}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			w := httptest.NewRecorder()
+
+			mux.ServeHTTP(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			assert.Equal(t, tc.wantStatus, res.StatusCode, "incorrect status code")
+			assert.Equal(t, "application/json", res.Header.Get("Content-Type"), "incorrect content type")
+
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.JSONEq(t, tc.wantBody, string(body), "incorrect response body")
+		})
+	}
+}
+
 // --- New tests for setHandler ---
 
 func TestSetHandler(t *testing.T) {
