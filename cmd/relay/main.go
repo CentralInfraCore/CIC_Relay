@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus" // Import logrus
 
 	"centralrelay/core/cabinet"
 )
@@ -72,6 +72,7 @@ func loadConfig() (*config, error) {
 type relayServer struct {
 	api    *cabinet.API
 	config *config
+	logger *logrus.Logger // Use logrus logger
 }
 
 // newMux creates a new HTTP multiplexer with all routes.
@@ -84,6 +85,14 @@ func newMux(s *relayServer) *http.ServeMux {
 
 // rootHandler serves the root path.
 func (s *relayServer) rootHandler(w http.ResponseWriter, r *http.Request) {
+	reqID := uuid.New().String()
+	logEntry := s.logger.WithFields(logrus.Fields{
+		"req-id": reqID,
+		"path":   r.URL.Path,
+		"method": r.Method,
+	})
+	logEntry.Info("Handling root request")
+
 	w.Header().Set("Content-Type", "application/json")
 	response := `{"status": "ok", "message": "central relay responding"}`
 	fmt.Fprintln(w, response)
@@ -91,7 +100,16 @@ func (s *relayServer) rootHandler(w http.ResponseWriter, r *http.Request) {
 
 // setHandler processes incoming SetPayload requests.
 func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
+	reqID := uuid.New().String()
+	logEntry := s.logger.WithFields(logrus.Fields{
+		"req-id": reqID,
+		"path":   r.URL.Path,
+		"method": r.Method,
+	})
+	logEntry.Info("Handling set request")
+
 	if r.Method != http.MethodPost {
+		logEntry.WithField("outcome", "method_not_allowed").Warn("Only POST method is allowed")
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -101,6 +119,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	limitedReader := io.LimitReader(r.Body, s.config.MaxJSONInputSize+1)
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
+		logEntry.WithField("outcome", "read_error").WithError(err).Error("Failed to read request body")
 		http.Error(w, "Failed to read request", http.StatusInternalServerError)
 		return
 	}
@@ -108,12 +127,18 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the body length is greater than the allowed size, return 413.
 	if int64(len(body)) > s.config.MaxJSONInputSize {
+		logEntry.WithFields(logrus.Fields{
+			"outcome": "body_too_large",
+			"size":    len(body),
+			"limit":   s.config.MaxJSONInputSize,
+		}).Warn("Request body too large")
 		http.Error(w, fmt.Sprintf("Request body too large, exceeds %d bytes", s.config.MaxJSONInputSize), http.StatusRequestEntityTooLarge)
 		return
 	}
 
 	var payload cabinet.SetPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
+		logEntry.WithField("outcome", "invalid_json").WithError(err).Warn("Invalid JSON payload")
 		http.Error(w, "Invalid JSON payload: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -122,62 +147,72 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Handle specific cabinet errors
 		if cabinet.IsInvalid(err) {
+			logEntry.WithField("outcome", "invalid_request").WithError(err).Warn("Invalid request")
 			http.Error(w, "Invalid request: "+err.Error(), http.StatusBadRequest)
 			return
 		}
+		logEntry.WithField("outcome", "internal_error").WithError(err).Error("Internal server error during Set operation")
 		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	logEntry.WithField("outcome", "success").Info("Set operation successful")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
 
 // run: külön függvény, hogy unit tesztben ne main()-t kelljen hívni
-func run(port string, logger *log.Logger, s *relayServer) error {
-	logger.Printf("✅ Central relay API started on %s", port)
+func run(port string, logger *logrus.Logger, s *relayServer) error {
+	logger.Printf("✅ Central relay API started on %s", port) // This will use logrus's Printf
 	return listenAndServe(port, newMux(s))
 }
 
 func main() {
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.JSONFormatter{}) // Structured logging in JSON format
+
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("FATAL: Failed to load configuration: %v", err)
+		logger.WithField("error", err).Fatal("FATAL: Failed to load configuration")
 	}
-	log.Printf("Loaded configuration: MaxJSONInputSize=%d bytes, MaxWASMModuleSize=%d bytes, HashingTimeout=%s", cfg.MaxJSONInputSize, cfg.MaxWASMModuleSize, cfg.HashingTimeout)
+	logger.WithFields(logrus.Fields{
+		"MaxJSONInputSize":  cfg.MaxJSONInputSize,
+		"MaxWASMModuleSize": cfg.MaxWASMModuleSize,
+		"HashingTimeout":    cfg.HashingTimeout,
+	}).Info("Loaded configuration")
 
 	// --- Cabinet Service Initialization ---
 	instanceID := uuid.New().String()
-	log.Printf("Instance ID: %s", instanceID)
+	logger.WithField("instance_id", instanceID).Info("Instance ID")
 
-	log.Println("Initializing cabinet stores...")
+	logger.Info("Initializing cabinet stores...")
 	schemaStore := cabinet.NewMemSchemaStore()
 	workflowStore := cabinet.NewMemWorkflowStore()
 	moduleStore := cabinet.NewMemModuleStore()
 
 	cabinetSvc := cabinet.NewCabinetService(schemaStore, moduleStore, workflowStore)
 	defer cabinetSvc.Close(context.Background()) // Ensure WASM runtime is closed
-	log.Println("Cabinet service initialized.")
+	logger.Info("Cabinet service initialized.")
 
 	// --- Component Loading ---
 	// Create a context with a timeout for all loading/hashing operations.
 	loadCtx, cancel := context.WithTimeout(context.Background(), cfg.HashingTimeout)
 	defer cancel()
 
-	if err := loadEmbeddedComponents(loadCtx, cabinetSvc, embeddedSchemas, embeddedWorkflows, cfg.MaxWASMModuleSize); err != nil {
-		log.Fatalf("FATAL: Failed to load embedded components: %v", err)
+	if err := loadEmbeddedComponents(loadCtx, cabinetSvc, embeddedSchemas, embeddedWorkflows, cfg.MaxWASMModuleSize, logger); err != nil {
+		logger.WithField("error", err).Fatal("FATAL: Failed to load embedded components")
 	}
 	// The path for installed components can be made configurable later (e.g., via flags or env vars)
 	// For now, it's hardcoded to /etc/cic-relay/components.d
-	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", cfg.MaxWASMModuleSize); err != nil {
-		log.Fatalf("FATAL: Failed to load installed components: %v", err)
+	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", cfg.MaxWASMModuleSize, logger); err != nil {
+		logger.WithField("error", err).Fatal("FATAL: Failed to load installed components")
 	}
 
 	// --- HTTP Server Initialization ---
 	api := cabinet.NewAPI(cabinetSvc)
-	server := &relayServer{api: api, config: cfg}
+	server := &relayServer{api: api, config: cfg, logger: logger} // Pass logrus logger to server
 
 	port := ":8080"
-	log.Fatal(run(port, log.Default(), server))
+	logger.Fatal(run(port, logger, server)) // Pass logrus logger to run function
 }

@@ -7,8 +7,8 @@ import (
 	"embed"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	"github.com/sirupsen/logrus" // Import logrus
 )
 
 // failingReadFileFS is a mock file system that fails on reading specific files.
@@ -82,8 +83,12 @@ func TestLoadEmbeddedComponents(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
+	// Create a logrus logger that discards output for tests
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+
 	// 2. Execute
-	err := loadEmbeddedComponents(context.Background(), svc, testSchemas, testWorkflows, maxWasmSize)
+	err := loadEmbeddedComponents(context.Background(), svc, testSchemas, testWorkflows, maxWasmSize, logger)
 	require.NoError(t, err, "loadEmbeddedComponents should not return an error")
 
 	// 3. Verify
@@ -98,10 +103,14 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
+	// Create a logrus logger that discards output for tests
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+
 	t.Run("invalid schema", func(t *testing.T) {
 		// Execute with an embed.FS that contains an invalid schema file.
 		// The error from loadComponentsFromFS should be propagated up.
-		err := loadEmbeddedComponents(context.Background(), svc, invalidSchemaFS, testWorkflows, maxWasmSize)
+		err := loadEmbeddedComponents(context.Background(), svc, invalidSchemaFS, testWorkflows, maxWasmSize, logger)
 		assert.Error(t, err, "expected an error when loading invalid embedded schema components")
 		assert.Contains(t, err.Error(), "failed to load embedded schemas", "error message should indicate which part failed")
 	})
@@ -109,7 +118,7 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 	t.Run("invalid workflow", func(t *testing.T) {
 		// Execute with an embed.FS that contains an invalid workflow file.
 		// The error from loadComponentsFromFS should be propagated up.
-		err := loadEmbeddedComponents(context.Background(), svc, testSchemas, invalidWorkflowFS, maxWasmSize)
+		err := loadEmbeddedComponents(context.Background(), svc, testSchemas, invalidWorkflowFS, maxWasmSize, logger)
 		assert.Error(t, err, "expected an error when loading invalid embedded workflow components")
 		assert.Contains(t, err.Error(), "failed to load embedded workflows", "error message should indicate which part failed")
 	})
@@ -131,14 +140,20 @@ metadata: "this should be a map"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, malformedYamlPath), malformedYamlContent, 0644))
 
 		tempFS := os.DirFS(tempDir)
-		// Capture log output
+
+		// Create a logrus logger that discards output for tests
+		logger := logrus.New()
+		logger.SetOutput(io.Discard)
+
+		// Capture logrus logger output
 		var logBuf bytes.Buffer
-		log.SetOutput(&logBuf)
+		originalLoggerOutput := logger.Out
+		logger.SetOutput(&logBuf)
 		defer func() {
-			log.SetOutput(os.Stderr)
+			logger.SetOutput(originalLoggerOutput)
 		}()
 
-		err := loadComponentsFromFS(context.Background(), svc, tempFS, ".", false, maxWasmSize)
+		err := loadComponentsFromFS(context.Background(), svc, tempFS, ".", false, maxWasmSize, logger)
 		assert.NoError(t, err, "loadComponentsFromFS should not return a fatal error for unmarshal errors")
 		assert.Contains(t, logBuf.String(), "unmarshal module file", "log should contain unmarshal error")
 	})
@@ -179,7 +194,7 @@ metadata:
   version: "1.0"
 wasmSize: 123
 `)
-		err := loadModule(context.Background(), svc, testModuleFS, "missing_digest.yaml", missingDigestYaml, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, "missing_digest.yaml", missingDigestYaml, maxWasmSize)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "wasmDigest is a required field")
 	})
@@ -194,7 +209,7 @@ metadata:
   version: "1.0"
 wasmDigest: "some-digest"
 `)
-		err := loadModule(context.Background(), svc, testModuleFS, "missing_size.yaml", missingSizeYaml, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, "missing_size.yaml", missingSizeYaml, maxWasmSize)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "wasmSize is a required field")
 	})
@@ -258,7 +273,7 @@ apiVersion: relay.cic.com/v1
 kind: Module
 metadata: "this should be a map"
 `)
-		err := loadModule(context.Background(), svc, testModuleFS, "invalid.yaml", invalidYamlContent, maxWasmSize)
+		err = loadModule(context.Background(), svc, testModuleFS, "invalid.yaml", invalidYamlContent, maxWasmSize)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal module file")
 	})
@@ -390,10 +405,23 @@ func TestLoadComponentsFromFS_WalkDirError(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
+	// Create a logrus logger that discards output for tests
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+
+	// Capture logrus logger output
+	var logBuf bytes.Buffer
+	originalLoggerOutput := logger.Out
+	logger.SetOutput(&logBuf)
+		defer func() {
+			logger.SetOutput(originalLoggerOutput)
+		}()
+
 	// Use an FS that will fail on WalkDir's internal call to ReadDir.
 	failingFS := &failingReadDirFS{FS: testModuleFS}
 
-	err := loadComponentsFromFS(context.Background(), svc, failingFS, ".", false, maxWasmSize)
+	// Pass the logger to loadComponentsFromFS
+	err := loadComponentsFromFS(context.Background(), svc, failingFS, ".", false, maxWasmSize, logger)
 
 	assert.Error(t, err, "loadComponentsFromFS should propagate errors from fs.WalkDir")
 	assert.ErrorIs(t, err, os.ErrPermission, "the specific error from the mock fs should be propagated")
@@ -405,12 +433,17 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	tempDir := t.TempDir()
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
-	// Capture log output
+	// Create a logrus logger that discards output for tests
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+
+	// Capture logrus logger output
 	var logBuf bytes.Buffer
-	log.SetOutput(&logBuf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
+	originalLoggerOutput := logger.Out
+	logger.SetOutput(&logBuf)
+		defer func() {
+			logger.SetOutput(originalLoggerOutput)
+		}()
 
 	testCases := []struct {
 		name              string
@@ -462,7 +495,7 @@ func TestLoadInstalledComponents_ErrorHandling(t *testing.T) {
 	}
 
 	// 2. Execute
-	err := loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize)
+	err := loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize, logger)
 	require.NoError(t, err, "loadInstalledComponents should not return a fatal error for invalid files")
 
 	// 3. Verify log output
@@ -478,8 +511,12 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 	tempDir := t.TempDir()
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
+	// Create a logrus logger that discards output for tests
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+
 	// Load embedded components first to have something to overwrite
-	require.NoError(t, loadEmbeddedComponents(context.Background(), svc, testSchemas, testWorkflows, maxWasmSize))
+	require.NoError(t, loadEmbeddedComponents(context.Background(), svc, testSchemas, testWorkflows, maxWasmSize, logger))
 
 	t.Run("overwrite schema", func(t *testing.T) {
 		// Dynamically create the schema and its checksum
@@ -506,7 +543,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 		require.NoError(t, os.WriteFile(path, overwriteContent, 0644))
 
 		// 2. Execute
-		err = loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize)
+		err = loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize, logger)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -542,7 +579,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 		require.NoError(t, os.WriteFile(path, overwriteContent, 0644))
 
 		// 2. Execute
-		err = loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize)
+		err = loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize, logger)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -609,7 +646,7 @@ func TestLoadInstalledComponents_Overwrite(t *testing.T) {
 		require.NoError(t, os.WriteFile(moduleWasmPath, wasmContent, 0644))
 
 		// 2. Execute
-		err = loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize)
+		err = loadInstalledComponents(context.Background(), svc, tempDir, maxWasmSize, logger)
 		require.NoError(t, err)
 
 		// 3. Verify
@@ -626,24 +663,43 @@ func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
 	t.Run("non-existent path", func(t *testing.T) {
+		// Create a logrus logger that discards output for tests
+		logger := logrus.New()
+		logger.SetOutput(io.Discard)
+
+		// Capture logrus logger output
+		var logBuf bytes.Buffer
+		originalLoggerOutput := logger.Out
+		logger.SetOutput(&logBuf)
+		defer func() {
+			logger.SetOutput(originalLoggerOutput)
+		}()
+
 		// A non-existent path should be skipped and not return an error.
-		err := loadInstalledComponents(context.Background(), svc, "/path/to/non/existent/dir", maxWasmSize)
+		err := loadInstalledComponents(context.Background(), svc, "/path/to/non/existent/dir", maxWasmSize, logger)
 		assert.NoError(t, err)
+		// Verify log output
+		logOutput := logBuf.String()
+		assert.Contains(t, logOutput, "Installed components directory not found, skipping.", "expected log to contain non-existent path warning")
 	})
 
 	t.Run("path is a file, not a directory", func(t *testing.T) {
+		// Create a logrus logger that discards output for tests
+		logger := logrus.New()
+		logger.SetOutput(io.Discard)
+
 		// Create a temporary file
 		tempFile, err := os.CreateTemp(t.TempDir(), "not_a_dir")
 		require.NoError(t, err)
 		tempFile.Close()
 
 		// Trying to load from a file path should result in an error.
-		loadErr := loadInstalledComponents(context.Background(), svc, tempFile.Name(), maxWasmSize)
+		loadErr := loadInstalledComponents(context.Background(), svc, tempFile.Name(), maxWasmSize, logger)
 		assert.Error(t, loadErr, "expected an error when path is a file, not a directory")
+		assert.Contains(t, loadErr.Error(), "not a directory")
 	})
 }
 
-// This is a new, focused test to cover the final missing branch in loadWorkflow.
 func TestLoadWorkflow_UnmarshalError(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 
@@ -653,4 +709,11 @@ func TestLoadWorkflow_UnmarshalError(t *testing.T) {
 	err := loadWorkflow(context.Background(), svc, content)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unmarshal workflow file")
+}
+
+// Helper function to create a logrus logger that discards output
+func newDiscardLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	return logger
 }
