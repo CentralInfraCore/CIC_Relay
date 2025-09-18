@@ -106,8 +106,8 @@ A cél a rendszer megfigyelhetőségének és üzemeltethetőségének javítás
     *   [x] **DoD**: Az audit trail adatok alapján incidens esetén 1 percen belül rekonstruálható, hogy mit töltöttek be, ki írta alá, miért ment át vagy bukott.
 
 *   **M6.3: `/healthz` és `/readyz` endpointok**
-    *   [ ] **Feladat**: Implementálni a `/healthz` és `/readyz` HTTP endpointokat, amelyek ellenőrzik a rendszer állapotát (trust store, policy, storage).
-    *   [ ] **DoD**: A `/healthz` és `/readyz` endpointok pontosan tükrözik a rendszer működőképességét és függőségeinek állapotát.
+    *   [x] **Feladat**: Implementálni a `/healthz` és `/readyz` HTTP endpointokat, amelyek ellenőrzik a rendszer állapotát (trust store, policy, storage).
+    *   [x] **DoD**: A `/healthz` és `/readyz` endpointok pontosan tükrözik a rendszer működőképességét és függőségeinek állapotát.
 
 ### M7 — CI-őrségek (gates)
 
@@ -164,7 +164,7 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
 | M3        | Done    |
 | M4        | Done    |
 | M5        | Done    |
-| M6        | Partial |
+| M6        | Done    |
 | M7        | Partial |
 | M8        | Missing |
 | M9        | Partial |
