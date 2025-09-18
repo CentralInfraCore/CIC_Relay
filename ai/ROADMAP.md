@@ -98,8 +98,8 @@ A cél a rendszer megfigyelhetőségének és üzemeltethetőségének javítás
 **Részfeladatok (checklist):**
 
 *   **M6.1: Strukturált logolás**
-    *   [ ] **Feladat**: Implementálni a strukturált logolást, beleértve a `req-id`, `path`, `kind`, `méret`, `latency`, `outcome`, `checksum` mezőket.
-    *   [ ] **DoD**: A rendszer minden releváns eseményről konzisztens, strukturált logokat generál, amelyek tartalmazzák a megadott mezőket.
+    *   [x] **Feladat**: Implementálni a strukturált logolást, beleértve a `req-id`, `path`, `kind`, `méret`, `latency`, `outcome`, `checksum` mezőket.
+    *   [x] **DoD**: A rendszer minden releváns eseményről konzisztens, strukturált logokat generál, amelyek tartalmazzák a megadott mezőket.
 
 *   **M6.2: Audit trail**
     *   [ ] **Feladat**: Létrehozni egy audit trail mechanizmust, amely rögzíti a betöltött modulok aláíróját, a lánc ujjlenyomatát és a végső hash-t.
@@ -164,7 +164,7 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
 | M3        | Done    |
 | M4        | Done    |
 | M5        | Done    |
-| M6        | Missing |
+| M6        | Partial |
 | M7        | Partial |
 | M8        | Missing |
 | M9        | Partial |
