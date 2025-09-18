@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"centralrelay/core/cabinet"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -80,14 +80,16 @@ func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 	}
 
 	var logBuf bytes.Buffer
-	logger := log.New(&logBuf, "", 0)
+	logger := logrus.New()
+	logger.Out = &logBuf
+	logger.SetFormatter(&logrus.TextFormatter{DisableColors: true, DisableTimestamp: true})
 
 	// Create a dummy relayServer for the test
 	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
 	// Initialize a default config for the test server
 	defaultConfig, err := loadConfig()
 	require.NoError(t, err)
-	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig}
+	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig, logger: logger}
 
 	err = run(":12345", logger, dummyServer)
 	if err != nil {
@@ -100,7 +102,7 @@ func TestRun_UsesGivenPort_AndServesRoot(t *testing.T) {
 		t.Fatalf("listenAndServe addr = %q, want %q", gotAddr, ":12345")
 	}
 
-	// Ellenőrizzük, hogy a handler valóban kiszolgálja a "/"'-t a várt JSON-nal
+	// Ellenőrizzük, hogy a handler valóban kiszolgálja a "/"-t a várt JSON-nal
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 	gotHandler.ServeHTTP(w, req)
@@ -139,14 +141,16 @@ func TestRun_PropagatesListenError(t *testing.T) {
 	}
 
 	var logBuf bytes.Buffer
-	logger := log.New(&logBuf, "", 0)
+	logger := logrus.New()
+	logger.Out = &logBuf
+	logger.SetFormatter(&logrus.TextFormatter{DisableColors: true, DisableTimestamp: true})
 
 	// Create a dummy relayServer for the test
 	dummyAPI := cabinet.NewAPI(&mockCabinetService{}) // Minimal API for test
 	// Initialize a default config for the test server
 	defaultConfig, err := loadConfig()
 	require.NoError(t, err)
-	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig}
+	dummyServer := &relayServer{api: dummyAPI, config: defaultConfig, logger: logger}
 
 	err = run(":0", logger, dummyServer)
 	if !errors.Is(err, wantErr) {
@@ -179,7 +183,7 @@ func TestSetHandler(t *testing.T) {
 	// Initialize a default config for the test server
 	defaultConfig, err := loadConfig()
 	require.NoError(t, err)
-	server := &relayServer{api: api, config: defaultConfig}
+	server := &relayServer{api: api, config: defaultConfig, logger: logrus.New()}
 
 	t.Run("successful set", func(t *testing.T) {
 		// Corrected payload with modules as a simple array of strings
@@ -187,7 +191,7 @@ func TestSetHandler(t *testing.T) {
 			"workflow_id": "core.ping.flow@1.0.0",
 			"modules": ["core.ping@1.0.0"]
 		}`
-
+		
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
 		w := httptest.NewRecorder()
 
@@ -266,7 +270,7 @@ func TestSetHandler(t *testing.T) {
 		// Initialize a default config for the mock server
 		defaultConfig, err := loadConfig()
 		require.NoError(t, err)
-		mockServer := &relayServer{api: mockAPI, config: defaultConfig}
+		mockServer := &relayServer{api: mockAPI, config: defaultConfig, logger: logrus.New()}
 
 		payload := `{"workflow_id": "any", "modules": ["any"]}`
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))
@@ -290,7 +294,7 @@ func TestSetHandler(t *testing.T) {
 		mockAPI := cabinet.NewAPI(mockSvc)
 		defaultConfig, err := loadConfig()
 		require.NoError(t, err)
-		mockServer := &relayServer{api: mockAPI, config: defaultConfig}
+		mockServer := &relayServer{api: mockAPI, config: defaultConfig, logger: logrus.New()}
 
 		payload := `{"workflow_id": "any", "modules": ["any"]}`
 		req := httptest.NewRequest(http.MethodPost, "/set", strings.NewReader(payload))

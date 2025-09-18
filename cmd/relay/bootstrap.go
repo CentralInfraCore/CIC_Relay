@@ -7,10 +7,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus" // Import logrus
 
 	"centralrelay/core/cabinet"
 	"gopkg.in/yaml.v3"
@@ -48,38 +49,47 @@ type ModuleFile struct {
 
 // loadEmbeddedComponents loads components from the embedded filesystem.
 // It fails hard on any error, as embedded components are considered critical.
-func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas embed.FS, workflows embed.FS, maxWasmModuleSize int64) error {
-	if err := loadComponentsFromFS(ctx, svc, schemas, ".", true, maxWasmModuleSize); err != nil {
+func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas embed.FS, workflows embed.FS, maxWasmModuleSize int64, logger *logrus.Logger) error {
+	if err := loadComponentsFromFS(ctx, svc, schemas, ".", true, maxWasmModuleSize, logger); err != nil {
 		return fmt.Errorf("failed to load embedded schemas: %w", err)
 	}
-	if err := loadComponentsFromFS(ctx, svc, workflows, ".", true, maxWasmModuleSize); err != nil {
+	if err := loadComponentsFromFS(ctx, svc, workflows, ".", true, maxWasmModuleSize, logger); err != nil {
 		return fmt.Errorf("failed to load embedded workflows: %w", err)
 	}
-	log.Println("Successfully loaded all embedded components.")
+	logger.Info("Successfully loaded all embedded components.")
 	return nil
 }
 
 // loadInstalledComponents loads components from a given filesystem path.
 // It logs errors for individual files but does not fail hard.
-func loadInstalledComponents(ctx context.Context, svc cabinet.Cabinet, path string, maxWasmModuleSize int64) error {
-	// Check if the directory exists. If not, it's not a fatal error.
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		log.Printf("Installed components directory not found at %s, skipping.", path)
-		return nil
+func loadInstalledComponents(ctx context.Context, svc cabinet.Cabinet, path string, maxWasmModuleSize int64, logger *logrus.Logger) error {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.WithField("path", path).Warn("Installed components directory not found, skipping.")
+			return nil
+		}
+		return fmt.Errorf("could not stat installed components path %s: %w", path, err)
+	}
+
+	if !fileInfo.IsDir() {
+		err := fmt.Errorf("path is a file, not a directory")
+		logger.WithField("path", path).Error(err.Error())
+		return err
 	}
 
 	installedFS := os.DirFS(path)
-	if err := loadComponentsFromFS(ctx, svc, installedFS, ".", false, maxWasmModuleSize); err != nil {
+	if err := loadComponentsFromFS(ctx, svc, installedFS, ".", false, maxWasmModuleSize, logger); err != nil {
 		// This would only be a filesystem-level error, which should be fatal.
 		return fmt.Errorf("failed to load installed components from %s: %w", path, err)
 	}
-	log.Printf("Successfully loaded installed components from %s.", path)
+	logger.WithField("path", path).Info("Successfully loaded installed components.")
 	return nil
 }
 
 // loadComponentsFromFS walks a filesystem and loads all valid components.
 // It can be configured to either fail hard on parsing errors or just log them.
-func loadComponentsFromFS(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, root string, failOnError bool, maxWasmModuleSize int64) error {
+func loadComponentsFromFS(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, root string, failOnError bool, maxWasmModuleSize int64, logger *logrus.Logger) error {
 	return fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err // Propagate filesystem errors
@@ -95,13 +105,19 @@ func loadComponentsFromFS(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, 
 
 		content, err := fs.ReadFile(fsys, path)
 		if err != nil {
-			log.Printf("WARN: Could not read file %s: %v", path, err)
+			logger.WithFields(logrus.Fields{
+				"path": path,
+				"error": err,
+			}).Warn("Could not read file")
 			return nil // Continue with the next file
 		}
 
 		var header ComponentHeader
 		if err := yaml.Unmarshal(content, &header); err != nil {
-			log.Printf("WARN: Could not unmarshal component header from %s: %v", path, err)
+			logger.WithFields(logrus.Fields{
+				"path": path,
+				"error": err,
+			}).Warn("Could not unmarshal component header")
 			return nil // Continue with the next file
 		}
 
@@ -114,7 +130,10 @@ func loadComponentsFromFS(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, 
 		case "Module":
 			loadErr = loadModule(ctx, svc, fsys, path, content, maxWasmModuleSize)
 		default:
-			log.Printf("WARN: Unknown component kind '%s' in file %s", header.Kind, path)
+			logger.WithFields(logrus.Fields{
+				"kind": header.Kind,
+				"path": path,
+			}).Warn("Unknown component kind in file")
 		}
 
 		if loadErr != nil {
@@ -122,7 +141,7 @@ func loadComponentsFromFS(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, 
 			if failOnError {
 				return formattedErr // Fail hard
 			}
-			log.Printf("WARN: %v", formattedErr) // Log and continue
+			logger.WithField("error", formattedErr).Warn("Error loading component") // Log and continue
 		}
 
 		return nil
@@ -142,7 +161,7 @@ func loadSchema(ctx context.Context, svc cabinet.Cabinet, content []byte) error 
 	}
 
 	if _, err := svc.GetSchema(schema.ID()); err == nil {
-		log.Printf("INFO: Overwriting existing schema with ID: %s", schema.ID())
+		logrus.WithField("schema_id", schema.ID()).Info("Overwriting existing schema")
 	}
 
 	return svc.PutSchema(schema)
@@ -161,7 +180,7 @@ func loadWorkflow(ctx context.Context, svc cabinet.Cabinet, content []byte) erro
 	}
 
 	if _, err := svc.GetWorkflow(workflow.ID()); err == nil {
-		log.Printf("INFO: Overwriting existing workflow with ID: %s", workflow.ID())
+		logrus.WithField("workflow_id", workflow.ID()).Info("Overwriting existing workflow")
 	}
 
 	return svc.PutWorkflow(workflow)
@@ -223,7 +242,7 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	}
 
 	if _, err := svc.GetModule(moduleDesc.ID()); err == nil {
-		log.Printf("INFO: Overwriting existing module with ID: %s", moduleDesc.ID())
+		logrus.WithField("module_id", moduleDesc.ID()).Info("Overwriting existing module")
 	}
 
 	return svc.PutModule(moduleDesc)
