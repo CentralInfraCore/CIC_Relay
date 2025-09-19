@@ -109,6 +109,10 @@ A cél a rendszer megfigyelhetőségének és üzemeltethetőségének javítás
     *   [x] **Feladat**: Implementálni a `/healthz` és `/readyz` HTTP endpointokat, amelyek ellenőrzik a rendszer állapotát (trust store, policy, storage).
     *   [x] **DoD**: A `/healthz` és `/readyz` endpointok pontosan tükrözik a rendszer működőképességét és függőségeinek állapotát.
 
+*   **M6.4: API tesztelés kidolgozása és implementálása**
+    *   [ ] **Feladat**: Létrehozni egy kezdeti API tesztkészletet (pl. Postman collection vagy `curl` scriptek formájában), amely lefedi a meglévő endpointokat (`/`, `/set`, `/healthz`, `/readyz`).
+    *   [ ] **DoD**: A tesztek dokumentálva vannak, és sikeresen lefutnak egy lokálisan indított relay szerver ellen. A tesztkészlet a projekt része, és könnyen futtatható.
+
 ### M7 — CI-őrségek (gates)
 
 A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása automatizált ellenőrzésekkel.
