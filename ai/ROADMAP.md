@@ -120,31 +120,31 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
 **Részfeladatok (checklist):**
 
 *   **M7.1: Symbols szinkronizáció**
-    *   [x] **Feladat**: Implementálni egy CI ellenőrzést, amely biztosítja, hogy a `context/SYMBOLS.md` fájl szinkronban van a kódbázis publikus szimbólumaival (drift=0).
-    *   [x] **DoD**: A CI/CD pipeline sikertelen, ha a `SYMBOLS.md` tartalma eltér a kódbázisban definiált publikus szimbólumoktól.
+    *   [ ] **Feladat**: Implementálni egy CI ellenőrzést, amely biztosítja, hogy a `context/SYMBOLS.md` fájl szinkronban van a kódbázis publikus szimbólumaival (drift=0).
+    *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a `SYMBOLS.md` tartalma eltér a kódbázisban definiált publikus szimbólumoktól.
     *   **Részfeladatok (checklist):**
-        *   [x] **M7.1.1: Specifikáció és szabályok definiálása**: Létrehozni a `docs/engineering/symbols_spec.md` fájlt, amely leírja a publikus API definícióját, a szimbólumok kanonikus formátumát és a szűrési szabályokat.
-        *   [x] **M7.1.2: Konfigurációs fájlok létrehozása**: Létrehozni a `context/SYMBOLS.ALLOWPKGS` fájlt a publikus csomagok listájával.
-        *   [x] **M7.1.3: Generátor eszköz implementálása**: Létrehozni a `tools/symbolsgen` eszközt, amely a specifikáció alapján generálja a `SYMBOLS.md` fájlt.
-        *   [x] **M7.1.4: CI-integráció**: Beépíteni a `verify.yml`-be egy lépést, ami a generátorral ellenőrzi a `SYMBOLS.md` naprakészségét.
-        *   [x] **M7.1.5: Baseline `SYMBOLS.md` létrehozása**: Generálni és manuálisan ellenőrizni az első, "golden" `SYMBOLS.md` fájlt.
+        *   [ ] **M7.1.1: Specifikáció és szabályok definiálása**: Létrehozni a `docs/engineering/symbols_spec.md` fájlt, amely leírja a publikus API definícióját, a szimbólumok kanonikus formátumát és a szűrési szabályokat.
+        *   [ ] **M7.1.2: Konfigurációs fájlok létrehozása**: Létrehozni a `context/SYMBOLS.ALLOWPKGS` fájlt a publikus csomagok listájával.
+        *   [ ] **M7.1.3: Generátor eszköz implementálása**: Létrehozni a `tools/symbolsgen` eszközt, amely a specifikáció alapján generálja a `SYMBOLS.md` fájlt.
+        *   [ ] **M7.1.4: CI-integráció**: Beépíteni a `verify.yml`-be egy lépést, ami a generátorral ellenőrzi a `SYMBOLS.md` naprakészségét.
+        *   [ ] **M7.1.5: Baseline `SYMBOLS.md` létrehozása**: Generálni és manuálisan ellenőrizni az első, "golden" `SYMBOLS.md` fájlt.
 
 *   **M7.2: Code quality checks (lint/staticcheck/go vet)**
-    *   [ ] **Feladat**: Integrálni a lint, staticcheck és go vet eszközöket a CI/CD pipeline-ba a kódminőség automatikus ellenőrzésére.
-    *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a kód nem felel meg a lintelési, statikus analízis és go vet ellenőrzéseknek.
+    *   [x] **Feladat**: Integrálni a lint, staticcheck és go vet eszközöket a CI/CD pipeline-ba a kódminőség automatikus ellenőrzésére.
+    *   [x] **DoD**: A CI/CD pipeline sikertelen, ha a kód nem felel meg a lintelési, statikus analízis és go vet ellenőrzéseknek.
     *   **Részfeladatok (checklist):**
-        *   [ ] **M7.2.1: CI lépések hozzáadása**: Módosítsa a fő CI workflow fájlt (pl. `verify.yml`), hogy tartalmazzon dedikált lépéseket a `lint`, `staticcheck` és `go vet` futtatására a teljes kódbázison.
-        *   [ ] **M7.2.2: Hiba esetén leállítás**: Konfigurálja ezeket a CI lépéseket úgy, hogy hiba esetén (pl. ha a lint/staticcheck/go vet hibát talál) a CI pipeline sikertelen legyen.
-        *   [ ] **M7.2.3: Konfiguráció**: Biztosítsa, hogy az eszközök konfigurációja (ha van ilyen) a projekt gyökerében legyen, és a CI környezetben is elérhető legyen.
-        *   [ ] **M7.2.4: Függőségek kezelése**: Győződjön meg róla, hogy a CI környezetben telepítve vannak a szükséges eszközök (pl. `staticcheck`).
+        *   [x] **M7.2.1: CI lépések hozzáadása**: Módosítsa a fő CI workflow fájlt (pl. `verify.yml`), hogy tartalmazzon dedikált lépéseket a `lint`, `staticcheck` és `go vet` futtatására a teljes kódbázison.
+        *   [x] **M7.2.2: Hiba esetén leállítás**: Konfigurálja ezeket a CI lépéseket úgy, hogy hiba esetén (pl. ha a lint/staticcheck/go vet hibát talál) a CI pipeline sikertelen legyen.
+        *   [x] **M7.2.3: Konfiguráció**: Biztosítsa, hogy az eszközök konfigurációja (ha van ilyen) a projekt gyökerében legyen, és a CI környezetben is elérhető legyen.
+        *   [x] **M7.2.4: Függőségek kezelése**: Győződjön meg róla, hogy a CI környezetben telepítve vannak a szükséges eszközök (pl. `staticcheck`).
 
 *   **M7.3: Per-package coverage thresholds**
     *   [x] **Feladat**: Bevezetni per-package alapú kódlefedettségi küszöböket a CI/CD pipeline-ba.
     *   [x] **DoD**: A CI/CD pipeline sikertelen, ha bármely package kódlefedettsége a meghatározott küszöb alá esik.
 
 *   **M7.4: Coverage report HTML artifact**
-    *   [ ] **Feladat**: Konfigurálni a CI/CD pipeline-t, hogy generáljon HTML kódlefedettségi riportot artifactként.
-    *   [ ] **DoD**: A CI/CD pipeline minden futtatás után generál egy hozzáférhető HTML kódlefedettségi riportot.
+    *   [x] **Feladat**: Konfigurálni a CI/CD pipeline-t, hogy generáljon HTML kódlefedettségi riportot artifactként.
+    *   [x] **DoD**: A CI/CD pipeline minden futtatás után generál egy hozzáférhető HTML kódlefedettségi riportot.
 
 ### M8 — Konfiguráció & biztonság
 
@@ -174,7 +174,7 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
 | M3        | Done    |
 | M4        | Done    |
 | M5        | Done    |
-| M6        | Done    |
+| M6        | Partial |
 | M7        | Partial |
 | M8        | Missing |
 | M9        | Partial |
