@@ -110,8 +110,8 @@ A cél a rendszer megfigyelhetőségének és üzemeltethetőségének javítás
     *   [x] **DoD**: A `/healthz` és `/readyz` endpointok pontosan tükrözik a rendszer működőképességét és függőségeinek állapotát.
 
 *   **M6.4: API tesztelés kidolgozása és implementálása**
-    *   [ ] **Feladat**: Létrehozni egy kezdeti API tesztkészletet (pl. Postman collection vagy `curl` scriptek formájában), amely lefedi a meglévő endpointokat (`/`, `/set`, `/healthz`, `/readyz`).
-    *   [ ] **DoD**: A tesztek dokumentálva vannak, és sikeresen lefutnak egy lokálisan indított relay szerver ellen. A tesztkészlet a projekt része, és könnyen futtatható.
+    *   [x] **Feladat**: Létrehozni egy kezdeti API tesztkészletet (pl. Postman collection vagy `curl` scriptek formájában), amely lefedi a meglévő endpointokat (`/`, `/set`, `/healthz`, `/readyz`).
+    *   [x] **DoD**: A tesztek dokumentálva vannak, és sikeresen lefutnak egy lokálisan indított relay szerver ellen. A tesztkészlet a projekt része, és könnyen futtatható.
 
 ### M7 — CI-őrségek (gates)
 
@@ -119,9 +119,15 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
 
 **Részfeladatok (checklist):**
 
-*   **M7.1: Symbols synchronization**
-    *   [ ] **Feladat**: Implementálni egy CI ellenőrzést, amely biztosítja, hogy a `SYMBOLS.md` fájl szinkronban van a kódbázis publikus szimbólumaival (drift=0).
+*   **M7.1: Symbols szinkronizáció**
+    *   [ ] **Feladat**: Implementálni egy CI ellenőrzést, amely biztosítja, hogy a `context/SYMBOLS.md` fájl szinkronban van a kódbázis publikus szimbólumaival (drift=0).
     *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a `SYMBOLS.md` tartalma eltér a kódbázisban definiált publikus szimbólumoktól.
+    *   **Részfeladatok (checklist):**
+        *   [ ] **M7.1.1: Specifikáció és szabályok definiálása**: Létrehozni a `docs/engineering/symbols_spec.md` fájlt, amely leírja a publikus API definícióját, a szimbólumok kanonikus formátumát és a szűrési szabályokat.
+        *   [ ] **M7.1.2: Konfigurációs fájlok létrehozása**: Létrehozni a `context/SYMBOLS.ALLOWPKGS` fájlt a publikus csomagok listájával.
+        *   [ ] **M7.1.3: Generátor eszköz implementálása**: Létrehozni a `tools/symbolsgen` eszközt, amely a specifikáció alapján generálja a `SYMBOLS.md` fájlt.
+        *   [ ] **M7.1.4: CI-integráció**: Beépíteni a `verify.yml`-be egy lépést, ami a generátorral ellenőrzi a `SYMBOLS.md` naprakészségét.
+        *   [ ] **M7.1.5: Baseline `SYMBOLS.md` létrehozása**: Generálni és manuálisan ellenőrizni az első, "golden" `SYMBOLS.md` fájlt.
 
 *   **M7.2: Code quality checks (lint/staticcheck/go vet)**
     *   [ ] **Feladat**: Integrálni a lint, staticcheck és go vet eszközöket a CI/CD pipeline-ba a kódminőség automatikus ellenőrzésére.
