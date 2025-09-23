@@ -102,7 +102,7 @@ If you'd like more usage examples or detailed REST API workflows, feel free to r
 
 ## License
 
-* The `vault-runner.sh` script is licensed under the **MIT License** (see below).
+* The `vault-runner.sh` script is licensed under the **CC BY-NC-SA 4.0** (see below).
 * This documentation is licensed under the following:
 
 **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**
