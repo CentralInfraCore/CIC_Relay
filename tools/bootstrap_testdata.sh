@@ -125,8 +125,8 @@ EOF
   openssl genrsa -out "$dir/ee.key" 3072 >/dev/null 2>&1
   openssl req -new -key "$dir/ee.key" -out "$dir/ee.csr" -config "$dir/ee.cnf" >/dev/null 2>&1
   # Backdated/expired interval
-  openssl x509 -req -in "$dir/ee.csr" -CA "$ca_pem" -CAkey "$ca_key" -CAcreateserial \
-    -startdate -10 day -enddate -1 day \
+  faketime '2023-01-01' openssl x509 -req -in "$dir/ee.csr" -CA "$ca_pem" -CAkey "$ca_key" -CAcreateserial \
+    -days  365\
     -extfile "$dir/ee.cnf" -extensions v3_ee_ext -out "$dir/ee.pem" >/dev/null 2>&1
 }
 
