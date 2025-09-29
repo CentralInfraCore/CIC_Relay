@@ -11,6 +11,14 @@ ROOT="cmd/relay/testdata"
 msg(){ printf "\033[1;32m==>\033[0m %s\n" "$*"; }
 err(){ printf "\033[1;31m[err]\033[0m %s\n" "$*" >&2; }
 
+# --- dependency checks -----------------------------------------------------
+for cmd in openssl sha256sum xxd faketime; do
+  if ! command -v "$cmd" &> /dev/null; then
+    err "Required command '$cmd' not found. Please install it."
+    exit 1
+  fi
+done
+
 mkd(){ mkdir -p "$@"; }
 
 # openssl config (minimal) via heredocs for Root CA and Company CA
@@ -124,7 +132,7 @@ extendedKeyUsage = ${usages}
 EOF
   openssl genrsa -out "$dir/ee.key" 3072 >/dev/null 2>&1
   openssl req -new -key "$dir/ee.key" -out "$dir/ee.csr" -config "$dir/ee.cnf" >/dev/null 2>&1
-  # Backdated/expired interval
+  # Create an already-expired cert by faking the system time
   faketime '2023-01-01' openssl x509 -req -in "$dir/ee.csr" -CA "$ca_pem" -CAkey "$ca_key" -CAcreateserial \
     -days  365\
     -extfile "$dir/ee.cnf" -extensions v3_ee_ext -out "$dir/ee.pem" >/dev/null 2>&1
