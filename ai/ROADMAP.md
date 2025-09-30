@@ -1,7 +1,7 @@
 # Relay Roadmap (AI snapshot)
 
 Ez a fájl az AI-támogatott roadmap állapota.
-→ Részletes fejlesztői doksi: [docs/roadmap/relay_milestones.md](../docs/roadmap/relay_milestones.md)
+→ Részletes fejlesztői doksi: [docs/hu/roadmap/relay_milestones.md](../docs/hu/roadmap/relay_milestones.md)
 
 ---
 
@@ -219,4 +219,4 @@ A cél egy robusztus, biztonságos és könnyen üzemeltethető konfigurációs 
 ## Sync-megjegyzés
 
 Ezt a fájlt az AI támogatott beszélgetések frissítik.
-A hivatalos, részletes forrás: `docs/roadmap/relay_milestones.md`.
+A hivatalos, részletes forrás: `docs/hu/roadmap/relay_milestones.md`.
