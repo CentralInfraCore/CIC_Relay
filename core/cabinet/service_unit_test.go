@@ -41,7 +41,7 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	})
 
 	t.Run("Workflow Put/Get", func(t *testing.T) {
-		workflow, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf1", Version: "v1"}, nil)
+		workflow, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf1", Version: "v1"}, []string{"step1"})
 		require.NoError(t, err, "NewWorkflow should succeed for valid input")
 
 		err = svc.PutWorkflow(workflow)
