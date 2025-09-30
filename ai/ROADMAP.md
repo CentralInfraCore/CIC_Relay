@@ -131,9 +131,13 @@ A cél a rendszer megfigyelhetőségének és üzemeltethetőségének javítás
     *   [x] **Feladat**: Implementálni a `/healthz` és `/readyz` HTTP endpointokat, amelyek ellenőrzik a rendszer állapotát (trust store, policy, storage).
     *   [x] **DoD**: A `/healthz` és `/readyz` endpointok pontosan tükrözik a rendszer működőképességét és függőségeinek állapotát.
 
-*   **M6.4: API tesztelés kidolgozása és implementálása**
-    *   [ ] **Feladat**: Létrehozni egy kezdeti API tesztkészletet (pl. Postman collection vagy `curl` scriptek formájában), amely lefedi a meglévő endpointokat (`/`, `/set`, `/healthz`, `/readyz`).
-    *   [ ] **DoD**: A tesztek dokumentálva vannak, és sikeresen lefutnak egy lokálisan indított relay szerver ellen. A tesztkészlet a projekt része, és könnyen futtatható.
+*   **M6.4: API Handler/Integrációs Tesztek**
+    *   [x] **Feladat**: A `/set`, `/healthz`, `/readyz` és `/` HTTP handlerek tesztelése a `net/http/httptest` csomag és mockolt service-ek segítségével.
+    *   [x] **DoD**: A handler tesztek lefedik a sikeres eseteket és a várt hibakódokat (4xx, 5xx). A tesztek a `make test` részei, gyorsak és nem igényelnek külső függőséget.
+
+*   **M6.5: End-to-End (E2E) Tesztek**
+    *   [ ] **Feladat**: Létrehozni egy kezdeti API tesztkészletet (pl. Postman collection vagy `curl` scriptek formájában), amely egy `docker compose up`-pal elindított, teljes rendszer ellen fut.
+    *   [ ] **DoD**: A tesztek dokumentálva vannak, és sikeresen lefedik a fő felhasználói útvonalakat. A tesztkészlet a projekt része, és a CI pipeline egy külön (opcionális) fázisában futtatható.
 
 ### M7 — CI-őrségek (gates)
 
@@ -201,14 +205,14 @@ A cél egy robusztus, biztonságos és könnyen üzemeltethető konfigurációs 
 ## Jelenlegi állapot (STATE)
 
 | Milestone | State   |
-|-----------|---------|
+| --------- | ------- |
 | M0        | Done    |
 | M1        | Done    |
 | M2        | Done    |
 | M3        | Done    |
 | M4        | Done    |
 | M5        | Done    |
-| M6        | Partial |
+| M6        | Done    |
 | M7        | Partial |
 | M8        | Missing |
 | M9        | Missing |

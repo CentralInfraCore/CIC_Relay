@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,12 +15,6 @@ import (
 
 	"centralrelay/core/cabinet"
 )
-
-//go:embed embedded/schemas/*.yaml
-var embeddedSchemas embed.FS
-
-//go:embed embedded/workflows/*.yaml
-var embeddedWorkflows embed.FS
 
 // test seam: unit tesztben felülírható
 var listenAndServe = http.ListenAndServe
@@ -70,7 +63,7 @@ func loadConfig() (*config, error) {
 
 // relayServer holds the dependencies for our HTTP handlers.
 type relayServer struct {
-	api    *cabinet.API
+	api    cabinet.Cabinet // Use the interface type
 	config *config
 	logger *logrus.Logger // Use logrus logger
 }
@@ -218,9 +211,6 @@ func main() {
 	loadCtx, cancel := context.WithTimeout(context.Background(), cfg.HashingTimeout)
 	defer cancel()
 
-	if err := loadEmbeddedComponents(loadCtx, cabinetSvc, embeddedSchemas, embeddedWorkflows, cfg.MaxWASMModuleSize, logger); err != nil {
-		logger.WithField("error", err).Fatal("FATAL: Failed to load embedded components")
-	}
 	// The path for installed components can be made configurable later (e.g., via flags or env vars)
 	// For now, it's hardcoded to /etc/cic-relay/components.d
 	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", cfg.MaxWASMModuleSize, logger); err != nil {
@@ -228,8 +218,7 @@ func main() {
 	}
 
 	// --- HTTP Server Initialization ---
-	api := cabinet.NewAPI(cabinetSvc)
-	server := &relayServer{api: api, config: cfg, logger: logger} // Pass logrus logger to server
+	server := &relayServer{api: cabinetSvc, config: cfg, logger: logger} // Pass the service which implements the interface
 
 	port := ":8080"
 	logger.Fatal(run(port, logger, server)) // Pass logrus logger to run function
