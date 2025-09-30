@@ -156,21 +156,21 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
         *   [ ] **M7.1.5: Baseline `SYMBOLS.md` létrehozása**: Generálni és manuálisan ellenőrizni az első, "golden" `SYMBOLS.md` fájlt.
 
 *   **M7.2: Code quality checks (lint/staticcheck/go vet)**
-    *   [x] **Feladat**: Integrálni a lint, staticcheck és go vet eszközöket a CI/CD pipeline-ba a kódminőség automatikus ellenőrzésére.
-    *   [x] **DoD**: A CI/CD pipeline sikertelen, ha a kód nem felel meg a lintelési, statikus analízis és go vet ellenőrzéseknek.
+    *   [ ] **Feladat**: Integrálni a lint, staticcheck és go vet eszközöket a CI/CD pipeline-ba a kódminőség automatikus ellenőrzésére.
+    *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a kód nem felel meg a lintelési, statikus analízis és go vet ellenőrzéseknek.
     *   **Részfeladatok (checklist):**
-        *   [x] **M7.2.1: CI lépések hozzáadása**: Módosítsa a fő CI workflow fájlt (pl. `verify.yml`), hogy tartalmazzon dedikált lépéseket a `lint`, `staticcheck` és `go vet` futtatására a teljes kódbázison.
-        *   [x] **M7.2.2: Hiba esetén leállítás**: Konfigurálja ezeket a CI lépéseket úgy, hogy hiba esetén (pl. ha a lint/staticcheck/go vet hibát talál) a CI pipeline sikertelen legyen.
-        *   [x] **M7.2.3: Konfiguráció**: Biztosítsa, hogy az eszközök konfigurációja (ha van ilyen) a projekt gyökerében legyen, és a CI környezetben is elérhető legyen.
-        *   [x] **M7.2.4: Függőségek kezelése**: Győződjön meg róla, hogy a CI környezetben telepítve vannak a szükséges eszközök (pl. `staticcheck`).
+        *   [ ] **M7.2.1: CI lépések hozzáadása**: Módosítsa a fő CI workflow fájlt (pl. `verify.yml`), hogy tartalmazzon dedikált lépéseket a `lint`, `staticcheck` és `go vet` futtatására a teljes kódbázison.
+        *   [ ] **M7.2.2: Hiba esetén leállítás**: Konfigurálja ezeket a CI lépéseket úgy, hogy hiba esetén (pl. ha a lint/staticcheck/go vet hibát talál) a CI pipeline sikertelen legyen.
+        *   [ ] **M7.2.3: Konfiguráció**: Biztosítsa, hogy az eszközök konfigurációja (ha van ilyen) a projekt gyökerében legyen, és a CI környezetben is elérhető legyen.
+        *   [ ] **M7.2.4: Függőségek kezelése**: Győződjön meg róla, hogy a CI környezetben telepítve vannak a szükséges eszközök (pl. `staticcheck`).
 
 *   **M7.3: Per-package coverage thresholds**
-    *   [x] **Feladat**: Bevezetni per-package alapú kódlefedettségi küszöböket a CI/CD pipeline-ba.
-    *   [x] **DoD**: A CI/CD pipeline sikertelen, ha bármely package kódlefedettsége a meghatározott küszöb alá esik.
+    *   [ ] **Feladat**: Bevezetni per-package alapú kódlefedettségi küszöböket a CI/CD pipeline-ba.
+    *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha bármely package kódlefedettsége a meghatározott küszöb alá esik.
 
 *   **M7.4: Coverage report HTML artifact**
-    *   [x] **Feladat**: Konfigurálni a CI/CD pipeline-t, hogy generáljon HTML kódlefedettségi riportot artifactként.
-    *   [x] **DoD**: A CI/CD pipeline minden futtatás után generál egy hozzáférhető HTML kódlefedettségi riportot.
+    *   [ ] **Feladat**: Konfigurálni a CI/CD pipeline-t, hogy generáljon HTML kódlefedettségi riportot artifactként.
+    *   [ ] **DoD**: A CI/CD pipeline minden futtatás után generál egy hozzáférhető HTML kódlefedettségi riportot.
 
 ### M8 — Konfiguráció, biztonság és önvalidáció
 
@@ -200,6 +200,20 @@ A cél egy robusztus, biztonságos és könnyen üzemeltethető konfigurációs 
 * **Feladatok**: request-body cap + early discard, slow-loris védelem (idle timeout), párhuzamossági limit sapka a determinisztika megtartásával.
 * **DoD**: terhelési próba alatt is stabil memóriahasználat és latency.
 
+## Mérföldkövek (prioritási sorrend, részletesen) - Frissített állapot
+
+| Milestone | Fő cél | Tényleges állapot a kódban | Megjegyzés |
+| --------- | ------- | -------------------------- | ---------- |
+| M0–M1     | a teszt-refaktor és a WASM checksum/strip (wabin hook) | valóban megvan; a bizonyíték a core/cabinet/validate.go és a cmd/relay/bootstrap_test.go. | A kódvizsgálat megerősítette a roadmap "valóban megvan" és "kész" állításait. |
+| M2–M3     | Schema/Workflow betöltés és a CabinetService Put*/Get* útvonalak megvalósítva; futtató runtime nincs bekötve (WASM exec path hiányzik). | Schema/Workflow betöltés és a CabinetService Put*/Get* útvonalak megvalósítva; futtató runtime nincs bekötve (WASM exec path hiányzik). | A `core/cabinet/service.go` fájlban a `TODO` komment egyértelműen jelzi a WASM futtatás hiányát. |
+| M4        | Limitációk (JSON, WASM, CPU/idő budget, konfigurálhatóság) | M4.1 JSON limit → részben kész (robosztus a setHandlerben); M4.2 WASM limit/strip → kész; M4.3 CPU/idő budget → hiányzik; M4.4 konfigurálhatóság → részben kész (nincs központi config). | Az M4.1 a `setHandler`-ben robusztusan implementált, de a "részben kész" még érvényes lehet, ha más handlerekben hiányzik. Az M4.3 csak a betöltési fázisra vonatkozik, nem az általános kérésfeldolgozásra/WASM futtatásra. Az M4.4 környezeti változókból olvassa be a konfigurációt, de nincs központi konfigurációs fájl. |
+| M5        | Sentinel hibák rendben, az egységes APIError JSON és a státuszkód-mapping félig kész, a “minden útvonal egyforma hibaformátumot ad” még nem igaz. | Sentinel hibák rendben, az egységes APIError JSON és a státuszkód-mapping félig kész, a “minden útvonal egyforma hibaformátumot ad” még nem igaz. | A `cmd/relay/main.go` `http.Error` használata miatt a hibaválaszok nem egységesen JSON formátumúak. |
+| M6 — Build & Release chain | determinisztikus build, MANIFEST, aláírások, verify pipeline | Részben kész → a repo tartalmaz: MANIFEST.sha256, scripts/gen_manifest.sh, docs/hu/en/security/*, GitHub-Actions workflowk (verify.yml, manifest-check.yml). | A megemlített komponensek valóban jelen vannak és bizonyos mértékig működnek, de a teljes build-signing integráció és az automatizált verify futás minden artifactre még hiányzik. |
+| M7 — Supply-chain validation / Artifact trust | betöltéskor signature+hash ellenőrzés, rollback LKG | Részben kész → `core/cabinet/pki_verify.go` tartalmaz revocation és SPKI-pinning logikát. | A PKI ellenőrzési logika létezik, de nincs bekötve a futási útvonalba; nincs rollout-gate vagy rollback-logika. |
+| M8 — Observability / Metrics | alap HTTP-metrics, compile/exec időmérés | Részben hiányzik. Logolás (`logrus`) használatban van, de Prometheus-/metrics-kód vagy compile/exec időmérés hiányzik. | A `cmd/relay/main.go` fájlban `logrus` logger van használatban strukturált logolással. Azonban a Prometheus metrikák és a compile/exec időmérés implementációja még hiányzik. |
+| M9 — Operations safety (circuit-breaker, rate-limit) | hibatűrés, DoS elleni védelem | Hiányzik → semmilyen CB/RL modul, se limiter nincs a kódban. | A kódvizsgálat nem talált semmilyen implementációt circuit breaker vagy rate limit mechanizmusokra. |
+| M10 — Enterprise rollout features (licenc, mTLS, multi-tenant) | haladó biztonság és üzemeltetés | Hiányzik → a roadmap csak célként említi, nincs implementáció. | Nincs jele licenckezelés, mTLS vagy multi-tenancy implementációnak a kódban. |
+
 ---
 
 ## Jelenlegi állapot (STATE)
@@ -208,13 +222,13 @@ A cél egy robusztus, biztonságos és könnyen üzemeltethető konfigurációs 
 | --------- | ------- |
 | M0        | Done    |
 | M1        | Done    |
-| M2        | Done    |
-| M3        | Done    |
-| M4        | Done    |
-| M5        | Done    |
-| M6        | Done    |
+| M2        | Partial |
+| M3        | Partial |
+| M4        | Partial |
+| M5        | Partial |
+| M6        | Partial |
 | M7        | Partial |
-| M8        | Missing |
+| M8        | Partial |
 | M9        | Missing |
 | M10       | Missing |
 
