@@ -198,14 +198,18 @@ cat "$ROOT/pki/signers/infras/host-local/ee.pem" "$ROOT/pki/trust/companies/comp
 # --- minimal (happy path) ----------------------------------------------------
 msg "Creating minimal happy-path artifacts"
 cat >"$ROOT/minimal/schemas/user.schema.yaml" <<'YAML'
-$schema: https://example/schema
-id: user
-version: 1
-fields:
-  - name: id
-    type: string
-  - name: email
-    type: string
+apiVersion: relay.cic.com/v1
+kind: Schema
+metadata:
+  name: user.schema
+  version: "1.0"
+spec:
+  type: object
+  properties:
+    id:
+      type: string
+    email:
+      type: string
 YAML
 
 cat >"$ROOT/minimal/modules/user.module.yaml" <<'YAML'
@@ -219,15 +223,14 @@ spec:
 YAML
 
 cat >"$ROOT/minimal/workflows/order.workflow.yaml" <<'YAML'
-apiVersion: v1
+apiVersion: relay.cic.com/v1
 kind: Workflow
 metadata:
-  name: order
-steps:
-  - run: user
-    with:
-      id: "42"
-      email: "demo@example.com"
+  name: order.workflow
+  version: "1.0"
+spec:
+  steps:
+    - "run: user with: {id: '42', email: 'demo@example.com'}"
 YAML
 
 # tiny placeholder WASM (not a real module, but has magic header). Replace with real sample if needed.
