@@ -56,27 +56,57 @@ func (s *memWorkflowStore) Exists(id string) bool {
 	return ok
 }
 
+// memModuleStore implements a content-addressable storage (CAS) for modules.
+// It uses a two-level map: an index for name/version to checksum mapping,
+// and a content store for checksum to module mapping.
 type memModuleStore struct {
-	mu   sync.RWMutex
-	byID map[string]*ModuleDescriptor
+	mu         sync.RWMutex
+	byID       map[string]string               // Index: id -> checksum
+	byChecksum map[string]*ModuleDescriptor    // CAS: checksum -> module
 }
 
 func NewMemModuleStore() ModuleStore {
-	return &memModuleStore{byID: map[string]*ModuleDescriptor{}}
+	return &memModuleStore{
+		byID:       map[string]string{},
+		byChecksum: map[string]*ModuleDescriptor{},
+	}
 }
 
 func (s *memModuleStore) Get(id string) (*ModuleDescriptor, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	v, ok := s.byID[id]
-	return v, ok
+
+	// 1. Look up the checksum from the ID index.
+	checksum, ok := s.byID[id]
+	if !ok {
+		return nil, false
+	}
+
+	// 2. Look up the module from the content-addressable store.
+	module, ok := s.byChecksum[checksum]
+	return module, ok
 }
 
 func (s *memModuleStore) Put(m *ModuleDescriptor) (*ModuleDescriptor, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	prev, existed := s.byID[m.ID()]
-	s.byID[m.ID()] = m
+
+	id := m.ID()
+	checksum := m.Meta.Checksum
+
+	// Check if a module with this ID already existed and find the previous version.
+	var prev *ModuleDescriptor
+	prevChecksum, existed := s.byID[id]
+	if existed {
+		prev = s.byChecksum[prevChecksum]
+	}
+
+	// Store the module in the content-addressable store.
+	s.byChecksum[checksum] = m
+
+	// Update the index to point to the new checksum for this ID.
+	s.byID[id] = checksum
+
 	return prev, existed
 }
 

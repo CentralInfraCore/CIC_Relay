@@ -21,8 +21,8 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 *   **M1.1: Méret- és CAS-alapú validáció**
     *   [x] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload és a WASM modulok méretét.
     *   [x] **DoD**: Túlméretes input esetén a rendszer hibával (pl. 413) válaszol. A limitek konfigurálhatók.
-    *   [ ] **Feladat**: Tényleges CAS (Content-Addressable Storage) implementálása a modulok tárolására, a tartalom-alapú címzés kihasználására.
-    *   [ ] **DoD**: A modulok tárolása a kanonikus checksum-uk alapján történik, elkerülve a duplikátumokat.
+    *   [x] **Feladat**: Tényleges CAS (Content-Addressable Storage) implementálása a modulok tárolására, a tartalom-alapú címzés kihasználására.
+    *   [x] **DoD**: A modulok tárolása a kanonikus checksum-uk alapján történik, elkerülve a duplikátumokat.
 
 *   **M1.2: WASM Kanonizálás**
     *   [x] **Feladat**: A `stripWasmModuleFunc` függvény implementálása a `wabin` segítségével, amely eltávolítja a nem determinisztikus `CustomSection`-öket.
@@ -201,9 +201,9 @@ A cél egy robusztus, biztonságos és könnyen üzemeltethető konfigurációs 
 ## Jelenlegi állapot (STATE)
 
 | Milestone | State   |
-| --------- | ------- |
+|-----------|---------|
 | M0        | Done    |
-| M1        | Partial |
+| M1        | Done    |
 | M2        | Done    |
 | M3        | Done    |
 | M4        | Done    |
