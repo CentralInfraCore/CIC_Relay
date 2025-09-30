@@ -89,6 +89,127 @@ func getSubFS(t *testing.T, subdir string) fs.FS {
 	return sub
 }
 
+func TestLoadPKIAssets(t *testing.T) {
+	logger := newDiscardLogger()
+
+	t.Run("successful load", func(t *testing.T) {
+		// loadPKIAssets expects a flat directory, so we create one with a root and intermediate.
+		tempDir := t.TempDir()
+		pkiFS := getSubFS(t, "pki/trust")
+
+		rootCA, err := fs.ReadFile(pkiFS, "root-ca.pem")
+		require.NoError(t, err)
+		intermediateCA, err := fs.ReadFile(pkiFS, "companies/company-ca.pem")
+		require.NoError(t, err)
+
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "root.pem"), rootCA, 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "intermediate.pem"), intermediateCA, 0644))
+
+		assets, err := loadPKIAssets(os.DirFS(tempDir), ".", logger)
+		require.NoError(t, err)
+		assert.NotEmpty(t, assets.Roots.Subjects(), "should load root CAs")
+		assert.NotEmpty(t, assets.Intermediates.Subjects(), "should load intermediate CAs")
+	})
+
+	t.Run("empty path", func(t *testing.T) {
+		pkiFS := getSubFS(t, "pki")
+		assets, err := loadPKIAssets(pkiFS, "", logger)
+		require.NoError(t, err)
+		assert.Empty(t, assets.Roots.Subjects())
+	})
+
+	t.Run("non-existent path", func(t *testing.T) {
+		pkiFS := getSubFS(t, "pki")
+		var logBuf bytes.Buffer
+		logger.SetOutput(&logBuf)
+		defer logger.SetOutput(io.Discard)
+
+		assets, err := loadPKIAssets(pkiFS, "non-existent-dir", logger)
+		require.NoError(t, err)
+		assert.Empty(t, assets.Roots.Subjects())
+		assert.Contains(t, logBuf.String(), "PKI directory not found")
+	})
+
+	t.Run("read dir fails", func(t *testing.T) {
+		failingFS := &failingReadDirFS{FS: getSubFS(t, "pki")}
+		_, err := loadPKIAssets(failingFS, ".", logger)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, os.ErrPermission)
+	})
+
+	t.Run("read file fails", func(t *testing.T) {
+		failingFS := &failingReadFileFS{
+			FS:         getSubFS(t, "pki/trust"),
+			failOnRead: map[string]bool{"root-ca.pem": true},
+		}
+		var logBuf bytes.Buffer
+		logger.SetOutput(&logBuf)
+		defer logger.SetOutput(io.Discard)
+
+		_, err := loadPKIAssets(failingFS, ".", logger)
+		require.NoError(t, err)
+		assert.Contains(t, logBuf.String(), "Could not read PKI file")
+	})
+
+	t.Run("skip directories", func(t *testing.T) {
+		pkiFS := getSubFS(t, "pki") // This contains subdirectories
+		_, err := loadPKIAssets(pkiFS, ".", logger)
+		require.NoError(t, err)
+	})
+
+	t.Run("non-pem file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "not-a-pem.txt"), []byte("hello world"), 0644))
+		var logBuf bytes.Buffer
+		logger.SetOutput(&logBuf)
+		defer logger.SetOutput(io.Discard)
+
+		_, err := loadPKIAssets(os.DirFS(tempDir), ".", logger)
+		require.NoError(t, err)
+		assert.Contains(t, logBuf.String(), "No PEM data found")
+	})
+
+	t.Run("invalid certificate", func(t *testing.T) {
+		tempDir := t.TempDir()
+		// This is valid base64 for "test", but not a valid DER certificate.
+		invalidCertContent := "-----BEGIN CERTIFICATE-----\nYWJjZGVmZw==\n-----END CERTIFICATE-----"
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid.crt"), []byte(invalidCertContent), 0644))
+		var logBuf bytes.Buffer
+		logger.SetOutput(&logBuf)
+		defer logger.SetOutput(io.Discard)
+
+		_, err := loadPKIAssets(os.DirFS(tempDir), ".", logger)
+		require.NoError(t, err)
+		assert.Contains(t, logBuf.String(), "Failed to parse certificate")
+	})
+
+	t.Run("invalid crl", func(t *testing.T) {
+		tempDir := t.TempDir()
+		// This is valid base64 for "test", but not a valid DER CRL.
+		invalidCRLContent := "-----BEGIN X509 CRL-----\nYWJjZGVmZw==\n-----END X509 CRL-----"
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid.crl"), []byte(invalidCRLContent), 0644))
+		var logBuf bytes.Buffer
+		logger.SetOutput(&logBuf)
+		defer logger.SetOutput(io.Discard)
+
+		_, err := loadPKIAssets(os.DirFS(tempDir), ".", logger)
+		require.NoError(t, err)
+		assert.Contains(t, logBuf.String(), "Failed to parse CRL")
+	})
+
+	t.Run("non-ca certificate", func(t *testing.T) {
+		pkiFS := getSubFS(t, "pki/signers/sources")
+		var logBuf bytes.Buffer
+		logger.SetOutput(&logBuf)
+		defer logger.SetOutput(io.Discard)
+
+		assets, err := loadPKIAssets(pkiFS, ".", logger)
+		require.NoError(t, err)
+		assert.Empty(t, assets.Roots.Subjects(), "non-CA cert should not be added to roots")
+		assert.Empty(t, assets.Intermediates.Subjects(), "non-CA cert should not be added to intermediates")
+	})
+}
+
 func TestLoadEmbeddedComponents(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	maxWasmSize := int64(16 * 1024 * 1024)
