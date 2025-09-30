@@ -12,12 +12,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 
 	"centralrelay/core/cabinet"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/sirupsen/logrus"
 )
 
 // failingReadFileFS is a mock file system that fails on reading specific files.
@@ -93,19 +94,18 @@ func TestLoadPKIAssets(t *testing.T) {
 	logger := newDiscardLogger()
 
 	t.Run("successful load", func(t *testing.T) {
-		// loadPKIAssets expects a flat directory, so we create one with a root and intermediate.
-		tempDir := t.TempDir()
-		pkiFS := getSubFS(t, "pki/trust")
-
-		rootCA, err := fs.ReadFile(pkiFS, "root-ca.pem")
+		// Create a virtual FS with root and intermediate certs in the same directory
+		rootCert, err := fs.ReadFile(getSubFS(t, "pki/trust"), "root-ca.pem")
 		require.NoError(t, err)
-		intermediateCA, err := fs.ReadFile(pkiFS, "companies/company-ca.pem")
+		intermediateCert, err := fs.ReadFile(getSubFS(t, "pki/trust/companies"), "company-ca.pem")
 		require.NoError(t, err)
 
-		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "root.pem"), rootCA, 0644))
-		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "intermediate.pem"), intermediateCA, 0644))
+		mockFS := fstest.MapFS{
+			"root.pem":         {Data: rootCert},
+			"intermediate.pem": {Data: intermediateCert},
+		}
 
-		assets, err := loadPKIAssets(os.DirFS(tempDir), ".", logger)
+		assets, err := loadPKIAssets(mockFS, ".", logger)
 		require.NoError(t, err)
 		assert.NotEmpty(t, assets.Roots.Subjects(), "should load root CAs")
 		assert.NotEmpty(t, assets.Intermediates.Subjects(), "should load intermediate CAs")
@@ -171,7 +171,7 @@ func TestLoadPKIAssets(t *testing.T) {
 
 	t.Run("invalid certificate", func(t *testing.T) {
 		tempDir := t.TempDir()
-		// Use a valid base64 string that is not a valid certificate
+		// This is a valid base64 string, but not a valid certificate.
 		invalidCertContent := "-----BEGIN CERTIFICATE-----\nYWJjZGVmZw==\n-----END CERTIFICATE-----"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid.crt"), []byte(invalidCertContent), 0644))
 		var logBuf bytes.Buffer
@@ -185,7 +185,7 @@ func TestLoadPKIAssets(t *testing.T) {
 
 	t.Run("invalid crl", func(t *testing.T) {
 		tempDir := t.TempDir()
-		// Use a valid base64 string that is not a valid CRL
+		// This is a valid base64 string, but not a valid CRL.
 		invalidCRLContent := "-----BEGIN X509 CRL-----\nYWJjZGVmZw==\n-----END X509 CRL-----"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid.crl"), []byte(invalidCRLContent), 0644))
 		var logBuf bytes.Buffer
@@ -198,7 +198,8 @@ func TestLoadPKIAssets(t *testing.T) {
 	})
 
 	t.Run("non-ca certificate", func(t *testing.T) {
-		pkiFS := getSubFS(t, "pki/signers/sources")
+		// Use a signer cert which is not a CA
+		pkiFS := getSubFS(t, "pki/signers/sources/module")
 		var logBuf bytes.Buffer
 		logger.SetOutput(&logBuf)
 		defer logger.SetOutput(io.Discard)
@@ -254,31 +255,50 @@ spec:
 }
 
 func TestLoadWorkflow(t *testing.T) {
-	ctx := context.Background()
+	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 
 	t.Run("unmarshal error", func(t *testing.T) {
-		svc := cabinet.NewCabinetService(nil, nil, cabinet.NewMemWorkflowStore())
-		content := []byte("kind: Workflow\nspec: 'not an object'")
-		err := loadWorkflow(ctx, svc, content)
+		content := []byte("kind: Workflow\nspec: \"not an object\"")
+		err := loadWorkflow(context.Background(), svc, content)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal workflow file")
 	})
 
-	t.Run("overwrite existing", func(t *testing.T) {
-		svc := cabinet.NewCabinetService(nil, nil, cabinet.NewMemWorkflowStore())
-		content := []byte("apiVersion: v1\nkind: Workflow\nmetadata:\n  name: test.flow\n  version: '1.0'\nspec:\n  steps: ['step1']")
+	t.Run("validation error", func(t *testing.T) {
+		// cabinet.NewWorkflow requires at least one step
+		content := []byte(`
+kind: Workflow
+metadata:
+  name: test.flow
+  version: "1.0"
+spec:
+  steps: []
+`)
+		err := loadWorkflow(context.Background(), svc, content)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "workflow validation")
+	})
 
-		// First load
-		err := loadWorkflow(ctx, svc, content)
+	t.Run("overwrite existing workflow", func(t *testing.T) {
+		content := []byte(`
+kind: Workflow
+metadata:
+  name: test.flow
+  version: "1.0"
+spec:
+  steps: ["step1"]
+`)
+		// Load once
+		err := loadWorkflow(context.Background(), svc, content)
 		require.NoError(t, err)
 
-		// Second load
 		var logBuf bytes.Buffer
 		originalOutput := logrus.StandardLogger().Out
 		logrus.SetOutput(&logBuf)
 		defer logrus.SetOutput(originalOutput)
 
-		err = loadWorkflow(ctx, svc, content)
+		// Load again
+		err = loadWorkflow(context.Background(), svc, content)
 		require.NoError(t, err)
 		assert.Contains(t, logBuf.String(), "Overwriting existing workflow")
 	})
