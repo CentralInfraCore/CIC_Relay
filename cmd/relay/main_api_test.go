@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,70 +15,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// mockCabinetAPI is a mock implementation of the cabinet.Cabinet interface.
-// It embeds mock.Mock and implements all methods of the interface.
-type mockCabinetAPI struct {
-	mock.Mock
-}
-
-func (m *mockCabinetAPI) PutSchema(s *cabinet.Schema) error {
-	args := m.Called(s)
-	return args.Error(0)
-}
-
-func (m *mockCabinetAPI) GetSchema(id string) (*cabinet.Schema, error) {
-	args := m.Called(id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*cabinet.Schema), args.Error(1)
-}
-
-func (m *mockCabinetAPI) PutModule(md *cabinet.ModuleDescriptor) error {
-	args := m.Called(md)
-	return args.Error(0)
-}
-
-func (m *mockCabinetAPI) GetModule(id string) (*cabinet.ModuleDescriptor, error) {
-	args := m.Called(id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*cabinet.ModuleDescriptor), args.Error(1)
-}
-
-func (m *mockCabinetAPI) PutWorkflow(w *cabinet.Workflow) error {
-	args := m.Called(w)
-	return args.Error(0)
-}
-
-func (m *mockCabinetAPI) GetWorkflow(id string) (*cabinet.Workflow, error) {
-	args := m.Called(id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*cabinet.Workflow), args.Error(1)
-}
-
-func (m *mockCabinetAPI) Set(ctx context.Context, payload *cabinet.SetPayload) (*cabinet.SetResponse, error) {
-	args := m.Called(ctx, payload)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*cabinet.SetResponse), args.Error(1)
-}
-
-func (m *mockCabinetAPI) Close(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-
 // TestSetHandler_Success tests the happy path for the /set endpoint.
 func TestSetHandler_Success(t *testing.T) {
 	// 1. Setup
 	// Create a mock cabinet API and tell it what to expect.
-	mockAPI := new(mockCabinetAPI)
+	mockAPI := new(mockCabinetService)
 	// When the Set method is called with any context and any payload, return a specific response and no error.
 	expectedResponse := &cabinet.SetResponse{Results: map[string]any{"status": "all good"}}
 	mockAPI.On("Set", mock.Anything, mock.Anything).Return(expectedResponse, nil)
@@ -130,7 +70,7 @@ func TestSetHandler_Success(t *testing.T) {
 // TestSetHandler_MethodNotAllowed tests that the /set endpoint only accepts POST requests.
 func TestSetHandler_MethodNotAllowed(t *testing.T) {
 	// 1. Setup
-	mockAPI := new(mockCabinetAPI) // The API won't even be called, but we need a server.
+	mockAPI := new(mockCabinetService) // The API won't even be called, but we need a server.
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
 
@@ -157,7 +97,7 @@ func TestSetHandler_MethodNotAllowed(t *testing.T) {
 // TestSetHandler_BodyTooLarge tests that the handler rejects bodies larger than the configured limit.
 func TestSetHandler_BodyTooLarge(t *testing.T) {
 	// 1. Setup
-	mockAPI := new(mockCabinetAPI)
+	mockAPI := new(mockCabinetService)
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
 
@@ -189,7 +129,7 @@ func TestSetHandler_BodyTooLarge(t *testing.T) {
 // TestSetHandler_InvalidJSON tests that the handler returns a 400 error for malformed JSON.
 func TestSetHandler_InvalidJSON(t *testing.T) {
 	// 1. Setup
-	mockAPI := new(mockCabinetAPI)
+	mockAPI := new(mockCabinetService)
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
 
@@ -219,7 +159,7 @@ func TestSetHandler_InvalidJSON(t *testing.T) {
 // TestSetHandler_CabinetInvalidError tests the handler's response to a validation error from the cabinet.
 func TestSetHandler_CabinetInvalidError(t *testing.T) {
 	// 1. Setup
-	mockAPI := new(mockCabinetAPI)
+	mockAPI := new(mockCabinetService)
 	// Tell the mock to return an ErrInvalid error.
 	mockAPI.On("Set", mock.Anything, mock.Anything).Return(nil, cabinet.ErrInvalid)
 
@@ -252,7 +192,7 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 // TestSetHandler_CabinetInternalError tests the handler's response to an unexpected internal error.
 func TestSetHandler_CabinetInternalError(t *testing.T) {
 	// 1. Setup
-	mockAPI := new(mockCabinetAPI)
+	mockAPI := new(mockCabinetService)
 	// Tell the mock to return a generic, non-validation error.
 	expectedErr := fmt.Errorf("unexpected database error")
 	mockAPI.On("Set", mock.Anything, mock.Anything).Return(nil, expectedErr)
