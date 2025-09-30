@@ -22,7 +22,7 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
     *   [x] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload méretét (pl. 2-4 MB). Túlméretes modul esetén a betöltésnek hibával meg kell szakadnia.
     *   [x] **DoD**: Túlméretes JSON input esetén a rendszer 413-as vagy 422-es HTTP státuszkóddal válaszol, és a kérés feldolgozása megszakad. A limit konfigurálható.
 
-*   **M1.2: WASM Kanonizálás (a \"lényeg\" megőrzése)**
+*   **M1.2: WASM Kanonizálás (a "lényeg" megőrzése)**
     *   [x] **Feladat**: A `stripWasmModuleFunc` függvény implementálva a `wabin` segítségével. A logika dekódolja a modult, eltávolítja az összes `CustomSection`-t, majd újraenkódolja a binárist.
     *   [x] **DoD**: A `strip` logika kimenete a kanonizált bájtsorozat, amely a determinisztikus checksum-számítás alapja.
 
@@ -39,6 +39,12 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 
 * **Feladatok**: saját trust store (offline root → intermediate → rövid élettartamú code signing leaf). Ellenőrzés: checksum+signature + chain verify. EKU=Code Signing, SPKI pin az intermediate-re, revocation (CRL/OCSP vagy rövid lejárat).
 * **DoD**: rossz issuer/EKU/lejárt/visszavont → fail; jó lánc → átmegy. Auditor-barát log: signer ujjlenyomat, chain hash, végső checksum.
+* **Architekturális megjegyzés**: A PKI működéséhez szükséges titkok (pl. privát kulcsok) betöltése nem a fájlrendszerből, hanem egy dedikált, külső titokkezelőből (pl. Vault) történik. Lásd **M8.3**.
+
+### M3.1 — Teszt tanúsítványok kezelése
+
+*   **Feladat**: Felülvizsgálni a tesztekben használt tanúsítványok (pl. `signed_module.pem`) kezelését. Cél, hogy a teszt tanúsítványok dinamikusan generálhatók legyenek a teszt futtatása előtt, vagy egy dedikált teszt PKI infrastruktúra részeként legyenek kezelve, elkerülve a `go:embed` fordítási idejű függőségeit és a manuális fájlkezelést.
+*   **DoD**: A tesztek futtatása nem igényel manuális tanúsítványfájl-létrehozást. A teszt tanúsítványok generálása automatizált, és a tesztek megbízhatóan futnak különböző környezetekben.
 
 ### M4 — LIMITS érvényesítés
 
@@ -146,11 +152,23 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
     *   [x] **Feladat**: Konfigurálni a CI/CD pipeline-t, hogy generáljon HTML kódlefedettségi riportot artifactként.
     *   [x] **DoD**: A CI/CD pipeline minden futtatás után generál egy hozzáférhető HTML kódlefedettségi riportot.
 
-### M8 — Konfiguráció & biztonság
+### M8 — Konfiguráció, biztonság és önvalidáció
 
-* **Feladatok**: kötelező flag/env (trust store path, max-sizes, policy file, log level). Safe defaults: prod → deny-by-default; dev → lazább. Fail-fast hibás konfig esetén.
+A cél egy robusztus, biztonságos és könnyen üzemeltethető konfigurációs modell létrehozása, amely a rendszer saját képességeit használja önmaga validálására.
 
-* **DoD**: félkonfig esetén nem indul; hibaüzenet egyértelmű, auditálható.
+**Részfeladatok (checklist):**
+
+*   **M8.1: Prefixált környezeti változók**
+    *   [ ] **Feladat**: Minden, a Relay által használt környezeti változót `CIC_` prefixszel kell ellátni a névtér-ütközések elkerülése és az egyértelmű azonosíthatóság érdekében.
+    *   [ ] **DoD**: A `loadConfig` függvény csak a `CIC_` prefixű változókat olvassa be. A kód sehol nem hivatkozik prefix nélküli változókra.
+
+*   **M8.2: Séma-alapú önvalidáció ("Dogfooding")**
+    *   [ ] **Feladat**: A Relay saját konfigurációját egy, a rendszerben definiált sémával (`relay.config.schema.yaml`) validálja induláskor.
+    *   [ ] **DoD**: A Relay indításkor betölti a `relay.config.schema.yaml`-t, és validálja a saját, környezeti változókból és/vagy fájlból betöltött konfigurációját. Hibás vagy hiányos konfiguráció esetén a program egyértelmű hibaüzenettel, azonnal leáll (fail-fast). A séma a konfiguráció ön-dokumentációjaként is szolgál.
+
+*   **M8.3: Titokkezelés szétválasztása (Single Responsibility)**
+    *   [ ] **Feladat**: A külső forrásból (pl. Vault) származó titkok betöltését egy dedikált, a fájlrendszer-alapú komponens-betöltéstől független függvénybe kell szervezni.
+    *   [ ] **DoD**: Létrejön egy dedikált `loadSecretsFromVault` (vagy hasonló nevű) függvény, amely kizárólag a külső titokkezelővel való kommunikációért felel. A `loadInstalledComponents` függvény nem tartalmaz semmilyen titokkezelési vagy hálózati logikát.
 
 ### M9 — Release & dokumentáció
 
@@ -169,15 +187,15 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
 | Milestone | State   |
 | --------- | ------- |
 | M0        | Done    |
-| M1        | Done    |
-| M2        | Done    |
+| M1        | Partial |
+| M2        | Missing |
 | M3        | Done    |
-| M4        | Done    |
-| M5        | Done    |
-| M6        | Partial |
+| M4        | Missing |
+| M5        | Missing |
+| M6        | Done    |
 | M7        | Partial |
 | M8        | Missing |
-| M9        | Partial |
+| M9        | Missing |
 | M10       | Missing |
 
 ---
@@ -185,5 +203,4 @@ A cél a CI/CD pipeline megbízhatóságának és a kódminőség biztosítása 
 ## Sync-megjegyzés
 
 Ezt a fájlt az AI támogatott beszélgetések frissítik.
-A hivatalos, részletes forrás: `docs/roadmap/relay_milestones.md`.\
-
+A hivatalos, részletes forrás: `docs/roadmap/relay_milestones.md`.
