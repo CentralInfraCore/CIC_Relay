@@ -121,6 +121,24 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 		assert.Error(t, err, "expected an error when loading invalid embedded schema components")
 		assert.Contains(t, err.Error(), "failed to load embedded schemas")
 	})
+
+	t.Run("pki asset loading error", func(t *testing.T) {
+		failingPKIFS := &failingReadDirFS{FS: getSubFS(t, "pki")}
+		schemasFS := getSubFS(t, "schemas")
+		workflowsFS := getSubFS(t, "workflows")
+		err := loadEmbeddedComponents(context.Background(), svc, schemasFS, workflowsFS, failingPKIFS, ".", maxWasmSize, logger)
+		assert.Error(t, err, "expected an error when loading pki assets fails")
+		assert.Contains(t, err.Error(), "failed to load embedded PKI assets")
+		assert.ErrorIs(t, err, os.ErrPermission)
+	})
+
+	t.Run("invalid workflow", func(t *testing.T) {
+		validSchemaFS := getSubFS(t, "schemas")
+		invalidWorkflowsFS := getSubFS(t, "invalid")
+		err := loadEmbeddedComponents(context.Background(), svc, validSchemaFS, invalidWorkflowsFS, pkiFS, ".", maxWasmSize, logger)
+		assert.Error(t, err, "expected an error when loading invalid embedded workflow components")
+		assert.Contains(t, err.Error(), "failed to load embedded workflows")
+	})
 }
 
 func TestLoadComponentsFromFS(t *testing.T) {
