@@ -439,44 +439,70 @@ func TestLoadComponentsFromFS_WalkDirError(t *testing.T) {
 	assert.ErrorIs(t, err, os.ErrPermission, "the specific error from the mock fs should be propagated")
 }
 
+func TestLoadInstalledComponents_Success(t *testing.T) {
+	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	maxWasmSize := int64(16 * 1024 * 1024)
+	logger := logrus.New()
+	var logBuf bytes.Buffer
+	logger.SetOutput(&logBuf)
+	logger.SetLevel(logrus.DebugLevel) // Ensure all levels are logged
+
+	// Use absolute paths to avoid issues with test working directory.
+	componentsDir, err := filepath.Abs("testdata/minimal")
+	require.NoError(t, err)
+
+	// No pki path to simplify the test and focus on component loading.
+	err = loadInstalledComponents(context.Background(), svc, componentsDir, "", maxWasmSize, logger)
+	logOutput := logBuf.String() // Capture log output
+	require.NoError(t, err, "loadInstalledComponents failed. Logs:\n%s", logOutput)
+
+	// Check if components from the 'minimal' set were loaded.
+	_, err = svc.GetSchema("user.schema@1.0")
+	require.NoError(t, err, "expected schema 'user.schema@1.0' to be loaded. Logs:\n%s", logOutput)
+
+	_, err = svc.GetWorkflow("order.workflow@1.0")
+	require.NoError(t, err, "expected workflow 'order.workflow@1.0' to be loaded. Logs:\n%s", logOutput)
+
+	// Check for the final success log message.
+	assert.Contains(t, logOutput, "Successfully loaded installed components.")
+}
+
 func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
-	// Create a logrus logger that discards output for tests
-	logger := logrus.New()
-	logger.SetOutput(io.Discard)
+	t.Run("non-existent path", func(t *testing.T) {
+		logger := logrus.New()
+		var logBuf bytes.Buffer
+		logger.SetOutput(&logBuf)
 
-	// Capture logrus logger output
-	var logBuf bytes.Buffer
-	originalLoggerOutput := logger.Out
-	logger.SetOutput(&logBuf)
-		defer func() {
-			logger.SetOutput(originalLoggerOutput)
-		}()
-
-		// A non-existent path should be skipped and not return an error.
 		err := loadInstalledComponents(context.Background(), svc, "/path/to/non/existent/dir", "", maxWasmSize, logger)
-		assert.NoError(t, err)
-		// Verify log output
-		logOutput := logBuf.String()
-		assert.Contains(t, logOutput, "Installed components directory not found, skipping.", "expected log to contain non-existent path warning")
-
+		require.NoError(t, err)
+		assert.Contains(t, logBuf.String(), "Installed components directory not found, skipping.")
+	})
 
 	t.Run("path is a file, not a directory", func(t *testing.T) {
-		// Create a logrus logger that discards output for tests
-		logger := logrus.New()
-		logger.SetOutput(io.Discard)
-
-		// Create a temporary file
+		logger := newDiscardLogger()
 		tempFile, err := os.CreateTemp(t.TempDir(), "not_a_dir")
 		require.NoError(t, err)
 		tempFile.Close()
 
-		// Trying to load from a file path should result in an error.
 		loadErr := loadInstalledComponents(context.Background(), svc, tempFile.Name(), "", maxWasmSize, logger)
-		assert.Error(t, loadErr, "expected an error when path is a file, not a directory")
-		assert.Contains(t, loadErr.Error(), "not a directory")
+		require.Error(t, loadErr)
+		assert.Contains(t, loadErr.Error(), "path is a file, not a directory")
+	})
+
+	t.Run("pki path is a file", func(t *testing.T) {
+		logger := newDiscardLogger()
+		componentsDir := t.TempDir()
+
+		pkiFile, err := os.CreateTemp(t.TempDir(), "pki_file")
+		require.NoError(t, err)
+		pkiFile.Close()
+
+		err = loadInstalledComponents(context.Background(), svc, componentsDir, pkiFile.Name(), maxWasmSize, logger)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to load installed PKI assets")
 	})
 }
 

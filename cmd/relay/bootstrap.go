@@ -79,7 +79,7 @@ func loadInstalledComponents(ctx context.Context, svc cabinet.Cabinet, component
 	var err error
 
 	if pkiPath != "" {
-		pkiAssets, err = loadPKIAssets(os.DirFS("/"), pkiPath, logger)
+		pkiAssets, err = loadPKIAssets(os.DirFS(pkiPath), ".", logger)
 		if err != nil {
 			return fmt.Errorf("failed to load installed PKI assets: %w", err)
 		}
@@ -332,5 +332,6 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 			assets.CRLs = append(assets.CRLs, crl)
 		}
 	}
+	logger.Info("Successfully loaded PKI assets")
 	return assets, nil
 }
