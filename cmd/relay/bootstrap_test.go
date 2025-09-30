@@ -171,7 +171,7 @@ func TestLoadPKIAssets(t *testing.T) {
 
 	t.Run("invalid certificate", func(t *testing.T) {
 		tempDir := t.TempDir()
-		// This is valid base64 for "test", but not a valid DER certificate.
+		// Use a valid base64 string that is not a valid certificate
 		invalidCertContent := "-----BEGIN CERTIFICATE-----\nYWJjZGVmZw==\n-----END CERTIFICATE-----"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid.crt"), []byte(invalidCertContent), 0644))
 		var logBuf bytes.Buffer
@@ -185,7 +185,7 @@ func TestLoadPKIAssets(t *testing.T) {
 
 	t.Run("invalid crl", func(t *testing.T) {
 		tempDir := t.TempDir()
-		// This is valid base64 for "test", but not a valid DER CRL.
+		// Use a valid base64 string that is not a valid CRL
 		invalidCRLContent := "-----BEGIN X509 CRL-----\nYWJjZGVmZw==\n-----END X509 CRL-----"
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid.crl"), []byte(invalidCRLContent), 0644))
 		var logBuf bytes.Buffer
@@ -207,6 +207,68 @@ func TestLoadPKIAssets(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, assets.Roots.Subjects(), "non-CA cert should not be added to roots")
 		assert.Empty(t, assets.Intermediates.Subjects(), "non-CA cert should not be added to intermediates")
+	})
+}
+
+func TestLoadSchema(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("unmarshal error", func(t *testing.T) {
+		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), nil, nil)
+		content := []byte("kind: Schema\nmetadata: 'not a map'")
+		err := loadSchema(ctx, svc, content)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unmarshal schema file")
+	})
+
+	t.Run("overwrite existing", func(t *testing.T) {
+		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), nil, nil)
+		content := []byte("apiVersion: v1\nkind: Schema\nmetadata:\n  name: test.schema\n  version: '1.0'\nspec:\n  type: object")
+
+		// First load
+		err := loadSchema(ctx, svc, content)
+		require.NoError(t, err)
+
+		// Second load
+		var logBuf bytes.Buffer
+		originalOutput := logrus.StandardLogger().Out
+		logrus.SetOutput(&logBuf)
+		defer logrus.SetOutput(originalOutput)
+
+		err = loadSchema(ctx, svc, content)
+		require.NoError(t, err)
+		assert.Contains(t, logBuf.String(), "Overwriting existing schema")
+	})
+}
+
+func TestLoadWorkflow(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("unmarshal error", func(t *testing.T) {
+		svc := cabinet.NewCabinetService(nil, nil, cabinet.NewMemWorkflowStore())
+		content := []byte("kind: Workflow\nspec: 'not an object'")
+		err := loadWorkflow(ctx, svc, content)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unmarshal workflow file")
+	})
+
+	t.Run("overwrite existing", func(t *testing.T) {
+		svc := cabinet.NewCabinetService(nil, nil, cabinet.NewMemWorkflowStore())
+		content := []byte("apiVersion: v1\nkind: Workflow\nmetadata:\n  name: test.flow\n  version: '1.0'\nspec:\n  steps: ['step1']")
+
+		// First load
+		err := loadWorkflow(ctx, svc, content)
+		require.NoError(t, err)
+
+		// Second load
+		var logBuf bytes.Buffer
+		originalOutput := logrus.StandardLogger().Out
+		logrus.SetOutput(&logBuf)
+		defer logrus.SetOutput(originalOutput)
+
+		err = loadWorkflow(ctx, svc, content)
+		require.NoError(t, err)
+		assert.Contains(t, logBuf.String(), "Overwriting existing workflow")
 	})
 }
 
@@ -625,17 +687,6 @@ func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to load installed PKI assets")
 	})
-}
-
-func TestLoadWorkflow_UnmarshalError(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
-
-	// This content has a valid kind, but the spec is not an object, causing a yaml.Unmarshal error.
-	content := []byte("kind: Workflow\nspec: \"not an object\"")
-
-	err := loadWorkflow(context.Background(), svc, content)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unmarshal workflow file")
 }
 
 // Helper function to create a logrus logger that discards output
