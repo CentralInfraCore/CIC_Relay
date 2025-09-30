@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"centralrelay/core/cabinet"
 	"github.com/sirupsen/logrus"
@@ -57,6 +58,47 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	assert.Equal(t, int64(4*1024*1024), cfg.MaxJSONInputSize)
 	assert.Equal(t, int64(16*1024*1024), cfg.MaxWASMModuleSize)
 }
+func TestLoadConfig_AllEnvSet(t *testing.T) {
+    t.Setenv("MAX_JSON_INPUT_SIZE", "8192")
+    t.Setenv("MAX_WASM_MODULE_SIZE", "32768")
+    t.Setenv("HASHING_TIMEOUT", "10s")
+
+    cfg, err := loadConfig()
+    assert.NoError(t, err)
+    assert.NotNil(t, cfg)
+    assert.Equal(t, int64(8192), cfg.MaxJSONInputSize)
+    assert.Equal(t, int64(32768), cfg.MaxWASMModuleSize)
+    assert.Equal(t, 10*time.Second, cfg.HashingTimeout)
+}
+
+func TestLoadConfig_InvalidJSONSize(t *testing.T) {
+    t.Setenv("MAX_JSON_INPUT_SIZE", "notanumber")
+
+    cfg, err := loadConfig()
+    assert.Nil(t, cfg)
+    assert.Error(t, err)
+    assert.Contains(t, err.Error(), "invalid value for MAX_JSON_INPUT_SIZE")
+}
+
+func TestLoadConfig_InvalidWASMSize(t *testing.T) {
+    t.Setenv("MAX_WASM_MODULE_SIZE", "oops")
+
+    cfg, err := loadConfig()
+    assert.Nil(t, cfg)
+    assert.Error(t, err)
+    assert.Contains(t, err.Error(), "invalid value for MAX_WASM_MODULE_SIZE")
+}
+
+func TestLoadConfig_InvalidHashingTimeout(t *testing.T) {
+    t.Setenv("HASHING_TIMEOUT", "notaduration")
+
+    cfg, err := loadConfig()
+    assert.Nil(t, cfg)
+    assert.Error(t, err)
+    assert.Contains(t, err.Error(), "invalid value for HASHING_TIMEOUT")
+}
+
+
 
 func TestNewMux(t *testing.T) {
 	server := &relayServer{}
