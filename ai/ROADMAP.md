@@ -18,22 +18,34 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 
 **Részfeladatok (checklist):**
 
-*   **M1.1: Méret- és CAS-alapú validáció (gyorsítótárazás)**
-    *   [x] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload méretét (pl. 2-4 MB). Túlméretes modul esetén a betöltésnek hibával meg kell szakadnia.
-    *   [x] **DoD**: Túlméretes JSON input esetén a rendszer 413-as vagy 422-es HTTP státuszkóddal válaszol, és a kérés feldolgozása megszakad. A limit konfigurálható.
+*   **M1.1: Méret- és CAS-alapú validáció**
+    *   [x] **Feladat**: Implementálni egy mechanizmust, amely korlátozza a bejövő JSON payload és a WASM modulok méretét.
+    *   [x] **DoD**: Túlméretes input esetén a rendszer hibával (pl. 413) válaszol. A limitek konfigurálhatók.
+    *   [ ] **Feladat**: Tényleges CAS (Content-Addressable Storage) implementálása a modulok tárolására, a tartalom-alapú címzés kihasználására.
+    *   [ ] **DoD**: A modulok tárolása a kanonikus checksum-uk alapján történik, elkerülve a duplikátumokat.
 
-*   **M1.2: WASM Kanonizálás (a "lényeg" megőrzése)**
-    *   [x] **Feladat**: A `stripWasmModuleFunc` függvény implementálva a `wabin` segítségével. A logika dekódolja a modult, eltávolítja az összes `CustomSection`-t, majd újraenkódolja a binárist.
+*   **M1.2: WASM Kanonizálás**
+    *   [x] **Feladat**: A `stripWasmModuleFunc` függvény implementálása a `wabin` segítségével, amely eltávolítja a nem determinisztikus `CustomSection`-öket.
     *   [x] **DoD**: A `strip` logika kimenete a kanonizált bájtsorozat, amely a determinisztikus checksum-számítás alapja.
 
-*   **M1.3: Definition of Done (DoD) teljesítése**
-    *   [x] **Feladat**: A `TestCanonicalWasmGolden` teszt igazolja, hogy két, funkcionálisan azonos, de eltérő metaadatokkal rendelkező WASM modul kanonizálás után azonos checksumot kap.
-    *   [x] **DoD**: A `github.com/tetratelabs/wabin` könyvtár hozzáadva a projekthez a stabil és publikus API-n keresztüli WASM-kezeléshez.
+*   **M1.3: Determinisztikus Checksum Igazolása**
+    *   [x] **Feladat**: `TestCanonicalWasmGolden` teszt, amely igazolja, hogy két funkcionálisan azonos, de eltérő metaadatokkal rendelkező WASM modul kanonizálás után azonos checksumot kap.
+    *   [x] **DoD**: A teszt sikeres, és a CI pipeline része.
 
 ### M2 — Modul YAML + CAS szerződés
 
-* **Feladatok**: A `ModuleFile` struktúra és a `loadModule` függvény módosítása a szigorú CAS (Content-Addressable Storage) szerződés kikényszerítésére.
-* **DoD**: A `wasmDigest` (sha256) és `wasmSize` mezők kötelezővé téve a modul YAML-definíciójában. A `loadModule` függvény betöltéskor ellenőrzi, hogy a WASM fájl tartalma és mérete megegyezik-e a YAML-ban megadott értékekkel. A hiányzó vagy hibás értékek a modul betöltésének megszakadását okozzák. A kapcsolódó tesztek frissítve és sikeresen lefutnak.
+A cél a `ModuleFile` struktúra és a `loadModule` függvény módosítása a szigorú CAS (Content-Addressable Storage) szerződés kikényszerítésére.
+
+**Részfeladatok (checklist):**
+
+*   [x] **Feladat**: A `wasmDigest` (sha256) és `wasmSize` mezők kötelezővé tétele a modul YAML-definíciójában.
+*   [x] **DoD**: A `ModuleFile` struktúra tartalmazza a kötelező mezőket, a hiányzó mezők hibát okoznak a feldolgozás során.
+*   [x] **Feladat**: A `loadModule` függvény kiegészítése a `wasmSize` ellenőrzésével.
+*   [x] **DoD**: A `loadModule` betöltéskor ellenőrzi, hogy a WASM fájl mérete megegyezik-e a YAML-ban megadott `wasmSize` értékkel. Eltérés esetén a betöltés hibával megszakad.
+*   [x] **Feladat**: A `loadModule` függvény kiegészítése a `wasmDigest` ellenőrzésével.
+*   [x] **DoD**: A `loadModule` betöltéskor ellenőrzi, hogy a WASM fájl tartalmának hash-e megegyezik-e a YAML-ban megadott `wasmDigest` értékkel. Eltérés esetén a betöltés hibával megszakad.
+*   [x] **Feladat**: A kapcsolódó tesztek frissítése és létrehozása.
+*   [x] **DoD**: A `bootstrap_test.go` tartalmaz dedikált teszteseteket a méret- és digest-eltérésekre, és azok sikeresen lefutnak.
 
 ### M3 — Privát PKI verifikáció
 
@@ -43,8 +55,12 @@ A cél egy olyan kanonikus checksum-eljárás létrehozása, amely garantálja, 
 
 ### M3.1 — Teszt tanúsítványok kezelése
 
-*   **Feladat**: Felülvizsgálni a tesztekben használt tanúsítványok (pl. `signed_module.pem`) kezelését. Cél, hogy a teszt tanúsítványok dinamikusan generálhatók legyenek a teszt futtatása előtt, vagy egy dedikált teszt PKI infrastruktúra részeként legyenek kezelve, elkerülve a `go:embed` fordítási idejű függőségeit és a manuális fájlkezelést.
-*   **DoD**: A tesztek futtatása nem igényel manuális tanúsítványfájl-létrehozást. A teszt tanúsítványok generálása automatizált, és a tesztek megbízhatóan futnak különböző környezetekben.
+**Részfeladatok (checklist):**
+
+*   [x] **Feladat**: Egy `bootstrap_testdata.sh` script létrehozása, amely dinamikusan generálja a tesztekhez szükséges teljes PKI-infrastruktúrát (Root CA, Intermediate CA, EE tanúsítványok).
+*   [x] **DoD**: A script megbízhatóan legenerálja a `cmd/relay/testdata` struktúrát, elkerülve a manuális fájlkezelést.
+*   [x] **Feladat**: A tesztek (`_test.go` fájlok) átállítása, hogy a `go:embed` segítségével beágyazott, dinamikusan generált tesztadatokat használják, és ne függjenek a kódbázisba commitált statikus tanúsítványoktól.
+*   [x] **DoD**: A tesztek futtatása nem igényel manuális tanúsítványfájl-létrehozást, és a tesztek megbízhatóan futnak különböző környezetekben.
 
 ### M4 — LIMITS érvényesítés
 
@@ -188,11 +204,11 @@ A cél egy robusztus, biztonságos és könnyen üzemeltethető konfigurációs 
 | --------- | ------- |
 | M0        | Done    |
 | M1        | Partial |
-| M2        | Missing |
+| M2        | Done    |
 | M3        | Done    |
-| M4        | Missing |
-| M5        | Missing |
-| M6        | Done    |
+| M4        | Done    |
+| M5        | Done    |
+| M6        | Partial |
 | M7        | Partial |
 | M8        | Missing |
 | M9        | Missing |
