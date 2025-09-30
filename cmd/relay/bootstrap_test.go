@@ -211,31 +211,43 @@ func TestLoadPKIAssets(t *testing.T) {
 }
 
 func TestLoadSchema(t *testing.T) {
-	ctx := context.Background()
+	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
 
 	t.Run("unmarshal error", func(t *testing.T) {
-		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), nil, nil)
-		content := []byte("kind: Schema\nmetadata: 'not a map'")
-		err := loadSchema(ctx, svc, content)
+		content := []byte("kind: Schema\nmetadata: \"not a map\"")
+		err := loadSchema(context.Background(), svc, content)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal schema file")
 	})
 
-	t.Run("overwrite existing", func(t *testing.T) {
-		svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), nil, nil)
-		content := []byte("apiVersion: v1\nkind: Schema\nmetadata:\n  name: test.schema\n  version: '1.0'\nspec:\n  type: object")
+	t.Run("validation error", func(t *testing.T) {
+		// cabinet.NewSchema requires name and version, so this should fail validation
+		content := []byte("kind: Schema\nmetadata: {}\nspec: {}")
+		err := loadSchema(context.Background(), svc, content)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "schema validation")
+	})
 
-		// First load
-		err := loadSchema(ctx, svc, content)
+	t.Run("overwrite existing schema", func(t *testing.T) {
+		content := []byte(`
+kind: Schema
+metadata:
+  name: test.schema
+  version: "1.0"
+spec:
+  type: object
+`)
+		// Load once
+		err := loadSchema(context.Background(), svc, content)
 		require.NoError(t, err)
 
-		// Second load
 		var logBuf bytes.Buffer
 		originalOutput := logrus.StandardLogger().Out
 		logrus.SetOutput(&logBuf)
 		defer logrus.SetOutput(originalOutput)
 
-		err = loadSchema(ctx, svc, content)
+		// Load again
+		err = loadSchema(context.Background(), svc, content)
 		require.NoError(t, err)
 		assert.Contains(t, logBuf.String(), "Overwriting existing schema")
 	})
