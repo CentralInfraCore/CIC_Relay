@@ -18,46 +18,54 @@ func ExampleAPI_Set_minimal() {
 	api := NewAPI(svc)
 
 	const (
-		moduleID   = "modA@v1"
-		workflowID = "wf.compile@v1"
+		moduleID   = "core.test@1.0" // Use our native test module
+		workflowID = "wf.echo@1.0"
 	)
 
+	initialPayload := map[string]any{"source": "hello from workflow"}
 	req := &SetPayload{
 		WorkflowID: workflowID,
 		Modules:    []ModuleID{moduleID},
-		Payload:    map[string]any{"source": "int main(){}"},
+		Payload:    initialPayload,
 	}
 
-	// The schema is used by the module, so we must create it first.
-	schema, err := NewSchema(context.Background(), BaseBlock{Name: "source.code", Version: "v1"}, SchemaDef{})
+	// To make the example pass, we must use the constructors to create valid objects with checksums.
+	// Register a dummy schema, though not directly used by core.test.echo
+	schema, err := NewSchema(context.Background(), BaseBlock{Name: "dummy.schema", Version: "1.0"}, SchemaDef{})
 	if err != nil {
 		fmt.Println("setup error (schema):", err)
 		return
 	}
 	schemaStore.Put(schema)
 
-	// The workflow step is updated to the new command format: "component.function(data)".
-	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.compile", Version: "v1"}, []string{"modA.compile(source)"})
+	// Register the core.test native module
+	testFuncs := make(NativeFunctions)
+	testFuncs["echo"] = CoreEcho // Our native echo function
+
+	coreTestMeta := BaseBlock{Name: "core.test", Version: "1.0", Description: "A native module for testing basic functionality."}
+	coreTestModule, err := NewModuleDescriptor(context.Background(), coreTestMeta, "native/test", nil, nil, nil)
+	if err != nil {
+		fmt.Println("setup error (core.test module descriptor):", err)
+		return
+	}
+	coreTestModule.NativeImpl = testFuncs // Attach the native function map
+	modStore.Put(coreTestModule)
+
+	// Create a workflow that uses the core.test.echo function with the full module ID
+	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.echo", Version: "1.0"}, []string{"core.test@1.0.echo(input)"})
 	if err != nil {
 		fmt.Println("setup error (workflow):", err)
 		return
 	}
 	wfStore.Put(wf)
 
-	// The 'accepts' parameter is re-introduced to fix the build error.
-	mod, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "modA", Version: "v1"}, "", []string{schema.ID()}, nil, nil)
-	if err != nil {
-		fmt.Println("setup error (module):", err)
-		return
-	}
-	modStore.Put(mod)
-
 	res, err := api.Set(context.Background(), req)
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
-	fmt.Println("ok", len(res.Results))
+	// The result should contain the echoed input data under the "result" key
+	fmt.Printf("ok %v\n", res.Results["result"])
 	// Output:
-	// ok 0
+	// ok map[source:hello from workflow]
 }

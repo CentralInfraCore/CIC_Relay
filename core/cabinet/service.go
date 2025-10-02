@@ -3,9 +3,9 @@ package cabinet
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/tetratelabs/wazero"
 )
 
@@ -97,13 +97,14 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			return "", "", "", fmt.Errorf("invalid step format: missing parentheses")
 		}
 
-		parts := strings.Split(before, ".")
-		if len(parts) != 2 {
+		// Find the last dot to separate componentID and functionName
+		lastDotIndex := strings.LastIndex(before, ".")
+		if lastDotIndex == -1 || lastDotIndex == 0 || lastDotIndex == len(before)-1 {
 			return "", "", "", fmt.Errorf("invalid step format: expected component.function")
 		}
 
-		componentID = parts[0]
-		functionName = parts[1]
+		componentID = before[:lastDotIndex]
+		functionName = before[lastDotIndex+1:]
 		dataKey = strings.TrimSuffix(after, ")")
 
 		return componentID, functionName, dataKey, nil
@@ -111,7 +112,8 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 
 	// --- Start of the new execution logic ---
 
-	// TODO: Initialize executionContext
+	// 2. Initialize executionContext
+	execCtx := NewExecutionContext(in.Payload)
 
 	for _, step := range workflow.Steps {
 		componentID, functionName, dataKey, err := parseStep(step)
@@ -119,20 +121,74 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			return nil, fmt.Errorf("error in workflow %q, step %q: %w", workflow.ID(), step, err)
 		}
 
-		// For now, just log the parsed parts to see that it's working.
-		logrus.WithFields(logrus.Fields{
-			"workflow":   workflow.ID(),
-			"step":       step,
-			"component":  componentID,
-			"function":   functionName,
-			"data_key":   dataKey,
-		}).Info("Parsing workflow step")
+		// 2b. Resolve the component (ModuleDescriptor) from the module store.
+		moduleDesc, err := c.GetModule(componentID)
+		if err != nil {
+			return nil, fmt.Errorf("workflow %q failed: could not resolve component %q: %w", workflow.ID(), componentID, err)
+		}
 
-		// TODO: Implement the rest of the execution logic (dispatching, etc.)
+		// 2c. Resolve the input data from the execution context.
+		inputData, ok := execCtx.Get(dataKey)
+		if !ok {
+			return nil, fmt.Errorf("workflow %q failed: input data key %q not found in context for step %q", workflow.ID(), dataKey, step)
+		}
+
+		// 2d. (Optional) Validate inputData against the function's input schema.
+		// TODO: Implement schema validation here using moduleDesc.Accepts and inputData's schema ID.
+
+		// 2e. Dispatch the call based on the module type.
+		var result interface{}
+		var execErr error
+
+		if moduleDesc.NativeImpl != nil {
+			// --- NATIVE GO EXECUTION ---
+			nativeFunc, ok := moduleDesc.NativeImpl[functionName]
+			if !ok {
+				return nil, fmt.Errorf("component %q does not have native function %q", componentID, functionName)
+			}
+
+			// Use reflection to call the native Go function.
+			funcValue := reflect.ValueOf(nativeFunc)
+			// Ensure the function has the expected signature: func(ctx context.Context, data interface{}) (interface{}, error)
+			// This check is crucial for type safety when using reflection.
+			if funcValue.Kind() != reflect.Func || funcValue.Type().NumIn() != 2 ||
+				funcValue.Type().In(0) != reflect.TypeOf((*context.Context)(nil)).Elem() ||
+				funcValue.Type().In(1) != reflect.TypeOf((*interface{})(nil)).Elem() ||
+				funcValue.Type().NumOut() != 2 ||
+				funcValue.Type().Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
+				return nil, fmt.Errorf("native function %s.%s has unexpected signature", componentID, functionName)
+			}
+
+			args := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(inputData)}
+			results := funcValue.Call(args)
+
+			// Handle return values
+			if len(results) > 0 {
+				result = results[0].Interface()
+			}
+			if len(results) > 1 && !results[1].IsNil() {
+				execErr = results[1].Interface().(error)
+			}
+		} else if moduleDesc.WasmCode != nil {
+			// --- WASM EXECUTION ---
+			// TODO: Implement WASM module instantiation and function call.
+			execErr = fmt.Errorf("WASM execution not yet implemented for component %q", componentID)
+		} else {
+			return nil, fmt.Errorf("component %s has no implementation (native or WASM)", componentID)
+		}
+
+		if execErr != nil {
+			return nil, fmt.Errorf("error executing step %q in workflow %q: %w", step, workflow.ID(), execErr)
+		}
+
+		// 2g. Store the result back into the execution context for subsequent steps.
+		// For now, we store the result under a generic "result" key. This should be made configurable.
+		execCtx.Set("result", result)
 	}
 
+	// 3. Return the final results from the execution context.
 	return &SetResponse{
-		Results:  map[string]any{},
+		Results:  execCtx.variables,
 		Warnings: nil,
 	}, nil
 }
