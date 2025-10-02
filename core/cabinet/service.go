@@ -171,8 +171,42 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			}
 		} else if moduleDesc.WasmCode != nil {
 			// --- WASM EXECUTION ---
-			// TODO: Implement WASM module instantiation and function call.
-			execErr = fmt.Errorf("WASM execution not yet implemented for component %q", componentID)
+			// 1. Check if the module is already materialized in this execution context.
+			if moduleDesc.wazeroInstance == nil {
+				// If not, instantiate it.
+				compiledModule, err := c.runtime.CompileModule(ctx, moduleDesc.WasmCode)
+				if err != nil {
+					return nil, fmt.Errorf("failed to compile WASM module %q: %w", componentID, err)
+				}
+				// Instantiate the module.
+				instance, err := c.runtime.InstantiateModule(ctx, compiledModule, wazero.NewModuleConfig().WithName(componentID))
+				if err != nil {
+					return nil, fmt.Errorf("failed to instantiate WASM module %q: %w", componentID, err)
+				}
+				moduleDesc.wazeroInstance = instance
+				execCtx.StoreModule(moduleDesc) // Store the materialized module in the context.
+			}
+
+			// 2. Get the exported WASM function.
+			wazeroFunc := moduleDesc.wazeroInstance.ExportedFunction(functionName)
+			if wazeroFunc == nil {
+				return nil, fmt.Errorf("WASM module %q does not export function %q", componentID, functionName)
+			}
+
+			// 3. Call the WASM function.
+			// TODO: Implement robust data passing (inputData) to WASM memory and reading results.
+			// For now, return an error if the function expects arguments or returns non-trivial values.
+			if len(wazeroFunc.Definition().ParamTypes()) > 0 || len(wazeroFunc.Definition().ResultTypes()) > 0 {
+				execErr = fmt.Errorf("WASM function %s.%s expects/returns complex data; ABI not yet implemented", componentID, functionName)
+			} else {
+				// Call a simple WASM function with no parameters and no results.
+				_, err := wazeroFunc.Call(ctx)
+				if err != nil {
+					execErr = fmt.Errorf("WASM function %s.%s call failed: %w", componentID, functionName, err)
+				}
+				result = nil // No result for simple call.
+			}
+
 		} else {
 			return nil, fmt.Errorf("component %s has no implementation (native or WASM)", componentID)
 		}
