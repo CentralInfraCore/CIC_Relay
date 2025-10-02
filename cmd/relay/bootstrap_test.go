@@ -727,3 +727,36 @@ func newDiscardLogger() *logrus.Logger {
 	logger.SetOutput(io.Discard)
 	return logger
 }
+
+// TestRegisterNativeComponents verifies that the native components are correctly registered in the cabinet.
+func TestRegisterNativeComponents(t *testing.T) {
+	// 1. Setup
+	// Create a mock cabinet service that will act as a receptor for our registration call.
+	mockCabinet := new(mockCabinetService)
+
+	// 2. Define Expectations
+	// We expect the PutModule method to be called exactly once.
+	// We will capture the argument passed to it to inspect it further.
+	var capturedModule *cabinet.ModuleDescriptor
+	mockCabinet.On("PutModule", mock.Anything).Run(func(args mock.Arguments) {
+		capturedModule = args.Get(0).(*cabinet.ModuleDescriptor)
+	}).Return(nil).Once()
+
+	// 3. Execute
+	// Call the function that is supposed to register our native components.
+	err := registerNativeComponents(context.Background(), mockCabinet)
+	require.NoError(t, err, "registerNativeComponents should not return an error")
+
+	// 4. Verify
+	// Assert that PutModule was indeed called.
+	mockCabinet.AssertExpectations(t)
+
+	// Inspect the captured module to ensure it's the one we expect.
+	require.NotNil(t, capturedModule, "A module descriptor should have been captured")
+	assert.Equal(t, "core.test@1.0", capturedModule.ID(), "The registered module should have the correct ID")
+	require.NotNil(t, capturedModule.NativeImpl, "The module should have a native implementation")
+
+	// Check if the 'echo' function is present in the native implementation map.
+	_, ok := capturedModule.NativeImpl["echo"]
+	assert.True(t, ok, "The native implementation should contain an 'echo' function")
+}

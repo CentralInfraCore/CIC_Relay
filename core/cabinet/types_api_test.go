@@ -27,7 +27,7 @@ func TestSchema_API_Shape(t *testing.T) {
 func TestModuleDescriptor_API_Shape(t *testing.T) {
 	typeOf := reflect.TypeOf(cabinet.ModuleDescriptor{})
 	// Meta, Type, Accepts, OutputKeys, WasmCode
-	assert.Equal(t, 5, typeOf.NumField(), "ModuleDescriptor field count")
+	assert.Equal(t, 7, typeOf.NumField(), "ModuleDescriptor field count")
 }
 
 func TestWorkflow_API_Shape(t *testing.T) {
