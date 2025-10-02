@@ -7,6 +7,46 @@ import (
 	"github.com/tetratelabs/wazero"
 )
 
+// executionContext holds the state for a single workflow execution.
+// It contains the data variables and the materialized (live) modules.
+type executionContext struct {
+	variables         map[string]interface{}
+	materializedModules map[string]*ModuleDescriptor
+}
+
+// NewExecutionContext creates a new execution context and initializes it with the starting payload.
+func NewExecutionContext(initialPayload map[string]interface{}) *executionContext {
+	ec := &executionContext{
+		variables:         make(map[string]interface{}),
+		materializedModules: make(map[string]*ModuleDescriptor),
+	}
+	// The initial payload is stored under the special key "input".
+	ec.variables["input"] = initialPayload
+	return ec
+}
+
+// Get retrieves a value from the context's variable store.
+func (ec *executionContext) Get(key string) (interface{}, bool) {
+	val, ok := ec.variables[key]
+	return val, ok
+}
+
+// Set stores a value in the context's variable store.
+func (ec *executionContext) Set(key string, value interface{}) {
+	ec.variables[key] = value
+}
+
+// GetModule retrieves a materialized module from the context.
+func (ec *executionContext) GetModule(id string) (*ModuleDescriptor, bool) {
+	mod, ok := ec.materializedModules[id]
+	return mod, ok
+}
+
+// StoreModule stores a newly materialized module in the context.
+func (ec *executionContext) StoreModule(mod *ModuleDescriptor) {
+	ec.materializedModules[mod.ID()] = mod
+}
+
 // Cabinet defines the central API for schema/module/workflow management.
 type Cabinet interface {
 	PutSchema(s *Schema) error
@@ -18,7 +58,7 @@ type Cabinet interface {
 	PutWorkflow(w *Workflow) error
 	GetWorkflow(id string) (*Workflow, error)
 
-	// Setx executes a workflow based on the function-oriented model.
+	// Setx executes a workflow based on the payload.
 	Setx(ctx context.Context, in *SetPayload) (*SetResponse, error)
 
 	// Close closes the underlying resources, like the WASM runtime.
