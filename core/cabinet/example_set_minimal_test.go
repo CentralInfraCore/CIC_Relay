@@ -18,7 +18,6 @@ func ExampleAPI_Set_minimal() {
 	api := NewAPI(svc)
 
 	const (
-		schemaID   = "source.code@v1"
 		moduleID   = "modA@v1"
 		workflowID = "wf.compile@v1"
 	)
@@ -29,7 +28,7 @@ func ExampleAPI_Set_minimal() {
 		Payload:    map[string]any{"source": "int main(){}"},
 	}
 
-	// To make the example pass, we must use the constructors to create valid objects with checksums.
+	// The schema is used by the module, so we must create it first.
 	schema, err := NewSchema(context.Background(), BaseBlock{Name: "source.code", Version: "v1"}, SchemaDef{})
 	if err != nil {
 		fmt.Println("setup error (schema):", err)
@@ -37,14 +36,16 @@ func ExampleAPI_Set_minimal() {
 	}
 	schemaStore.Put(schema)
 
-	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.compile", Version: "v1"}, []string{schemaID})
+	// The workflow step is updated to the new command format: "component.function(data)".
+	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.compile", Version: "v1"}, []string{"modA.compile(source)"})
 	if err != nil {
 		fmt.Println("setup error (workflow):", err)
 		return
 	}
 	wfStore.Put(wf)
 
-	mod, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "modA", Version: "v1"}, "", []string{schemaID}, nil, nil)
+	// The 'accepts' parameter is re-introduced to fix the build error.
+	mod, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "modA", Version: "v1"}, "", []string{schema.ID()}, nil, nil)
 	if err != nil {
 		fmt.Println("setup error (module):", err)
 		return
