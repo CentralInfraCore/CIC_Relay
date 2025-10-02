@@ -22,7 +22,7 @@ func TestSetHandler_Success(t *testing.T) {
 	mockAPI := new(mockCabinetService)
 	// When the Set method is called with any context and any payload, return a specific response and no error.
 	expectedResponse := &cabinet.SetResponse{Results: map[string]any{"status": "all good"}}
-	mockAPI.On("Set", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(expectedResponse, nil)
 
 	// Create a logger that discards output for clean test logs.
 	logger := logrus.New()
@@ -161,7 +161,7 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 	// 1. Setup
 	mockAPI := new(mockCabinetService)
 	// Tell the mock to return an ErrInvalid error.
-	mockAPI.On("Set", mock.Anything, mock.Anything).Return(nil, cabinet.ErrInvalid)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, cabinet.ErrInvalid)
 
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
@@ -186,7 +186,7 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code, "Expected HTTP status 400 for ErrInvalid")
 
 	// Ensure the mock API was called.
-	mockAPI.AssertCalled(t, "Set", mock.Anything, mock.Anything)
+	mockAPI.AssertCalled(t, "Setx", mock.Anything, mock.Anything)
 }
 
 // TestSetHandler_CabinetInternalError tests the handler's response to an unexpected internal error.
@@ -195,7 +195,7 @@ func TestSetHandler_CabinetInternalError(t *testing.T) {
 	mockAPI := new(mockCabinetService)
 	// Tell the mock to return a generic, non-validation error.
 	expectedErr := fmt.Errorf("unexpected database error")
-	mockAPI.On("Set", mock.Anything, mock.Anything).Return(nil, expectedErr)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, expectedErr)
 
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
@@ -220,7 +220,7 @@ func TestSetHandler_CabinetInternalError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code, "Expected HTTP status 500 for internal errors")
 
 	// Ensure the mock API was called.
-	mockAPI.AssertCalled(t, "Set", mock.Anything, mock.Anything)
+	mockAPI.AssertCalled(t, "Setx", mock.Anything, mock.Anything)
 }
 
 // TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz, /readyz, and /.

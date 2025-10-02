@@ -18,8 +18,8 @@ type Cabinet interface {
 	PutWorkflow(w *Workflow) error
 	GetWorkflow(id string) (*Workflow, error)
 
-	// Set executes a workflow based on the payload.
-	Set(ctx context.Context, in *SetPayload) (*SetResponse, error)
+	// Setx executes a workflow based on the function-oriented model.
+	Setx(ctx context.Context, in *SetPayload) (*SetResponse, error)
 
 	// Close closes the underlying resources, like the WASM runtime.
 	Close(ctx context.Context) error
@@ -38,8 +38,8 @@ func NewCabinetService(schemas SchemaStore, modules ModuleStore, workflows Workf
 	return &cabinetService{schemas: schemas, modules: modules, workflows: workflows, runtime: r}
 }
 
-// Set resolves the execution plan and (in the future) runs the workflow.
-func (c *cabinetService) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
+// Setx executes a workflow based on the function-oriented model.
+func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse, error) {
 	// 1. Resolve the workflow itself.
 	workflow, err := c.GetWorkflow(in.WorkflowID)
 	if err != nil {

@@ -154,7 +154,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := s.api.Set(r.Context(), &payload)
+	resp, err := s.api.Setx(r.Context(), &payload)
 	if err != nil {
 		// Handle specific cabinet errors
 		if cabinet.IsInvalid(err) {

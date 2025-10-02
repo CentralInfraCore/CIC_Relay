@@ -307,9 +307,9 @@ func TestMockCabinetService_Set(t *testing.T) {
 	payload := &cabinet.SetPayload{}
 	expectedResponse := &cabinet.SetResponse{} // Removed Success field
 
-	mockService.On("Set", ctx, payload).Return(expectedResponse, nil).Once()
+	mockService.On("Setx", ctx, payload).Return(expectedResponse, nil).Once()
 
-	response, err := mockService.Set(ctx, payload)
+	response, err := mockService.Setx(ctx, payload)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResponse, response)
 	mockService.AssertExpectations(t)
@@ -321,9 +321,9 @@ func TestMockCabinetService_Set_Error(t *testing.T) {
 	payload := &cabinet.SetPayload{}
 	expectedErr := errors.New("failed to set payload")
 
-	mockService.On("Set", ctx, payload).Return(nil, expectedErr).Once()
+	mockService.On("Setx", ctx, payload).Return(nil, expectedErr).Once()
 
-	response, err := mockService.Set(ctx, payload)
+	response, err := mockService.Setx(ctx, payload)
 	assert.Error(t, err)
 	assert.Nil(t, response)
 	assert.Equal(t, expectedErr, err)
