@@ -3,7 +3,9 @@ package cabinet
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/sirupsen/logrus"
 	"github.com/tetratelabs/wazero"
 )
 
@@ -86,48 +88,48 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		return nil, fmt.Errorf("failed to resolve workflow %q: %w", in.WorkflowID, err)
 	}
 
-	// 2. Build the execution plan by resolving each step.
-	var executionPlan []map[string]string
-
-	for _, schemaID := range workflow.Steps {
-		// 2a. Resolve the schema for the current step.
-		schema, err := c.GetSchema(schemaID)
-		if err != nil {
-			return nil, fmt.Errorf("workflow %q failed: could not resolve step schema %q: %w", workflow.ID(), schemaID, err)
+	// Helper function to parse a step string. Defined locally within Setx.
+	parseStep := func(step string) (componentID, functionName, dataKey string, err error) {
+		// This is a placeholder implementation. A robust implementation would use regex.
+		// Example format: "component.function(data)"
+		before, after, found := strings.Cut(step, "(")
+		if !found || !strings.HasSuffix(after, ")") {
+			return "", "", "", fmt.Errorf("invalid step format: missing parentheses")
 		}
 
-		// 2b. Find a suitable module from the payload that accepts this schema.
-		var foundModuleID ModuleID = ""
-		for _, moduleID := range in.Modules {
-			moduleDesc, err := c.GetModule(string(moduleID))
-			if err != nil {
-				return nil, fmt.Errorf("workflow %q failed: could not resolve provided module %q: %w", workflow.ID(), moduleID, err)
-			}
-
-			for _, acceptedSchemaID := range moduleDesc.Accepts {
-				if acceptedSchemaID == schema.ID() {
-					foundModuleID = moduleID
-					break
-				}
-			}
-			if foundModuleID != "" {
-				break
-			}
+		parts := strings.Split(before, ".")
+		if len(parts) != 2 {
+			return "", "", "", fmt.Errorf("invalid step format: expected component.function")
 		}
 
-		if foundModuleID == "" {
-			return nil, fmt.Errorf("%w: no suitable module provided for schema %q in workflow %q", ErrInvalid, schema.ID(), workflow.ID())
-		}
+		componentID = parts[0]
+		functionName = parts[1]
+		dataKey = strings.TrimSuffix(after, ")")
 
-		planStep := map[string]string{
-			"step":   schemaID,
-			"schema": schema.ID(),
-			"module": string(foundModuleID),
-		}
-		executionPlan = append(executionPlan, planStep)
+		return componentID, functionName, dataKey, nil
 	}
 
-	// TODO: Implement the actual execution of the plan (e.g., dispatching to WASM modules).
+	// --- Start of the new execution logic ---
+
+	// TODO: Initialize executionContext
+
+	for _, step := range workflow.Steps {
+		componentID, functionName, dataKey, err := parseStep(step)
+		if err != nil {
+			return nil, fmt.Errorf("error in workflow %q, step %q: %w", workflow.ID(), step, err)
+		}
+
+		// For now, just log the parsed parts to see that it's working.
+		logrus.WithFields(logrus.Fields{
+			"workflow":   workflow.ID(),
+			"step":       step,
+			"component":  componentID,
+			"function":   functionName,
+			"data_key":   dataKey,
+		}).Info("Parsing workflow step")
+
+		// TODO: Implement the rest of the execution logic (dispatching, etc.)
+	}
 
 	return &SetResponse{
 		Results:  map[string]any{},
