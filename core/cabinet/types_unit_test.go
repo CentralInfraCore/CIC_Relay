@@ -24,7 +24,7 @@ func TestSchema_Shape(t *testing.T) {
 
 func TestModuleDescriptor_Shape(t *testing.T) {
 	typeOf := reflect.TypeOf(ModuleDescriptor{})
-	// Meta, Type, Accepts, OutputKeys, WasmCode
+	// Meta, Type, Accepts, OutputKeys, WasmCode, wazeroInstance, NativeImpl
 	assert.Equal(t, 7, typeOf.NumField(), "ModuleDescriptor field count")
 }
 
