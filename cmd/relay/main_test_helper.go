@@ -52,7 +52,7 @@ func (m *mockCabinetService) GetWorkflow(id string) (*cabinet.Workflow, error) {
 	return args.Get(0).(*cabinet.Workflow), args.Error(1)
 }
 
-func (m *mockCabinetService) Set(ctx context.Context, in *cabinet.SetPayload) (*cabinet.SetResponse, error) {
+func (m *mockCabinetService) Setx(ctx context.Context, in *cabinet.SetPayload) (*cabinet.SetResponse, error) {
 	args := m.Called(ctx, in)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

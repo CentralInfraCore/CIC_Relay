@@ -72,5 +72,5 @@ func (a *API) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
 	}
 
 	// Delegate the execution to the underlying cabinet service.
-	return a.Cabinet.Set(ctx, in)
+	return a.Cabinet.Setx(ctx, in)
 }

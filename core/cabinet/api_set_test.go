@@ -63,7 +63,7 @@ func (m *mockCabinet) PutSchema(s *Schema) error {
 	return nil
 }
 
-func (m *mockCabinet) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
+func (m *mockCabinet) Setx(ctx context.Context, in *SetPayload) (*SetResponse, error) {
 	if m.setFunc != nil {
 		return m.setFunc(ctx, in)
 	}
