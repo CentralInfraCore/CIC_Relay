@@ -14,11 +14,34 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"centralrelay/core/cabinet"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
+
+// registerNativeComponents creates and registers all built-in Go components in the cabinet.
+func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
+	// --- Register core.test module ---
+	testFuncs := make(cabinet.NativeFunctions)
+	testFuncs["echo"] = cabinet.CoreEcho
+
+	coreTestMeta := cabinet.BaseBlock{Name: "core.test", Version: "1.0", Description: "A native module for testing basic functionality."}
+	// Corrected call to NewModuleDescriptor to match the current signature
+	coreTestModule, err := cabinet.NewModuleDescriptor(ctx, coreTestMeta, "native/test", nil, nil, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create core.test module descriptor: %w", err)
+	}
+	coreTestModule.NativeImpl = testFuncs // Attach the native function map
+
+	if err := svc.PutModule(coreTestModule); err != nil {
+		return fmt.Errorf("failed to register core.test module: %w", err)
+	}
+
+	// TODO: Register other native components like 'core.config', 'postgresql', etc. here.
+
+	logrus.Info("Successfully registered all native components.")
+	return nil
+}
 
 // PKIAssets holds the loaded public key infrastructure components.
 type PKIAssets struct {
@@ -258,6 +281,7 @@ sigPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".pem"
 		}
 	}
 
+	// Corrected call to NewModuleDescriptor to include 'file.Accepts'
 	moduleDesc, err := cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
 	if err != nil {
 		return fmt.Errorf("module validation: %w", err)

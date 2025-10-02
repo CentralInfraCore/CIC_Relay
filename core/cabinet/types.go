@@ -1,5 +1,9 @@
 package cabinet
 
+import (
+	"github.com/tetratelabs/wazero/api"
+)
+
 // ModuleID a modul egyedi azonosítója (string alias).
 type ModuleID string
 
@@ -30,6 +34,10 @@ type Schema struct {
 	Spec SchemaDef `json:"spec" yaml:"spec"`
 }
 
+// NativeFunctions a natív, Go-ban implementált függvények tárolója.
+// A kulcs a függvény neve, az érték maga a Go függvény.
+type NativeFunctions map[string]interface{}
+
 // ModuleDescriptor: egy modul jellemzői – típusa, támogatott sémák, output kulcsok.
 type ModuleDescriptor struct {
 	Meta       BaseBlock `json:"metadata" yaml:"metadata"`
@@ -37,6 +45,10 @@ type ModuleDescriptor struct {
 	Accepts    []string  `json:"accepts" yaml:"accepts"`
 	OutputKeys []string  `json:"outputKeys,omitempty" yaml:"outputKeys,omitempty"`
 	WasmCode   []byte    `json:"-" yaml:"-"` // A WasmCode-ot soha nem szerializáljuk, külön fájlban kezeljük.
+
+	// Futásidejű, nem-perzisztált mezők
+	wazeroInstance api.Module      `json:"-" yaml:"-"` // Az "élő", példányosított WASM modul.
+	NativeImpl     NativeFunctions `json:"-" yaml:"-"` // A natív Go implementációkat tartalmazó tároló.
 }
 
 // Workflow: végrehajtási lépések listája, gráf formában – sémákra hivatkozva.
