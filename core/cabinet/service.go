@@ -172,8 +172,9 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		} else if moduleDesc.WasmCode != nil {
 			// --- WASM EXECUTION ---
 			// 1. Check if the module is already materialized in this execution context.
-			if moduleDesc.wazeroInstance == nil {
-				// If not, instantiate it.
+			// If not, instantiate it.
+			materializedModule, ok := execCtx.GetModule(componentID)
+			if !ok || materializedModule.wazeroInstance == nil {
 				compiledModule, err := c.runtime.CompileModule(ctx, moduleDesc.WasmCode)
 				if err != nil {
 					return nil, fmt.Errorf("failed to compile WASM module %q: %w", componentID, err)
@@ -185,6 +186,8 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 				}
 				moduleDesc.wazeroInstance = instance
 				execCtx.StoreModule(moduleDesc) // Store the materialized module in the context.
+			} else {
+				moduleDesc = materializedModule // Use the already materialized module.
 			}
 
 			// 2. Get the exported WASM function.
