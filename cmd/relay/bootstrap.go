@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
@@ -47,7 +46,7 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
 type PKIAssets struct {
 	Roots         *x509.CertPool
 	Intermediates *x509.CertPool
-	CRLs          []*pkix.CertificateList
+	CRLs          []*x509.RevocationList
 }
 
 // ComponentHeader defines the common fields for identifying a component type.
@@ -112,7 +111,7 @@ func loadInstalledComponents(ctx context.Context, svc cabinet.Cabinet, component
 		pkiAssets = &PKIAssets{
 			Roots:         x509.NewCertPool(),
 			Intermediates: x509.NewCertPool(),
-			CRLs:          []*pkix.CertificateList{},
+			CRLs:          []*x509.RevocationList{},
 		}
 	}
 
@@ -296,7 +295,7 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 	assets := &PKIAssets{
 		Roots:         x509.NewCertPool(),
 		Intermediates: x509.NewCertPool(),
-		CRLs:          []*pkix.CertificateList{},
+		CRLs:          []*x509.RevocationList{},
 	}
 
 	// If path is empty, there are no PKI assets to load from a directory.
@@ -348,7 +347,7 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 				}
 			}
 		case "X509 CRL":
-			crl, err := x509.ParseCRL(block.Bytes)
+			crl, err := x509.ParseRevocationList(block.Bytes)
 			if err != nil {
 				logger.WithFields(logrus.Fields{"path": file.Name(), "error": err}).Warn("Failed to parse CRL")
 				continue
