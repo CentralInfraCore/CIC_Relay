@@ -1,6 +1,7 @@
 package cabinet
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -125,17 +126,23 @@ func TestVerifyCertificateChain(t *testing.T) {
 
 	t.Run("fails with revoked certificate", func(t *testing.T) {
 		// Create a CRL that revokes the leaf certificate
-		revokedCerts := []pkix.RevokedCertificate{
+		revokedCerts := []x509.RevocationListEntry{
 			{
 				SerialNumber:   leafCert.SerialNumber,
 				RevocationTime: time.Now(),
 			},
 		}
+		crlTemplate := x509.RevocationList{
+			Number:                    big.NewInt(1),
+			RevokedCertificateEntries: revokedCerts,
+			ThisUpdate:                time.Now(),
+			NextUpdate:                time.Now().Add(24 * time.Hour),
+		}
 
-		crlBytes, err := intermediateCA.CreateCRL(rand.Reader, intermediateKey, revokedCerts, time.Now(), time.Now().Add(24*time.Hour))
+		crlBytes, err := x509.CreateRevocationList(rand.Reader, &crlTemplate, intermediateCA, intermediateKey.(crypto.Signer))
 		require.NoError(t, err)
 
-		crl, err := x509.ParseCRL(crlBytes)
+		crl, err := x509.ParseRevocationList(crlBytes)
 		require.NoError(t, err)
 
 		// Setup verification options including the CRL
@@ -143,7 +150,7 @@ func TestVerifyCertificateChain(t *testing.T) {
 			Roots:         rootPool,
 			Intermediates: intermediatePool,
 			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
-			CRLs:          []*pkix.CertificateList{crl},
+			CRLs:          []*x509.RevocationList{crl},
 		}
 
 		// Execute and verify
@@ -155,17 +162,24 @@ func TestVerifyCertificateChain(t *testing.T) {
 
 	t.Run("successful verification with non-revoked certificate and CRL", func(t *testing.T) {
 		// Create a CRL that revokes a *different* certificate
-		revokedCerts := []pkix.RevokedCertificate{
+		revokedCerts := []x509.RevocationListEntry{
 			{
 				SerialNumber:   big.NewInt(99),
 				RevocationTime: time.Now(),
 			},
 		}
 
-		crlBytes, err := intermediateCA.CreateCRL(rand.Reader, intermediateKey, revokedCerts, time.Now(), time.Now().Add(24*time.Hour))
+		crlTemplate := x509.RevocationList{
+			Number:                    big.NewInt(2),
+			RevokedCertificateEntries: revokedCerts,
+			ThisUpdate:                time.Now(),
+			NextUpdate:                time.Now().Add(24 * time.Hour),
+		}
+
+		crlBytes, err := x509.CreateRevocationList(rand.Reader, &crlTemplate, intermediateCA, intermediateKey.(crypto.Signer))
 		require.NoError(t, err)
 
-		crl, err := x509.ParseCRL(crlBytes)
+		crl, err := x509.ParseRevocationList(crlBytes)
 		require.NoError(t, err)
 
 		// Setup verification options including the CRL
@@ -173,7 +187,7 @@ func TestVerifyCertificateChain(t *testing.T) {
 			Roots:         rootPool,
 			Intermediates: intermediatePool,
 			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
-			CRLs:          []*pkix.CertificateList{crl},
+			CRLs:          []*x509.RevocationList{crl},
 		}
 
 		// Execute and verify that it succeeds

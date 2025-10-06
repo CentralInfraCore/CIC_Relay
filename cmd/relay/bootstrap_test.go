@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/x509"
 	"embed"
 	"encoding/hex"
 	"fmt"
@@ -107,15 +108,15 @@ func TestLoadPKIAssets(t *testing.T) {
 
 		assets, err := loadPKIAssets(mockFS, ".", logger)
 		require.NoError(t, err)
-		assert.NotEmpty(t, assets.Roots.Subjects(), "should load root CAs")
-		assert.NotEmpty(t, assets.Intermediates.Subjects(), "should load intermediate CAs")
+		assert.NotEqual(t, x509.NewCertPool(), assets.Roots, "should load root CAs")
+		assert.NotEqual(t, x509.NewCertPool(), assets.Intermediates, "should load intermediate CAs")
 	})
 
 	t.Run("empty path", func(t *testing.T) {
 		pkiFS := getSubFS(t, "pki")
 		assets, err := loadPKIAssets(pkiFS, "", logger)
 		require.NoError(t, err)
-		assert.Empty(t, assets.Roots.Subjects())
+		assert.Equal(t, x509.NewCertPool(), assets.Roots)
 	})
 
 	t.Run("non-existent path", func(t *testing.T) {
@@ -126,7 +127,7 @@ func TestLoadPKIAssets(t *testing.T) {
 
 		assets, err := loadPKIAssets(pkiFS, "non-existent-dir", logger)
 		require.NoError(t, err)
-		assert.Empty(t, assets.Roots.Subjects())
+		assert.Equal(t, x509.NewCertPool(), assets.Roots)
 		assert.Contains(t, logBuf.String(), "PKI directory not found")
 	})
 
@@ -206,8 +207,8 @@ func TestLoadPKIAssets(t *testing.T) {
 
 		assets, err := loadPKIAssets(pkiFS, ".", logger)
 		require.NoError(t, err)
-		assert.Empty(t, assets.Roots.Subjects(), "non-CA cert should not be added to roots")
-		assert.Empty(t, assets.Intermediates.Subjects(), "non-CA cert should not be added to intermediates")
+		assert.Equal(t, x509.NewCertPool(), assets.Roots, "non-CA cert should not be added to roots")
+		assert.Equal(t, x509.NewCertPool(), assets.Intermediates, "non-CA cert should not be added to intermediates")
 	})
 }
 

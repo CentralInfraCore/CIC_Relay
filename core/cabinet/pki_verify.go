@@ -3,7 +3,6 @@ package cabinet
 import (
 	"crypto/sha256"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
 )
@@ -14,12 +13,12 @@ type VerifyOptions struct {
 	Roots         *x509.CertPool
 	Intermediates *x509.CertPool
 	KeyUsages     []x509.ExtKeyUsage
-	CRLs          []*pkix.CertificateList // Added for M3 revocation check
-	PinnedSPKIs   map[string]bool         // Added for M3 SPKI pinning. Map of base64-encoded SHA-256 SPKI hashes.
+	CRLs          []*x509.RevocationList // Added for M3 revocation check
+	PinnedSPKIs   map[string]bool          // Added for M3 SPKI pinning. Map of base64-encoded SHA-256 SPKI hashes.
 }
 
 // checkRevocation checks if any certificate in the provided chains is in the revocation list.
-func checkRevocation(chains [][]*x509.Certificate, crls []*pkix.CertificateList) error {
+func checkRevocation(chains [][]*x509.Certificate, crls []*x509.RevocationList) error {
 	if len(crls) == 0 {
 		return nil // No CRLs to check against
 	}
@@ -27,7 +26,7 @@ func checkRevocation(chains [][]*x509.Certificate, crls []*pkix.CertificateList)
 	for _, chain := range chains {
 		for _, cert := range chain {
 			for _, crl := range crls {
-				for _, revokedCert := range crl.TBSCertList.RevokedCertificates {
+				for _, revokedCert := range crl.RevokedCertificateEntries {
 					if cert.SerialNumber.Cmp(revokedCert.SerialNumber) == 0 {
 						return fmt.Errorf("certificate with serial number %s is revoked", cert.SerialNumber)
 					}
