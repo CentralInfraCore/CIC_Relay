@@ -1,0 +1,26 @@
+tags:
+  - concept
+  - wasm
+  - core
+  - workflow
+  - schema
+  - execution
+  - module
+  - interface
+  - runtime
+  - declarative
+related_nodes: []
+category:
+  - definition
+  - architecture
+  - specification
+  - execution
+  - interface
+entrypoint: false
+used_in:
+  - workflow_engine
+  - plugin_dev
+  - cic_design
+  - dynamic_execution
+  - execution_block
+description: "Defines the concept and contract for a WASM-based iSDK (guest) and a minimal host framework. The primary goal is to run ''core'' and ''wasm'' steps synchronously within a YAML-based, directed-tree workflow, ensuring a deterministic, developer-friendly module execution environment."
