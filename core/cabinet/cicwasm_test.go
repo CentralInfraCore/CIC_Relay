@@ -441,3 +441,81 @@ func TestCicWasmHost_Process_TrapDealloc(t *testing.T) {
 	assert.Equal(t, "", dataJson)
 	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
 }
+
+// TestCicWasmHost_Process_Timeout tests the timeout functionality.
+func TestCicWasmHost_Process_Timeout(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+	// Set a very short timeout to ensure the wasm module will time out.
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+
+	longRunningWasm := loadWasmFile(t, "long_running.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "long-running-module", Version: "1.0"}, "wasm", nil, nil, longRunningWasm)
+	require.NoError(t, err)
+	store.Put(md)
+
+	m, err := NewWasmManager(ctx, store, config)
+	require.NoError(t, err)
+	defer m.Close(ctx)
+
+	instance, err := m.NewHostInstance(ctx, md.ID())
+	require.NoError(t, err)
+	defer instance.Close(ctx)
+
+	dataJson, errorJson := instance.Process(ctx, "{}", "{}")
+
+	assert.Equal(t, "", dataJson)
+	assert.Contains(t, errorJson, `"code":"TIMEOUT"`)
+}
+
+// TestFormatErrorJson_WithDetails tests that the details field is correctly included.
+func TestFormatErrorJson_WithDetails(t *testing.T) {
+	details := map[string]interface{}{"extra": "info"}
+	errorJson := formatErrorJson("TEST_CODE", "test message", details)
+	assert.Contains(t, errorJson, `"details":{"extra":"info"}`)
+}
+
+// TestCicWasmHost_Close_NilInstance tests closing a nil instance.
+func TestCicWasmHost_Close_NilInstance(t *testing.T) {
+	host := &CicWasmHost{}
+	err := host.Close(context.Background())
+	assert.NoError(t, err)
+}
+
+// TestWasmManager_EvictModule_Prefix tests that EvictModule evicts all versions of a module.
+func TestWasmManager_EvictModule_Prefix(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+
+	dummyWasm := loadWasmFile(t, "dummy.wasm")
+	md1, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+	require.NoError(t, err)
+	store.Put(md1)
+
+	md2, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "2.0"}, "wasm", nil, nil, dummyWasm)
+	require.NoError(t, err)
+	store.Put(md2)
+
+	m, err := NewWasmManager(ctx, store, config)
+	require.NoError(t, err)
+	defer m.Close(ctx)
+
+	// Compile both modules to get them into the cache.
+	_, err = m.PreCompileModule(ctx, md1.ID())
+	require.NoError(t, err)
+	_, err = m.PreCompileModule(ctx, md2.ID())
+	require.NoError(t, err)
+
+	// Evict the module by its base name.
+	m.EvictModule(ctx, "test-module")
+
+	// Check that both versions are no longer in the cache.
+	cacheKey1 := md1.ID() + ":" + md1.Checksum()
+	_, ok1 := m.compiledModules.Get(cacheKey1)
+	assert.False(t, ok1, "module version 1.0 should be evicted")
+
+	cacheKey2 := md2.ID() + ":" + md2.Checksum()
+	_, ok2 := m.compiledModules.Get(cacheKey2)
+	assert.False(t, ok2, "module version 2.0 should be evicted")
+}

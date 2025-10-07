@@ -145,11 +145,15 @@ func (m *WasmManager) EvictModule(ctx context.Context, moduleID string) {
 		return
 	}
 
-	prefix := moduleID + ":"
+	keysToRemove := []string{}
 	for _, key := range m.compiledModules.Keys() {
-		if strings.HasPrefix(key, prefix) {
-			m.compiledModules.Remove(key)
+		if strings.HasPrefix(key, moduleID) {
+			keysToRemove = append(keysToRemove, key)
 		}
+	}
+
+	for _, key := range keysToRemove {
+		m.compiledModules.Remove(key)
 	}
 }
 
