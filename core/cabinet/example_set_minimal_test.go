@@ -12,7 +12,13 @@ func ExampleAPI_Set_minimal() {
 	schemaStore := NewMemSchemaStore()
 
 	// Create a CabinetService with the in-memory stores
-	svc := NewCabinetService(schemaStore, modStore, wfStore)
+	// Add a default WasmManagerConfig for the example
+	wasmConfig := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := NewCabinetService(context.Background(), schemaStore, modStore, wfStore, wasmConfig)
+	if err != nil {
+		fmt.Println("setup error (cabinet service):", err)
+		return
+	}
 
 	// Create the API instance using the NewAPI constructor
 	api := NewAPI(svc)

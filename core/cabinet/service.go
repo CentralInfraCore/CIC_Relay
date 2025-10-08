@@ -2,6 +2,7 @@ package cabinet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -10,14 +11,14 @@ import (
 // executionContext holds the state for a single workflow execution.
 // It contains the data variables and the materialized (live) modules.
 type executionContext struct {
-	variables         map[string]interface{}
+	variables           map[string]interface{}
 	materializedModules map[string]*ModuleDescriptor
 }
 
 // NewExecutionContext creates a new execution context and initializes it with the starting payload.
 func NewExecutionContext(initialPayload map[string]interface{}) *executionContext {
 	ec := &executionContext{
-		variables:         make(map[string]interface{}),
+		variables:           make(map[string]interface{}),
 		materializedModules: make(map[string]*ModuleDescriptor),
 	}
 	// The initial payload is stored under the special key "input".
@@ -66,13 +67,25 @@ type Cabinet interface {
 }
 
 type cabinetService struct {
-	schemas   SchemaStore
-	modules   ModuleStore
-	workflows WorkflowStore
+	schemas     SchemaStore
+	modules     ModuleStore
+	workflows   WorkflowStore
+	wasmManager *WasmManager
 }
 
-func NewCabinetService(schemas SchemaStore, modules ModuleStore, workflows WorkflowStore) Cabinet {
-	return &cabinetService{schemas: schemas, modules: modules, workflows: workflows}
+// NewCabinetService creates a new Cabinet service with the given stores and WasmManager configuration.
+func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleStore, workflows WorkflowStore, wasmConfig WasmManagerConfig) (Cabinet, error) {
+	wasmManager, err := NewWasmManager(ctx, modules, wasmConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create WASM manager: %w", err)
+	}
+
+	return &cabinetService{
+		schemas:     schemas,
+		modules:     modules,
+		workflows:   workflows,
+		wasmManager: wasmManager,
+	}, nil
 }
 
 // Setx executes a workflow based on the function-oriented model.
@@ -164,8 +177,48 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			if len(results) > 1 && !results[1].IsNil() {
 				execErr = results[1].Interface().(error)
 			}
+		} else if moduleDesc.WasmCode != nil {
+			// --- WASM EXECUTION ---
+			host, err := c.wasmManager.NewHostInstance(ctx, componentID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create WASM host instance for module %q: %w", componentID, err)
+			}
+			defer host.Close(ctx)
+
+			inputJson, err := json.Marshal(inputData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal input data for WASM module %q: %w", componentID, err)
+			}
+
+			authContextJson := "{}"
+
+			normalizedFunctionName := strings.ToLower(functionName)
+
+			var dataResult, errorResult string
+			if normalizedFunctionName == "init" {
+				dataResult, errorResult = host.Init(ctx, authContextJson, string(inputJson))
+			} else if normalizedFunctionName == "process" {
+				dataResult, errorResult = host.Process(ctx, authContextJson, string(inputJson))
+			} else if normalizedFunctionName == "get" {
+				dataResult, errorResult = host.Get(ctx, authContextJson, string(inputJson))
+			} else if normalizedFunctionName == "notify" {
+				dataResult, errorResult = host.Notify(ctx, authContextJson, string(inputJson))
+			} else {
+				execErr = fmt.Errorf("WASM module %q does not support operation %q", componentID, functionName)
+			}
+
+			if errorResult != "null" && errorResult != "" {
+				execErr = fmt.Errorf("WASM function %s.%s returned error: %s", componentID, functionName, errorResult)
+			} else {
+				var jsonResult interface{}
+				if err := json.Unmarshal([]byte(dataResult), &jsonResult); err != nil {
+					result = dataResult
+				} else {
+					result = jsonResult
+				}
+			}
 		} else {
-			return nil, fmt.Errorf("component %s has no native implementation", componentID)
+			return nil, fmt.Errorf("component %s has no implementation (native or WASM)", componentID)
 		}
 
 		if execErr != nil {
@@ -185,11 +238,11 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 }
 
 func (c *cabinetService) Close(ctx context.Context) error {
-	return nil
+	return c.wasmManager.Close(ctx)
 }
 
 func (c *cabinetService) PutSchema(s *Schema) error {
-	// Validation is now handled by the constructor. The service trusts that a valid object is passed.
+	// Validation is now handled by the constructor.
 	c.schemas.Put(s)
 	return nil
 }

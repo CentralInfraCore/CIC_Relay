@@ -213,7 +213,9 @@ func TestLoadPKIAssets(t *testing.T) {
 }
 
 func TestLoadSchema(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 
 	t.Run("unmarshal error", func(t *testing.T) {
 		content := []byte("kind: Schema\nmetadata: \"not a map\"")
@@ -256,7 +258,9 @@ spec:
 }
 
 func TestLoadWorkflow(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 
 	t.Run("unmarshal error", func(t *testing.T) {
 		content := []byte("kind: Workflow\nspec: \"not an object\"")
@@ -306,7 +310,9 @@ spec:
 }
 
 func TestLoadEmbeddedComponents(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024)
 	logger := newDiscardLogger()
 
@@ -314,7 +320,7 @@ func TestLoadEmbeddedComponents(t *testing.T) {
 	workflowsFS := getSubFS(t, "workflows")
 	pkiFS := getSubFS(t, "pki")
 
-	err := loadEmbeddedComponents(context.Background(), svc, schemasFS, workflowsFS, pkiFS, ".", maxWasmSize, logger)
+	err = loadEmbeddedComponents(context.Background(), svc, schemasFS, workflowsFS, pkiFS, ".", maxWasmSize, logger)
 	require.NoError(t, err, "loadEmbeddedComponents should not return an error")
 
 	_, err = svc.GetSchema("test.schema@1.0")
@@ -325,7 +331,9 @@ func TestLoadEmbeddedComponents(t *testing.T) {
 }
 
 func TestLoadEmbeddedComponents_Error(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024)
 	logger := newDiscardLogger()
 	pkiFS := getSubFS(t, "pki")
@@ -358,7 +366,9 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 }
 
 func TestLoadComponentsFromFS(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024)
 	logger := newDiscardLogger()
 	pkiFS := getSubFS(t, "pki")
@@ -389,7 +399,9 @@ metadata: "this should be a map"
 }
 
 func TestLoadModule(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024)
 	logger := newDiscardLogger()
 	modulesFS := getSubFS(t, "modules")
@@ -628,7 +640,9 @@ wasmSize: 4
 }
 
 func TestLoadComponentsFromFS_WalkDirError(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
 	// Create a logrus logger that discards output for tests
@@ -656,7 +670,9 @@ func TestLoadComponentsFromFS_WalkDirError(t *testing.T) {
 }
 
 func TestLoadInstalledComponents_Success(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024)
 	logger := logrus.New()
 	var logBuf bytes.Buffer
@@ -684,7 +700,9 @@ func TestLoadInstalledComponents_Success(t *testing.T) {
 }
 
 func TestLoadInstalledComponents_PathErrors(t *testing.T) {
-	svc := cabinet.NewCabinetService(cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore())
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024) // Default max WASM size for tests
 
 	t.Run("non-existent path", func(t *testing.T) {

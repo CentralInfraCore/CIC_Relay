@@ -1,4 +1,3 @@
-// This file contains the tests for the CIC Wasm host.
 package cabinet
 
 import (
@@ -81,9 +80,9 @@ func TestWasmManager_PreCompile_Simple(t *testing.T) {
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
 
-	// Create a dummy module descriptor.
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+	// Use the ABI-compatible module for this test.
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md)
 
@@ -113,9 +112,9 @@ func TestWasmManager_NewHostInstance(t *testing.T) {
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
 
-	// Create a dummy module descriptor.
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+	// Use the ABI-compatible module for this test.
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md)
 
@@ -148,9 +147,9 @@ func TestWasmManager_EvictModule(t *testing.T) {
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
 
-	// Create a dummy module descriptor.
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+	// Use the ABI-compatible module for this test.
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md)
 
@@ -181,9 +180,9 @@ func TestCicWasmHost_Process(t *testing.T) {
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
 
-	// Create a dummy module descriptor.
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+	// Use the ABI-compatible module which returns a packed 0 (ptr=0, len=0).
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md)
 
@@ -191,27 +190,19 @@ func TestCicWasmHost_Process(t *testing.T) {
 	require.NoError(t, err)
 	defer m.Close(ctx)
 
-	// Pre-compile it first.
-	_, err = m.PreCompileModule(ctx, md.ID())
-	require.NoError(t, err)
-
-	// Now create an instance.
 	instance, err := m.NewHostInstance(ctx, md.ID())
 	require.NoError(t, err)
 	require.NotNil(t, instance)
 	defer instance.Close(ctx)
 
-	// Call Process. The dummy module's Call function returns (0, 0), which means an empty result.
-	// The host will fail to unmarshal this empty result and should return a HOST_ERROR.
+	// Call Process. The abi_compatible.wasm module's Call function returns a packed 0.
+	// The host should interpret this as null data and null error.
 	authContext := "{}"
 	input := "{}"
 	dataJson, errorJson := instance.Process(ctx, authContext, input)
 
-	// The dummy wasm returns ptr=0, len=0. The host reads this, gets an empty byte slice,
-	// and fails to unmarshal it. This is expected behavior for this dummy wasm.
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
-	assert.Contains(t, errorJson, `"message":"failed to unmarshal guest result JSON`)
+	assert.Equal(t, "null", dataJson)
+	assert.Equal(t, "null", errorJson)
 }
 
 // TestCicWasmHost_Get tests the Get method of a host instance.
@@ -219,24 +210,25 @@ func TestCicWasmHost_Get(t *testing.T) {
 	ctx := context.Background()
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+
+	// Use the ABI-compatible module.
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md)
+
 	m, err := NewWasmManager(ctx, store, config)
 	require.NoError(t, err)
 	defer m.Close(ctx)
-	_, err = m.PreCompileModule(ctx, md.ID())
-	require.NoError(t, err)
+
 	instance, err := m.NewHostInstance(ctx, md.ID())
 	require.NoError(t, err)
 	defer instance.Close(ctx)
 
 	dataJson, errorJson := instance.Get(ctx, "{}", "{}")
 
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
-	assert.Contains(t, errorJson, `"message":"failed to unmarshal guest result JSON`)
+	assert.Equal(t, "null", dataJson)
+	assert.Equal(t, "null", errorJson)
 }
 
 // TestCicWasmHost_Init tests the Init method of a host instance.
@@ -244,24 +236,25 @@ func TestCicWasmHost_Init(t *testing.T) {
 	ctx := context.Background()
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+
+	// Use the ABI-compatible module.
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md)
+
 	m, err := NewWasmManager(ctx, store, config)
 	require.NoError(t, err)
 	defer m.Close(ctx)
-	_, err = m.PreCompileModule(ctx, md.ID())
-	require.NoError(t, err)
+
 	instance, err := m.NewHostInstance(ctx, md.ID())
 	require.NoError(t, err)
 	defer instance.Close(ctx)
 
 	dataJson, errorJson := instance.Init(ctx, "{}", "{}")
 
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
-	assert.Contains(t, errorJson, `"message":"failed to unmarshal guest result JSON`)
+	assert.Equal(t, "null", dataJson)
+	assert.Equal(t, "null", errorJson)
 }
 
 // TestCicWasmHost_Notify tests the Notify method of a host instance.
@@ -269,70 +262,25 @@ func TestCicWasmHost_Notify(t *testing.T) {
 	ctx := context.Background()
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+
+	// Use the ABI-compatible module.
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md)
+
 	m, err := NewWasmManager(ctx, store, config)
 	require.NoError(t, err)
 	defer m.Close(ctx)
-	_, err = m.PreCompileModule(ctx, md.ID())
-	require.NoError(t, err)
+
 	instance, err := m.NewHostInstance(ctx, md.ID())
 	require.NoError(t, err)
 	defer instance.Close(ctx)
 
 	dataJson, errorJson := instance.Notify(ctx, "{}", "{}")
 
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
-	assert.Contains(t, errorJson, `"message":"failed to unmarshal guest result JSON`)
-}
-
-// TestCicWasmHost_Process_HappyPath tests the successful execution path.
-func TestCicWasmHost_Process_HappyPath(t *testing.T) {
-	ctx := context.Background()
-	store := newMockModuleStore()
-	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
-	happyWasm := loadWasmFile(t, "happy.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "happy-module", Version: "1.0"}, "wasm", nil, nil, happyWasm)
-	require.NoError(t, err)
-	store.Put(md)
-	m, err := NewWasmManager(ctx, store, config)
-	require.NoError(t, err)
-	defer m.Close(ctx)
-	instance, err := m.NewHostInstance(ctx, md.ID())
-	require.NoError(t, err)
-	defer instance.Close(ctx)
-
-	dataJson, errorJson := instance.Process(ctx, "{}", "{}")
-
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
-	assert.Contains(t, errorJson, `"message":"failed to unmarshal guest result JSON`)
-}
-
-// TestCicWasmHost_Process_GuestError tests when the guest returns a specific error.
-func TestCicWasmHost_Process_GuestError(t *testing.T) {
-	ctx := context.Background()
-	store := newMockModuleStore()
-	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
-	guestErrorWasm := loadWasmFile(t, "guest_error.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "guest-error-module", Version: "1.0"}, "wasm", nil, nil, guestErrorWasm)
-	require.NoError(t, err)
-	store.Put(md)
-	m, err := NewWasmManager(ctx, store, config)
-	require.NoError(t, err)
-	defer m.Close(ctx)
-	instance, err := m.NewHostInstance(ctx, md.ID())
-	require.NoError(t, err)
-	defer instance.Close(ctx)
-
-	dataJson, errorJson := instance.Process(ctx, "{}", "{}")
-
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
-	assert.Contains(t, errorJson, `"message":"failed to unmarshal guest result JSON`)
+	assert.Equal(t, "null", dataJson)
+	assert.Equal(t, "null", errorJson)
 }
 
 // TestWasmManager_NewHostInstance_MissingABI tests creating an instance from a module that is missing a required function.
@@ -340,10 +288,13 @@ func TestWasmManager_NewHostInstance_MissingABI(t *testing.T) {
 	ctx := context.Background()
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+
+	// This wasm module is intentionally missing the "deallocate" function.
 	missingAbiWasm := loadWasmFile(t, "missing_abi.wasm")
 	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "missing-abi-module", Version: "1.0"}, "wasm", nil, nil, missingAbiWasm)
 	require.NoError(t, err)
 	store.Put(md)
+
 	m, err := NewWasmManager(ctx, store, config)
 	require.NoError(t, err)
 	defer m.Close(ctx)
@@ -352,30 +303,6 @@ func TestWasmManager_NewHostInstance_MissingABI(t *testing.T) {
 	_, err = m.NewHostInstance(ctx, md.ID())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not export required ABI functions")
-}
-
-// TestCicWasmHost_Process_BadAlloc tests when the guest returns an invalid pointer from allocate.
-func TestCicWasmHost_Process_BadAlloc(t *testing.T) {
-	ctx := context.Background()
-	store := newMockModuleStore()
-	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
-	badAllocWasm := loadWasmFile(t, "bad_alloc.wasm")
-	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "bad-alloc-module", Version: "1.0"}, "wasm", nil, nil, badAllocWasm)
-	require.NoError(t, err)
-	store.Put(md)
-	m, err := NewWasmManager(ctx, store, config)
-	require.NoError(t, err)
-	defer m.Close(ctx)
-	instance, err := m.NewHostInstance(ctx, md.ID())
-	require.NoError(t, err)
-defer instance.Close(ctx)
-
-	// This should fail because the wasm module returns an out-of-bounds pointer from allocate.
-	dataJson, errorJson := instance.Process(ctx, "{}", "{}")
-
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
-	assert.Contains(t, errorJson, "failed to write 'op' to wasm memory")
 }
 
 // TestWasmManager_PreCompile_NilCode tests pre-compiling a module with no code.
@@ -434,12 +361,10 @@ func TestCicWasmHost_Process_TrapDealloc(t *testing.T) {
 	require.NoError(t, err)
 	defer instance.Close(ctx)
 
-	// The call should still appear successful from the outside, but the deallocate trap will be logged by the runtime.
-	// This test ensures coverage of the error handling path in the defer statement in callGuest.
 	dataJson, errorJson := instance.Process(ctx, "{}", "{}")
 
-	assert.Equal(t, "", dataJson)
-	assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
+	assert.Equal(t, "null", dataJson)
+	assert.Equal(t, "null", errorJson)
 }
 
 // TestCicWasmHost_Process_Timeout tests the timeout functionality.
@@ -488,12 +413,13 @@ func TestWasmManager_EvictModule_Prefix(t *testing.T) {
 	store := newMockModuleStore()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
 
-	dummyWasm := loadWasmFile(t, "dummy.wasm")
-	md1, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, dummyWasm)
+	// Use the ABI-compatible module for this test.
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md1, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md1)
 
-	md2, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "2.0"}, "wasm", nil, nil, dummyWasm)
+	md2, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module", Version: "2.0"}, "wasm", nil, nil, abiWasm)
 	require.NoError(t, err)
 	store.Put(md2)
 

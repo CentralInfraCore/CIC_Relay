@@ -219,9 +219,6 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	callCtx, cancel := context.WithTimeout(ctx, h.timeout)
 	defer cancel()
 
-	// The old ABI for guest modules expects only two parameters: a pointer to the input data and its length.
-	// To maintain backward compatibility, we write op and authContext to memory but don't pass them to the Call function.
-	// These must be deallocated to prevent memory leaks in the Wasm module.
 	opPtr, opLen, err := h.writeStringToWasm(callCtx, op)
 	if err != nil {
 		return "", formatErrorJson("HOST_ERROR", fmt.Sprintf("failed to write 'op' to wasm memory: %v", err), nil)
@@ -252,7 +249,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		}
 	}()
 
-	results, err := h.callFn.Call(callCtx, dataPtr, dataLen)
+	results, err := h.callFn.Call(callCtx, opPtr, opLen, authPtr, authLen, dataPtr, dataLen)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return "", formatErrorJson("TIMEOUT", "wasm module execution timed out", nil)
@@ -260,7 +257,6 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("RUNTIME", fmt.Sprintf("wasm module execution failed: %v", err), nil)
 	}
 
-	// The result is a single uint64 with the pointer in the upper 32 bits and the length in the lower 32 bits.
 	packedResult := results[0]
 	resultPtr := uint32(packedResult >> 32)
 	resultLen := uint32(packedResult)
@@ -270,6 +266,11 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 			// TODO: Log deallocation error at WARN level.
 		}
 	}()
+
+	// Handle the case where the guest returns a packed 0 (ptr=0, len=0), which means null/empty.
+	if resultLen == 0 {
+		return "null", "null"
+	}
 
 	resultBytes, ok := h.instance.Memory().Read(resultPtr, resultLen)
 	if !ok {
