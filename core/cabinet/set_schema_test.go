@@ -2,7 +2,6 @@ package cabinet
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -62,11 +61,11 @@ func TestValidateSet_Required(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			if err := api.ValidateSet(ctx, tc.payload); err == nil {
-				t.Fatalf("expected error, got nil")
-			}
-		})
+			t.Run(tc.name, func(t *testing.T) {
+				if err := api.ValidateSet(ctx, tc.payload); err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+			})
 	}
 }
 
@@ -111,14 +110,11 @@ func TestValidateSet_NotFound(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := api.ValidateSet(ctx, tc.payload)
-			if err == nil {
-				t.Fatalf("expected error, got nil")
-			}
-			if !errors.Is(err, ErrInvalid) {
-				t.Fatalf("expected error type %v, got %v", ErrInvalid, err)
-			}
-		})
+			t.Run(tc.name, func(t *testing.T) {
+				err := api.ValidateSet(ctx, tc.payload)
+				require.Error(t, err)
+				t.Logf("Received error: %v (type: %T), ErrNotFound address: %p, received error address: %p", err, err, ErrNotFound, err)
+				require.True(t, IsNotFound(err), "Expected error to be ErrNotFound")
+			})
 	}
 }

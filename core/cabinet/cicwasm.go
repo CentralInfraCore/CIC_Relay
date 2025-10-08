@@ -108,7 +108,7 @@ func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wa
 }
 
 // NewHostInstance creates a new, live instance of a module, applying configured limits.
-func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (*CicWasmHost, error) {
+func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cicWasmHost, error) {
 	if m.closed.Load() {
 		return nil, errors.New("WasmManager is closed")
 	}
@@ -257,9 +257,10 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("RUNTIME", fmt.Sprintf("wasm module execution failed: %v", err), nil)
 	}
 
+	// The result is a single uint64 with the length in the upper 32 bits and the pointer in the lower 32 bits.
 	packedResult := results[0]
-	resultPtr := uint32(packedResult >> 32)
-	resultLen := uint32(packedResult)
+	resultLen := uint32(packedResult >> 32)
+	resultPtr := uint32(packedResult)
 
 	defer func() {
 		if _, err := h.deallocateFn.Call(callCtx, uint64(resultPtr), uint64(resultLen)); err != nil {
@@ -276,6 +277,8 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	if !ok {
 		return "", formatErrorJson("HOST_ERROR", fmt.Sprintf("failed to read result from wasm memory at ptr=%d, len=%d", resultPtr, resultLen), nil)
 	}
+
+	// fmt.Printf("DEBUG: Read resultBytes from WASM memory: %q (len: %d)\n", resultBytes, resultLen)
 
 	type GuestResult struct {
 		Data  json.RawMessage `json:"data"`
