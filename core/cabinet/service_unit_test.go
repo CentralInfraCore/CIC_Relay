@@ -111,6 +111,101 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 		mockCicWasmHost.AssertExpectations(t)
 	})
 
+	// --- Sub-test: Successful WASM Init execution ---
+	t.Run("init success path", func(t *testing.T) {
+		mockWasmManager := new(MockWasmManager)
+		mockCicWasmHost := new(MockCicWasmHost)
+
+		mockWasmManager.On("NewHostInstance", ctx, wasmMod.ID()).Return(cicWasmHost(mockCicWasmHost), nil).Once()
+		mockCicWasmHost.On("Init", ctx, wasmMod.ID(), "{\"input\":{\"config\":\"test\"}}").Return(`{"status":"initialized"}`, "null").Once()
+		mockCicWasmHost.On("Close", ctx).Return(nil).Once()
+
+		svc := &cabinetService{
+			modules:     modStore,
+			workflows:   wfStore,
+			wasmManager: mockWasmManager,
+		}
+
+		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.init.success", Version: "1.0"}, []string{"test.wasm@1.0.Init(input)"})
+		require.NoError(t, err)
+		svc.workflows.Put(wf)
+
+		payload := &SetPayload{WorkflowID: wf.ID(), Payload: map[string]any{"input": map[string]any{"config": "test"}}}
+		resp, err := svc.Setx(ctx, payload)
+
+		require.NoError(t, err)
+		assert.Equal(t, "initialized", resp.Results["result"].(map[string]interface{})["status"])
+		mockWasmManager.AssertExpectations(t)
+		mockCicWasmHost.AssertExpectations(t)
+	})
+
+	// --- Sub-test: Successful WASM Get execution ---
+	t.Run("get success path", func(t *testing.T) {
+		mockWasmManager := new(MockWasmManager)
+		mockCicWasmHost := new(MockCicWasmHost)
+
+		mockWasmManager.On("NewHostInstance", ctx, wasmMod.ID()).Return(cicWasmHost(mockCicWasmHost), nil).Once()
+		mockCicWasmHost.On("Get", ctx, wasmMod.ID(), "{\"input\":{\"query\":\"data\"}}").Return(`{"data":"retrieved"}`, "null").Once()
+		mockCicWasmHost.On("Close", ctx).Return(nil).Once()
+
+		svc := &cabinetService{
+			modules:     modStore,
+			workflows:   wfStore,
+			wasmManager: mockWasmManager,
+		}
+
+		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.get.success", Version: "1.0"}, []string{"test.wasm@1.0.Get(input)"})
+		require.NoError(t, err)
+		svc.workflows.Put(wf)
+
+		payload := &SetPayload{WorkflowID: wf.ID(), Payload: map[string]any{"input": map[string]any{"query": "data"}}}
+		resp, err := svc.Setx(ctx, payload)
+
+		require.NoError(t, err)
+		assert.Equal(t, "retrieved", resp.Results["result"].(map[string]interface{})["data"])
+		mockWasmManager.AssertExpectations(t)
+		mockCicWasmHost.AssertExpectations(t)
+	})
+
+	// --- Sub-test: Successful WASM Notify execution ---
+	t.Run("notify success path", func(t *testing.T) {
+		mockWasmManager := new(MockWasmManager)
+		mockCicWasmHost := new(MockCicWasmHost)
+
+		mockWasmManager.On("NewHostInstance", ctx, wasmMod.ID()).Return(cicWasmHost(mockCicWasmHost), nil).Once()
+		mockCicWasmHost.On("Notify", ctx, wasmMod.ID(), "{\"input\":{\"event\":\"fired\"}}").Return(`{"status":"notified"}`, "null").Once()
+		mockCicWasmHost.On("Close", ctx).Return(nil).Once()
+
+		svc := &cabinetService{
+			modules:     modStore,
+			workflows:   wfStore,
+			wasmManager: mockWasmManager,
+		}
+
+		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.notify.success", Version: "1.0"}, []string{"test.wasm@1.0.Notify(input)"})
+		require.NoError(t, err)
+		svc.workflows.Put(wf)
+
+		payload := &SetPayload{WorkflowID: wf.ID(), Payload: map[string]any{"input": map[string]any{"event": "fired"}}}
+		resp, err := svc.Setx(ctx, payload)
+
+		require.NoError(t, err)
+		assert.Equal(t, "notified", resp.Results["result"].(map[string]interface{})["status"])
+		mockWasmManager.AssertExpectations(t)
+		mockCicWasmHost.AssertExpectations(t)
+	})
+
+	// --- Sub-test: Explicit Close call for coverage (MockCicWasmHost) ---
+	t.Run("explicit close call coverage (MockCicWasmHost)", func(t *testing.T) {
+		mockCicWasmHost := new(MockCicWasmHost)
+		mockCicWasmHost.On("Close", ctx).Return(nil).Once()
+
+		err := mockCicWasmHost.Close(ctx)
+		require.NoError(t, err)
+		mockCicWasmHost.AssertExpectations(t)
+	})
+
+
 	// --- Sub-test: NewHostInstance fails ---
 	t.Run("NewHostInstance failure", func(t *testing.T) {
 		// a. Setup Mocks
@@ -275,12 +370,27 @@ func TestCabinetService_Get_NotFound(t *testing.T) {
 }
 
 func TestCabinetService_Close(t *testing.T) {
+	ctx := context.Background()
 	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
-	svc, err := NewCabinetService(context.Background(), NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(), config)
+	svc, err := NewCabinetService(ctx, NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(), config)
 	require.NoError(t, err)
 
 	// Call Close and assert no error is returned.
 	// The actual implementation of Close for MemStores is a no-op, so it should always succeed.
-	err = svc.Close(context.Background())
+	err = svc.Close(ctx)
 	assert.NoError(t, err, "Close should not return an error")
+
+	// --- Sub-test: Mock WasmManager Close coverage ---
+	t.Run("mock wasm manager close", func(t *testing.T) {
+		mockWasmManager := new(MockWasmManager)
+		mockWasmManager.On("Close", ctx).Return(nil).Once()
+
+		svc := &cabinetService{
+			wasmManager: mockWasmManager,
+		}
+
+		err := svc.Close(ctx)
+		assert.NoError(t, err, "Close should not return an error when mocking wasmManager")
+		mockWasmManager.AssertExpectations(t)
+	})
 }
