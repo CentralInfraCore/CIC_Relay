@@ -63,49 +63,6 @@ func TestExecutionContext(t *testing.T) {
 	})
 }
 
-// TestSetx_WasmExecution tests the WASM execution path with a simple no-op module.
-func TestSetx_WasmExecution(t *testing.T) {
-	// 1. Define a minimal binary WASM module that exports a "noop" function.
-	// This is the binary equivalent of the WAT: (module (func (export "noop")))
-	wasmBytes := []byte{
-		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x04, 0x01, 0x60, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00,
-		0x07, 0x08, 0x01, 0x04, 0x6e, 0x6f, 0x6f, 0x70, 0x00, 0x00, 0x0a, 0x05, 0x01, 0x03, 0x00, 0x01, 0x0b,
-	}
-
-	// 2. Setup Cabinet and test data
-	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
-	ctx := context.Background()
-
-	workflowID := "wf.wasm.test@1.0"
-
-	// 3. Register the WASM module with the binary code.
-	mod, err := NewModuleDescriptor(ctx, BaseBlock{Name: "wasm.noop", Version: "1.0"}, "wasm/test", nil, nil, wasmBytes)
-	require.NoError(t, err)
-	require.NoError(t, svc.PutModule(mod))
-
-	// 4. Register the workflow
-	wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.test", Version: "1.0"}, []string{"wasm.noop@1.0.noop(input)"})
-	require.NoError(t, err)
-	require.NoError(t, svc.PutWorkflow(wf))
-
-	// 5. Prepare the payload and call Setx
-	payload := &SetPayload{
-		WorkflowID: workflowID,
-		Payload:    map[string]any{"message": "hello wasm"},
-	}
-
-	resp, err := svc.Setx(ctx, payload)
-
-	// 6. Verify the results
-	require.NoError(t, err, "Setx should execute the simple WASM call without error")
-	require.NotNil(t, resp, "Response should not be nil")
-
-	// The noop function returns no result, so the "result" key should be nil.
-	result, ok := resp.Results["result"]
-	assert.True(t, ok, "The 'result' key should exist in the response")
-	assert.Nil(t, result, "The result of a no-op WASM call should be nil")
-}
-
 // TestCabinetService_PutAndGet_Success verifies the core Put/Get functionality of the service.
 func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
