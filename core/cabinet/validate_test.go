@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"centralrelay/pkg/canonicaljson"
-	"github.com/stretchr/testify/assert"
+	testify_assert "github.com/stretchr/testify/assert" // Explicit alias
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,26 +44,26 @@ func TestValidateAndChecksum(t *testing.T) {
 	t.Run("missing name should fail", func(t *testing.T) {
 		meta := &BaseBlock{Version: "1.0"}
 		_, err := validateAndChecksum(context.Background(), meta, KindSpec, nil)
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrInvalid)
-		assert.Contains(t, err.Error(), "name and version are required")
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "name and version are required")
 	})
 
 	t.Run("missing version should fail", func(t *testing.T) {
 		meta := &BaseBlock{Name: "test"}
 		_, err := validateAndChecksum(context.Background(), meta, KindSpec, nil)
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrInvalid)
-		assert.Contains(t, err.Error(), "name and version are required")
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "name and version are required")
 	})
 
 	t.Run("checksum mismatch should fail and set valid=false", func(t *testing.T) {
 		meta := &BaseBlock{Name: "test", Version: "1.0", Checksum: "bad-checksum"}
 		_, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrInvalid)
-		assert.Contains(t, err.Error(), "checksum mismatch")
-		assert.False(t, meta.Valid, "meta.Valid should be false on checksum mismatch")
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "checksum mismatch")
+		testify_assert.False(t, meta.Valid, "meta.Valid should be false on checksum mismatch")
 	})
 
 	t.Run("correct existing checksum should pass and set valid=true", func(t *testing.T) {
@@ -74,8 +74,8 @@ func TestValidateAndChecksum(t *testing.T) {
 		sum, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
 
 		require.NoError(t, err)
-		assert.Equal(t, correctChecksum, sum)
-		assert.True(t, meta.Valid, "meta.Valid should be true on checksum match")
+		testify_assert.Equal(t, correctChecksum, sum)
+		testify_assert.True(t, meta.Valid, "meta.Valid should be true on checksum match")
 	})
 
 	t.Run("no existing checksum should calculate and return a new one", func(t *testing.T) {
@@ -85,8 +85,8 @@ func TestValidateAndChecksum(t *testing.T) {
 		sum, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
 
 		require.NoError(t, err)
-		assert.Equal(t, expectedChecksum, sum)
-		assert.False(t, meta.Valid, "meta.Valid should not be set when checksum is new")
+		testify_assert.Equal(t, expectedChecksum, sum)
+		testify_assert.False(t, meta.Valid, "meta.Valid should not be set when checksum is new")
 	})
 
 	t.Run("error from computeChecksum should be propagated", func(t *testing.T) {
@@ -100,8 +100,8 @@ func TestValidateAndChecksum(t *testing.T) {
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
 		_, err := validateAndChecksum(context.Background(), meta, KindSpec, "data")
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "canonicalizer failed")
+		testify_assert.Error(t, err)
+		testify_assert.Contains(t, err.Error(), "canonicalizer failed")
 	})
 
 	t.Run("WASM module size exceeds limit should fail", func(t *testing.T) {
@@ -110,16 +110,16 @@ func TestValidateAndChecksum(t *testing.T) {
 		largeWasmData := make([]byte, MaxWASMModuleSize+1)
 		_, err := validateAndChecksum(context.Background(), meta, KindModule, largeWasmData)
 
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrInvalid)
-		assert.Contains(t, err.Error(), fmt.Sprintf("WASM module size exceeds limit of %d bytes", MaxWASMModuleSize))
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), fmt.Sprintf("WASM module size exceeds limit of %d bytes", MaxWASMModuleSize))
 	})
 
 	t.Run("valid WASM module should pass", func(t *testing.T) {
 		meta := &BaseBlock{Name: "small-wasm", Version: "1.0"}
 		// Use a structurally valid, minimal WASM module.
 		_, err := validateAndChecksum(context.Background(), meta, KindModule, wasmBase)
-		assert.NoError(t, err)
+		testify_assert.NoError(t, err)
 	})
 
 	t.Run("WASM module canonicalization should affect checksum", func(t *testing.T) {
@@ -132,8 +132,8 @@ func TestValidateAndChecksum(t *testing.T) {
 		// Call validateAndChecksum with the non-canonical data (with custom section)
 		actualChecksum, err := validateAndChecksum(context.Background(), meta, KindModule, wasmWithCustomSection)
 
-		assert.NoError(t, err)
-		assert.Equal(t, expectedChecksum, actualChecksum, "Checksum should be calculated based on stripped WASM data")
+		testify_assert.NoError(t, err)
+		testify_assert.Equal(t, expectedChecksum, actualChecksum, "Checksum should be calculated based on stripped WASM data")
 	})
 
 	t.Run("WASM module canonicalization error should be propagated", func(t *testing.T) {
@@ -147,9 +147,9 @@ func TestValidateAndChecksum(t *testing.T) {
 
 		_, err := validateAndChecksum(context.Background(), meta, KindModule, rawWasmData)
 
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrInvalid)
-		assert.Contains(t, err.Error(), "failed to canonicalize WASM module: wasm stripping failed")
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "failed to canonicalize WASM module: wasm stripping failed")
 	})
 }
 
@@ -172,8 +172,8 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
 		_, err := computeChecksum(context.Background(), meta, KindSpec, "data")
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to canonicalize meta")
+		testify_assert.Error(t, err)
+		testify_assert.Contains(t, err.Error(), "failed to canonicalize meta")
 	})
 
 	t.Run("error on data canonicalization should fail", func(t *testing.T) {
@@ -189,8 +189,8 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
 		_, err := computeChecksum(context.Background(), meta, KindSpec, "some-data")
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to canonicalize data")
+		testify_assert.Error(t, err)
+		testify_assert.Contains(t, err.Error(), "failed to canonicalize data")
 	})
 
 	t.Run("unsupported type in data should fail", func(t *testing.T) {
@@ -198,8 +198,8 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 		meta := &BaseBlock{Name: "test", Version: "1.0"}
 		_, err := computeChecksum(context.Background(), meta, KindSpec, math.NaN())
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to canonicalize data")
+		testify_assert.Error(t, err)
+		testify_assert.Contains(t, err.Error(), "failed to canonicalize data")
 	})
 
 	t.Run("SetToJSONMock should set and reset mock", func(t *testing.T) {
@@ -215,12 +215,39 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 		meta := &BaseBlock{Name: "mock-test", Version: "1.0"}
 		_, err := computeChecksum(context.Background(), meta, KindSpec, "dummy-data")
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "mocked canonicalization error")
+		testify_assert.Error(t, err)
+		testify_assert.Contains(t, err.Error(), "mocked canonicalization error")
 
 		// Reset the mock and verify that canonicalization works again
 		canonicaljson.SetToJSONMock(nil)
 		_, err = computeChecksum(context.Background(), meta, KindSpec, "dummy-data")
-		assert.NoError(t, err, "Canonicalization should work after resetting the mock")
+		testify_assert.NoError(t, err, "Canonicalization should work after resetting the mock")
 	})
+}
+
+func TestNewModuleDescriptor_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel the context immediately
+
+	_, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test", Version: "1.0"}, "wasm/test", nil, nil, wasmBase)
+	require.Error(t, err)
+	testify_assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestNewWorkflow_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel the context immediately
+
+	_, err := NewWorkflow(ctx, BaseBlock{Name: "test-wf", Version: "1.0"}, []string{"step1"})
+	require.Error(t, err)
+	testify_assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestNewSchema_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel the context immediately
+
+	_, err := NewSchema(ctx, BaseBlock{Name: "test-schema", Version: "1.0"}, SchemaDef{})
+	require.Error(t, err)
+	testify_assert.ErrorIs(t, err, context.Canceled)
 }
