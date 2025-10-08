@@ -43,7 +43,7 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 	// Ellenőrzés, hogy a WorkflowID létezik.
 	if _, err := a.GetWorkflow(v.WorkflowID); err != nil {
 		if IsNotFound(err) {
-			return fmt.Errorf("%w: workflow_id not found: %s", ErrInvalid, v.WorkflowID)
+			return fmt.Errorf("%w: workflow_id not found: %s", ErrNotFound, v.WorkflowID)
 		}
 		return err // Kezeli a store egyéb lehetséges hibáit
 	}
@@ -52,7 +52,7 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 	for _, moduleID := range v.Modules {
 		if _, err := a.GetModule(string(moduleID)); err != nil {
 			if IsNotFound(err) {
-				return fmt.Errorf("%w: module_id not found: %s", ErrInvalid, moduleID)
+				return fmt.Errorf("%w: module_id not found: %s", ErrNotFound, moduleID)
 			}
 			return err // Kezeli a store egyéb lehetséges hibáit
 		}

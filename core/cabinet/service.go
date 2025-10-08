@@ -8,6 +8,23 @@ import (
 	"strings"
 )
 
+// cicWasmHost defines the interface for interacting with a live WASM instance.
+// This allows for mocking in unit tests.
+type cicWasmHost interface {
+	Process(ctx context.Context, authContextJson, inputJson string) (string, string)
+	Get(ctx context.Context, authContextJson, queryJson string) (string, string)
+	Init(ctx context.Context, authContextJson, configJson string) (string, string)
+	Notify(ctx context.Context, authContextJson, eventJson string) (string, string)
+	Close(ctx context.Context) error
+}
+
+// wasmManager defines the interface for a WASM lifecycle manager.
+// This allows for mocking in unit tests.
+type wasmManager interface {
+	NewHostInstance(ctx context.Context, moduleID string) (cicWasmHost, error) // Use the interface type
+	Close(ctx context.Context) error
+}
+
 // executionContext holds the state for a single workflow execution.
 // It contains the data variables and the materialized (live) modules.
 type executionContext struct {
@@ -70,7 +87,7 @@ type cabinetService struct {
 	schemas     SchemaStore
 	modules     ModuleStore
 	workflows   WorkflowStore
-	wasmManager *WasmManager
+	wasmManager wasmManager // Use the interface type
 }
 
 // NewCabinetService creates a new Cabinet service with the given stores and WasmManager configuration.
@@ -190,7 +207,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 				return nil, fmt.Errorf("failed to marshal input data for WASM module %q: %w", componentID, err)
 			}
 
-			authContextJson := "{}"
+			authContextJson := componentID
 
 			normalizedFunctionName := strings.ToLower(functionName)
 
@@ -234,7 +251,8 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	return &SetResponse{
 		Results:  execCtx.variables,
 		Warnings: nil,
-	}, nil
+	},
+		nil
 }
 
 func (c *cabinetService) Close(ctx context.Context) error {
