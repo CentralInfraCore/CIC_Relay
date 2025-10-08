@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestCanonicalizeSetPayload(t *testing.T) {
@@ -71,12 +73,20 @@ func TestValidateSet_Required(t *testing.T) {
 func TestValidateSet_NotFound(t *testing.T) {
 	// Setup: create stores and populate them with valid objects.
 	wfStore := NewMemWorkflowStore()
-	wfStore.Put(&Workflow{Meta: BaseBlock{Name: "wf-exists", Version: "v1"}}) // ID: wf-exists@v1
+	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf-exists", Version: "v1"}, []string{"step1"})
+	require.NoError(t, err)
+	wfStore.Put(wf)
 
 	modStore := NewMemModuleStore()
-	modStore.Put(&ModuleDescriptor{Meta: BaseBlock{Name: "mod-exists", Version: "v1"}}) // ID: mod-exists@v1
+	mod, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "mod-exists", Version: "v1"}, "native/test", nil, nil, nil)
+	require.NoError(t, err)
+	modStore.Put(mod)
 
-	svc := NewCabinetService(nil, modStore, wfStore)
+	schemaStore := NewMemSchemaStore()
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := NewCabinetService(context.Background(), schemaStore, modStore, wfStore, config)
+	require.NoError(t, err)
+
 	api := NewAPI(svc)
 	ctx := context.Background()
 

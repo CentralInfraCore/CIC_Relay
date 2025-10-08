@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // mockCabinet is a mock implementation of the Cabinet interface for testing error propagation.
@@ -87,12 +88,14 @@ func TestAPI_Set_NilPayload(t *testing.T) {
 
 func TestAPI_Set_ValidationError(t *testing.T) {
 	// Use a real service here, but provide a payload that will fail validation
-	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := NewCabinetService(context.Background(), NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 	api := NewAPI(svc)
 
 	payload := &SetPayload{WorkflowID: ""} // Invalid: empty workflow ID
 
-	_, err := api.Set(context.Background(), payload)
+	_, err = api.Set(context.Background(), payload)
 	assert.Error(t, err, "Set should propagate validation errors")
 	assert.ErrorIs(t, err, ErrInvalid, "Error should be a validation error")
 }

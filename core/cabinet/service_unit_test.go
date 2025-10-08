@@ -65,7 +65,9 @@ func TestExecutionContext(t *testing.T) {
 
 // TestCabinetService_PutAndGet_Success verifies the core Put/Get functionality of the service.
 func TestCabinetService_PutAndGet_Success(t *testing.T) {
-	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := NewCabinetService(context.Background(), NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 
 	t.Run("Schema Put/Get", func(t *testing.T) {
 		schema, err := NewSchema(context.Background(), BaseBlock{Name: "s1", Version: "v1"}, SchemaDef{})
@@ -108,9 +110,11 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 }
 
 func TestCabinetService_Get_NotFound(t *testing.T) {
-	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := NewCabinetService(context.Background(), NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 
-	_, err := svc.GetSchema("nonexistent")
+	_, err = svc.GetSchema("nonexistent")
 	assert.ErrorIs(t, err, ErrNotFound, "GetSchema should return ErrNotFound for nonexistent ID")
 
 	_, err = svc.GetModule("nonexistent")
@@ -121,10 +125,12 @@ func TestCabinetService_Get_NotFound(t *testing.T) {
 }
 
 func TestCabinetService_Close(t *testing.T) {
-	svc := NewCabinetService(NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore())
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := NewCabinetService(context.Background(), NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(), config)
+	require.NoError(t, err)
 
 	// Call Close and assert no error is returned.
 	// The actual implementation of Close for MemStores is a no-op, so it should always succeed.
-	err := svc.Close(context.Background())
+	err = svc.Close(context.Background())
 	assert.NoError(t, err, "Close should not return an error")
 }

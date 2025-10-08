@@ -202,7 +202,14 @@ func main() {
 	workflowStore := cabinet.NewMemWorkflowStore()
 	moduleStore := cabinet.NewMemModuleStore()
 
-	cabinetSvc := cabinet.NewCabinetService(schemaStore, moduleStore, workflowStore)
+	wasmConfig := cabinet.WasmManagerConfig{
+		LRUCacheSize:          100, // Default cache size
+		DefaultTimeoutSeconds: 5,   // Default timeout
+	}
+	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig)
+	if err != nil {
+		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
+	}
 	defer cabinetSvc.Close(context.Background()) // Ensure WASM runtime is closed
 	logger.Info("Cabinet service initialized.")
 
