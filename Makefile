@@ -113,7 +113,7 @@ symbols: ## Generate symbols documentation
 
 check-symbols: ## Check if symbols documentation is up-to-date
 	@echo "🔎 Checking for symbol drift..."
-	@$(call GO_FIXER, go run ./tools/symbolsgen && (git diff --exit-code context/SYMBOLS.md)
+	@$(call GO_FIXER, go run ./tools/symbolsgen && (git diff --exit-code context/SYMBOLS.md))
 
 # ---- Tests & coverage ----
 test: ## Run unit tests (verbose, race)
