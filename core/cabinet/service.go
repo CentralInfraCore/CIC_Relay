@@ -94,7 +94,7 @@ type cabinetService struct {
 func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleStore, workflows WorkflowStore, wasmConfig WasmManagerConfig) (Cabinet, error) {
 	wasmManager, err := NewWasmManager(ctx, modules, wasmConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create WASM manager: %w", err)
+		return nil, fmt.Errorf("failed to create cabinet service: %w", err)
 	}
 
 	return &cabinetService{

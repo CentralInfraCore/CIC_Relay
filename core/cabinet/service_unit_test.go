@@ -9,6 +9,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestNewCabinetService_WasmManagerError tests the error path for NewCabinetService
+// when the WasmManager fails to initialize.
+func TestNewCabinetService_WasmManagerError(t *testing.T) {
+	// Use an invalid config that will cause NewWasmManager to fail.
+	invalidConfig := WasmManagerConfig{LRUCacheSize: -1}
+
+	_, err := NewCabinetService(context.Background(), NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(), invalidConfig)
+
+	require.Error(t, err, "NewCabinetService should fail with an invalid WasmManager config")
+	assert.Contains(t, err.Error(), "failed to create cabinet service", "Error message should indicate service creation failure")
+	assert.Contains(t, err.Error(), "failed to create LRU cache", "Error message should propagate the underlying LRU cache error")
+}
+
 // TestExecutionContext verifies the functionality of the executionContext struct.
 func TestExecutionContext(t *testing.T) {
 	initialPayload := map[string]interface{}{"initial_key": "initial_value"}

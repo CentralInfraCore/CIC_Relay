@@ -417,6 +417,14 @@ func TestFormatErrorJson_WithDetails(t *testing.T) {
 	assert.Contains(t, errorJson, `"details":{"extra":"info"}`)
 }
 
+// TestFormatErrorJson_MarshalError tests the error path of formatErrorJson.
+func TestFormatErrorJson_MarshalError(t *testing.T) {
+	// Channels cannot be marshaled to JSON, so this should trigger the internal error.
+	unsupportedDetails := make(chan int)
+	errorJson := formatErrorJson("TEST_CODE", "test message", unsupportedDetails)
+	assert.Equal(t, `{"code":"HOST_INTERNAL", "message":"failed to marshal error object"}`, errorJson)
+}
+
 // TestCicWasmHost_Close_NilInstance tests closing a nil instance.
 func TestCicWasmHost_Close_NilInstance(t *testing.T) {
 	host := &CicWasmHost{}
