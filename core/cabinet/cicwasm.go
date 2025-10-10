@@ -268,10 +268,10 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("RUNTIME", fmt.Sprintf("wasm module execution failed: %v", err), nil)
 	}
 
-	// The guest packs the result as (pointer << 32) | length.
+	// The guest packs the result as (size << 32) | pointer.
 	packedResult := results[0]
-	resultPtr := uint32(packedResult >> 32)
-	resultLen := uint32(packedResult)
+	resultLen := uint32(packedResult >> 32)
+	resultPtr := uint32(packedResult)
 
 	defer func() {
 		if _, err := h.deallocateFn.Call(callCtx, uint64(resultPtr), uint64(resultLen)); err != nil {

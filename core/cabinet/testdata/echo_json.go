@@ -46,6 +46,6 @@ func Call(opPtr, opLen, authContextPtr, authContextLen, inputPtr, inputLen uint3
 	resultPtr := allocate(resultSize)
 	copy(unsafe.Slice((*byte)(unsafe.Pointer(resultPtr)), resultSize), resultBytes)
 
-	// Pack the pointer and length into a uint64
-	return (uint64(resultPtr) << 32) | uint64(resultSize)
+	// Pack the size and pointer into a uint64. Convention: (size << 32) | pointer
+	return (uint64(resultSize) << 32) | uint64(resultPtr)
 }
