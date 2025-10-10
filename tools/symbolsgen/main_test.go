@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"golang.org/x/tools/go/packages"
 )
 
 // Helper function to create a temporary file with content
@@ -22,6 +26,33 @@ func createTempFile(t *testing.T, content string) string {
 		t.Fatalf("failed to close temp file: %v", err)
 	}
 	return tmpfile.Name()
+}
+
+// Helper function to create a temporary Go package directory and file
+func createTempGoPackage(t *testing.T, pkgName, fileName, content string) (string, string) {
+	tmpDir, err := ioutil.TempDir("", "testpkg")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+
+	// Create go.mod file
+	modulePath := "example.com/testmodule_" + pkgName
+	goModContent := "module " + modulePath + "\n\ngo 1.18\n"
+	goModPath := filepath.Join(tmpDir, "go.mod")
+	if err := ioutil.WriteFile(goModPath, []byte(goModContent), 0644); err != nil {
+		t.Fatalf("failed to write go.mod: %v", err)
+	}
+
+	pkgPath := filepath.Join(tmpDir, pkgName)
+	if err := os.Mkdir(pkgPath, 0755); err != nil {
+		t.Fatalf("failed to create package dir: %v", err)
+	}
+
+	filePath := filepath.Join(pkgPath, fileName)
+	if err := ioutil.WriteFile(filePath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write package file: %v", err)
+	}
+	return tmpDir, modulePath + "/" + pkgName // Return the base temp dir and the module path to the package
 }
 
 // Helper function to read file content
@@ -87,7 +118,7 @@ func TestRun_Success(t *testing.T) {
 }
 
 func TestRun_AllowlistNotFound(t *testing.T) {
-	// Mock os.Exit and log.Fatalf
+	// Mock os.Exit and log.Fatalf to prevent actual program exit
 	oldExit := exit
 	oldFatalf := fatalf
 	defer func() {
@@ -107,7 +138,7 @@ func TestRun_AllowlistNotFound(t *testing.T) {
 
 	nonExistentAllowFilePath := filepath.Join(os.TempDir(), "nonexistent_allowlist.txt")
 	outputFilePath := filepath.Join(os.TempDir(), "SYMBOLS.md")
-	defer os.Remove(outputFilePath) // Ensure no file is left behind if created
+	defer os.Remove(outputFilePath)
 
 	err := run(nonExistentAllowFilePath, outputFilePath)
 	if err == nil {
@@ -126,7 +157,7 @@ func TestRun_AllowlistNotFound(t *testing.T) {
 }
 
 func TestRun_GenerateSymbolsError(t *testing.T) {
-	// Mock os.Exit and log.Fatalf
+	// Mock os.Exit and log.Fatalf to prevent actual program exit
 	oldExit := exit
 	oldFatalf := fatalf
 	defer func() {
@@ -169,9 +200,10 @@ func TestRun_GenerateSymbolsError(t *testing.T) {
 }
 
 func TestGenerateSymbols_Success(t *testing.T) {
+	cfg := &packages.Config{} // Default config
 	pkgPatterns := []string{"fmt"} // Use a standard library package
 
-	output, err := generateSymbols(pkgPatterns)
+	output, err := generateSymbols(cfg, pkgPatterns)
 	if err != nil {
 		t.Fatalf("generateSymbols() failed with error: %v", err)
 	}
@@ -193,21 +225,23 @@ func TestGenerateSymbols_Success(t *testing.T) {
 }
 
 func TestGenerateSymbols_NoPackages(t *testing.T) {
+	cfg := &packages.Config{} // Default config
 	pkgPatterns := []string{} // No packages
 
-	output, err := generateSymbols(pkgPatterns)
+	output, err := generateSymbols(cfg, pkgPatterns)
 	if err != nil {
 		t.Fatalf("generateSymbols() failed with error: %v", err)
 	}
-	if output != nil {
+	if output != nil { // FIX: Should be output == nil
 		t.Errorf("generateSymbols() returned non-nil output for no packages: %s", string(output))
 	}
 }
 
 func TestGenerateSymbols_PackageLoadError(t *testing.T) {
+	cfg := &packages.Config{} // Default config
 	pkgPatterns := []string{"nonexistent/package/xyz"} // Invalid package pattern
 
-	output, err := generateSymbols(pkgPatterns)
+	output, err := generateSymbols(cfg, pkgPatterns)
 	if err == nil {
 		t.Error("generateSymbols() did not return an error for invalid package pattern")
 	}
@@ -216,5 +250,149 @@ func TestGenerateSymbols_PackageLoadError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "multiple errors encountered during symbol generation") || !strings.Contains(err.Error(), "package nonexistent/package/xyz") {
 		t.Errorf("expected error message to contain 'multiple errors encountered during symbol generation' and 'package nonexistent/package/xyz', got: %v", err)
+	}
+}
+
+func TestGenerateSymbols_PackageWithErrors(t *testing.T) {
+	pkgContent := `package mypackage
+
+const MyConst = "hello"
+
+var MyVar = 123
+
+func MyFunc() string {
+	return "world"
+}
+
+func MyBadFunc() string {
+	return "bad" // Missing closing brace
+` // Syntax error here
+
+	baseDir, modulePath := createTempGoPackage(t, "mypackage_with_errors", "mypackage_with_errors.go", pkgContent)
+	defer os.RemoveAll(baseDir) // Clean up the temporary directory
+
+	cfg := &packages.Config{Dir: baseDir} // Set the working directory for packages.Load
+
+	// Call generateSymbols with the custom package
+	output, err := generateSymbols(cfg, []string{modulePath})
+	if err == nil {
+		t.Error("generateSymbols() did not return an error for package with errors")
+	}
+	if output != nil {
+		t.Errorf("generateSymbols() returned non-nil output for package with errors: %s", string(output))
+	}
+
+	// Check for expected error message parts
+	errorMsg := err.Error()
+	if !strings.Contains(errorMsg, "multiple errors encountered during symbol generation") {
+		t.Errorf("expected error message to contain 'multiple errors encountered during symbol generation', got: %v", errorMsg)
+	}
+	if !strings.Contains(errorMsg, "mypackage_with_errors.go") || !strings.Contains(errorMsg, "expected '}'") {
+		t.Errorf("expected error message to contain syntax error details, got: %v", errorMsg)
+	}
+}
+
+func TestGenerateSymbols_CustomPackage(t *testing.T) {
+	pkgContent := `package mypackage
+
+const MyConst = "hello"
+
+var MyVar = 123
+
+func MyFunc() string {
+	return "world"
+}
+
+type MyStruct struct {
+	Field1 string
+	Field2 int
+}
+`
+
+	baseDir, modulePath := createTempGoPackage(t, "mypackage", "mypackage.go", pkgContent)
+	defer os.RemoveAll(baseDir) // Clean up the temporary directory
+
+	cfg := &packages.Config{Dir: baseDir} // Set the working directory for packages.Load
+
+	// Call generateSymbols with the custom package
+	output, err := generateSymbols(cfg, []string{modulePath})
+	if err != nil {
+		t.Fatalf("generateSymbols() failed with error: %v", err)
+	}
+	if output == nil {
+		t.Fatal("generateSymbols() returned nil output for custom package")
+	}
+
+	outputStr := string(output)
+
+	// Assertions for expected content
+	if !strings.Contains(outputStr, "# Public Symbols") {
+		t.Errorf("output missing expected header")
+	}
+	if !strings.Contains(outputStr, fmt.Sprintf("## Package: `%s`", modulePath)) {
+		t.Errorf("output missing expected package header for '%s'", modulePath)
+	}
+	if !strings.Contains(outputStr, "### Constants") {
+		t.Errorf("output missing expected Constants header")
+	}
+	if !strings.Contains(outputStr, "- `const MyConst`") {
+		t.Errorf("output missing expected constant 'MyConst'")
+	}
+	if !strings.Contains(outputStr, "### Variables") {
+		t.Errorf("output missing expected Variables header")
+	}
+	if !strings.Contains(outputStr, "- `var MyVar`") {
+		t.Errorf("output missing expected variable 'MyVar'")
+	}
+	if !strings.Contains(outputStr, "### Functions") {
+		t.Errorf("output missing expected Functions header")
+	}
+	if !strings.Contains(outputStr, "- `func MyFunc`") {
+		t.Errorf("output missing expected function 'MyFunc'")
+	}
+	if !strings.Contains(outputStr, "### Types") {
+		t.Errorf("output missing expected Types header")
+	}
+	if !strings.Contains(outputStr, "- `type MyStruct`") {
+		t.Errorf("output missing expected type 'MyStruct'")
+	}
+}
+
+func TestGenerateSymbols_DocNewFromFilesError(t *testing.T) {
+	// Syntax error here: missing closing brace
+	pkgContent := `package mypackage
+
+func MyFunc() string {
+	return "world"
+`
+
+	baseDir, modulePath := createTempGoPackage(t, "mypackage_empty", "empty.go", pkgContent)
+	defer os.RemoveAll(baseDir) // Clean up the temporary directory
+
+	cfg := &packages.Config{Dir: baseDir} // Set the working directory for packages.Load
+
+	// Call generateSymbols with the custom package
+	output, err := generateSymbols(cfg, []string{modulePath})
+	if err == nil {
+		t.Fatal("generateSymbols() did not return an error for empty package") // Use t.Fatal to stop on unexpected nil error
+	}
+	if output != nil {
+		t.Errorf("generateSymbols() returned non-nil output for empty package: %s", string(output))
+	}
+
+	// Check for expected error message parts
+	errorMsg := err.Error()
+	// Normalize temporary paths for robust comparison
+	re := regexp.MustCompile(`/tmp/testpkg\d+`)
+	errorMsg = re.ReplaceAllString(errorMsg, `<TMP>`)
+
+	if !strings.Contains(errorMsg, "multiple errors encountered during symbol generation") {
+		t.Errorf("expected error message to contain 'multiple errors encountered during symbol generation', got: %v", errorMsg)
+	}
+	if !strings.Contains(errorMsg, "syntax error") || !strings.Contains(errorMsg, "unexpected EOF") || !strings.Contains(errorMsg, "expected '}'") {
+		t.Errorf("expected error message to contain syntax error details (syntax error, unexpected EOF, expected '}}'), got: %v", errorMsg)
+	}
+	if !strings.Contains(errorMsg, "mypackage_empty/empty.go") {
+		t.Errorf("expected error message to contain file name 'mypackage_empty/empty.go', got: %v", errorMsg)
 	}
 }
