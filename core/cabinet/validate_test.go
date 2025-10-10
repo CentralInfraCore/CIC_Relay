@@ -29,17 +29,15 @@ var wasmWithCustomSection = append(wasmBase, []byte{
 	0x01, // Number of producers
 	0x01, // Producer name length
 	'A',  // Producer name: "A"
-}...,)
+}...)
 
 func TestValidateAndChecksum(t *testing.T) {
-	// Restore original function after all tests in this file
-	defer func() {
+	// Save and restore original function to prevent test pollution
+	originalStripFunc := stripWasmModuleFunc
+	t.Cleanup(func() {
+		SetStripWasmModuleFunc(originalStripFunc)
 		canonicaljson.SetToJSONMock(nil)
-		// Reset the stripWasmModuleFunc to its default no-op behavior
-		SetStripWasmModuleFunc(func(rawData []byte) ([]byte, error) {
-			return rawData, nil
-		})
-	}()
+	})
 
 	t.Run("missing name should fail", func(t *testing.T) {
 		meta := &BaseBlock{Version: "1.0"}
@@ -90,7 +88,9 @@ func TestValidateAndChecksum(t *testing.T) {
 	})
 
 	t.Run("error from computeChecksum should be propagated", func(t *testing.T) {
-		defer canonicaljson.SetToJSONMock(nil) // Reset mock after this subtest
+		t.Cleanup(func() {
+			canonicaljson.SetToJSONMock(nil)
+		})
 
 		// Inject an error into the canonicalizer for the metadata part
 		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
@@ -137,6 +137,11 @@ func TestValidateAndChecksum(t *testing.T) {
 	})
 
 	t.Run("WASM module canonicalization error should be propagated", func(t *testing.T) {
+		originalFunc := stripWasmModuleFunc
+		t.Cleanup(func() {
+			SetStripWasmModuleFunc(originalFunc)
+		})
+
 		meta := &BaseBlock{Name: "test-wasm-error", Version: "1.0"}
 		rawWasmData := []byte("some raw wasm data")
 
@@ -151,16 +156,27 @@ func TestValidateAndChecksum(t *testing.T) {
 		testify_assert.ErrorIs(t, err, ErrInvalid)
 		testify_assert.Contains(t, err.Error(), "failed to canonicalize WASM module: wasm stripping failed")
 	})
+
+	t.Run("WASM module validation with cancelled context should fail", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		meta := &BaseBlock{Name: "test-wasm", Version: "1.0"}
+		_, err := validateAndChecksum(ctx, meta, KindModule, wasmBase)
+		require.Error(t, err)
+		testify_assert.ErrorIs(t, err, context.Canceled)
+	})
 }
 
 func TestComputeChecksum_ErrorCases(t *testing.T) {
 	// Restore original function after all tests in this file
-	defer func() {
+	t.Cleanup(func() {
 		canonicaljson.SetToJSONMock(nil)
-	}()
+	})
 
 	t.Run("error on meta canonicalization should fail", func(t *testing.T) {
-		defer canonicaljson.SetToJSONMock(nil) // Reset mock after this subtest
+		t.Cleanup(func() {
+			canonicaljson.SetToJSONMock(nil)
+		})
 		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
 			// Fail only when trying to marshal the metaForChecksum struct
 			if _, ok := v.(metaForChecksum); ok {
@@ -177,7 +193,9 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 	})
 
 	t.Run("error on data canonicalization should fail", func(t *testing.T) {
-		defer canonicaljson.SetToJSONMock(nil) // Reset mock after this subtest
+		t.Cleanup(func() {
+			canonicaljson.SetToJSONMock(nil)
+		})
 		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
 			// Fail only for the data part (e.g., a string in this test)
 			if _, ok := v.(string); ok {
@@ -186,7 +204,7 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 			return canonicaljson.ToJSONOriginal(v)
 		})
 
-		meta := &BaseBlock{Name: "test", Version: "1.0"}
+		meta := &BaseBlock{Name: "test", Version: "1.o"}
 		_, err := computeChecksum(context.Background(), meta, KindSpec, "some-data")
 
 		testify_assert.Error(t, err)
@@ -203,8 +221,9 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 	})
 
 	t.Run("SetToJSONMock should set and reset mock", func(t *testing.T) {
-		// Ensure the mock is reset after this subtest
-		defer canonicaljson.SetToJSONMock(nil)
+		t.Cleanup(func() {
+			canonicaljson.SetToJSONMock(nil)
+		})
 
 		// Set a mock that always returns an error
 		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
@@ -225,13 +244,41 @@ func TestComputeChecksum_ErrorCases(t *testing.T) {
 	})
 }
 
+func TestStripWasmModuleFunc_Error(t *testing.T) {
+	t.Run("invalid wasm data should fail decoding", func(t *testing.T) {
+		// Using a truncated WASM module (magic number only) which should
+		// cause a decoding error due to incomplete data.
+		invalidWasmData := []byte{0x00, 0x61, 0x73, 0x6d} // "\0asm"
+		_, err := stripWasmModuleFunc(invalidWasmData)
+		require.Error(t, err)
+		testify_assert.Contains(t, err.Error(), "failed to decode wasm module with wabin")
+	})
+}
+
+func TestComputeChecksum_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	meta := &BaseBlock{Name: "test", Version: "1.0"}
+
+	// This should cover the first ctx.Err() check in computeChecksum
+	_, err := computeChecksum(ctx, meta, KindSpec, "some data")
+	require.Error(t, err)
+		testify_assert.ErrorIs(t, err, context.Canceled)
+
+	// This should cover the ctx.Err() check in the []byte data path
+	_, err = computeChecksum(ctx, meta, KindModule, []byte("some data"))
+	require.Error(t, err)
+	testify_assert.ErrorIs(t, err, context.Canceled)
+}
+
 func TestNewModuleDescriptor_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel the context immediately
 
 	_, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test", Version: "1.0"}, "wasm/test", nil, nil, wasmBase)
 	require.Error(t, err)
-	testify_assert.ErrorIs(t, err, context.Canceled)
+		testify_assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestNewWorkflow_ContextCancelled(t *testing.T) {
@@ -240,7 +287,7 @@ func TestNewWorkflow_ContextCancelled(t *testing.T) {
 
 	_, err := NewWorkflow(ctx, BaseBlock{Name: "test-wf", Version: "1.0"}, []string{"step1"})
 	require.Error(t, err)
-	testify_assert.ErrorIs(t, err, context.Canceled)
+		testify_assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestNewSchema_ContextCancelled(t *testing.T) {
