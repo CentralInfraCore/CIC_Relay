@@ -235,7 +235,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("HOST_ERROR", fmt.Sprintf("failed to write 'op' to wasm memory: %v", err), nil)
 	}
 	defer func() {
-		if _, err := h.deallocateFn.Call(callCtx, opPtr, opLen); err != nil {
+		if _, err := h.deallocateFn.Call(callCtx, uint64(opPtr), uint64(opLen)); err != nil {
 			// TODO: Log deallocation error at WARN level.
 		}
 	}()
@@ -245,7 +245,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("HOST_ERROR", fmt.Sprintf("failed to write 'auth_context' to wasm memory: %v", err), nil)
 	}
 	defer func() {
-		if _, err := h.deallocateFn.Call(callCtx, authPtr, authLen); err != nil {
+		if _, err := h.deallocateFn.Call(callCtx, uint64(authPtr), uint64(authLen)); err != nil {
 			// TODO: Log deallocation error at WARN level.
 		}
 	}()
@@ -255,12 +255,12 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("HOST_ERROR", fmt.Sprintf("failed to write 'input_json' to wasm memory: %v", err), nil)
 	}
 	defer func() {
-		if _, err := h.deallocateFn.Call(callCtx, dataPtr, dataLen); err != nil {
+		if _, err := h.deallocateFn.Call(callCtx, uint64(dataPtr), uint64(dataLen)); err != nil {
 			// TODO: Log deallocation error at WARN level.
 		}
 	}()
 
-	results, err := h.callFn.Call(callCtx, opPtr, opLen, authPtr, authLen, dataPtr, dataLen)
+	results, err := h.callFn.Call(callCtx, uint64(opPtr), uint64(opLen), uint64(authPtr), uint64(authLen), uint64(dataPtr), uint64(dataLen))
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return "", formatErrorJson("TIMEOUT", "wasm module execution timed out", nil)
@@ -280,7 +280,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	}()
 
 	// Handle the case where the guest returns a packed 0 (ptr=0, len=0), which means null/empty.
-	if resultLen == 0 {
+	if packedResult == 0 {
 		return "null", "null"
 	}
 
@@ -314,17 +314,18 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	return string(dataJsonResult), string(errorJsonResult)
 }
 
-func (h *CicWasmHost) writeStringToWasm(ctx context.Context, s string) (uint64, uint64, error) {
+func (h *CicWasmHost) writeStringToWasm(ctx context.Context, s string) (uint32, uint32, error) {
 	data := []byte(s)
-	dataLen := uint64(len(data))
+	dataLen := uint32(len(data))
 
-	results, err := h.allocateFn.Call(ctx, dataLen)
+	results, err := h.allocateFn.Call(ctx, uint64(dataLen))
 	if err != nil {
 		return 0, 0, err
 	}
-	ptr := results[0]
+	ptr64 := results[0]
+	ptr := uint32(ptr64)
 
-	if !h.instance.Memory().Write(uint32(ptr), data) {
+	if !h.instance.Memory().Write(ptr, data) {
 		return 0, 0, fmt.Errorf("Memory.Write failed for length %d", dataLen)
 	}
 

@@ -59,25 +59,36 @@ func (s *mockModuleStore) Exists(id string) bool {
 func TestWasmManager_NewAndClose(t *testing.T) {
 	ctx := context.Background()
 	store := newMockModuleStore()
-	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
 
-	m, err := NewWasmManager(ctx, store, config)
-	require.NoError(t, err)
-	require.NotNil(t, m)
+	t.Run("successful creation and close", func(t *testing.T) {
+		config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+		m, err := NewWasmManager(ctx, store, config)
+		require.NoError(t, err)
+		require.NotNil(t, m)
 
-	// Closing the manager should not return an error.
-	err = m.Close(ctx)
-	assert.NoError(t, err)
+		// Closing the manager should not return an error.
+		err = m.Close(ctx)
+		assert.NoError(t, err)
 
-	// Operations after closing should fail.
-	_, err = m.NewHostInstance(ctx, "any-module")
-	assert.Error(t, err, "expected error on closed manager")
+		// Operations after closing should fail.
+		_, err = m.NewHostInstance(ctx, "any-module")
+		assert.Error(t, err, "expected error on closed manager")
+	})
 
-	// Test that NewWasmManager fails if the context is already closed, preventing WASI instantiation.
-	closedCtx, cancel := context.WithCancel(ctx)
-	cancel()
-	_, err = NewWasmManager(closedCtx, store, config)
-	assert.Error(t, err, "NewWasmManager should fail with a closed context")
+	t.Run("fail with canceled context", func(t *testing.T) {
+		config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+		closedCtx, cancel := context.WithCancel(ctx)
+		cancel()
+		_, err := NewWasmManager(closedCtx, store, config)
+		assert.Error(t, err, "NewWasmManager should fail with a closed context")
+	})
+
+	t.Run("fail with invalid LRU size", func(t *testing.T) {
+		config := WasmManagerConfig{LRUCacheSize: -1, DefaultTimeoutSeconds: 1}
+		_, err := NewWasmManager(ctx, store, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to create LRU cache")
+	})
 }
 
 // TestWasmManager_PreCompile_Simple tests a single, successful compilation and caching.
