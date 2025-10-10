@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -38,8 +39,19 @@ type WasmManager struct {
 
 // NewWasmManager creates a new central WASM manager with the given configuration.
 func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManagerConfig) (*WasmManager, error) {
+	// Fail fast if the context is already canceled.
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("cannot create WasmManager with a canceled context: %w", err)
+	}
+
 	runtimeConfig := wazero.NewRuntimeConfig().WithCloseOnContextDone(true)
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
+
+	// Instantiate the WASI module, which is required for WASM modules compiled from Go.
+	if _, err := wasi_snapshot_preview1.Instantiate(ctx, r); err != nil {
+		r.Close(context.Background()) // Use background context for cleanup on failure.
+		return nil, fmt.Errorf("failed to instantiate wasi: %w", err)
+	}
 
 	onEvict := func(key string, mod wazero.CompiledModule) {
 		// When a module is evicted from the cache, ensure its native resources are freed.
@@ -51,6 +63,7 @@ func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManager
 
 	lruCache, err := lru.NewWithEvict[string, wazero.CompiledModule](config.LRUCacheSize, onEvict)
 	if err != nil {
+		r.Close(context.Background()) // Use background context for cleanup on failure.
 		return nil, fmt.Errorf("failed to create LRU cache: %w", err)
 	}
 
@@ -118,10 +131,8 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 		return nil, err
 	}
 
-	// TODO(enhancement): Enforce memory limit. The current wazero version may not support this on ModuleConfig.
-	// After updating wazero, this should be changed to:
-	// moduleConfig := wazero.NewModuleConfig().WithName(moduleID).WithMemoryPages(m.config.DefaultMemoryPages)
-	moduleConfig := wazero.NewModuleConfig().WithName(moduleID)
+	// Don't call the _start function, as these are libraries, not applications.
+	moduleConfig := wazero.NewModuleConfig().WithName(moduleID).WithStartFunctions()
 
 	// TODO: Record instantiation duration with a metrics library: time.Since(startInstantiation)
 	// startInstantiation := time.Now()
@@ -257,10 +268,10 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("RUNTIME", fmt.Sprintf("wasm module execution failed: %v", err), nil)
 	}
 
-	// The result is a single uint64 with the length in the upper 32 bits and the pointer in the lower 32 bits.
+	// The guest packs the result as (pointer << 32) | length.
 	packedResult := results[0]
-	resultLen := uint32(packedResult >> 32)
-	resultPtr := uint32(packedResult)
+	resultPtr := uint32(packedResult >> 32)
+	resultLen := uint32(packedResult)
 
 	defer func() {
 		if _, err := h.deallocateFn.Call(callCtx, uint64(resultPtr), uint64(resultLen)); err != nil {

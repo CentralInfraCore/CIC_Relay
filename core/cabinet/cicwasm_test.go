@@ -72,6 +72,12 @@ func TestWasmManager_NewAndClose(t *testing.T) {
 	// Operations after closing should fail.
 	_, err = m.NewHostInstance(ctx, "any-module")
 	assert.Error(t, err, "expected error on closed manager")
+
+	// Test that NewWasmManager fails if the context is already closed, preventing WASI instantiation.
+	closedCtx, cancel := context.WithCancel(ctx)
+	cancel()
+	_, err = NewWasmManager(closedCtx, store, config)
+	assert.Error(t, err, "NewWasmManager should fail with a closed context")
 }
 
 // TestWasmManager_PreCompile_Simple tests a single, successful compilation and caching.
@@ -444,4 +450,132 @@ func TestWasmManager_EvictModule_Prefix(t *testing.T) {
 	cacheKey2 := md2.ID() + ":" + md2.Checksum()
 	_, ok2 := m.compiledModules.Get(cacheKey2)
 	assert.False(t, ok2, "module version 2.0 should be evicted")
+}
+
+// TestCicWasmHost_callGuest_Errors covers various error scenarios in the callGuest function.
+func TestCicWasmHost_callGuest_Errors(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+
+	// Note: The following tests require specific wasm files in the testdata directory.
+	// - trap.wasm: A module whose "Call" function immediately traps.
+	// - echo_json.wasm: A module whose "Call" function returns a hardcoded JSON string based on the op.
+
+	t.Run("writeStringToWasm fails", func(t *testing.T) {
+		abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+		md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test-module-write-fail", Version: "1.0"}, "wasm", nil, nil, abiWasm)
+		require.NoError(t, err)
+		store.Put(md)
+
+		m, err := NewWasmManager(ctx, store, config)
+		require.NoError(t, err)
+		defer m.Close(ctx)
+
+		instance, err := m.NewHostInstance(ctx, md.ID())
+		require.NoError(t, err)
+		defer instance.Close(ctx)
+
+		hostInstance, ok := instance.(*CicWasmHost)
+		require.True(t, ok)
+
+		// Use a canceled context to cause writeStringToWasm to fail.
+		callCtx, cancel := context.WithCancel(ctx)
+		cancel()
+
+		_, errorJson := hostInstance.callGuest(callCtx, "any_op", "{}", "{}")
+		assert.Contains(t, errorJson, "HOST_ERROR")
+		assert.Contains(t, errorJson, "failed to write 'op' to wasm memory")
+	})
+
+	t.Run("guest call traps", func(t *testing.T) {
+		trapWasm := loadWasmFile(t, "trap.wasm")
+		md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "trap-module", Version: "1.0"}, "wasm", nil, nil, trapWasm)
+		require.NoError(t, err)
+		store.Put(md)
+
+		m, err := NewWasmManager(ctx, store, config)
+		require.NoError(t, err)
+		defer m.Close(ctx)
+
+		instance, err := m.NewHostInstance(ctx, md.ID())
+		require.NoError(t, err)
+		defer instance.Close(ctx)
+
+		hostInstance, ok := instance.(*CicWasmHost)
+		require.True(t, ok)
+
+		_, errorJson := hostInstance.callGuest(ctx, "any_op", "{}", "{}")
+		assert.Contains(t, errorJson, `"code":"RUNTIME"`)
+		assert.Contains(t, errorJson, "wasm module execution failed")
+	})
+
+	t.Run("guest returns invalid json", func(t *testing.T) {
+		echoWasm := loadWasmFile(t, "echo_json.wasm")
+		md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "echo-json-module", Version: "1.0"}, "wasm", nil, nil, echoWasm)
+		require.NoError(t, err)
+		store.Put(md)
+
+		m, err := NewWasmManager(ctx, store, config)
+		require.NoError(t, err)
+		defer m.Close(ctx)
+
+		instance, err := m.NewHostInstance(ctx, md.ID())
+		require.NoError(t, err)
+		defer instance.Close(ctx)
+
+		hostInstance, ok := instance.(*CicWasmHost)
+		require.True(t, ok)
+
+		_, errorJson := hostInstance.callGuest(ctx, "get_invalid_json", "{}", "{}")
+
+		assert.Contains(t, errorJson, `"code":"HOST_ERROR"`)
+		assert.Contains(t, errorJson, "failed to unmarshal guest result JSON")
+	})
+
+	t.Run("guest returns null data", func(t *testing.T) {
+		echoWasm := loadWasmFile(t, "echo_json.wasm")
+		md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "echo-json-module-null-data", Version: "1.0"}, "wasm", nil, nil, echoWasm)
+		require.NoError(t, err)
+		store.Put(md)
+
+		m, err := NewWasmManager(ctx, store, config)
+		require.NoError(t, err)
+		defer m.Close(ctx)
+
+		instance, err := m.NewHostInstance(ctx, md.ID())
+		require.NoError(t, err)
+		defer instance.Close(ctx)
+
+		hostInstance, ok := instance.(*CicWasmHost)
+		require.True(t, ok)
+
+		dataJson, errorJson := hostInstance.callGuest(ctx, "get_null_data", "{}", "{}")
+
+		assert.Equal(t, "null", dataJson)
+		assert.JSONEq(t, `{"code":"GUEST_REJECTED"}`, errorJson)
+	})
+
+	t.Run("guest returns null error", func(t *testing.T) {
+		echoWasm := loadWasmFile(t, "echo_json.wasm")
+		md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "echo-json-module-null-error", Version: "1.0"}, "wasm", nil, nil, echoWasm)
+		require.NoError(t, err)
+		store.Put(md)
+
+		m, err := NewWasmManager(ctx, store, config)
+		require.NoError(t, err)
+		defer m.Close(ctx)
+
+		instance, err := m.NewHostInstance(ctx, md.ID())
+		require.NoError(t, err)
+		defer instance.Close(ctx)
+
+		hostInstance, ok := instance.(*CicWasmHost)
+		require.True(t, ok)
+
+		dataJson, errorJson := hostInstance.callGuest(ctx, "get_null_error", "{}", "{}")
+
+		assert.Equal(t, "null", errorJson)
+		assert.JSONEq(t, `{"status":"ok"}`, dataJson)
+	})
 }
