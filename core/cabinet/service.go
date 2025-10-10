@@ -249,9 +249,9 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 
 	// 3. Return the final results from the execution context.
 	return &SetResponse{
-		Results:  execCtx.variables,
-		Warnings: nil,
-	},
+			Results:  execCtx.variables,
+			Warnings: nil,
+		},
 		nil
 }
 

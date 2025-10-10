@@ -61,8 +61,8 @@ func (s *memWorkflowStore) Exists(id string) bool {
 // and a content store for checksum to module mapping.
 type memModuleStore struct {
 	mu         sync.RWMutex
-	byID       map[string]string               // Index: id -> checksum
-	byChecksum map[string]*ModuleDescriptor    // CAS: checksum -> module
+	byID       map[string]string            // Index: id -> checksum
+	byChecksum map[string]*ModuleDescriptor // CAS: checksum -> module
 }
 
 func NewMemModuleStore() ModuleStore {

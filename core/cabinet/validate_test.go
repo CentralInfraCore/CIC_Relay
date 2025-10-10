@@ -22,9 +22,9 @@ var wasmBase = []byte{
 
 // wasmWithCustomSection is the same module but with an added, non-essential custom section.
 var wasmWithCustomSection = append(wasmBase, []byte{
-	0x00, // Section ID for custom sections
-	0x0d, // Section size (13 bytes)
-	0x07, // Name length (7 bytes)
+	0x00,                                        // Section ID for custom sections
+	0x0d,                                        // Section size (13 bytes)
+	0x07,                                        // Name length (7 bytes)
 	'p', 'r', 'o', 'd', 'u', 'c', 'e', 'r', 's', // Section name: "producers"
 	0x01, // Number of producers
 	0x01, // Producer name length
@@ -264,7 +264,7 @@ func TestComputeChecksum_ContextCancelled(t *testing.T) {
 	// This should cover the first ctx.Err() check in computeChecksum
 	_, err := computeChecksum(ctx, meta, KindSpec, "some data")
 	require.Error(t, err)
-		testify_assert.ErrorIs(t, err, context.Canceled)
+	testify_assert.ErrorIs(t, err, context.Canceled)
 
 	// This should cover the ctx.Err() check in the []byte data path
 	_, err = computeChecksum(ctx, meta, KindModule, []byte("some data"))
@@ -278,7 +278,7 @@ func TestNewModuleDescriptor_ContextCancelled(t *testing.T) {
 
 	_, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test", Version: "1.0"}, "wasm/test", nil, nil, wasmBase)
 	require.Error(t, err)
-		testify_assert.ErrorIs(t, err, context.Canceled)
+	testify_assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestNewWorkflow_ContextCancelled(t *testing.T) {
@@ -287,7 +287,7 @@ func TestNewWorkflow_ContextCancelled(t *testing.T) {
 
 	_, err := NewWorkflow(ctx, BaseBlock{Name: "test-wf", Version: "1.0"}, []string{"step1"})
 	require.Error(t, err)
-		testify_assert.ErrorIs(t, err, context.Canceled)
+	testify_assert.ErrorIs(t, err, context.Canceled)
 }
 
 func TestNewSchema_ContextCancelled(t *testing.T) {

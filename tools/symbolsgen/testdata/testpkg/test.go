@@ -15,7 +15,7 @@ var privateVar int
 // PublicStruct is a public type.
 type PublicStruct struct {
 	// PublicField is a public field.
-	PublicField string
+	PublicField  string
 	privateField string
 }
 

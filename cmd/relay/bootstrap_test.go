@@ -637,7 +637,7 @@ wasmSize: 4
 		err = loadModule(context.Background(), mockSvc, modulesFS, "test_module.yaml", yamlContent, pkiAssets, maxWasmSize, logger)
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, expectedErr)
-	mockSvc.AssertExpectations(t)
+		mockSvc.AssertExpectations(t)
 	})
 }
 
@@ -655,9 +655,9 @@ func TestLoadComponentsFromFS_WalkDirError(t *testing.T) {
 	var logBuf bytes.Buffer
 	originalLoggerOutput := logger.Out
 	logger.SetOutput(&logBuf)
-		defer func() {
-			logger.SetOutput(originalLoggerOutput)
-		}()
+	defer func() {
+		logger.SetOutput(originalLoggerOutput)
+	}()
 
 	pkiFS := getSubFS(t, "pki")
 	pkiAssets, err := loadPKIAssets(pkiFS, ".", logger)

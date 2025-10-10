@@ -16,9 +16,6 @@ import (
 )
 
 var (
-	allowFile  = "context/SYMBOLS.ALLOWPKGS"
-	outputFile = "context/SYMBOLS.md"
-
 	// exit is a variable that holds the os.Exit function.
 	// It can be replaced in tests to prevent actual program exit.
 	exit = os.Exit
@@ -39,7 +36,7 @@ func generateSymbols(cfg *packages.Config, pkgPatterns []string) ([]byte, error)
 	// Create a context with a timeout for package loading.
 	// This prevents packages.Load from hanging indefinitely.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // 30-second timeout
-	defer cancel() // Ensure the context is cancelled to release resources
+	defer cancel()                                                           // Ensure the context is cancelled to release resources
 
 	// 2. Load the packages, including their syntax trees
 	cfg.Mode = packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes
@@ -168,7 +165,7 @@ func run(allowFilePath, outputFilePath string) error {
 
 	// Generate the symbol documentation
 	output, err := generateSymbols(cfg, pkgPatterns)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to generate symbols: %w", err)
 	}

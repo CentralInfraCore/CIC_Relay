@@ -81,7 +81,7 @@ fmt-check: ## Fail if formatting differs
 		test -z "$$M" || { printf "%s\n" "$$M"; echo "Code not formatted. Run make fmt"; exit 1; })
 
 lint: ## Run static linters (staticcheck, ineffassign)
-	mkdir -p $BUILD_DIR && $(call GO_EXEC, \
+	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
 		set -euo pipefail; \
 		PKGS="$$(go list ./... | grep -v /vendor/)"; \
 		if [ -z "$$PKGS" ]; then \
@@ -180,7 +180,7 @@ coverage-check-pkgs: ## Fail if packages coverage < $(COVERAGE_MIN)%
 		done'
 
 vuln: ## Run Go vulnerability scan (govulncheck)
-	mkdir -p $BUILD_DIR && $(call GO_EXEC, \
+	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
 		set -euo pipefail; \
 		PKGS="$$(go list ./... | grep -v /vendor/)"; \
 		if [ -z "$$PKGS" ]; then \

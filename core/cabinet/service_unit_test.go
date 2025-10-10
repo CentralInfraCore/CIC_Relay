@@ -218,7 +218,6 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 		mockCicWasmHost.AssertExpectations(t)
 	})
 
-
 	// --- Sub-test: NewHostInstance fails ---
 	t.Run("NewHostInstance failure", func(t *testing.T) {
 		// a. Setup Mocks
