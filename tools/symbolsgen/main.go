@@ -30,7 +30,7 @@ var (
 
 // generateSymbols loads and processes Go packages based on the provided patterns
 // and returns the generated symbols documentation as a byte slice.
-func generateSymbols(pkgPatterns []string) ([]byte, error) {
+func generateSymbols(cfg *packages.Config, pkgPatterns []string) ([]byte, error) {
 	// If no package patterns are provided, return nil output and no error.
 	if len(pkgPatterns) == 0 {
 		return nil, nil
@@ -42,11 +42,10 @@ func generateSymbols(pkgPatterns []string) ([]byte, error) {
 	defer cancel() // Ensure the context is cancelled to release resources
 
 	// 2. Load the packages, including their syntax trees
-	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes,
-		Fset: token.NewFileSet(),
-		Context: ctx, // Assign the context with timeout
-	}
+	cfg.Mode = packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes
+	cfg.Fset = token.NewFileSet()
+	cfg.Context = ctx // Assign the context with timeout
+
 	pkgs, err := packages.Load(cfg, pkgPatterns...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load packages: %w", err)
@@ -164,8 +163,11 @@ func run(allowFilePath, outputFilePath string) error {
 
 	pkgPatterns := strings.Split(strings.TrimSpace(string(allowlistContent)), "\n")
 
+	// Create a default packages.Config for generateSymbols
+	cfg := &packages.Config{}
+
 	// Generate the symbol documentation
-	output, err := generateSymbols(pkgPatterns)
+	output, err := generateSymbols(cfg, pkgPatterns)
 	
 	if err != nil {
 		return fmt.Errorf("failed to generate symbols: %w", err)
