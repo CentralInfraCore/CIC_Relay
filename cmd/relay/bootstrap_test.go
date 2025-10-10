@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -16,6 +17,7 @@ import (
 	"testing/fstest"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/pkg/canonicaljson"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -778,4 +780,37 @@ func TestRegisterNativeComponents(t *testing.T) {
 	// Check if the 'echo' function is present in the native implementation map.
 	_, ok := capturedModule.NativeImpl["echo"]
 	assert.True(t, ok, "The native implementation should contain an 'echo' function")
+}
+
+func TestRegisterNativeComponents_Errors(t *testing.T) {
+	t.Run("NewModuleDescriptor fails", func(t *testing.T) {
+		// Mock the canonicaljson.ToJSON function to return an error
+		canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
+			return nil, errors.New("json marshal error")
+		})
+		t.Cleanup(func() {
+			canonicaljson.SetToJSONMock(nil) // Restore original function
+		})
+
+		mockCabinet := new(mockCabinetService)
+		err := registerNativeComponents(context.Background(), mockCabinet)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to create core.test module descriptor")
+	})
+
+	t.Run("PutModule fails", func(t *testing.T) {
+		mockCabinet := new(mockCabinetService)
+		expectedErr := errors.New("db is full")
+
+		// Expect PutModule to be called and return an error
+		mockCabinet.On("PutModule", mock.Anything).Return(expectedErr).Once()
+
+		err := registerNativeComponents(context.Background(), mockCabinet)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, expectedErr)
+		assert.Contains(t, err.Error(), "failed to register core.test module")
+		mockCabinet.AssertExpectations(t)
+	})
 }
