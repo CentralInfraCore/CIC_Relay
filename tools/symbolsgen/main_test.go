@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,7 +14,7 @@ import (
 
 // Helper function to create a temporary file with content
 func createTempFile(t *testing.T, content string) string {
-	tmpfile, err := ioutil.TempFile("", "testfile")
+	tmpfile, err := os.CreateTemp("", "testfile")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
@@ -30,7 +29,7 @@ func createTempFile(t *testing.T, content string) string {
 
 // Helper function to create a temporary Go package directory and file
 func createTempGoPackage(t *testing.T, pkgName, fileName, content string) (string, string) {
-	tmpDir, err := ioutil.TempDir("", "testpkg")
+	tmpDir, err := os.MkdirTemp("", "testpkg")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -39,7 +38,7 @@ func createTempGoPackage(t *testing.T, pkgName, fileName, content string) (strin
 	modulePath := "example.com/testmodule_" + pkgName
 	goModContent := "module " + modulePath + "\n\ngo 1.18\n"
 	goModPath := filepath.Join(tmpDir, "go.mod")
-	if err := ioutil.WriteFile(goModPath, []byte(goModContent), 0644); err != nil {
+	if err := os.WriteFile(goModPath, []byte(goModContent), 0644); err != nil {
 		t.Fatalf("failed to write go.mod: %v", err)
 	}
 
@@ -49,7 +48,7 @@ func createTempGoPackage(t *testing.T, pkgName, fileName, content string) (strin
 	}
 
 	filePath := filepath.Join(pkgPath, fileName)
-	if err := ioutil.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		t.Fatalf("failed to write package file: %v", err)
 	}
 	return tmpDir, modulePath + "/" + pkgName // Return the base temp dir and the module path to the package
@@ -57,7 +56,7 @@ func createTempGoPackage(t *testing.T, pkgName, fileName, content string) (strin
 
 // Helper function to read file content
 func readFileContent(t *testing.T, path string) string {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("failed to read file %s: %v", path, err)
 	}
@@ -200,7 +199,7 @@ func TestRun_GenerateSymbolsError(t *testing.T) {
 }
 
 func TestGenerateSymbols_Success(t *testing.T) {
-	cfg := &packages.Config{} // Default config
+	cfg := &packages.Config{}      // Default config
 	pkgPatterns := []string{"fmt"} // Use a standard library package
 
 	output, err := generateSymbols(cfg, pkgPatterns)
@@ -238,7 +237,7 @@ func TestGenerateSymbols_NoPackages(t *testing.T) {
 }
 
 func TestGenerateSymbols_PackageLoadError(t *testing.T) {
-	cfg := &packages.Config{} // Default config
+	cfg := &packages.Config{}                          // Default config
 	pkgPatterns := []string{"nonexistent/package/xyz"} // Invalid package pattern
 
 	output, err := generateSymbols(cfg, pkgPatterns)

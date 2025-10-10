@@ -31,7 +31,7 @@ func loadConfig() (*config, error) {
 	cfg := &config{
 		MaxJSONInputSize:  4 * 1024 * 1024,  // Default to 4 MB
 		MaxWASMModuleSize: 16 * 1024 * 1024, // Default to 16 MB
-		HashingTimeout:    5 * time.Second,      // Default to 5 seconds
+		HashingTimeout:    5 * time.Second,  // Default to 5 seconds
 	}
 
 	if val := os.Getenv("MAX_JSON_INPUT_SIZE"); val != "" {

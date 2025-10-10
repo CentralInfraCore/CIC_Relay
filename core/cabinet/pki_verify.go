@@ -14,7 +14,7 @@ type VerifyOptions struct {
 	Intermediates *x509.CertPool
 	KeyUsages     []x509.ExtKeyUsage
 	CRLs          []*x509.RevocationList // Added for M3 revocation check
-	PinnedSPKIs   map[string]bool          // Added for M3 SPKI pinning. Map of base64-encoded SHA-256 SPKI hashes.
+	PinnedSPKIs   map[string]bool        // Added for M3 SPKI pinning. Map of base64-encoded SHA-256 SPKI hashes.
 }
 
 // checkRevocation checks if any certificate in the provided chains is in the revocation list.

@@ -23,9 +23,9 @@ func TestCanonicalWasmGolden(t *testing.T) {
 	// This is the same module but with an added, non-essential custom section.
 	// Custom sections are used for metadata (e.g., producer info) and should be stripped.
 	customSection := []byte{
-		0x00, // Section ID for custom sections
-		0x0d, // Section size (13 bytes)
-		0x07, // Name length (7 bytes)
+		0x00,                                        // Section ID for custom sections
+		0x0d,                                        // Section size (13 bytes)
+		0x07,                                        // Name length (7 bytes)
 		'p', 'r', 'o', 'd', 'u', 'c', 'e', 'r', 's', // Section name: "producers"
 		0x01, // Number of producers
 		0x01, // Producer name length
