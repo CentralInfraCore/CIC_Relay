@@ -180,19 +180,63 @@ Ez a fájl az AI-támogatott roadmap állapota.
 * **DoD**: terhelési próba alatt is stabil memóriahasználat és latency.
 * **Megjegyzés:** A haladó biztonsági és üzemeltetési funkciók (licenc, mTLS, multi-tenant) nincsenek implementálva.
 
-## Mérföldkövek (prioritási sorrend, részletesen) - Frissített állapot
+### M11 — IaC Feldolgozás és Gráf Építés (Nexus IaC)
+* **Állapot:** Hiányzik
+* **Feladatok:** A rendszer bemenetét képező Infrastruktúra-leíró (IaC) adatok beolvasása, validálása és egy memóriabeli gráf-modellé alakítása, függetlenül attól, hogy az adat fájlrendszerből vagy API-n keresztül érkezik.
+* **DoD**: A rendszer képes mind fájlrendszerből, mind (mockolt) API válaszból felépíteni ugyanazt a gráfot. A forrás típusa konfigurálható.
+* **Részfeladatok (checklist):**
+    *   [ ] **M11.1: IaC Source Abstraction**: `IaCSource` interfész definiálása (pl. `FetchConfig`).
+    *   [ ] **M11.2: Implementációk**: `FileSource` (rekurzív fájl olvasás) és `UpstreamSource` (API kliens) vázának elkészítése.
+    *   [ ] **M11.3: Gráf Építő**: A nyers adatokból a `Relay`-`Host`-`Service` csomópontok és élek memóriabeli felépítése.
+    *   [ ] **M11.4: Validáció és Desired State**: A gráf konzisztenciájának ellenőrzése és transzformálása `ExpectedState` objektummá.
 
-| Milestone | Fő cél | Tényleges állapot a kódban | Megjegyzés |
-| --------- | ------- | -------------------------- | ---------- |
-| M0–M1     | a teszt-refaktor és a WASM checksum/strip (wabin hook) | valóban megvan; a bizonyíték a core/cabinet/validate.go és a cmd/relay/bootstrap_test.go. | A kódvizsgálat megerősítette a roadmap "valóban megvan" és "kész" állításait. |
-| M2–M3     | Schema/Workflow betöltés és a CabinetService Put*/Get* útvonalak megvalósítva; futtató runtime nincs bekötve (WASM exec path hiányzik). | Schema/Workflow betöltés és a CabinetService Put*/Get* útvonalak megvalósítva; futtató runtime nincs bekötve (WASM exec path hiányzik). | A `core/cabinet/service.go` fájlban a `TODO` komment egyértelműen jelzi a WASM futtatás hiányát. |
-| M4        | Limitációk (JSON, WASM, CPU/idő budget, konfigurálhatóság) | M4.1 JSON limit → részben kész (robosztus a setHandlerben); M4.2 WASM limit/strip → kész; M4.3 CPU/idő budget → hiányzik; M4.4 konfigurálhatóság → részben kész (nincs központi config). | Az M4.1 a `setHandler`-ben robusztusan implementált, de a "részben kész" még érvényes lehet, ha más handlerekben hiányzik. Az M4.3 csak a betöltési fázisra vonatkozik, nem az általános kérésfeldolgozásra/WASM futtatásra. Az M4.4 környezeti változókból olvassa be a konfigurációt, de nincs központi konfigurációs fájl. |
-| M5        | Sentinel hibák rendben, az egységes APIError JSON és a státuszkód-mapping félig kész, a “minden útvonal egyforma hibaformátumot ad” még nem igaz. | Sentinel hibák rendben, az egységes APIError JSON és a státuszkód-mapping félig kész, a “minden útvonal egyforma hibaformátumot ad” még nem igaz. | A `cmd/relay/main.go` `http.Error` használata miatt a hibaválaszok nem egységesen JSON formátumúak. |
-| M6 — Build & Release chain | determinisztikus build, MANIFEST, aláírások, verify pipeline | Részben kész → a repo tartalmaz: MANIFEST.sha256, scripts/gen_manifest.sh, docs/hu/en/security/*, GitHub-Actions workflowk (verify.yml, manifest-check.yml). | A megemlített komponensek valóban jelen vannak és bizonyos mértékig működnek, de a teljes build-signing integráció és az automatizált verify futás minden artifactre még hiányzik. |
-| M7 — Supply-chain validation / Artifact trust | betöltéskor signature+hash ellenőrzés, rollback LKG | Részben kész → `core/cabinet/pki_verify.go` tartalmaz revocation és SPKI-pinning logikát. | A PKI ellenőrzési logika létezik, de nincs bekötve a futási útvonalba; nincs rollout-gate vagy rollback-logika. |
-| M8 — Observability / Metrics | alap HTTP-metrics, compile/exec időmérés | Részben hiányzik. Logolás (`logrus`) használatban van, de Prometheus-/metrics-kód vagy compile/exec időmérés hiányzik. | A `cmd/relay/main.go` fájlban `logrus` logger van használatban strukturált logolással. Azonban a Prometheus metrikák és a compile/exec időmérés implementációja még hiányzik. |
-| M9 — Operations safety (circuit-breaker, rate-limit) | hibatűrés, DoS elleni védelem | Hiányzik → semmilyen CB/RL modul, se limiter nincs a kódban. | A kódvizsgálat nem talált semmilyen implementációt circuit breaker vagy rate limit mechanizmusokra. |
-| M10 — Enterprise rollout features (licenc, mTLS, multi-tenant) | haladó biztonság és üzemeltetés | Hiányzik → a roadmap csak célként említi, nincs implementáció. | Nincs jele licenckezelés, mTLS vagy multi-tenancy implementációnak a kódban. |
+### M12 — Git-alapú Állapotrögzítés (Nexus Recorder)
+* **Állapot:** Hiányzik
+* **Feladatok:** A Relay belső állapotának (expected/actual) perzisztens, visszakereshető rögzítése egy lokális Git repóba a hibakeresés támogatására.
+* **DoD**: A Relay futása során létrejön a lokális Git repo, és minden tranzakció után megjelenik egy új commit a megfelelő branch-en, ami tartalmazza az állapot-fájlokat.
+* **Részfeladatok (checklist):**
+    *   [ ] **M12.1: Közös Típusrendszer (`nexus/types`)**: Definiálni a `Host`, `Relay`, `Module` és `State` struktúrákat.
+    *   [ ] **M12.2: Recorder Interfész**: `StateRecorder` interfész definiálása.
+    *   [ ] **M12.3: Git Library Integráció**: `go-git` vagy wrapper bekötése, `InitRepo` implementálása.
+    *   [ ] **M12.4: Perzisztencia és Commit**: JSON szerializáció és `Commit` logika implementálása.
+
+### M13 — Vault Integráció és Aláírás (Nexus Crypto)
+* **Állapot:** Hiányzik
+* **Feladatok:** A rögzített állapotok hitelességének biztosítása kriptográfiai aláírással.
+* **DoD**: A Git commitok metaadatai között (pl. commit message footer vagy külön meta fájl) megjelenik a Vault által generált aláírás. A rendszer induláskor ellenőrzi a Vault kapcsolatot.
+* **Részfeladatok (checklist):**
+    *   [ ] **M13.1: Vault Kliens**: Wrapper, HealthCheck implementálása.
+    *   [ ] **M13.2: Aláírás (Sign)**: Transit engine integráció.
+    *   [ ] **M13.3: CryptoService Interfész**: Magas szintű API definiálása.
+    *   [ ] **M13.4: Recorder Integráció**: Commit aláírás bekötése.
+
+### M14 — Központi Audit Szinkronizáció (Nexus Sync)
+* **Állapot:** Hiányzik
+* **Feladatok:** A lokális, részletes hibakeresési adatok tömörítése és biztonságos továbbítása egy központi audit repóba.
+* **DoD**: A központi Git repóban megjelennek a napi összesített commitok. A lokális repóban a régi branchek törlődnek (prune).
+* **Részfeladatok (checklist):**
+    *   [ ] **M14.1: Squash Logika**: Napi tömörítés implementálása.
+    *   [ ] **M14.2: Push Logika**: Központi repóba küldés implementálása.
+    *   [ ] **M14.3: Prune**: Takarítási logika implementálása.
+
+### M15 — Többrétegű Biztonsági Szeparáció (Nexus Isolation)
+* **Állapot:** Hiányzik
+* **Feladatok:** A "Zero Trust" elv érvényesítése a titkosítási folyamatban a jogosultságok szétválasztásával.
+* **DoD**: A rendszer három különálló identitást használ a műveletekhez. A plaintext adat soha nem jelenik meg a koordinátor processz memóriájában, csak a végponti izolált környezetben.
+* **Részfeladatok (checklist):**
+    *   [ ] **M15.1: Identitás Definíciók**: Host/Relay/Module identity struktúrák.
+    *   [ ] **M15.2: Koordinátor**: Folyamatvezérlés implementálása.
+    *   [ ] **M15.3: IPC**: Kommunikációs csatorna implementálása.
+    *   [ ] **M15.4: Workerek**: Decrypt workerek implementálása.
+
+### M16 — GitOps-vezérelt Életciklus (Nexus Operator)
+* **Állapot:** Hiányzik
+* **Feladatok:** A rendszer entitásainak (hostok, modulok) dinamikus, automatizált kezelése egy központi "Infrastruktúra Állapot Repó" alapján.
+* **DoD**: Egy új YAML fájl commitolása az infra repóba automatikusan eredményez egy működő, hitelesített új hostot/modult a rendszerben, emberi beavatkozás nélkül.
+* **Részfeladatok (checklist):**
+    *   [ ] **M16.1: Watcher**: Infra repo figyelés implementálása.
+    *   [ ] **M16.2: Bootstrap**: Token generálás implementálása.
+    *   [ ] **M16.3: Lifecycle**: Onboarding/Offboarding logika implementálása.
 
 ---
 
@@ -212,6 +256,12 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M8        | Partial |
 | M9        | Missing |
 | M10       | Missing |
+| M11       | Missing |
+| M12       | Missing |
+| M13       | Missing |
+| M14       | Missing |
+| M15       | Missing |
+| M16       | Missing |
 
 ---
 

@@ -2,8 +2,15 @@ SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 
-# Default goal
-.DEFAULT_GOAL := build
+# ---- Phony ----
+.PHONY: all help infra-init prepare fmt fmt-check lint vet quality \
+	test coverage coverage-threshold build verify manifest-src \
+	tdd cache-populate mq-publish verify-auto verify-debug \
+	manifest-verify manifest-update verify-full clean shell \
+	symbols check-symbols test-api deps
+
+# Default to showing help
+all: help
 
 MAKE := make
 APP_NAME ?= cic-relay
@@ -296,9 +303,3 @@ mq-publish: ## Example publish step (override as needed)
 			nats pub build.result.$(COMMIT) "❌ Build failed or missing output."; \
 		fi '
 
-# ---- Phony ----
-.PHONY: help infra-init prepare fmt fmt-check lint vet quality \
-	test coverage coverage-threshold build verify manifest-src \
-	tdd cache-populate mq-publish verify-auto verify-debug \
-	manifest-verify manifest-update verify-full clean shell \
-	symbols check-symbols test-api deps
