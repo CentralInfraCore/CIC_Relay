@@ -1,0 +1,8 @@
+apiVersion: cic/v1
+kind: Host
+metadata:
+  name: host-01
+spec:
+  os: linux
+  services:
+    - ../services/service-a.yaml
