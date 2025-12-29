@@ -1,6 +1,27 @@
-/.idea
-/output
-/tmp
-/p_venv
+# IDE
+.idea/
+
+# Build & Test artifacts
+output/
+tmp/
+htmlcov/
 .coverage
 coverage.json
+coverage.out
+*.prof
+*.test
+
+# Python
+p_venv/
+__pycache__/
+*.pyc
+
+# Local data
+/nats-data/
+/test-iac-repo/
+/test-audit-repo/
+
+# Other
+llm.lock
+CurrentTest/
+.pytest_cache/

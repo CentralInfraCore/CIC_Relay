@@ -1,0 +1,8 @@
+apiVersion: cic/v1
+kind: Service
+metadata:
+  name: service-a
+spec:
+  module: test-module
+  config:
+    key: value
