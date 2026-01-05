@@ -1,0 +1,11 @@
+./golden/json/order.workflow.canon.json
+./golden/wasm/add.canonical.hex
+./manifest/FILELIST.csv
+./modules/user.module.yaml
+./modules/user.module.yaml.sig
+./schemas/user.schema.yaml
+./schemas/user.schema.yaml.sig
+./wasm/add.wasm
+./wasm/add.wasm.sig
+./workflows/order.workflow.yaml
+./workflows/order.workflow.yaml.sig

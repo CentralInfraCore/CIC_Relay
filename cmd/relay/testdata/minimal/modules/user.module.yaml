@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Module
+metadata:
+  name: user
+spec:
+  schema: user
+  wasm: wasm/add.wasm
