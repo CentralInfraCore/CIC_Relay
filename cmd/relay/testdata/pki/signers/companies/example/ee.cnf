@@ -1,0 +1,20 @@
+[ req ]
+prompt = no
+distinguished_name = dn
+req_extensions = v3_req_ext
+
+[ dn ]
+C = HU
+O = Example Org
+CN = example-company-signer@example
+
+[ v3_req_ext ]
+subjectKeyIdentifier = hash
+
+[ v3_ee_ext ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = CA:false
+keyUsage = critical, digitalSignature
+extendedKeyUsage = codeSigning
+subjectAltName = email:example-company-signerexample
