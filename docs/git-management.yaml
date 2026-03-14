@@ -1,0 +1,14 @@
+tags:
+  - doc
+  - core
+  - ci-cd
+related_nodes:
+  - ../feature-list
+category:
+  - concept
+  - ci-cd
+entrypoint: false
+used_in:
+  - development-process
+description: |
+  Git branch management specification for CIC-Relay. Defines branch naming, merge rules, CI feedback patterns, and deletion procedures specific to the Relay component.

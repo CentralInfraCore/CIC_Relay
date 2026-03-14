@@ -1,0 +1,14 @@
+tags:
+  - doc
+  - relay
+related_nodes:
+  - features/feature-001/spec
+  - features/feature-002/spec
+  - README
+category:
+  - meta
+entrypoint: false
+used_in:
+  - development-process
+description: |
+  Feature list for CIC-Relay. Tracks planned, in-progress, and completed features for the relay control plane component.
