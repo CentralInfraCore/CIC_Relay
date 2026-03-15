@@ -1,4 +1,3 @@
----
 package: main
 description: ''
 tags:
@@ -10,14 +9,16 @@ related_nodes: []
 objects:
 - name: BuildMeta
   kind: struct
-  description: ''
+  description: 'Build metadata struct: build ID, commit hash, timestamp, GPG signature,
+    CA fingerprint — printed with -v flag.'
   implements: []
   references: []
 - name: printHelp
   kind: func
-  description: ''
+  description: Prints CLI usage and available flags to stdout.
   references: []
 - name: main
   kind: func
-  description: ''
+  description: 'Entry point: parses flags, prints build metadata (-v) or certificate
+    info (-cert) from PEM file.'
   references: []

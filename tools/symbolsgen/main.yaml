@@ -1,4 +1,3 @@
----
 package: main
 description: ''
 tags:
@@ -29,5 +28,6 @@ objects:
   - packages.Config
 - name: main
   kind: func
-  description: ''
+  description: 'Entry point: loads Go packages via golang.org/x/tools/go/packages
+    and generates symbol documentation.'
   references: []

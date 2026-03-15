@@ -1,4 +1,3 @@
----
 package: main
 description: ''
 tags:
@@ -63,7 +62,8 @@ objects:
   - logrus.Logger
 - name: main
   kind: func
-  description: ''
+  description: 'Entry point: loads config, initialises cabinet and WASM manager, bootstraps
+    PKI and native components, starts HTTP server.'
   references:
   - logrus.New
   - logrus.JSONFormatter
