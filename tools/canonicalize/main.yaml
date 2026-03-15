@@ -1,0 +1,27 @@
+package: main
+description: ''
+tags:
+- builder
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: 'Entry point: reads JSON from stdin, writes canonical (deterministically
+    sorted) JSON to stdout.'
+  references: []
+- name: Run
+  kind: func
+  description: Reads JSON from input, unmarshals it, converts to canonical form via
+    canonicaljson.ToJSON, writes to output.
+  references:
+  - canonicaljson.ToJSON
+- name: RunFunc
+  kind: var
+  description: RunFunc is a variable that holds the actual run function. It can be
+    reassigned for testing purposes.
+  references: []

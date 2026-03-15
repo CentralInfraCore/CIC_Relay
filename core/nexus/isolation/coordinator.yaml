@@ -1,0 +1,40 @@
+---
+package: isolation
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: DecryptRequest
+  kind: struct
+  description: DecryptRequest represents a request to decrypt a payload.
+  implements: []
+  references: []
+- name: DecryptResponse
+  kind: struct
+  description: DecryptResponse represents the result of a decryption operation.
+  implements: []
+  references: []
+- name: Coordinator
+  kind: struct
+  description: Coordinator manages the 3-step decryption process.
+  implements: []
+  references: []
+- name: Worker
+  kind: interface
+  description: Worker defines the interface for an isolated decryption component.
+  references: []
+- name: NewCoordinator
+  kind: func
+  description: NewCoordinator creates a new Coordinator with the given workers.
+  references: []
+- name: Unwrap
+  kind: method
+  receiver: Coordinator
+  description: 'Unwrap performs the layered decryption: Relay -> Module -> Host. Note:
+    The order depends on how the data was wrapped. Assuming standard onion routing:
+    Outer layer = Relay, Middle = Module, Inner = Host.'
+  references: []

@@ -1,0 +1,15 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: CoreEcho
+  kind: func
+  description: CoreEcho is a simple native function for testing. It takes any data
+    as input and returns it unmodified, acting as an echo.
+  references: []

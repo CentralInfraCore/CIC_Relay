@@ -1,0 +1,33 @@
+package: main
+description: ''
+tags:
+- builder
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: generateSymbols
+  kind: func
+  description: generateSymbols loads and processes Go packages based on the provided
+    patterns and returns the generated symbols documentation as a byte slice.
+  references:
+  - packages.Config
+  - packages.NeedName
+  - packages.NeedFiles
+  - packages.NeedSyntax
+  - packages.NeedTypes
+  - packages.Load
+- name: run
+  kind: func
+  description: run contains the main logic of the symbolsgen tool, allowing it to
+    be tested.
+  references:
+  - packages.Config
+- name: main
+  kind: func
+  description: 'Entry point: loads Go packages via golang.org/x/tools/go/packages
+    and generates symbol documentation.'
+  references: []

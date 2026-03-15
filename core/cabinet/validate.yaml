@@ -1,0 +1,42 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: metaForChecksum
+  kind: struct
+  description: metaForChecksum is a helper struct to select only the non-volatile
+    fields from BaseBlock for checksum calculation.
+  implements: []
+  references: []
+- name: SetStripWasmModuleFunc
+  kind: func
+  description: SetStripWasmModuleFunc allows overriding the default WASM stripping
+    function for testing.
+  references: []
+- name: computeChecksum
+  kind: func
+  description: computeChecksum is a private helper that calculates the canonical checksum.
+    It now accepts a context to handle timeouts during long-running operations.
+  references:
+  - canonicaljson.ToJSON
+- name: validateAndChecksum
+  kind: func
+  description: validateAndChecksum is the single central entry point for validation
+    and checksum calculation. It now accepts a context to handle timeouts.
+  references: []
+- name: stripWasmModuleFunc
+  kind: var
+  description: stripWasmModuleFunc uses wabin to strip all custom sections from a
+    WASM module, producing a canonical byte representation.
+  references: []
+- name: MaxWASMModuleSize
+  kind: const
+  description: MaxWASMModuleSize defines the maximum allowed size for a WASM module
+    in bytes (16MB).
+  references: []

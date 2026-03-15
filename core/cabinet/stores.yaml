@@ -1,0 +1,100 @@
+package: cabinet
+description: ''
+tags:
+- core
+- schema
+- storage
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: memWorkflowStore
+  kind: struct
+  description: In-memory Workflow store backed by a mutex-protected map, implements
+    WorkflowStore.
+  implements: []
+  references: []
+- name: memModuleStore
+  kind: struct
+  description: 'memModuleStore implements a content-addressable storage (CAS) for
+    modules. It uses a two-level map: an index for name/version to checksum mapping,
+    and a content store for checksum to module mapping.'
+  implements: []
+  references: []
+- name: memSchemaStore
+  kind: struct
+  description: In-memory Schema store backed by a mutex-protected map, implements
+    SchemaStore.
+  implements: []
+  references: []
+- name: WorkflowStore
+  kind: interface
+  description: WorkflowStore abstracts storage for Workflow entities.
+  references: []
+- name: ModuleStore
+  kind: interface
+  description: ModuleStore abstracts storage for ModuleDescriptor entities.
+  references: []
+- name: SchemaStore
+  kind: interface
+  description: SchemaStore abstracts storage for Schema entities.
+  references: []
+- name: NewMemWorkflowStore
+  kind: func
+  description: Creates and returns an empty in-memory WorkflowStore.
+  references: []
+- name: Get
+  kind: method
+  receiver: memWorkflowStore
+  description: Returns the entity by ID; second return indicates presence.
+  references: []
+- name: Put
+  kind: method
+  receiver: memWorkflowStore
+  description: Stores entity; returns previous value and whether it existed.
+  references: []
+- name: Exists
+  kind: method
+  receiver: memWorkflowStore
+  description: Returns true if an entity with the given ID is present.
+  references: []
+- name: NewMemModuleStore
+  kind: func
+  description: Creates and returns an empty in-memory ModuleStore with CAS (content-addressable
+    storage).
+  references: []
+- name: Get
+  kind: method
+  receiver: memModuleStore
+  description: Returns the entity by ID; second return indicates presence.
+  references: []
+- name: Put
+  kind: method
+  receiver: memModuleStore
+  description: Stores entity; returns previous value and whether it existed.
+  references: []
+- name: Exists
+  kind: method
+  receiver: memModuleStore
+  description: Returns true if an entity with the given ID is present.
+  references: []
+- name: NewMemSchemaStore
+  kind: func
+  description: Creates and returns an empty in-memory SchemaStore.
+  references: []
+- name: Get
+  kind: method
+  receiver: memSchemaStore
+  description: Returns the entity by ID; second return indicates presence.
+  references: []
+- name: Put
+  kind: method
+  receiver: memSchemaStore
+  description: Stores entity; returns previous value and whether it existed.
+  references: []
+- name: Exists
+  kind: method
+  receiver: memSchemaStore
+  description: Returns true if an entity with the given ID is present.
+  references: []

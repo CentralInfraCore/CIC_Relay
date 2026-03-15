@@ -1,0 +1,48 @@
+---
+package: crypto
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: VaultCryptoService
+  kind: struct
+  description: VaultCryptoService implements CryptoService using HashiCorp Vault's
+    Transit engine.
+  implements: []
+  references:
+  - api.Client
+- name: CryptoService
+  kind: interface
+  description: CryptoService defines the interface for cryptographic operations like
+    signing and decrypting.
+  references: []
+- name: NewVaultCryptoService
+  kind: func
+  description: NewVaultCryptoService creates and configures a new service for signing.
+    It reads Vault's address and token from standard environment variables (VAULT_ADDR,
+    VAULT_TOKEN).
+  references:
+  - api.DefaultConfig
+  - api.NewClient
+- name: Sign
+  kind: method
+  receiver: VaultCryptoService
+  description: Sign uses the Vault Transit engine to sign the given data. It expects
+    the data to be a hash (or raw data depending on Vault config), but typically for
+    signing commits we sign the hash.
+  references: []
+- name: Decrypt
+  kind: method
+  receiver: VaultCryptoService
+  description: Decrypt uses the Vault Transit engine to decrypt the given ciphertext.
+    The ciphertext must be a valid Vault ciphertext string (e.g., "vault:v1:...").
+  references: []
+- name: HealthCheck
+  kind: method
+  receiver: VaultCryptoService
+  description: HealthCheck pings the Vault server's health endpoint.
+  references: []

@@ -1,0 +1,39 @@
+---
+package: sync
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: GitSyncerConfig
+  kind: struct
+  description: GitSyncerConfig holds the configuration for the GitSyncer.
+  implements: []
+  references: []
+- name: GitSyncer
+  kind: struct
+  description: GitSyncer implements the Syncer interface using git commands.
+  implements: []
+  references: []
+- name: Syncer
+  kind: interface
+  description: Syncer defines the interface for synchronizing local state to a central
+    repository.
+  references: []
+- name: NewGitSyncer
+  kind: func
+  description: NewGitSyncer creates a new GitSyncer.
+  references: []
+- name: SyncDaily
+  kind: method
+  receiver: GitSyncer
+  description: SyncDaily performs the daily squash and push.
+  references: []
+- name: runGit
+  kind: method
+  receiver: GitSyncer
+  description: runGit executes a git command in the repo directory.
+  references: []
