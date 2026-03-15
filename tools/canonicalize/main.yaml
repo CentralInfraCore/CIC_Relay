@@ -1,0 +1,26 @@
+---
+package: main
+description: ''
+tags:
+- builder
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: ''
+  references: []
+- name: Run
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.ToJSON
+- name: RunFunc
+  kind: var
+  description: RunFunc is a variable that holds the actual run function. It can be
+    reassigned for testing purposes.
+  references: []

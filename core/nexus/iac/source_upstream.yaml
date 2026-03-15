@@ -1,0 +1,25 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: UpstreamSource
+  kind: struct
+  description: UpstreamSource implements IaCSource for fetching config from an upstream
+    Relay API.
+  implements: []
+  references: []
+- name: NewUpstreamSource
+  kind: func
+  description: NewUpstreamSource creates a new UpstreamSource.
+  references: []
+- name: FetchConfig
+  kind: method
+  receiver: UpstreamSource
+  description: FetchConfig calls the upstream API to get the configuration.
+  references: []

@@ -1,0 +1,70 @@
+---
+package: operator
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Event
+  kind: struct
+  description: Event represents a change in the infrastructure definition.
+  implements: []
+  references: []
+- name: Operator
+  kind: struct
+  description: Operator manages the lifecycle of infrastructure entities based on
+    Watcher events.
+  implements: []
+  references: []
+- name: PollingWatcher
+  kind: struct
+  description: PollingWatcher implements Watcher by periodically scanning a directory.
+    A simple implementation for now; production usage might prefer fsnotify.
+  implements: []
+  references: []
+- name: Watcher
+  kind: interface
+  description: Watcher defines the interface for monitoring infrastructure changes.
+  references: []
+- name: EventType
+  kind: type
+  description: EventType defines the type of change detected in the infrastructure
+    repo.
+  references: []
+- name: NewOperator
+  kind: func
+  description: NewOperator creates a new Operator.
+  references: []
+- name: Run
+  kind: method
+  receiver: Operator
+  description: Run starts the operator loop.
+  references: []
+- name: handleEvent
+  kind: method
+  receiver: Operator
+  description: handleEvent processes a single infrastructure change event.
+  references: []
+- name: onApply
+  kind: method
+  receiver: Operator
+  description: onApply handles creation or update of an entity (Onboarding).
+  references: []
+- name: onDelete
+  kind: method
+  receiver: Operator
+  description: onDelete handles deletion of an entity (Offboarding).
+  references: []
+- name: NewPollingWatcher
+  kind: func
+  description: NewPollingWatcher creates a new watcher that scans the directory every
+    interval.
+  references: []
+- name: Watch
+  kind: method
+  receiver: PollingWatcher
+  description: ''
+  references: []

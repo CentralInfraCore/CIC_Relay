@@ -1,0 +1,12 @@
+---
+package: cabinet
+description: This file is intentionally left blank. It previously contained a test
+  seam for checksum calculation that was removed during refactoring. The old logic
+  has been replaced by the central validateAndChecksum function.
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects: []

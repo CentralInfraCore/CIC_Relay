@@ -1,0 +1,34 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- loader
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Loader
+  kind: struct
+  description: Loader is responsible for parsing IaC data and building the graph.
+  implements: []
+  references: []
+- name: IaCSource
+  kind: interface
+  description: IaCSource defines the interface for retrieving raw configuration data.
+  references: []
+- name: NewLoader
+  kind: func
+  description: NewLoader creates a new Loader instance.
+  references: []
+- name: Load
+  kind: method
+  receiver: Loader
+  description: Load reads the configuration and builds the infrastructure graph.
+  references:
+  - types.Graph
+  - types.Relay
+  - types.Host
+  - types.Service
+  - types.BaseComponent

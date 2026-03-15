@@ -1,0 +1,78 @@
+---
+package: types
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Metadata
+  kind: struct
+  description: Metadata defines the common metadata block for all CIC components.
+    Based on the structure seen in postgresql-v0.18.0_2025.yaml.
+  implements: []
+  references: []
+- name: Validity
+  kind: struct
+  description: Validity defines the time range for which a component is valid.
+  implements: []
+  references: []
+- name: EntityIdentity
+  kind: struct
+  description: EntityIdentity represents the creator of a component (signed).
+  implements: []
+  references: []
+- name: ValidationReceipt
+  kind: struct
+  description: ValidationReceipt proves that the component was validated by a specific
+    meta-schema.
+  implements: []
+  references: []
+- name: BaseComponent
+  kind: struct
+  description: BaseComponent is the common interface for Relay, Host, and Service
+    definitions.
+  implements: []
+  references: []
+- name: Relay
+  kind: struct
+  description: Relay represents a Relay node in the infrastructure graph.
+  implements: []
+  references: []
+- name: RelaySpec
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: Host
+  kind: struct
+  description: Host represents a Host node (execution environment).
+  implements: []
+  references: []
+- name: HostSpec
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: Service
+  kind: struct
+  description: Service represents a functional unit (e.g., PostgreSQL).
+  implements: []
+  references: []
+- name: ServiceSpec
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: Graph
+  kind: struct
+  description: Graph represents the in-memory execution graph.
+  implements: []
+  references: []
+- name: ExpectedState
+  kind: struct
+  description: ExpectedState represents the "Desired State" snapshot for the recorder.
+  implements: []
+  references: []
