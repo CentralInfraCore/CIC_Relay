@@ -1,0 +1,112 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: WasmManagerConfig
+  kind: struct
+  description: WasmManagerConfig defines the configurable parameters for the WasmManager.
+  implements: []
+  references: []
+- name: WasmManager
+  kind: struct
+  description: WasmManager is responsible for the entire WASM lifecycle management.
+  implements: []
+  references:
+  - wazero.Runtime
+  - lru.Cache
+  - wazero.CompiledModule
+  - singleflight.Group
+- name: CicWasmHost
+  kind: struct
+  description: ''
+  implements: []
+  references:
+  - api.Module
+  - api.Function
+- name: GuestResult
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: NewWasmManager
+  kind: func
+  description: NewWasmManager creates a new central WASM manager with the given configuration.
+  references:
+  - wazero.NewRuntimeConfig
+  - wazero.NewRuntimeWithConfig
+  - wasi_snapshot_preview1.Instantiate
+  - wazero.CompiledModule
+  - lru.NewWithEvict
+- name: PreCompileModule
+  kind: method
+  receiver: WasmManager
+  description: PreCompileModule compiles a module and stores it in the cache.
+  references:
+  - wazero.CompiledModule
+- name: NewHostInstance
+  kind: method
+  receiver: WasmManager
+  description: NewHostInstance creates a new, live instance of a module, applying
+    configured limits.
+  references:
+  - wazero.NewModuleConfig
+- name: EvictModule
+  kind: method
+  receiver: WasmManager
+  description: EvictModule removes all versions of a compiled module from the cache.
+  references: []
+- name: Close
+  kind: method
+  receiver: WasmManager
+  description: Close shuts down the entire WASM runtime and clears all caches.
+  references: []
+- name: newCicWasmHost
+  kind: func
+  description: ''
+  references:
+  - api.Module
+- name: Close
+  kind: method
+  receiver: CicWasmHost
+  description: Close shuts down the entire WASM runtime and clears all caches.
+  references: []
+- name: Process
+  kind: method
+  receiver: CicWasmHost
+  description: ''
+  references: []
+- name: Get
+  kind: method
+  receiver: CicWasmHost
+  description: ''
+  references: []
+- name: Init
+  kind: method
+  receiver: CicWasmHost
+  description: ''
+  references: []
+- name: Notify
+  kind: method
+  receiver: CicWasmHost
+  description: ''
+  references: []
+- name: callGuest
+  kind: method
+  receiver: CicWasmHost
+  description: ''
+  references: []
+- name: writeStringToWasm
+  kind: method
+  receiver: CicWasmHost
+  description: ''
+  references: []
+- name: formatErrorJson
+  kind: func
+  description: ''
+  references: []

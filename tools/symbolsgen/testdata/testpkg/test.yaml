@@ -1,0 +1,44 @@
+---
+package: testpkg
+description: ''
+tags:
+- builder
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: PublicStruct
+  kind: struct
+  description: PublicStruct is a public type.
+  implements: []
+  references: []
+- name: privateStruct
+  kind: struct
+  description: privateStruct is a private type.
+  implements: []
+  references: []
+- name: PublicFunc
+  kind: func
+  description: PublicFunc is a public function.
+  references: []
+- name: privateFunc
+  kind: func
+  description: privateFunc is a private function.
+  references: []
+- name: PublicVar
+  kind: var
+  description: PublicVar is a public variable.
+  references: []
+- name: privateVar
+  kind: var
+  description: privateVar is a private variable.
+  references: []
+- name: PublicConstant
+  kind: const
+  description: PublicConstant is a public constant.
+  references: []
+- name: privateConstant
+  kind: const
+  description: privateConstant is a private constant.
+  references: []

@@ -1,0 +1,67 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MockWasmManager
+  kind: struct
+  description: MockWasmManager is a mock implementation of the wasmManager interface
+    for unit testing.
+  implements: []
+  references:
+  - mock.Mock
+- name: MockCicWasmHost
+  kind: struct
+  description: MockCicWasmHost is a mock for the cicWasmHost interface.
+  implements: []
+  references:
+  - mock.Mock
+- name: NewHostInstance
+  kind: method
+  receiver: MockWasmManager
+  description: NewHostInstance mocks the creation of a new host instance. It allows
+    tests to specify what cicWasmHost instance (or error) should be returned.
+  references: []
+- name: Close
+  kind: method
+  receiver: MockWasmManager
+  description: Close mocks the closing of the WasmManager.
+  references: []
+- name: Process
+  kind: method
+  receiver: MockCicWasmHost
+  description: ''
+  references: []
+- name: Get
+  kind: method
+  receiver: MockCicWasmHost
+  description: ''
+  references: []
+- name: Init
+  kind: method
+  receiver: MockCicWasmHost
+  description: ''
+  references: []
+- name: Notify
+  kind: method
+  receiver: MockCicWasmHost
+  description: ''
+  references: []
+- name: Close
+  kind: method
+  receiver: MockCicWasmHost
+  description: Close mocks the closing of the WasmManager.
+  references: []
+- name: _
+  kind: var
+  description: Ensure MockCicWasmHost implements the cicWasmHost interface.
+  references: []
+- name: _
+  kind: var
+  description: Ensure MockCicWasmHost implements the cicWasmHost interface.
+  references: []

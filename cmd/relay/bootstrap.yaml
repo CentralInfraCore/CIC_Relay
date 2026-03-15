@@ -1,0 +1,101 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- schema
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: PKIAssets
+  kind: struct
+  description: PKIAssets holds the loaded public key infrastructure components.
+  implements: []
+  references: []
+- name: ComponentHeader
+  kind: struct
+  description: ComponentHeader defines the common fields for identifying a component
+    type.
+  implements: []
+  references: []
+- name: SchemaFile
+  kind: struct
+  description: SchemaFile defines the structure of a Schema YAML file.
+  implements: []
+  references:
+  - cabinet.BaseBlock
+  - cabinet.SchemaDef
+- name: WorkflowFile
+  kind: struct
+  description: WorkflowFile defines the structure of a Workflow YAML file.
+  implements: []
+  references:
+  - cabinet.BaseBlock
+- name: ModuleFile
+  kind: struct
+  description: ModuleFile defines the structure of a Module YAML file.
+  implements: []
+  references:
+  - cabinet.BaseBlock
+- name: registerNativeComponents
+  kind: func
+  description: registerNativeComponents creates and registers all built-in Go components
+    in the cabinet.
+  references:
+  - cabinet.Cabinet
+  - cabinet.NativeFunctions
+  - cabinet.CoreEcho
+  - cabinet.BaseBlockName
+  - cabinet.NewModuleDescriptor
+  - logrus.Info
+- name: loadEmbeddedComponents
+  kind: func
+  description: loadEmbeddedComponents loads components from the embedded filesystem.
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+- name: loadInstalledComponents
+  kind: func
+  description: loadInstalledComponents loads components from a given filesystem path.
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+- name: loadComponentsFromFS
+  kind: func
+  description: loadComponentsFromFS walks a filesystem and loads all valid components.
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+  - logrus.Fields
+- name: loadSchema
+  kind: func
+  description: ''
+  references:
+  - cabinet.Cabinet
+  - cabinet.NewSchema
+  - logrus.WithField
+- name: loadWorkflow
+  kind: func
+  description: ''
+  references:
+  - cabinet.Cabinet
+  - cabinet.NewWorkflow
+  - logrus.WithField
+- name: loadModule
+  kind: func
+  description: ''
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+  - logrus.Fields
+  - cabinet.NewModuleDescriptor
+  - logrus.WithField
+- name: loadPKIAssets
+  kind: func
+  description: ''
+  references:
+  - logrus.Logger
+  - logrus.Fields
