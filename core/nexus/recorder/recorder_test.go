@@ -3,6 +3,7 @@ package recorder
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math"
 	"os"
 	"path/filepath"
@@ -58,6 +59,79 @@ func TestGitStateRecorder_RecordState_Success(t *testing.T) {
 	require.NoError(t, json.Unmarshal(sigContent, &sigData))
 	assert.Equal(t, "mock-signature-123", sigData["signature"])
 }
+
+// --- WorkflowRecorder tests ---
+
+func TestWorkflowRecorder_Record_Success(t *testing.T) {
+	tmpDir := t.TempDir()
+	mockCrypto := &MockCryptoService{}
+	sr, err := NewGitStateRecorder(tmpDir, mockCrypto)
+	require.NoError(t, err)
+
+	wr := NewWorkflowRecorder(sr)
+
+	trace := map[string]interface{}{
+		"workflow_id": "deploy@1.0",
+		"chain_hash":  "abc123",
+	}
+	err = wr.Record(context.Background(), "deploy@1.0", trace)
+	require.NoError(t, err)
+
+	// actual.json should contain the trace
+	actual, err := os.ReadFile(filepath.Join(tmpDir, "actual.json"))
+	require.NoError(t, err)
+	assert.Contains(t, string(actual), "chain_hash")
+}
+
+func TestWorkflowRecorder_Record_NilStateRecorder(t *testing.T) {
+	wr := NewWorkflowRecorder(nil)
+	err := wr.Record(context.Background(), "wf", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "underlying StateRecorder is nil")
+}
+
+func TestWorkflowRecorder_Record_VaultUnavailable(t *testing.T) {
+	// Vault (CryptoService) fails → recorder returns error → caller should WARN and continue.
+	tmpDir := t.TempDir()
+	mockCrypto := &MockCryptoService{
+		SignFunc: func(ctx context.Context, data []byte) (string, error) {
+			return "", errors.New("vault unavailable")
+		},
+	}
+	sr, err := NewGitStateRecorder(tmpDir, mockCrypto)
+	require.NoError(t, err)
+
+	wr := NewWorkflowRecorder(sr)
+	err = wr.Record(context.Background(), "deploy@1.0", map[string]interface{}{"chain_hash": "x"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "vault unavailable")
+}
+
+func TestWorkflowRecorder_RunID_Is_WorkflowID(t *testing.T) {
+	var capturedExpected types.ExpectedState
+	mockSR := &mockStateRecorder{
+		fn: func(ctx context.Context, expected types.ExpectedState, actual interface{}) (string, error) {
+			capturedExpected = expected
+			return "hash", nil
+		},
+	}
+
+	wr := NewWorkflowRecorder(mockSR)
+	err := wr.Record(context.Background(), "myworkflow@2.0", nil)
+	require.NoError(t, err)
+	assert.Equal(t, "myworkflow@2.0", capturedExpected.RunID)
+}
+
+// mockStateRecorder is a test double for StateRecorder.
+type mockStateRecorder struct {
+	fn func(ctx context.Context, expected types.ExpectedState, actual interface{}) (string, error)
+}
+
+func (m *mockStateRecorder) RecordState(ctx context.Context, expected types.ExpectedState, actual interface{}) (string, error) {
+	return m.fn(ctx, expected, actual)
+}
+
+// --- GitStateRecorder error tests ---
 
 func TestGitStateRecorder_RecordState_Errors(t *testing.T) {
 	t.Run("init fails on bad path", func(t *testing.T) {
