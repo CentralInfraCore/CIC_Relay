@@ -1,0 +1,28 @@
+---
+package: isolation
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: LocalWorker
+  kind: struct
+  description: LocalWorker is a simple in-process implementation of the Worker interface.
+    It uses a CryptoService to perform the actual decryption.
+  implements: []
+  references:
+  - crypto.CryptoService
+- name: NewLocalWorker
+  kind: func
+  description: NewLocalWorker creates a new worker that uses the given CryptoService.
+  references:
+  - crypto.CryptoService
+- name: Decrypt
+  kind: method
+  receiver: LocalWorker
+  description: Decrypt calls the underlying CryptoService's Decrypt method. In a real
+    implementation, this would run in a separate process with its own identity.
+  references: []

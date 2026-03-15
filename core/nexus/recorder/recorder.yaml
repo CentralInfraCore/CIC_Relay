@@ -1,0 +1,54 @@
+---
+package: recorder
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: GitStateRecorder
+  kind: struct
+  description: GitStateRecorder implements StateRecorder using a local Git repository.
+  implements: []
+  references:
+  - crypto.CryptoService
+- name: StateRecorder
+  kind: interface
+  description: StateRecorder defines the interface for persisting state snapshots.
+  references:
+  - types.ExpectedState
+- name: NewGitStateRecorder
+  kind: func
+  description: NewGitStateRecorder creates a new recorder that operates on the given
+    repository path.
+  references:
+  - crypto.CryptoService
+- name: init
+  kind: method
+  receiver: GitStateRecorder
+  description: init ensures the repository directory and the git repository exist.
+  references: []
+- name: RecordState
+  kind: method
+  receiver: GitStateRecorder
+  description: RecordState persists the state to JSON files, signs it, and creates
+    a git commit.
+  references:
+  - types.ExpectedState
+- name: createManifest
+  kind: method
+  receiver: GitStateRecorder
+  description: createManifest generates a sorted list of files and their SHA256 hashes.
+  references: []
+- name: runGit
+  kind: method
+  receiver: GitStateRecorder
+  description: runGit executes a git command in the repo directory.
+  references: []
+- name: getHeadHash
+  kind: method
+  receiver: GitStateRecorder
+  description: getHeadHash returns the full hash of the current HEAD commit.
+  references: []

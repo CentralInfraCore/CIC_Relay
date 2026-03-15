@@ -1,0 +1,32 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: NewModuleDescriptor
+  kind: func
+  description: NewModuleDescriptor constructs a ModuleDescriptor by calling the single
+    central entry point for validation and checksum calculation.
+  references: []
+- name: ID
+  kind: method
+  receiver: ModuleDescriptor
+  description: ID returns the unique module identifier in the form "name@version".
+  references: []
+- name: GetData
+  kind: method
+  receiver: ModuleDescriptor
+  description: GetData returns the data part of the module descriptor for checksum
+    calculation. It now always returns a composite structure including policy fields
+    and optional WASM code.
+  references: []
+- name: Checksum
+  kind: method
+  receiver: ModuleDescriptor
+  description: Checksum returns the pre-computed checksum from the Meta block.
+  references: []

@@ -1,0 +1,27 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SetOptions
+  kind: struct
+  description: 'SetOptions hordozza a felhasználói beállításokat a Set kéréshez. A
+    Priority jelenleg: low|normal|high (normal az alapértelmezett).'
+  implements: []
+  references: []
+- name: SetPayload
+  kind: struct
+  description: SetPayload a Set belépési kérés kanonikus reprezentációja. A Modules
+    csak hivatkozás; semmi sincs példányosítva.
+  implements: []
+  references: []
+- name: CanonicalizeSetPayload
+  kind: func
+  description: CanonicalizeSetPayload normalizálja a bemenetet (trim, dedup/sort,
+    defaultok).
+  references: []

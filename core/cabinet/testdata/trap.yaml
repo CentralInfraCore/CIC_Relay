@@ -1,0 +1,27 @@
+---
+package: main
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: main is required by the compiler, but we don't want it to run automatically.
+  references: []
+- name: allocate
+  kind: func
+  description: export allocate
+  references: []
+- name: deallocate
+  kind: func
+  description: export deallocate
+  references: []
+- name: Call
+  kind: func
+  description: Call is the main entry point for the module. It immediately traps.
+    export Call
+  references: []

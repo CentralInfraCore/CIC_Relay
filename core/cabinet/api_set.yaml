@@ -1,0 +1,29 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SetResponse
+  kind: struct
+  description: SetResponse a Set hívás válasza. A Results későbbi iterációban kerül
+    feltöltésre a workflow futtatása után; jelen patch csak a séma/validáció alapját
+    hozza.
+  implements: []
+  references: []
+- name: ValidateSet
+  kind: method
+  receiver: API
+  description: ValidateSet a SetPayload minimális szerkezeti ellenőrzése, és a hivatkozott
+    entitások (workflow, modulok) létezésének ellenőrzése.
+  references: []
+- name: Set
+  kind: method
+  receiver: API
+  description: 'Set: belépési pont a séma-ellenőrzéshez és a workflow futtatáshoz.'
+  references: []

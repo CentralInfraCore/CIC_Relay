@@ -1,0 +1,23 @@
+---
+package: main
+description: ''
+tags:
+- builder
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: BuildMeta
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: printHelp
+  kind: func
+  description: ''
+  references: []
+- name: main
+  kind: func
+  description: ''
+  references: []

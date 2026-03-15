@@ -1,0 +1,30 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: NewWorkflow
+  kind: func
+  description: NewWorkflow constructs a Workflow by calling the single central entry
+    point for validation and checksum calculation.
+  references: []
+- name: ID
+  kind: method
+  receiver: Workflow
+  description: ID returns the unique workflow identifier in the form "name@version".
+  references: []
+- name: GetData
+  kind: method
+  receiver: Workflow
+  description: GetData returns the workflow's steps for checksum purposes.
+  references: []
+- name: Checksum
+  kind: method
+  receiver: Workflow
+  description: Checksum returns the pre-computed checksum from the Meta block.
+  references: []

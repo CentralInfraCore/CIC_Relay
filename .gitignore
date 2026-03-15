@@ -25,3 +25,8 @@ __pycache__/
 llm.lock
 CurrentTest/
 .pytest_cache/
+
+# Temp/exported files
+git_logst_secret.txt
+gitlog.txt
+merged_graph_data_cleaned.ndjson

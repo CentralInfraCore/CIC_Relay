@@ -1,0 +1,56 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: FieldError
+  kind: struct
+  description: FieldError describes a validation error for a specific field.
+  implements: []
+  references: []
+- name: ValidationError
+  kind: struct
+  description: ValidationError aggregates multiple field-level validation errors.
+  implements: []
+  references: []
+- name: APIError
+  kind: struct
+  description: APIError represents a standardized error response for API consumers.
+  implements: []
+  references: []
+- name: IsInvalid
+  kind: func
+  description: Helper predicates for common error matching.
+  references: []
+- name: IsConflict
+  kind: func
+  description: ''
+  references: []
+- name: IsNotFound
+  kind: func
+  description: ''
+  references: []
+- name: Error
+  kind: method
+  receiver: ValidationError
+  description: Error returns a JSON-encoded list of causes, or a generic message if
+    empty.
+  references: []
+- name: NewValidationError
+  kind: func
+  description: NewValidationError creates a ValidationError from given field errors.
+  references: []
+- name: NewAPIError
+  kind: func
+  description: NewAPIError converts a Go error into a standardized APIError.
+  references: []
+- name: jsonMarshal
+  kind: var
+  description: jsonMarshal is a variable that holds the json.Marshal function. It
+    can be replaced in tests to simulate marshaling errors.
+  references: []
