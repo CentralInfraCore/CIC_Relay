@@ -82,7 +82,7 @@ entries:
     accept: make test
 
   - task: "dev-vault-bootstrap"
-    status: ready
+    status: done
     priority: 6
     prompt: |
       Készíts egy `make dev-vault` Makefile targetet és egy hozzá tartozó szkriptet,
