@@ -158,8 +158,10 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			return nil, fmt.Errorf("workflow %q failed: input data key %q not found in context for step %q", workflow.ID(), dataKey, step)
 		}
 
-		// 2d. (Optional) Validate inputData against the function's input schema.
-		// TODO: Implement schema validation here using moduleDesc.Accepts and inputData's schema ID.
+		// 2d. Validate inputData against the module's declared accepted schemas.
+		if err := validateInputSchema(moduleDesc, inputData); err != nil {
+			return nil, fmt.Errorf("schema validation failed at step %q: %w", step, err)
+		}
 
 		// 2e. Dispatch the call based on the module type.
 		var result interface{}
