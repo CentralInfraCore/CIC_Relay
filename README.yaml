@@ -1,0 +1,15 @@
+tags:
+  - doc
+  - relay
+  - core
+related_nodes:
+  - docs/git-management
+  - feature-list
+category:
+  - concept
+entrypoint: true
+used_in:
+  - onboarding
+  - development-process
+description: |
+  Root README for CIC-Relay: the Go-based control plane component of CentralInfraCore. Entry point for understanding the relay architecture, repository structure, and development workflow.
