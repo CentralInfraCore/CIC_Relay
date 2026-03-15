@@ -39,19 +39,17 @@ Ez a fájl az AI-támogatott roadmap állapota.
         *   [x] **DoD**: A teszt sikeres, és a CI pipeline része.
 
 ### M2 — Schema/Workflow betöltés és CabinetService
-*   **Állapot:** Részben kész
-*   **Feladatok:** Schema/Workflow betöltés és a CabinetService Put*/Get* útvonalak megvalósítása.
-*   **Megjegyzés:** A futtató runtime nincs bekötve (WASM exec path hiányzik). A `core/cabinet/service.go`-ban a `TODO` komment egyértelműen jelzi a hiányosságot.
+*   **Állapot:** Kész
+*   **Feladatok:** Schema/Workflow betöltés és a CabinetService Put*/Get* útvonalak megvalósítása, teljes végrehajtási útvonallal.
 * **Részfeladatok (checklist):**
         *   [x] **Feladat**: A `wasmDigest` (sha256) és `wasmSize` mezők kötelezővé tétele a modul YAML-definíciójában.
-        *   [x] **DoD**: A `ModuleFile` struktúra tartalmazza a kötelező mezőket, a hiányzó mezők hibát okoznak a feldolgozás során.
-        *   [x] **Feladat**: A `loadModule` függvény kiegészítése a `wasmSize` ellenőrzésével.
-        *   [x] **DoD**: A `loadModule` betöltéskor ellenőrzi, hogy a WASM fájl mérete megegyezik-e a YAML-ban megadott `wasmSize` értékkel. Eltérés esetén a betöltés hibával megszakad.
-        *   [x] **Feladat**: A `loadModule` függvény kiegészítése a `wasmDigest` ellenőrzésével.
-        *   [x] **DoD**: A `loadModule` betöltéskor ellenőrzi, hogy a WASM fájl tartalmának hash-e megegyezik-e a YAML-ban megadott `wasmDigest` értékkel. Eltérés esetén a betöltés hibával megszakad.
+        *   [x] **Feladat**: A `loadModule` függvény kiegészítése a `wasmSize` és `wasmDigest` ellenőrzésével.
         *   [x] **Feladat**: A kapcsolódó tesztek frissítése és létrehozása.
-        *   [x] **DoD**: A `bootstrap_test.go` tartalmaz dedikált teszteseteket a méret- és digest-eltérésekre, és azok sikeresen lefutnak.
-        *   [ ] **Feladat**: A 'wasm' modulok példányosítása
+        *   [x] **Feladat**: WASM és native Go végrehajtási útvonal bekötése (`Setx`, `WasmManager`, `ExecutionGraph`).
+        *   [x] **Feladat**: `ExecutionGraph` — lineáris, névvel ellátott kimenet-kulcsokkal (`component@version.function(inputKey) -> outputKey`). Visszafelé kompatibilis régi formátummal.
+        *   [x] **Feladat**: Schema validáció bekötése `Setx`-be — `moduleDesc.Accepts` lista alapján `"$schema"` kulcs ellenőrzése. `ErrInvalid` ha nem egyezik.
+        *   [x] **Feladat**: `ProofTrace` típus bevezetése — `workflow_id`, per-step `input_hash`+`output_hash` (canonical JSON SHA256), `chain_hash`, injektált `timestamp`. Determinisztikus, oldalhatás-mentes.
+        *   [x] **DoD**: `make test` zöld, `make verify` zöld.
 
 ### M3 — Privát PKI verifikáció
 *   **Feladatok**: saját trust store (offline root → intermediate → rövid élettartamú code signing leaf). Ellenőrzés: checksum+signature + chain verify. EKU=Code Signing, SPKI pin az intermediate-re, revocation (CRL/OCSP vagy rövid lejárat).
@@ -191,14 +189,15 @@ Ez a fájl az AI-támogatott roadmap állapota.
     *   [x] **M11.4: Validáció és Desired State**: A gráf konzisztenciájának ellenőrzése és transzformálása `ExpectedState` objektummá.
 
 ### M12 — Git-alapú Állapotrögzítés (Nexus Recorder)
-* **Állapot:** Részben kész
+* **Állapot:** Kész
 * **Feladatok:** A Relay belső állapotának (expected/actual) perzisztens, visszakereshető rögzítése egy lokális Git repóba a hibakeresés támogatására.
 * **DoD**: A Relay futása során létrejön a lokális Git repo, és minden tranzakció után megjelenik egy új commit a megfelelő branch-en, ami tartalmazza az állapot-fájlokat.
 * **Részfeladatok (checklist):**
-    *   [x] **M12.1: Közös Típusrendszer (`nexus/types`)**: Definiálni a `Host`, `Relay`, `Module` és `State` struktúrákat.
-    *   [x] **M12.2: Recorder Interfész**: `StateRecorder` interfész definiálása.
-    *   [x] **M12.3: Git Library Integráció**: `go-git` vagy wrapper bekötése, `InitRepo` implementálása.
-    *   [x] **M12.4: Perzisztencia és Commit**: JSON szerializáció és `Commit` logika implementálása.
+    *   [x] **M12.1: Közös Típusrendszer (`nexus/types`)**: `Host`, `Relay`, `Module`, `State` struktúrák.
+    *   [x] **M12.2: Recorder Interfész**: `StateRecorder` interfész.
+    *   [x] **M12.3: Git Library Integráció**: git wrapper, `InitRepo`.
+    *   [x] **M12.4: Perzisztencia és Commit**: JSON szerializáció és commit logika.
+    *   [x] **M12.5: WorkflowRecorder**: `Setx` → `recorder` összekötés `ExecutionRecorder` interfészen keresztül. Vault hiba nem fatális — WARN + folytatás.
 
 ### M13 — Vault Integráció és Aláírás (Nexus Crypto)
 * **Állapot:** Részben kész
@@ -209,6 +208,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
     *   [x] **M13.2: Aláírás (Sign)**: Transit engine integráció.
     *   [x] **M13.3: CryptoService Interfész**: Magas szintű API definiálása.
     *   [x] **M13.4: Recorder Integráció**: Commit aláírás bekötése.
+    *   [x] **M13.5: Dev Vault Bootstrap**: `make dev-vault` — lokális in-memory Vault, paraméter nélkül, Transit kulcs auto-generálva. `make dev-vault-stop` leállítás. Dokumentálva `ai/SYSTEM_CONTEXT.md`-ben.
+    *   [ ] **M13.6: Produkciós Vault bekötés**: A `cabinetService.recorder` injektálása a bootstrap/main szinten valódi `GitStateRecorder`+`VaultCryptoService` kombinációval.
 
 ### M14 — Központi Audit Szinkronizáció (Nexus Sync)
 * **Állapot:** Részben kész
@@ -242,26 +243,26 @@ Ez a fájl az AI-támogatott roadmap állapota.
 
 ## Jelenlegi állapot (STATE)
 
-| Milestone | State   |
-|-----------| ------- |
-| M-Konfig  | Missing |
-| M0        | Done    |
-| M1        | Done    |
-| M2        | Partial |
-| M3        | Partial |
-| M4        | Partial |
-| M5        | Partial |
-| M6        | Partial |
-| M7        | Partial |
-| M8        | Partial |
-| M9        | Missing |
-| M10       | Missing |
-| M11       | Partial |
-| M12       | Partial |
-| M13       | Partial |
-| M14       | Partial |
-| M15       | Partial |
-| M16       | Partial |
+| Milestone | State   | Megjegyzés |
+|-----------| ------- | ---------- |
+| M-Konfig  | Missing | |
+| M0        | Done    | |
+| M1        | Done    | |
+| M2        | **Done**    | ExecutionGraph, schema validáció, ProofTrace kész |
+| M3        | Partial | |
+| M4        | Partial | |
+| M5        | Partial | |
+| M6        | Partial | |
+| M7        | Partial | |
+| M8        | Partial | |
+| M9        | Missing | |
+| M10       | Missing | |
+| M11       | Partial | |
+| M12       | **Done**    | WorkflowRecorder + Setx összekötés kész |
+| M13       | Partial | Dev Vault bootstrap kész, prod bekötés hiányzik |
+| M14       | Partial | |
+| M15       | Partial | |
+| M16       | Partial | |
 
 ---
 
