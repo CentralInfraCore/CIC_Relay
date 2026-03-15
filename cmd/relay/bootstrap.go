@@ -271,11 +271,13 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 			if err != nil {
 				auditLogger.WithField("outcome", "failure").WithError(err).Error("Failed to parse certificate from signature file.")
 			} else {
-				// Placeholder for actual signature verification logic
+				// Trust ecosystem not yet bootstrapped — signature verification is not implemented.
+				// The certificate is parsed and logged for audit purposes only.
 				auditLogger.WithFields(logrus.Fields{
-					"outcome":        "success", // Placeholder, real verification is not yet implemented
+					"outcome":        "skipped",
+					"reason":         "trust ecosystem not bootstrapped",
 					"signer_subject": cert.Subject.String(),
-				}).Info("Signature check placeholder")
+				}).Warn("Signature verification skipped: CA chain not available.")
 			}
 		}
 	}
