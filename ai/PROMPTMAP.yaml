@@ -68,8 +68,7 @@ entries:
     accept: make test
 
   - task: "execution-graph-linear"
-    status: blocked
-    blocked_by: "proof-trace-type"
+    status: done
     priority: 5
     prompt: |
       Implementáld a `core/cabinet/graph.go`-t lineáris ExecutionGraph-ként.

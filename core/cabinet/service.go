@@ -116,90 +116,63 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		return nil, fmt.Errorf("failed to resolve workflow %q: %w", in.WorkflowID, err)
 	}
 
-	// Helper function to parse a step string. Defined locally within Setx.
-	parseStep := func(step string) (componentID, functionName, dataKey string, err error) {
-		// This is a placeholder implementation. A robust implementation would use regex.
-		// Example format: "component.function(data)"
-		before, after, found := strings.Cut(step, "(")
-		if !found || !strings.HasSuffix(after, ")") {
-			return "", "", "", fmt.Errorf("invalid step format: missing parentheses")
-		}
-
-		// Find the last dot to separate componentID and functionName
-		lastDotIndex := strings.LastIndex(before, ".")
-		if lastDotIndex == -1 || lastDotIndex == 0 || lastDotIndex == len(before)-1 {
-			return "", "", "", fmt.Errorf("invalid step format: expected component.function")
-		}
-
-		componentID = before[:lastDotIndex]
-		functionName = before[lastDotIndex+1:]
-		dataKey = strings.TrimSuffix(after, ")")
-
-		return componentID, functionName, dataKey, nil
+	// 2. Parse workflow steps into an ExecutionGraph.
+	graph, err := ParseExecutionGraph(workflow.Steps)
+	if err != nil {
+		return nil, fmt.Errorf("workflow %q: %w", workflow.ID(), err)
 	}
 
-	// --- Start of the new execution logic ---
-
-	// 2. Initialize executionContext
+	// 3. Initialize executionContext and run each step.
 	execCtx := NewExecutionContext(in.Payload)
-	traceSteps := make([]ProofTraceStep, 0, len(workflow.Steps))
+	traceSteps := make([]ProofTraceStep, 0, len(graph.Steps))
 
-	for _, step := range workflow.Steps {
-		componentID, functionName, dataKey, err := parseStep(step)
+	for _, step := range graph.Steps {
+		// 3a. Resolve the component.
+		moduleDesc, err := c.GetModule(step.ComponentID)
 		if err != nil {
-			return nil, fmt.Errorf("error in workflow %q, step %q: %w", workflow.ID(), step, err)
+			return nil, fmt.Errorf("workflow %q failed: could not resolve component %q: %w", workflow.ID(), step.ComponentID, err)
 		}
 
-		// 2b. Resolve the component (ModuleDescriptor) from the module store.
-		moduleDesc, err := c.GetModule(componentID)
-		if err != nil {
-			return nil, fmt.Errorf("workflow %q failed: could not resolve component %q: %w", workflow.ID(), componentID, err)
-		}
-
-		// 2c. Resolve the input data from the execution context.
-		inputData, ok := execCtx.Get(dataKey)
+		// 3b. Resolve input from the execution context.
+		inputData, ok := execCtx.Get(step.InputKey)
 		if !ok {
-			return nil, fmt.Errorf("workflow %q failed: input data key %q not found in context for step %q", workflow.ID(), dataKey, step)
+			return nil, fmt.Errorf("workflow %q failed: input key %q not found in context for step %q", workflow.ID(), step.InputKey, step.Raw)
 		}
 
-		// 2d. Validate inputData against the module's declared accepted schemas.
+		// 3c. Validate inputData against the module's declared accepted schemas.
 		if err := validateInputSchema(moduleDesc, inputData); err != nil {
-			return nil, fmt.Errorf("schema validation failed at step %q: %w", step, err)
+			return nil, fmt.Errorf("schema validation failed at step %q: %w", step.Raw, err)
 		}
 
-		// 2e. Hash input for ProofTrace (before dispatch).
+		// 3d. Hash input for ProofTrace (before dispatch).
 		inputHash, err := hashValue(inputData)
 		if err != nil {
-			return nil, fmt.Errorf("failed to hash input at step %q: %w", step, err)
+			return nil, fmt.Errorf("failed to hash input at step %q: %w", step.Raw, err)
 		}
 
-		// 2f. Dispatch the call based on the module type.
+		// 3e. Dispatch the call based on the module type.
 		var result interface{}
 		var execErr error
 
 		if moduleDesc.NativeImpl != nil {
 			// --- NATIVE GO EXECUTION ---
-			nativeFunc, ok := moduleDesc.NativeImpl[functionName]
+			nativeFunc, ok := moduleDesc.NativeImpl[step.FunctionName]
 			if !ok {
-				return nil, fmt.Errorf("component %q does not have native function %q", componentID, functionName)
+				return nil, fmt.Errorf("component %q does not have native function %q", step.ComponentID, step.FunctionName)
 			}
 
-			// Use reflection to call the native Go function.
 			funcValue := reflect.ValueOf(nativeFunc)
-			// Ensure the function has the expected signature: func(ctx context.Context, data interface{}) (interface{}, error)
-			// This check is crucial for type safety when using reflection.
 			if funcValue.Kind() != reflect.Func || funcValue.Type().NumIn() != 2 ||
 				funcValue.Type().In(0) != reflect.TypeOf((*context.Context)(nil)).Elem() ||
 				funcValue.Type().In(1) != reflect.TypeOf((*interface{})(nil)).Elem() ||
 				funcValue.Type().NumOut() != 2 ||
 				funcValue.Type().Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
-				return nil, fmt.Errorf("native function %s.%s has unexpected signature", componentID, functionName)
+				return nil, fmt.Errorf("native function %s.%s has unexpected signature", step.ComponentID, step.FunctionName)
 			}
 
 			args := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(inputData)}
 			results := funcValue.Call(args)
 
-			// Handle return values
 			if len(results) > 0 {
 				result = results[0].Interface()
 			}
@@ -208,67 +181,68 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			}
 		} else if moduleDesc.WasmCode != nil {
 			// --- WASM EXECUTION ---
-			host, err := c.wasmManager.NewHostInstance(ctx, componentID)
+			host, err := c.wasmManager.NewHostInstance(ctx, step.ComponentID)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create WASM host instance for module %q: %w", componentID, err)
+				return nil, fmt.Errorf("failed to create WASM host instance for module %q: %w", step.ComponentID, err)
 			}
 			defer host.Close(ctx)
 
 			inputJson, err := json.Marshal(inputData)
 			if err != nil {
-				return nil, fmt.Errorf("failed to marshal input data for WASM module %q: %w", componentID, err)
+				return nil, fmt.Errorf("failed to marshal input data for WASM module %q: %w", step.ComponentID, err)
 			}
 
-			authContextJson := componentID
-
-			normalizedFunctionName := strings.ToLower(functionName)
+			authContextJson := step.ComponentID
+			normalizedFn := strings.ToLower(step.FunctionName)
 
 			var dataResult, errorResult string
-			if normalizedFunctionName == "init" {
+			switch normalizedFn {
+			case "init":
 				dataResult, errorResult = host.Init(ctx, authContextJson, string(inputJson))
-			} else if normalizedFunctionName == "process" {
+			case "process":
 				dataResult, errorResult = host.Process(ctx, authContextJson, string(inputJson))
-			} else if normalizedFunctionName == "get" {
+			case "get":
 				dataResult, errorResult = host.Get(ctx, authContextJson, string(inputJson))
-			} else if normalizedFunctionName == "notify" {
+			case "notify":
 				dataResult, errorResult = host.Notify(ctx, authContextJson, string(inputJson))
-			} else {
-				execErr = fmt.Errorf("WASM module %q does not support operation %q", componentID, functionName)
+			default:
+				execErr = fmt.Errorf("WASM module %q does not support operation %q", step.ComponentID, step.FunctionName)
 			}
 
-			if errorResult != "null" && errorResult != "" {
-				execErr = fmt.Errorf("WASM function %s.%s returned error: %s", componentID, functionName, errorResult)
-			} else {
-				var jsonResult interface{}
-				if err := json.Unmarshal([]byte(dataResult), &jsonResult); err != nil {
-					result = dataResult
+			if execErr == nil {
+				if errorResult != "null" && errorResult != "" {
+					execErr = fmt.Errorf("WASM function %s.%s returned error: %s", step.ComponentID, step.FunctionName, errorResult)
 				} else {
-					result = jsonResult
+					var jsonResult interface{}
+					if err := json.Unmarshal([]byte(dataResult), &jsonResult); err != nil {
+						result = dataResult
+					} else {
+						result = jsonResult
+					}
 				}
 			}
 		} else {
-			return nil, fmt.Errorf("component %s has no implementation (native or WASM)", componentID)
+			return nil, fmt.Errorf("component %s has no implementation (native or WASM)", step.ComponentID)
 		}
 
 		if execErr != nil {
-			return nil, fmt.Errorf("error executing step %q in workflow %q: %w", step, workflow.ID(), execErr)
+			return nil, fmt.Errorf("error executing step %q in workflow %q: %w", step.Raw, workflow.ID(), execErr)
 		}
 
-		// Hash output for ProofTrace.
+		// 3f. Hash output and record ProofTrace step.
 		outputHash, err := hashValue(result)
 		if err != nil {
-			return nil, fmt.Errorf("failed to hash output at step %q: %w", step, err)
+			return nil, fmt.Errorf("failed to hash output at step %q: %w", step.Raw, err)
 		}
 		traceSteps = append(traceSteps, ProofTraceStep{
-			Name:       step,
-			Module:     componentID,
+			Name:       step.Raw,
+			Module:     step.ComponentID,
 			InputHash:  inputHash,
 			OutputHash: outputHash,
 		})
 
-		// 2g. Store the result back into the execution context for subsequent steps.
-		// For now, we store the result under a generic "result" key. This should be made configurable.
-		execCtx.Set("result", result)
+		// 3g. Store the result under the step's declared output key.
+		execCtx.Set(step.OutputKey, result)
 	}
 
 	// 3. Build ProofTrace and return.
