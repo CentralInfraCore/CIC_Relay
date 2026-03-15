@@ -1,4 +1,3 @@
----
 package: main
 description: ''
 tags:
@@ -12,11 +11,13 @@ related_nodes: []
 objects:
 - name: main
   kind: func
-  description: ''
+  description: 'Entry point: reads JSON from stdin, writes canonical (deterministically
+    sorted) JSON to stdout.'
   references: []
 - name: Run
   kind: func
-  description: ''
+  description: Reads JSON from input, unmarshals it, converts to canonical form via
+    canonicaljson.ToJSON, writes to output.
   references:
   - canonicaljson.ToJSON
 - name: RunFunc

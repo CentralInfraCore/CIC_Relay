@@ -1,4 +1,3 @@
----
 package: cabinet
 description: ''
 tags:
@@ -35,22 +34,26 @@ objects:
 - name: Process
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: 'Mock: delegates Process call to testify mock recorder, returns (outputJson,
+    errJson).'
   references: []
 - name: Get
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: 'Mock: delegates Get call to testify mock recorder, returns (resultJson,
+    errJson).'
   references: []
 - name: Init
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: 'Mock: delegates Init call to testify mock recorder, returns (resultJson,
+    errJson).'
   references: []
 - name: Notify
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: 'Mock: delegates Notify call to testify mock recorder, returns (resultJson,
+    errJson).'
   references: []
 - name: Close
   kind: method

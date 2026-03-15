@@ -1,4 +1,3 @@
----
 package: main
 description: ''
 tags:
@@ -72,21 +71,21 @@ objects:
   - logrus.Fields
 - name: loadSchema
   kind: func
-  description: ''
+  description: Loads a Schema YAML file from disk and registers it in the cabinet.
   references:
   - cabinet.Cabinet
   - cabinet.NewSchema
   - logrus.WithField
 - name: loadWorkflow
   kind: func
-  description: ''
+  description: Loads a Workflow YAML file from disk and registers it in the cabinet.
   references:
   - cabinet.Cabinet
   - cabinet.NewWorkflow
   - logrus.WithField
 - name: loadModule
   kind: func
-  description: ''
+  description: Loads a WASM module binary from disk and registers it in the cabinet.
   references:
   - cabinet.Cabinet
   - logrus.Logger
@@ -95,7 +94,8 @@ objects:
   - logrus.WithField
 - name: loadPKIAssets
   kind: func
-  description: ''
+  description: Loads PKI assets (root CAs, intermediates, CRLs) from a directory into
+    PKIAssets.
   references:
   - logrus.Logger
   - logrus.Fields
