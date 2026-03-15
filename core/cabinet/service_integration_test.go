@@ -11,6 +11,8 @@ import (
 func TestSetx_SchemaValidation_Integration(t *testing.T) {
 	ctx := context.Background()
 
+	fixedClock := func() string { return "2026-01-01T00:00:00Z" }
+
 	// helper: build a minimal cabinetService backed by mem stores + mock wasm manager
 	newSvc := func() *cabinetService {
 		mockWM := new(MockWasmManager)
@@ -19,6 +21,7 @@ func TestSetx_SchemaValidation_Integration(t *testing.T) {
 			modules:     NewMemModuleStore(),
 			workflows:   NewMemWorkflowStore(),
 			wasmManager: mockWM,
+			clock:       fixedClock,
 		}
 	}
 

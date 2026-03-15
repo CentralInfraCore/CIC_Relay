@@ -40,7 +40,7 @@ entries:
     accept: make test
 
   - task: "proof-trace-type"
-    status: ready
+    status: done
     priority: 3
     prompt: |
       Vezess be egy `ProofTrace` típust a `core/cabinet` csomagban.

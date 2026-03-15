@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // cicWasmHost defines the interface for interacting with a live WASM instance.
@@ -87,7 +88,8 @@ type cabinetService struct {
 	schemas     SchemaStore
 	modules     ModuleStore
 	workflows   WorkflowStore
-	wasmManager wasmManager // Use the interface type
+	wasmManager wasmManager
+	clock       func() string // injected; returns UTC timestamp for ProofTrace
 }
 
 // NewCabinetService creates a new Cabinet service with the given stores and WasmManager configuration.
@@ -102,6 +104,7 @@ func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleS
 		modules:     modules,
 		workflows:   workflows,
 		wasmManager: wasmManager,
+		clock:       func() string { return time.Now().UTC().Format(time.RFC3339) },
 	}, nil
 }
 
@@ -139,6 +142,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 
 	// 2. Initialize executionContext
 	execCtx := NewExecutionContext(in.Payload)
+	traceSteps := make([]ProofTraceStep, 0, len(workflow.Steps))
 
 	for _, step := range workflow.Steps {
 		componentID, functionName, dataKey, err := parseStep(step)
@@ -163,7 +167,13 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			return nil, fmt.Errorf("schema validation failed at step %q: %w", step, err)
 		}
 
-		// 2e. Dispatch the call based on the module type.
+		// 2e. Hash input for ProofTrace (before dispatch).
+		inputHash, err := hashValue(inputData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash input at step %q: %w", step, err)
+		}
+
+		// 2f. Dispatch the call based on the module type.
 		var result interface{}
 		var execErr error
 
@@ -244,17 +254,39 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			return nil, fmt.Errorf("error executing step %q in workflow %q: %w", step, workflow.ID(), execErr)
 		}
 
+		// Hash output for ProofTrace.
+		outputHash, err := hashValue(result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash output at step %q: %w", step, err)
+		}
+		traceSteps = append(traceSteps, ProofTraceStep{
+			Name:       step,
+			Module:     componentID,
+			InputHash:  inputHash,
+			OutputHash: outputHash,
+		})
+
 		// 2g. Store the result back into the execution context for subsequent steps.
 		// For now, we store the result under a generic "result" key. This should be made configurable.
 		execCtx.Set("result", result)
 	}
 
-	// 3. Return the final results from the execution context.
+	// 3. Build ProofTrace and return.
+	clockFn := c.clock
+	if clockFn == nil {
+		clockFn = func() string { return time.Now().UTC().Format(time.RFC3339) }
+	}
+	trace := &ProofTrace{
+		WorkflowID: workflow.ID(),
+		Steps:      traceSteps,
+		ChainHash:  computeChainHash(traceSteps),
+		Timestamp:  clockFn(),
+	}
 	return &SetResponse{
-			Results:  execCtx.variables,
-			Warnings: nil,
-		},
-		nil
+		Results:  execCtx.variables,
+		Warnings: nil,
+		Trace:    trace,
+	}, nil
 }
 
 func (c *cabinetService) Close(ctx context.Context) error {
