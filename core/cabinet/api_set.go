@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-// SetResponse a Set hívás válasza. A Results későbbi iterációban kerül feltöltésre
-// a workflow futtatása után; jelen patch csak a séma/validáció alapját hozza.
+// SetResponse a Set hívás válasza.
 type SetResponse struct {
 	Results  map[string]any
 	Warnings []string
+	Trace    *ProofTrace
 }
 
 // ValidateSet a SetPayload minimális szerkezeti ellenőrzése, és a hivatkozott

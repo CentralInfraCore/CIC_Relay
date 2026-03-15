@@ -298,11 +298,10 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 
 	// --- Sub-test: JSON marshaling of input fails ---
 	t.Run("json marshal fails", func(t *testing.T) {
+		// Channels cannot be marshaled to JSON.
+		// Since ProofTrace hashes the input before dispatch, the error now surfaces
+		// at the hashing step rather than the WASM JSON-marshal step.
 		mockWasmManager := new(MockWasmManager)
-		mockCicWasmHost := new(MockCicWasmHost)
-
-		mockWasmManager.On("NewHostInstance", ctx, wasmMod.ID()).Return(cicWasmHost(mockCicWasmHost), nil).Once()
-		mockCicWasmHost.On("Close", ctx).Return(nil).Once()
 
 		svc := &cabinetService{modules: modStore, workflows: wfStore, wasmManager: mockWasmManager}
 
@@ -310,12 +309,11 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
-		// Channels cannot be marshaled to JSON
 		payload := &SetPayload{WorkflowID: wf.ID(), Payload: map[string]any{"input": make(chan int)}}
 		_, err = svc.Setx(ctx, payload)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to marshal input data")
+		assert.Contains(t, err.Error(), "failed to hash input at step")
 		mockWasmManager.AssertExpectations(t)
 	})
 }
@@ -379,6 +377,64 @@ func TestCabinetService_Get_NotFound(t *testing.T) {
 
 	_, err = svc.GetWorkflow("nonexistent")
 	assert.ErrorIs(t, err, ErrNotFound, "GetWorkflow should return ErrNotFound for nonexistent ID")
+}
+
+// TestSetx_ProofTrace verifies that Setx produces a correct ProofTrace.
+func TestSetx_ProofTrace(t *testing.T) {
+	ctx := context.Background()
+
+	modStore := NewMemModuleStore()
+	wfStore := NewMemWorkflowStore()
+
+	native := make(NativeFunctions)
+	native["echo"] = CoreEcho
+	mod, err := NewModuleDescriptor(ctx, BaseBlock{Name: "echo", Version: "1.0"}, "native", nil, nil, nil)
+	require.NoError(t, err)
+	mod.NativeImpl = native
+	modStore.Put(mod)
+
+	wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.trace", Version: "1.0"}, []string{"echo@1.0.echo(input)"})
+	require.NoError(t, err)
+	wfStore.Put(wf)
+
+	fixedTime := "2026-01-01T00:00:00Z"
+	svc := &cabinetService{
+		modules:   modStore,
+		workflows: wfStore,
+		wasmManager: func() wasmManager {
+			m := new(MockWasmManager)
+			return m
+		}(),
+		clock: func() string { return fixedTime },
+	}
+
+	payload := &SetPayload{
+		WorkflowID: wf.ID(),
+		Payload:    map[string]any{"msg": "hello"},
+	}
+	resp, err := svc.Setx(ctx, payload)
+	require.NoError(t, err)
+	require.NotNil(t, resp.Trace)
+
+	trace := resp.Trace
+	assert.Equal(t, wf.ID(), trace.WorkflowID)
+	assert.Equal(t, fixedTime, trace.Timestamp)
+	require.Len(t, trace.Steps, 1)
+
+	step := trace.Steps[0]
+	assert.Equal(t, "echo@1.0", step.Module)
+	assert.NotEmpty(t, step.InputHash)
+	assert.NotEmpty(t, step.OutputHash)
+	assert.NotEmpty(t, trace.ChainHash)
+
+	// ChainHash must equal SHA256 of the single output hash.
+	assert.Equal(t, computeChainHash(trace.Steps), trace.ChainHash)
+
+	// Determinism: same input → same hashes.
+	resp2, err := svc.Setx(ctx, payload)
+	require.NoError(t, err)
+	assert.Equal(t, trace.Steps[0].InputHash, resp2.Trace.Steps[0].InputHash)
+	assert.Equal(t, trace.ChainHash, resp2.Trace.ChainHash)
 }
 
 func TestCabinetService_Close(t *testing.T) {
