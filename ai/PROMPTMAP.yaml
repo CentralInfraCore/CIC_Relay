@@ -1,6 +1,8 @@
-version: 1
+version: 2
 entries:
+  # --- Megvalósított / referencia ---
   - task: "cabinet-canonicalize"
+    status: done
     prompt: |
       Készíts determinisztikus, rendezett (canonical) JSON kimenetet a cabinet grafból a CONTRACT szerint.
       Ne legyen idő/locale/RNG mellékhatás. A GOLDEN inputokkal ellenőrizd.
@@ -8,3 +10,87 @@ entries:
       - GOLDEN/cabinet_case01.in
       - GOLDEN/cabinet_case02.in
     accept: make verify
+
+  # --- Következő lépések (prioritás szerint) ---
+
+  - task: "fix-audit-placeholder-log"
+    status: ready
+    priority: 1
+    prompt: |
+      A `cmd/relay/bootstrap.go` `loadModule` függvényében a PEM aláírás ellenőrzés
+      placeholder ágán `"outcome": "success"` log jelenik meg, holott semmi nem lett ellenőrizve.
+      Javítsd `"outcome": "skipped"`-re és adj hozzá `"reason": "trust ecosystem not bootstrapped"` mezőt.
+      Ez nem feature — ez egy hazugság az audit trailben.
+    tests:
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  - task: "schema-validation-setx"
+    status: ready
+    priority: 2
+    prompt: |
+      A `core/cabinet/service.go` `Setx` függvényében van egy TODO:
+      "Implement schema validation here using moduleDesc.Accepts and inputData's schema ID."
+      Implementáld: minden lépésnél ellenőrizd az inputData schema-megfelelőségét
+      a moduleDesc.Accepts lista alapján. ErrInvalid-dal térj vissza ha nem egyezik.
+      Ne változtasd meg a Cabinet interfészt.
+    tests:
+      - core/cabinet/service_unit_test.go
+      - core/cabinet/service_integration_test.go
+    accept: make test
+
+  - task: "proof-trace-type"
+    status: ready
+    priority: 3
+    prompt: |
+      Vezess be egy `ProofTrace` típust a `core/cabinet` csomagban.
+      A ProofTrace rögzíti egy workflow végrehajtás teljes lenyomatát:
+      workflow_id, lépésenkénti input_hash + output_hash, chain_hash (lépések hash-einek SHA256-a),
+      timestamp (injektált, nem clock). Minden mező determinisztikus és kanonizálható.
+      A `Setx` térjen vissza ProofTrace-szel is a SetResponse-ban.
+      Nem kell Vault aláírás ebben a lépésben — csak a típus és a chain_hash számítás.
+    tests:
+      - core/cabinet/service_unit_test.go (új teszteset)
+    accept: make test
+
+  - task: "setx-recorder-wire"
+    status: blocked
+    blocked_by: "proof-trace-type"
+    priority: 4
+    prompt: |
+      Kösd össze a `Setx` végrehajtást a `core/nexus/recorder`-rel:
+      minden sikeres workflow végrehajtás után a ProofTrace kerüljön be a recorder-be
+      (expected state = workflow input, actual state = ProofTrace).
+      A recorder Vault aláírást igényel — ha Vault nem elérhető, logolj WARN-t és folytasd.
+      Failure ne legyen fatal a végrehajtásra nézve ebben a lépésben.
+    tests:
+      - core/nexus/recorder/recorder_test.go
+    accept: make test
+
+  - task: "execution-graph-linear"
+    status: blocked
+    blocked_by: "proof-trace-type"
+    priority: 5
+    prompt: |
+      Implementáld a `core/cabinet/graph.go`-t lineáris ExecutionGraph-ként.
+      Egy ExecutionGraph lépések rendezett listája ahol minden lépés kimenetének
+      saját neve van a kontextusban (nem mindent felülíró "result" kulcs).
+      A lépés formátuma: `"component@version.function(inputKey) -> outputKey"`.
+      A Setx parser ezt az új formátumot értelmezze.
+      Visszafelé kompatibilis: a régi `"component.function(data)"` formátum is működjön.
+    tests:
+      - core/cabinet/graph_test.go
+      - core/cabinet/service_unit_test.go
+    accept: make test
+
+  - task: "dev-vault-bootstrap"
+    status: ready
+    priority: 6
+    prompt: |
+      Készíts egy `make dev-vault` Makefile targetet és egy hozzá tartozó szkriptet,
+      ami a `tools/vault-sign-agent.sh` alapján elindít egy lokális, in-memory Vault-ot
+      a fejlesztői környezethez. A target után `make verify` futtatható legyen
+      Vault-függő tesztek nélkül is. Dokumentáld a `ai/SYSTEM_CONTEXT.md`-ben.
+    tests:
+      - scripts/
+    accept: make dev-vault && make verify

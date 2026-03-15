@@ -126,6 +126,7 @@ check-symbols: ## Check if symbols documentation is up-to-date
 test: ## Run unit tests (verbose, race)
 	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
 		set -euo pipefail; \
+		git config --global --add safe.directory /git-source 2>/dev/null || true; \
 		PKGS="$$(go list ./... | grep -v /vendor/)"; \
 		if [ -z "$$PKGS" ]; then \
 			echo "No Go packages to lint."; \
