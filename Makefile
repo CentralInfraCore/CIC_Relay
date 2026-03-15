@@ -7,7 +7,8 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	test coverage coverage-threshold build verify manifest-src \
 	tdd cache-populate mq-publish verify-auto verify-debug \
 	manifest-verify manifest-update verify-full clean shell \
-	symbols check-symbols test-api deps
+	symbols check-symbols test-api deps \
+	dev-vault dev-vault-stop
 
 # Default to showing help
 all: help
@@ -213,6 +214,15 @@ build-crt-parser: prepare ## build-crt-parser
 
 
 # Golden verification (LLM-ready overlay)
+verify: ## Run golden file verification (BINARY=path or auto-detected)
+	@bash scripts/ai_verify.sh
+
+# Dev Vault (local in-memory, no TLS, auto-unsealed)
+dev-vault: ## Start local in-memory Vault for development (host-side, requires vault binary)
+	@bash scripts/dev-vault.sh
+
+dev-vault-stop: ## Stop local dev Vault
+	@bash scripts/dev-vault.sh --stop
 
 build-canonicalize: prepare ## build-canonicalize
 	@echo "🔨 Building canonicalize..."
