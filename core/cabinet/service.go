@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // cicWasmHost defines the interface for interacting with a live WASM instance.
@@ -89,7 +91,8 @@ type cabinetService struct {
 	modules     ModuleStore
 	workflows   WorkflowStore
 	wasmManager wasmManager
-	clock       func() string // injected; returns UTC timestamp for ProofTrace
+	clock       func() string    // injected; returns UTC timestamp for ProofTrace
+	recorder    ExecutionRecorder // optional; nil = skip recording
 }
 
 // NewCabinetService creates a new Cabinet service with the given stores and WasmManager configuration.
@@ -245,7 +248,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		execCtx.Set(step.OutputKey, result)
 	}
 
-	// 3. Build ProofTrace and return.
+	// 3. Build ProofTrace.
 	clockFn := c.clock
 	if clockFn == nil {
 		clockFn = func() string { return time.Now().UTC().Format(time.RFC3339) }
@@ -256,6 +259,17 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		ChainHash:  computeChainHash(traceSteps),
 		Timestamp:  clockFn(),
 	}
+
+	// 4. Record the execution (non-fatal: Vault may be unavailable).
+	if c.recorder != nil {
+		if err := c.recorder.Record(ctx, workflow.ID(), trace); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"workflow_id": workflow.ID(),
+				"error":       err,
+			}).Warn("ProofTrace recording failed, continuing")
+		}
+	}
+
 	return &SetResponse{
 		Results:  execCtx.variables,
 		Warnings: nil,

@@ -54,8 +54,7 @@ entries:
     accept: make test
 
   - task: "setx-recorder-wire"
-    status: blocked
-    blocked_by: "proof-trace-type"
+    status: done
     priority: 4
     prompt: |
       Kösd össze a `Setx` végrehajtást a `core/nexus/recorder`-rel:
