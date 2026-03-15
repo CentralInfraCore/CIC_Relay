@@ -1,0 +1,24 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: FileSource
+  kind: struct
+  description: FileSource implements IaCSource for the local file system.
+  implements: []
+  references: []
+- name: NewFileSource
+  kind: func
+  description: NewFileSource creates a new FileSource rooted at the given path.
+  references: []
+- name: FetchConfig
+  kind: method
+  receiver: FileSource
+  description: FetchConfig walks the directory tree and reads all YAML/JSON files.
+  references: []

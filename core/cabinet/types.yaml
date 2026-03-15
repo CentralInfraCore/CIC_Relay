@@ -1,0 +1,48 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+- schema
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: BaseBlock
+  kind: struct
+  description: 'BaseBlock: minden objektum közös metaadatait és validációs jellemzőit
+    tartalmazza.'
+  implements: []
+  references: []
+- name: SchemaDef
+  kind: struct
+  description: 'SchemaDef: egy séma működési specifikációja – állapotfeltételek, függőségek,
+    következő lépések.'
+  implements: []
+  references: []
+- name: Schema
+  kind: struct
+  description: 'Schema: teljes séma objektum, meta + működési leírás.'
+  implements: []
+  references: []
+- name: ModuleDescriptor
+  kind: struct
+  description: 'ModuleDescriptor: egy modul jellemzői – típusa, támogatott sémák,
+    output kulcsok.'
+  implements: []
+  references: []
+- name: Workflow
+  kind: struct
+  description: 'Workflow: végrehajtási lépések listája, gráf formában – sémákra hivatkozva.'
+  implements: []
+  references: []
+- name: ModuleID
+  kind: type
+  description: ModuleID a modul egyedi azonosítója (string alias).
+  references: []
+- name: NativeFunctions
+  kind: type
+  description: NativeFunctions a natív, Go-ban implementált függvények tárolója. A
+    kulcs a függvény neve, az érték maga a Go függvény.
+  references: []
