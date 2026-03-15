@@ -1,0 +1,120 @@
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: WasmManagerConfig
+  kind: struct
+  description: WasmManagerConfig defines the configurable parameters for the WasmManager.
+  implements: []
+  references: []
+- name: WasmManager
+  kind: struct
+  description: WasmManager is responsible for the entire WASM lifecycle management.
+  implements: []
+  references:
+  - wazero.Runtime
+  - lru.Cache
+  - wazero.CompiledModule
+  - singleflight.Group
+- name: CicWasmHost
+  kind: struct
+  description: Live WASM host instance wrapping a wazero module; implements cicWasmHost
+    interface.
+  implements: []
+  references:
+  - api.Module
+  - api.Function
+- name: GuestResult
+  kind: struct
+  description: 'Parsed response struct from a WASM guest call: output JSON and error
+    JSON.'
+  implements: []
+  references: []
+- name: NewWasmManager
+  kind: func
+  description: NewWasmManager creates a new central WASM manager with the given configuration.
+  references:
+  - wazero.NewRuntimeConfig
+  - wazero.NewRuntimeWithConfig
+  - wasi_snapshot_preview1.Instantiate
+  - wazero.CompiledModule
+  - lru.NewWithEvict
+- name: PreCompileModule
+  kind: method
+  receiver: WasmManager
+  description: PreCompileModule compiles a module and stores it in the cache.
+  references:
+  - wazero.CompiledModule
+- name: NewHostInstance
+  kind: method
+  receiver: WasmManager
+  description: NewHostInstance creates a new, live instance of a module, applying
+    configured limits.
+  references:
+  - wazero.NewModuleConfig
+- name: EvictModule
+  kind: method
+  receiver: WasmManager
+  description: EvictModule removes all versions of a compiled module from the cache.
+  references: []
+- name: Close
+  kind: method
+  receiver: WasmManager
+  description: Close shuts down the entire WASM runtime and clears all caches.
+  references: []
+- name: newCicWasmHost
+  kind: func
+  description: Creates a new CicWasmHost by instantiating a compiled WASM module in
+    the given runtime.
+  references:
+  - api.Module
+- name: Close
+  kind: method
+  receiver: CicWasmHost
+  description: Close shuts down the entire WASM runtime and clears all caches.
+  references: []
+- name: Process
+  kind: method
+  receiver: CicWasmHost
+  description: Calls the guest's process export with auth context and input JSON,
+    returns (outputJson, errJson).
+  references: []
+- name: Get
+  kind: method
+  receiver: CicWasmHost
+  description: Calls the guest's get export with auth context and query JSON, returns
+    (resultJson, errJson).
+  references: []
+- name: Init
+  kind: method
+  receiver: CicWasmHost
+  description: Calls the guest's init export with auth context and config JSON, returns
+    (resultJson, errJson).
+  references: []
+- name: Notify
+  kind: method
+  receiver: CicWasmHost
+  description: Calls the guest's notify export with auth context and event JSON, returns
+    (resultJson, errJson).
+  references: []
+- name: callGuest
+  kind: method
+  receiver: CicWasmHost
+  description: 'Low-level helper: writes args into WASM memory, calls named export,
+    reads back result.'
+  references: []
+- name: writeStringToWasm
+  kind: method
+  receiver: CicWasmHost
+  description: Allocates a string in WASM linear memory and returns pointer+length.
+  references: []
+- name: formatErrorJson
+  kind: func
+  description: Formats a Go error as a JSON error string suitable for returning to
+    the WASM guest.
+  references: []

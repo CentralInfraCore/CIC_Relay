@@ -1,0 +1,80 @@
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: config
+  kind: struct
+  description: config holds the application's configuration.
+  implements: []
+  references: []
+- name: relayServer
+  kind: struct
+  description: relayServer holds the dependencies for our HTTP handlers.
+  implements: []
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+- name: loadConfig
+  kind: func
+  description: loadConfig loads configuration from environment variables.
+  references: []
+- name: newMux
+  kind: func
+  description: newMux creates a new HTTP multiplexer with all routes.
+  references: []
+- name: rootHandler
+  kind: method
+  receiver: relayServer
+  description: rootHandler serves the root path.
+  references:
+  - uuid.New
+  - logrus.Fields
+- name: healthzHandler
+  kind: method
+  receiver: relayServer
+  description: healthzHandler serves the health check endpoint.
+  references: []
+- name: readyzHandler
+  kind: method
+  receiver: relayServer
+  description: readyzHandler serves the readiness check endpoint.
+  references: []
+- name: setHandler
+  kind: method
+  receiver: relayServer
+  description: setHandler processes incoming SetPayload requests.
+  references:
+  - uuid.New
+  - logrus.Fields
+  - cabinet.SetPayload
+  - cabinet.IsInvalid
+- name: run
+  kind: func
+  description: 'run: külön függvény, hogy unit tesztben ne main()-t kelljen hívni'
+  references:
+  - logrus.Logger
+- name: main
+  kind: func
+  description: 'Entry point: loads config, initialises cabinet and WASM manager, bootstraps
+    PKI and native components, starts HTTP server.'
+  references:
+  - logrus.New
+  - logrus.JSONFormatter
+  - logrus.Fields
+  - uuid.New
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewMemModuleStore
+  - cabinet.WasmManagerConfig
+  - cabinet.NewCabinetService
+- name: listenAndServe
+  kind: var
+  description: 'test seam: unit tesztben felülírható'
+  references: []

@@ -1,0 +1,24 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: API
+  kind: struct
+  description: API provides the public interface for the Cabinet service.
+  implements: []
+  references: []
+- name: NewAPI
+  kind: func
+  description: NewAPI creates a new API instance.
+  references: []
+- name: Close
+  kind: method
+  receiver: API
+  description: Close closes the underlying resources, like the WASM runtime.
+  references: []

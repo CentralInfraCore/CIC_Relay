@@ -1,0 +1,49 @@
+package: canonicaljson
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ToJSONFunc
+  kind: type
+  description: ToJSONFunc is the type for the ToJSON function, allowing it to be mocked.
+  references: []
+- name: ToJSONOriginal
+  kind: func
+  description: ToJSONOriginal is the original implementation of ToJSON.
+  references: []
+- name: ToJSON
+  kind: func
+  description: ToJSON marshals a Go value into a canonical JSON string. It ensures
+    that map keys are sorted alphabetically for deterministic output.
+  references: []
+- name: SetToJSONMock
+  kind: func
+  description: SetToJSONMock sets the mock function for ToJSON. Pass nil to restore
+    the original implementation.
+  references: []
+- name: writeCanonicalJSON
+  kind: func
+  description: Recursively writes a Go value as canonical JSON to an io.Writer.
+  references: []
+- name: writeJSONString
+  kind: func
+  description: Writes a string or float value as a JSON-encoded string to an io.Writer.
+  references: []
+- name: writeJSONArray
+  kind: func
+  description: Writes a []any slice as a JSON array, recursively canonicalising each
+    element.
+  references: []
+- name: writeJSONMap
+  kind: func
+  description: Writes a map[string]any as a JSON object with alphabetically sorted
+    keys.
+  references: []
+- name: ToJSONImpl
+  kind: var
+  description: ToJSONImpl is the actual implementation of ToJSON that can be swapped
+    for testing.
+  references: []

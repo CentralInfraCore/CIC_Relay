@@ -1,0 +1,106 @@
+package: cabinet
+description: ''
+tags:
+- core
+- schema
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: executionContext
+  kind: struct
+  description: executionContext holds the state for a single workflow execution. It
+    contains the data variables and the materialized (live) modules.
+  implements: []
+  references: []
+- name: cabinetService
+  kind: struct
+  description: Core service struct implementing the Cabinet interface; wires together
+    stores, WASM manager and execution engine.
+  implements: []
+  references: []
+- name: cicWasmHost
+  kind: interface
+  description: cicWasmHost defines the interface for interacting with a live WASM
+    instance. This allows for mocking in unit tests.
+  references: []
+- name: wasmManager
+  kind: interface
+  description: wasmManager defines the interface for a WASM lifecycle manager. This
+    allows for mocking in unit tests.
+  references: []
+- name: Cabinet
+  kind: interface
+  description: Cabinet defines the central API for schema/module/workflow management.
+  references: []
+- name: NewExecutionContext
+  kind: func
+  description: NewExecutionContext creates a new execution context and initializes
+    it with the starting payload.
+  references: []
+- name: Get
+  kind: method
+  receiver: executionContext
+  description: Get retrieves a value from the context's variable store.
+  references: []
+- name: Set
+  kind: method
+  receiver: executionContext
+  description: Set stores a value in the context's variable store.
+  references: []
+- name: GetModule
+  kind: method
+  receiver: executionContext
+  description: GetModule retrieves a materialized module from the context.
+  references: []
+- name: StoreModule
+  kind: method
+  receiver: executionContext
+  description: StoreModule stores a newly materialized module in the context.
+  references: []
+- name: NewCabinetService
+  kind: func
+  description: NewCabinetService creates a new Cabinet service with the given stores
+    and WasmManager configuration.
+  references: []
+- name: Setx
+  kind: method
+  receiver: cabinetService
+  description: Setx executes a workflow based on the function-oriented model.
+  references: []
+- name: Close
+  kind: method
+  receiver: cabinetService
+  description: Gracefully shuts down the service and its WASM manager.
+  references: []
+- name: PutSchema
+  kind: method
+  receiver: cabinetService
+  description: Validates and stores a Schema in the SchemaStore.
+  references: []
+- name: GetSchema
+  kind: method
+  receiver: cabinetService
+  description: Retrieves a Schema by ID from the SchemaStore.
+  references: []
+- name: PutModule
+  kind: method
+  receiver: cabinetService
+  description: Validates and stores a ModuleDescriptor in the ModuleStore.
+  references: []
+- name: GetModule
+  kind: method
+  receiver: cabinetService
+  description: GetModule retrieves a materialized module from the context.
+  references: []
+- name: PutWorkflow
+  kind: method
+  receiver: cabinetService
+  description: Validates and stores a Workflow in the WorkflowStore.
+  references: []
+- name: GetWorkflow
+  kind: method
+  receiver: cabinetService
+  description: Retrieves a Workflow by ID from the WorkflowStore.
+  references: []

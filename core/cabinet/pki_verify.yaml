@@ -1,0 +1,32 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: VerifyOptions
+  kind: struct
+  description: VerifyOptions encapsulates the parameters for certificate chain verification.
+    This structure will hold the trusted root CAs, expected key usages, CRLs, and
+    SPKI pins.
+  implements: []
+  references: []
+- name: checkRevocation
+  kind: func
+  description: checkRevocation checks if any certificate in the provided chains is
+    in the revocation list.
+  references: []
+- name: checkSPKIPinning
+  kind: func
+  description: checkSPKIPinning checks if any certificate in the chains matches the
+    pinned SPKI hashes.
+  references: []
+- name: VerifyCertificateChain
+  kind: func
+  description: VerifyCertificateChain checks a certificate against a trust store and
+    specific key usages. This is the core function for M3 - Private PKI verification.
+  references: []
