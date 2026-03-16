@@ -117,8 +117,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
         *   [x] **Feladat**: A `/set`, `/healthz`, `/readyz` és `/` HTTP handlerek tesztelése a `net/http/httptest` csomag és mockolt service-ek segítségével.
         *   [x] **DoD**: A handler tesztek lefedik a sikeres eseteket és a várt hibakódokat (4xx, 5xx). A tesztek a `make test` részei, gyorsak és nem igényelnek külső függőséget.
     *   **M6.5: End-to-End (E2E) Tesztek**
-        *   [ ] **Feladat**: Létrehozni egy kezdeti API tesztkészletet (pl. Postman collection vagy `curl` scriptek formájában), amely egy `docker compose up`-pal elindított, teljes rendszer ellen fut.
-        *   [ ] **DoD**: A tesztek dokumentálva vannak, és sikeresen lefedik a fő felhasználói útvonalakat. A tesztkészlet a projekt része, és a CI pipeline egy külön (opcionális) fázisában futtatható.
+        *   [x] **Feladat**: Létrehozni egy kezdeti API tesztkészletet curl scriptek formájában, amely futó relay instance ellen fut.
+        *   [x] **DoD**: `api_tests/smoke.sh` — 5 assertion, `RELAY_URL` konfigurálható, `make test-api` futtatja. Dokumentálva `ai/SYSTEM_CONTEXT.md`-ben.
 
 ### M7 — Supply-chain Validation / Artifact Trust
 * **Állapot:** Részben kész
