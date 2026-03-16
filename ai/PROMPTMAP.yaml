@@ -439,3 +439,96 @@ entries:
     tests:
       - core/nexus/iac/upstream_test.go
     accept: make test
+
+  # --- Sprint 5 ---
+
+  - task: "sbom-release-artifact"
+    status: todo
+    priority: 25
+    milestone: M9
+    prompt: |
+      Zárjuk le az M9 mérföldkövet: reprodukálható release artifact lánc.
+      A `-trimpath` flag már megvan a Makefile-ban.
+      Feladatok:
+        1. `make release` target:
+           - Cross-compile linux/amd64 statikus binárist
+             (`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w"`)
+           - Kimenet: `dist/relay`
+        2. `dist/relay.sha256` — `sha256sum dist/relay > dist/relay.sha256`
+        3. SBOM generálás: `go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
+           mod -output dist/sbom.json -json` (CycloneDX JSON formátum)
+        4. `make release-verify` — ellenőrzi hogy `dist/relay.sha256` egyezik a binárissal
+        5. `dist/` kerüljön be `.gitignore`-ba (generált artefaktok, ne commitáljuk)
+        6. Dokumentáld `ai/SYSTEM_CONTEXT.md`-ben a release folyamatot (1 bekezdés)
+      DoD: `make release && make release-verify` hibátlan a docker builder container-ben.
+    tests:
+      - Makefile (release + release-verify target)
+      - .gitignore (dist/ bejegyzés)
+    accept: make release && make release-verify
+
+  - task: "audit-sync-integration"
+    status: todo
+    priority: 26
+    milestone: M14
+    prompt: |
+      Az M14 squash/push/prune logika (`core/nexus/sync`) implementálva van, de nincs
+      integrációs teszt és a coverage alacsony. Zárjuk le a mérföldkövet:
+        1. Integrációs teszt 2 ephemeral git repo-val (t.TempDir()):
+           - "local" repo: RecordState N commit-tal feltöltve
+           - "remote" repo: bare repo (`git init --bare`)
+           - Sync futtatás → ellenőrizd hogy a squash commit megjelent a remote-on
+           - Prune: régi branch törlődik a localból a push után
+        2. A teszt ne igényeljen hálózatot — csak lokális fájlrendszer
+        3. `core/nexus/sync` package coverage ≥ 70%
+      Ne változtass az M14 implementáción — csak tesztek.
+      Ha a jelenlegi sync implementáció nem teszt-barát (pl. hardcoded path),
+      minimálisan refaktoráld hogy injektálható legyen a repo path.
+    tests:
+      - core/nexus/sync/sync_integration_test.go
+    accept: make test
+
+  - task: "isolation-subprocess-ipc"
+    status: todo
+    priority: 27
+    milestone: M15
+    prompt: |
+      Az M15 isolation coordinator jelenleg in-process — a Zero Trust cél
+      ("plaintext adat soha nem jelenik meg a koordinátor processz memóriájában")
+      nem teljesül. Implementáld a 3-process szétválasztást:
+        1. Coordinator (jelenlegi main relay): Unix socket listener (`/tmp/cic-relay-ipc.sock`)
+        2. Worker subprocess: `exec.Command(os.Executable(), "--mode=module-worker")`
+           - stdin/stdout: newline-delimited JSON (kérés + válasz, 1 request egyszerre)
+           - IPC protokoll: `{"op":"decrypt","payload":"..."}` / `{"result":"...","error":"..."}`
+        3. `--mode=module-worker` flag: ha jelen van, a relay worker módban fut
+           (nincs HTTP listener, csak IPC loop)
+        4. Coordinator ↔ worker round-trip integrációs teszt (subprocess spawn + echo)
+      Backward compat: ha `CIC_ISOLATION_MODE=subprocess` nincs beállítva,
+      az in-process mód marad aktív (nem breaking change).
+      DoD: `make test` zöld + subprocess round-trip teszt átmegy.
+    tests:
+      - core/nexus/isolation/coordinator_test.go
+      - core/nexus/isolation/ipc_test.go
+    accept: make test
+
+  - task: "m16-operator-watcher-wiring"
+    status: todo
+    priority: 28
+    milestone: M16.4
+    prompt: |
+      Az M16 Watcher + Bootstrap + Lifecycle implementálva van, de a Operator nincs
+      bekötve a `cmd/relay/main.go` indítási folyamatába. Kösd be:
+        1. `main.go` `run()`: ha `CIC_INFRA_REPO_PATH` be van állítva, indítson el
+           egy `PollingWatcher`-t (`NewPollingWatcher(path, 30s)`) és
+           egy `OperatorWithLifecycle`-t goroutine-ban (`go op.Run(ctx)`)
+        2. `CIC_OPERATOR_SECRET` env változó: ha hiányzik és `CIC_INFRA_REPO_PATH` be van állítva,
+           Fatal — bootstrap token nem generálható titkos kulcs nélkül
+        3. Ha `CIC_INFRA_REPO_PATH` nincs beállítva: Operator nem indul, csak WARN log
+           (backward-compatible — nem kötelező az operátor)
+        4. `config/relay.config.schema.yaml` frissítése: `CIC_INFRA_REPO_PATH`,
+           `CIC_OPERATOR_SECRET` dokumentálása
+        5. Integrációs teszt: tmpdir + 1 Host YAML → Operator kezeli → registry bejegyzés
+      DoD: `make test` zöld, az Operator életciklus a relay indításával automatikus.
+    tests:
+      - cmd/relay/main_test.go
+      - config/relay.config.schema.yaml
+    accept: make test

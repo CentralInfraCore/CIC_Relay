@@ -249,7 +249,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M0        | Done        | |
 | M1        | Done        | |
 | M2        | **Done**    | ExecutionGraph, schema validáció, ProofTrace kész |
-| M3        | Partial     | PKI verify (`pki_verify.go`) kész; bootstrap.go wiring folyamatban |
+| M3        | **Done**    | PKI verify + bootstrap.go wiring + TrustStoreLoaded flag + 3 PKI teszt kész |
 | M4        | **Done**    | M4.4 kész: CIC_WASM_EXEC_TIMEOUT_SECONDS + range validáció |
 | M5        | **Done**    | M5.2 uniform JSON error kész, minden M5 subtask zárva |
 | M6        | **Done**    | M6.5 E2E smoke tests kész, minden M6 subtask zárva |
