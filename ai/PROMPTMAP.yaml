@@ -421,7 +421,7 @@ entries:
     accept: make test
 
   - task: "nexus-upstream-source"
-    status: todo
+    status: done
     priority: 24
     milestone: M11
     prompt: |
