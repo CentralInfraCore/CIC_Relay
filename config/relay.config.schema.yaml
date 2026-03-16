@@ -9,10 +9,11 @@ metadata:
     schema engine at startup. All fields correspond to CIC_* environment variables.
 spec:
   stateRequirement:
-    # Core limits
-    CIC_MAX_JSON_INPUT_SIZE: "integer, bytes, default 4194304 (4 MB)"
-    CIC_MAX_WASM_MODULE_SIZE: "integer, bytes, default 16777216 (16 MB)"
-    CIC_HASHING_TIMEOUT: "duration string, default 5s"
+    # Core limits (all integer/duration values must satisfy minimum constraints)
+    CIC_MAX_JSON_INPUT_SIZE: "integer, bytes, min 1, default 4194304 (4 MB)"
+    CIC_MAX_WASM_MODULE_SIZE: "integer, bytes, min 1, default 16777216 (16 MB)"
+    CIC_HASHING_TIMEOUT: "duration string, min 1s, default 5s"
+    CIC_WASM_EXEC_TIMEOUT_SECONDS: "integer, seconds, min 1, default 30"
     # Vault integration (optional — recording disabled if absent)
     VAULT_ADDR: "string, Vault server address (Vault SDK env)"
     VAULT_TOKEN: "string, Vault token (Vault SDK env, optional)"

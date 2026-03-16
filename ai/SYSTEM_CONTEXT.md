@@ -145,16 +145,24 @@ cabinet.ValidateSchema(accepts, data)  ← exportált validátor, $schema kulcs 
 
 Folyamat:
 1. `loadConfig()` betölti az env változókat → `*config` struktúra
-2. `validateConfig(cfg)` a config-ot `map[string]interface{}`-re konvertálja
-   és hozzáadja `"$schema": "relay.config@1.0"` kulcsot
-3. `cabinet.ValidateSchema([]string{"relay.config@1.0"}, configMap)` ellenőrzi
+   - Range ellenőrzés env parsing közben: `CIC_WASM_EXEC_TIMEOUT_SECONDS` ≥ 1
+2. `validateConfig(cfg)` range constraint-eket ellenőriz (MinJSON/WASM ≥ 1, timeout ≥ 1s),
+   majd a config-ot `map[string]interface{}`-re konvertálja és hozzáadja `"$schema": "relay.config@1.0"` kulcsot
+3. `cabinet.ValidateSchema([]string{"relay.config@1.0"}, configMap)` ellenőrzi a séma ID-t
 4. Hiba esetén Fatal — fail-fast, egyértelmű hibaüzenet
+
+Konfigurált env változók (`CIC_*`):
+- `CIC_MAX_JSON_INPUT_SIZE` — integer bytes, min 1, default 4 MB
+- `CIC_MAX_WASM_MODULE_SIZE` — integer bytes, min 1, default 16 MB
+- `CIC_HASHING_TIMEOUT` — duration string, min 1s, default 5s
+- `CIC_WASM_EXEC_TIMEOUT_SECONDS` — integer seconds, min 1, default 30
 
 Ez a "dogfooding" elv: a rendszer saját eszközeit használja önmaga validálására.
 A séma egyben dokumentáció is — az összes `CIC_*` env változó ott van leírva.
 
-Megjegyzés: a jelenlegi validáció `$schema` ID egyezést ellenőriz, nem teljes értékű
-JSON Schema validációt — ez a mélység az első lépésként szándékos.
+Megjegyzés: a jelenlegi schema validáció `$schema` ID egyezést ellenőriz, nem teljes értékű
+JSON Schema validációt — ez a mélység az első lépésként szándékos. A range constraint-ek
+explicit Go kódban vannak (`validateConfig` elején).
 
 ---
 
