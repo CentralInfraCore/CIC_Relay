@@ -1,44 +1,65 @@
-# CIC Relay (Powered by Nexus)
+# CIC Relay
 
-Ez a repository a Central Infra Core (CIC) infrastruktúra-kezelő rendszerének központi komponensét, a **Relay**-t tartalmazza. A Relay motorja a **Nexus**, egy modern, GitOps-alapú vezérlősík, amely az infrastruktúra teljes életciklusát kezeli.
+A CIC-Relay egy **ProofTrace-alapú, auditálható végrehajtási platform**.
+Minden végrehajtott workflow determinisztikus hash-láncot alkot,
+amelynek integritása kriptográfiailag igazolható.
 
-## Architektúra: A Nexus Mag
+A bizalom nem feltételezés — igazolható állapot.
 
-A Relay nem csupán egy egyszerű proxy vagy szolgáltatás, hanem egy komplex vezérlő, amelynek központi eleme a `core/nexus` modul. A Nexus felel a rendszer "agyáért", és a következő fő komponensekből áll:
+---
 
-*   **`iac` (Infrastructure as Code):** Betölti és értelmezi az infrastruktúra leíróit (Desired State), majd felépíti a rendszer belső gráf-modelljét.
-*   **`recorder` (State Recorder):** Minden tranzakció után egy helyi, Git-alapú cache-be rögzíti a rendszer tényleges állapotát (Actual State). Ez a "fekete doboz" biztosítja az auditálhatóságot és a hibakeresést.
-*   **`crypto` (Security & Signing):** A Vault Transit engine-re támaszkodva kriptográfiailag aláír minden állapotrögzítést, garantálva azok hitelességét és sértetlenségét.
-*   **`sync` (Audit Synchronization):** A helyi, részletes cache-t periodikusan tömöríti és szinkronizálja egy központi, hosszú távú audit repository-ba.
-*   **`isolation` (Process Isolation):** A "Zero Trust" elvet követve, egy 3-lépcsős (Host/Relay/Module) láncon keresztül, izolált processzekben kezeli az érzékeny adatok visszafejtését.
-*   **`operator` (GitOps Lifecycle):** Folyamatosan figyeli a központi infrastruktúra repository-t, és automatikusan kezeli a komponensek (pl. új hostok) életciklusát, a biztonságos "onboarding"-tól a jogosultságok visszavonásáig.
+## Architektúra
 
-A rendszer másik fontos eleme a `core/cabinet`, amely a WASM-alapú üzleti logika futtatásáért felelős "végrehajtó" rétegként működik, a Nexus vezérlése alatt.
+```
+cmd/relay        HTTP API (:8080), bootstrap, PKI asset betöltés
+core/cabinet     Schema/Module/Workflow registry + WASM végrehajtó (wazero)
+core/nexus       IaC loader, Git recorder, Vault crypto, sync, isolation, operator
+```
 
-## Használat
+A jelenlegi **futó runtime középpontja** a `cmd/relay` + `core/cabinet`.
+A `core/nexus` komponensei közül a `recorder` és `crypto` aktívan be van kötve (ProofTrace aláírás).
+Az `iac`, `operator`, `sync`, `isolation` részek implementáltak, de a fő futási útvonalba
+még nincs minden bekötve — ezek az architektúra következő rétegei.
 
-### Fejlesztés és Tesztelés
-A projekt `Makefile` alapú build rendszert használ.
+---
+
+## Gyors start
 
 ```bash
-# Tesztek futtatása
+# Infrastruktúra indítása (Docker-alapú builder)
+make infra-init
+
+# Tesztek
 make test
 
-# Golden tesztek (kanonikus formátum) ellenőrzése
+# Golden tesztek (kanonikus formátum egyezés)
 make verify
+
+# Build
+make build
 ```
 
-### Futtatás (Prototípus)
-A rendszer jelenleg prototípus fázisban van. A `cmd/nexus/main.go` egy példa implementáció, ami bemutatja a Nexus komponensek összekapcsolását. Futtatásához szükség van egy működő Vault szerverre.
+### Fejlesztői Vault (opcionális, ProofTrace aláíráshoz)
 
 ```bash
-export VAULT_ADDR="http://127.0.0.1:8200"
-export VAULT_TOKEN="root"
-go run cmd/nexus/main.go
+make dev-vault                                        # lokális in-memory Vault
+source $XDG_RUNTIME_DIR/cic-vault-dev.env            # env betöltése
+make test                                             # tesztek Vault-tal
+make dev-vault-stop                                   # leállítás
 ```
 
+### E2E smoke tesztek
+
+```bash
+# Futó relay instance szükséges (pl. make build && ./output/<commit>/cic-relay)
+RELAY_URL=http://localhost:8080 make test-api
+```
+
+---
+
 ## Dokumentáció
-Részletes dokumentáció a `docs/` könyvtárban található.
-*   [Roadmap](ai/ROADMAP.md)
-*   [Mérföldkövek](docs/hu/roadmap/relay_milestones.md)
-*   [Biztonsági Modell](docs/hu/security/secret_and_audit_model.md)
+
+- [Roadmap](ai/ROADMAP.md)
+- [Mérföldkövek](docs/hu/roadmap/relay_milestones.md)
+- [Biztonsági modell](docs/hu/security/secret_and_audit_model.md)
+- [Rendszer kontextus (AI)](ai/SYSTEM_CONTEXT.md)
