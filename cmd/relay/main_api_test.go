@@ -207,6 +207,32 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 	mockAPI.AssertCalled(t, "Setx", mock.Anything, mock.Anything)
 }
 
+// TestSetHandler_Timeout tests the handler's response to a timeout from the cabinet.
+func TestSetHandler_Timeout(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("%w: step timed out", cabinet.ErrTimeout))
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	server := &relayServer{
+		api:    mockAPI,
+		config: &config{MaxJSONInputSize: 1024},
+		logger: logger,
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflowId":"any"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusGatewayTimeout, w.Code, "Expected HTTP 504 for timeout")
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	assertErrorJSON(t, w, "timeout")
+	mockAPI.AssertCalled(t, "Setx", mock.Anything, mock.Anything)
+}
+
 // TestSetHandler_CabinetInternalError tests the handler's response to an unexpected internal error.
 func TestSetHandler_CabinetInternalError(t *testing.T) {
 	// 1. Setup

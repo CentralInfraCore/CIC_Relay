@@ -166,7 +166,11 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.api.Setx(r.Context(), &payload)
 	if err != nil {
-		// Handle specific cabinet errors
+		if cabinet.IsTimeout(err) {
+			logEntry.WithField("outcome", "timeout").WithError(err).Warn("Workflow execution timed out")
+			writeError(w, http.StatusGatewayTimeout, "timeout", "Workflow execution timed out: "+err.Error())
+			return
+		}
 		if cabinet.IsInvalid(err) {
 			logEntry.WithField("outcome", "invalid_request").WithError(err).Warn("Invalid request")
 			writeError(w, http.StatusBadRequest, "invalid_request", "Invalid request: "+err.Error())

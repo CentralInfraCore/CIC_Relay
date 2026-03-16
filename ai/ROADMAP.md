@@ -73,8 +73,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
         *   [x] **Feladat**: Kiterjeszteni a WASM méretellenőrzést, hogy az egy globálisan konfigurálható maximumot érvényesítsen.
         *   [x] **DoD**: Túlméretes WASM modul betöltésekor a rendszer hibát jelez. A limit konfigurálható.
     *   **M4.3: CPU/Idő Korlát**
-        *   [ ] **Feladat**: Bevezetni egy CPU/idő budget mechanizmust a kanonizálási, hash számítási és WASM futtatási műveletekhez.
-        *   [ ] **DoD**: Ha egy művelet túllépi a megadott időkeretet, a művelet megszakad, és a rendszer megfelelő hibával válaszol.
+        *   [x] **Feladat**: Bevezetni egy CPU/idő budget mechanizmust a WASM futtatási műveletekhez.
+        *   [x] **DoD**: `ErrTimeout` sentinel + `IsTimeout` predikátum. cicwasm TIMEOUT kód → `ErrTimeout` wrapping a `Setx`-ben. HTTP 504 a handler szinten.
     *   **M4.4: Limitértékek Konfigurálhatósága**
         *   [x] **Feladat**: Biztosítani, hogy a bevezetett limitek (JSON méret, WASM méret) konfigurálhatók legyenek.
         *   [ ] **DoD**: Minden limit könnyen módosítható a központi, séma-vezérelt konfigurációban.

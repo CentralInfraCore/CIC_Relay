@@ -15,12 +15,14 @@ var (
 	ErrInvalid  = errors.New("invalid")   // validation or integrity failure
 	ErrConflict = errors.New("conflict")  // conflicting resource state
 	ErrNotFound = errors.New("not_found") // resource not found
+	ErrTimeout  = errors.New("timeout")   // execution exceeded time budget
 )
 
 // Helper predicates for common error matching.
 func IsInvalid(err error) bool  { return errors.Is(err, ErrInvalid) }
 func IsConflict(err error) bool { return errors.Is(err, ErrConflict) }
 func IsNotFound(err error) bool { return errors.Is(err, ErrNotFound) }
+func IsTimeout(err error) bool  { return errors.Is(err, ErrTimeout) }
 
 // FieldError describes a validation error for a specific field.
 type FieldError struct {

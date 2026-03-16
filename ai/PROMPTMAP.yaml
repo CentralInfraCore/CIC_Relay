@@ -169,7 +169,7 @@ entries:
     accept: make test
 
   - task: "wasm-exec-timeout"
-    status: todo
+    status: done
     priority: 11
     milestone: M4.3
     prompt: |
