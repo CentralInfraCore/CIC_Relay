@@ -155,8 +155,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
 * **Megjegyzés:** Az alap strukturált logolás (`logrus`) használatban van, de a dedikált alap HTTP-metrikák (Prometheus) és a compile/exec időmérés hiányzik.
 * **Részfeladatok (checklist):**
     *   **M8.1: Prefixált környezeti változók**
-        *   [ ] **Feladat**: Minden, a Relay által használt környezeti változót `CIC_` prefixszel kell ellátni a névtér-ütközések elkerülése és az egyértelmű azonosíthatóság érdekében.
-        *   [ ] **DoD**: A `loadConfig` függvény csak a `CIC_` prefixű változókat olvassa be. A kód sehol nem hivatkozik prefix nélküli változókra.
+        *   [x] **Feladat**: Minden, a Relay által használt környezeti változót `CIC_` prefixszel kell ellátni a névtér-ütközések elkerülése és az egyértelmű azonosíthatóság érdekében.
+        *   [x] **DoD**: A `loadConfig` függvény csak a `CIC_` prefixű változókat olvassa be. (VAULT_ADDR/VAULT_TOKEN a Vault SDK saját változói — nem átnevezve.)
 
     *   **M8.2: Séma-alapú önvalidáció ("Dogfooding")**
         *   [ ] **Feladat**: A Relay saját konfigurációját egy, a rendszerben definiált sémával (`relay.config.schema.yaml`) validálja induláskor.

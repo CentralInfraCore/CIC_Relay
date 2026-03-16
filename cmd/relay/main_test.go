@@ -59,9 +59,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	assert.Equal(t, int64(16*1024*1024), cfg.MaxWASMModuleSize)
 }
 func TestLoadConfig_AllEnvSet(t *testing.T) {
-	t.Setenv("MAX_JSON_INPUT_SIZE", "8192")
-	t.Setenv("MAX_WASM_MODULE_SIZE", "32768")
-	t.Setenv("HASHING_TIMEOUT", "10s")
+	t.Setenv("CIC_MAX_JSON_INPUT_SIZE", "8192")
+	t.Setenv("CIC_MAX_WASM_MODULE_SIZE", "32768")
+	t.Setenv("CIC_HASHING_TIMEOUT", "10s")
 
 	cfg, err := loadConfig()
 	assert.NoError(t, err)
@@ -72,30 +72,30 @@ func TestLoadConfig_AllEnvSet(t *testing.T) {
 }
 
 func TestLoadConfig_InvalidJSONSize(t *testing.T) {
-	t.Setenv("MAX_JSON_INPUT_SIZE", "notanumber")
+	t.Setenv("CIC_MAX_JSON_INPUT_SIZE", "notanumber")
 
 	cfg, err := loadConfig()
 	assert.Nil(t, cfg)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid value for MAX_JSON_INPUT_SIZE")
+	assert.Contains(t, err.Error(), "invalid value for CIC_MAX_JSON_INPUT_SIZE")
 }
 
 func TestLoadConfig_InvalidWASMSize(t *testing.T) {
-	t.Setenv("MAX_WASM_MODULE_SIZE", "oops")
+	t.Setenv("CIC_MAX_WASM_MODULE_SIZE", "oops")
 
 	cfg, err := loadConfig()
 	assert.Nil(t, cfg)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid value for MAX_WASM_MODULE_SIZE")
+	assert.Contains(t, err.Error(), "invalid value for CIC_MAX_WASM_MODULE_SIZE")
 }
 
 func TestLoadConfig_InvalidHashingTimeout(t *testing.T) {
-	t.Setenv("HASHING_TIMEOUT", "notaduration")
+	t.Setenv("CIC_HASHING_TIMEOUT", "notaduration")
 
 	cfg, err := loadConfig()
 	assert.Nil(t, cfg)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid value for HASHING_TIMEOUT")
+	assert.Contains(t, err.Error(), "invalid value for CIC_HASHING_TIMEOUT")
 }
 
 func TestNewMux(t *testing.T) {
