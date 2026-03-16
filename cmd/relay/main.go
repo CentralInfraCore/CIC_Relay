@@ -70,6 +70,13 @@ type relayServer struct {
 	logger *logrus.Logger // Use logrus logger
 }
 
+// writeError writes a uniform JSON error response: {"error":"<msg>","code":"<code>"}.
+func writeError(w http.ResponseWriter, status int, code, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg, "code": code})
+}
+
 // newMux creates a new HTTP multiplexer with all routes.
 func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -123,7 +130,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		logEntry.WithField("outcome", "method_not_allowed").Warn("Only POST method is allowed")
-		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Only POST method is allowed")
 		return
 	}
 
@@ -133,7 +140,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
 		logEntry.WithField("outcome", "read_error").WithError(err).Error("Failed to read request body")
-		http.Error(w, "Failed to read request", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "read_error", "Failed to read request")
 		return
 	}
 	defer r.Body.Close() // Ensure the original body is closed
@@ -145,14 +152,15 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 			"size":    len(body),
 			"limit":   s.config.MaxJSONInputSize,
 		}).Warn("Request body too large")
-		http.Error(w, fmt.Sprintf("Request body too large, exceeds %d bytes", s.config.MaxJSONInputSize), http.StatusRequestEntityTooLarge)
+		writeError(w, http.StatusRequestEntityTooLarge, "body_too_large",
+			fmt.Sprintf("Request body too large, exceeds %d bytes", s.config.MaxJSONInputSize))
 		return
 	}
 
 	var payload cabinet.SetPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
 		logEntry.WithField("outcome", "invalid_json").WithError(err).Warn("Invalid JSON payload")
-		http.Error(w, "Invalid JSON payload: "+err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload: "+err.Error())
 		return
 	}
 
@@ -161,11 +169,11 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 		// Handle specific cabinet errors
 		if cabinet.IsInvalid(err) {
 			logEntry.WithField("outcome", "invalid_request").WithError(err).Warn("Invalid request")
-			http.Error(w, "Invalid request: "+err.Error(), http.StatusBadRequest)
+			writeError(w, http.StatusBadRequest, "invalid_request", "Invalid request: "+err.Error())
 			return
 		}
 		logEntry.WithField("outcome", "internal_error").WithError(err).Error("Internal server error during Set operation")
-		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error: "+err.Error())
 		return
 	}
 

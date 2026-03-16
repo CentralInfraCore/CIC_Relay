@@ -15,6 +15,16 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// assertErrorJSON checks that the response body is a valid error JSON with the expected code.
+func assertErrorJSON(t *testing.T, w *httptest.ResponseRecorder, expectedCode string) {
+	t.Helper()
+	var body map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &body)
+	assert.NoError(t, err, "error response must be valid JSON")
+	assert.Equal(t, expectedCode, body["code"], "error code mismatch")
+	assert.NotEmpty(t, body["error"], "error message must not be empty")
+}
+
 // TestSetHandler_Success tests the happy path for the /set endpoint.
 func TestSetHandler_Success(t *testing.T) {
 	// 1. Setup
@@ -89,6 +99,8 @@ func TestSetHandler_MethodNotAllowed(t *testing.T) {
 
 	// 3. Verify
 	assert.Equal(t, http.StatusMethodNotAllowed, w.Code, "Expected HTTP status 405 Method Not Allowed")
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	assertErrorJSON(t, w, "method_not_allowed")
 
 	// Ensure the mock API was not called at all.
 	mockAPI.AssertNotCalled(t, "Set")
@@ -121,6 +133,8 @@ func TestSetHandler_BodyTooLarge(t *testing.T) {
 
 	// 3. Verify
 	assert.Equal(t, http.StatusRequestEntityTooLarge, w.Code, "Expected HTTP status 413 Request Entity Too Large")
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	assertErrorJSON(t, w, "body_too_large")
 
 	// Ensure the mock API was not called.
 	mockAPI.AssertNotCalled(t, "Set")
@@ -151,6 +165,8 @@ func TestSetHandler_InvalidJSON(t *testing.T) {
 
 	// 3. Verify
 	assert.Equal(t, http.StatusBadRequest, w.Code, "Expected HTTP status 400 Bad Request")
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	assertErrorJSON(t, w, "invalid_json")
 
 	// Ensure the mock API was not called.
 	mockAPI.AssertNotCalled(t, "Set")
@@ -184,6 +200,8 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 
 	// 3. Verify
 	assert.Equal(t, http.StatusBadRequest, w.Code, "Expected HTTP status 400 for ErrInvalid")
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	assertErrorJSON(t, w, "invalid_request")
 
 	// Ensure the mock API was called.
 	mockAPI.AssertCalled(t, "Setx", mock.Anything, mock.Anything)
@@ -218,6 +236,8 @@ func TestSetHandler_CabinetInternalError(t *testing.T) {
 
 	// 3. Verify
 	assert.Equal(t, http.StatusInternalServerError, w.Code, "Expected HTTP status 500 for internal errors")
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	assertErrorJSON(t, w, "internal_error")
 
 	// Ensure the mock API was called.
 	mockAPI.AssertCalled(t, "Setx", mock.Anything, mock.Anything)

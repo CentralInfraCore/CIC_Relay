@@ -134,7 +134,7 @@ entries:
     accept: make test
 
   - task: "uniform-error-json"
-    status: todo
+    status: done
     priority: 9
     milestone: M5.2
     prompt: |
