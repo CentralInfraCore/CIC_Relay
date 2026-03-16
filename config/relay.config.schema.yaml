@@ -1,0 +1,21 @@
+apiVersion: cic.io/v1
+kind: Schema
+metadata:
+  name: relay.config
+  version: "1.0"
+  description: >
+    CIC Relay startup configuration schema.
+    Used for dogfooding: the relay validates its own config using the cabinet
+    schema engine at startup. All fields correspond to CIC_* environment variables.
+spec:
+  stateRequirement:
+    # Core limits
+    CIC_MAX_JSON_INPUT_SIZE: "integer, bytes, default 4194304 (4 MB)"
+    CIC_MAX_WASM_MODULE_SIZE: "integer, bytes, default 16777216 (16 MB)"
+    CIC_HASHING_TIMEOUT: "duration string, default 5s"
+    # Vault integration (optional — recording disabled if absent)
+    VAULT_ADDR: "string, Vault server address (Vault SDK env)"
+    VAULT_TOKEN: "string, Vault token (Vault SDK env, optional)"
+    CIC_VAULT_MOUNT: "string, Transit engine mount path, default transit"
+    CIC_VAULT_KEY: "string, Transit signing key name, default cic-dev-sign-key"
+    CIC_AUDIT_REPO_PATH: "string, local git audit repo path, default /var/lib/cic-relay/audit"

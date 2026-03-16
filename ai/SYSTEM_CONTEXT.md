@@ -111,6 +111,27 @@ Fontos tudnivalók:
 
 ---
 
+## Dogfooding — Séma-vezérelt önvalidáció
+
+A rendszer induláskor a saját cabinet schema engine-jével validálja a saját konfigurációját.
+
+```
+config/relay.config.schema.yaml   ← a konfig séma definíciója (Kind: Schema)
+cabinet.ValidateSchema(accepts, data)  ← exportált validátor, $schema kulcs alapján
+```
+
+Folyamat:
+1. `loadConfig()` betölti az env változókat → `*config` struktúra
+2. `validateConfig(cfg)` a config-ot `map[string]interface{}`-re konvertálja
+   és hozzáadja `"$schema": "relay.config@1.0"` kulcsot
+3. `cabinet.ValidateSchema([]string{"relay.config@1.0"}, configMap)` ellenőrzi
+4. Hiba esetén Fatal — fail-fast, egyértelmű hibaüzenet
+
+Ez a "dogfooding" elv: a rendszer saját eszközeit használja önmaga validálására.
+A séma egyben dokumentáció is — az összes `CIC_*` env változó ott van leírva.
+
+---
+
 ## Mérce
 
 ```

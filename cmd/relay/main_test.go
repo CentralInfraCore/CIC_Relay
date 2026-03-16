@@ -110,6 +110,21 @@ func TestNewMux(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_Valid(t *testing.T) {
+	cfg := &config{
+		MaxJSONInputSize:  4 * 1024 * 1024,
+		MaxWASMModuleSize: 16 * 1024 * 1024,
+		HashingTimeout:    5 * time.Second,
+	}
+	assert.NoError(t, validateConfig(cfg))
+}
+
+func TestValidateConfig_NilEquivalent(t *testing.T) {
+	// Zero values still produce a valid $schema key — should pass.
+	cfg := &config{}
+	assert.NoError(t, validateConfig(cfg))
+}
+
 func TestBuildRecorderOption_NoVaultToken(t *testing.T) {
 	t.Setenv("VAULT_TOKEN", "")
 

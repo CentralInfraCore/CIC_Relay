@@ -159,8 +159,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
         *   [x] **DoD**: A `loadConfig` függvény csak a `CIC_` prefixű változókat olvassa be. (VAULT_ADDR/VAULT_TOKEN a Vault SDK saját változói — nem átnevezve.)
 
     *   **M8.2: Séma-alapú önvalidáció ("Dogfooding")**
-        *   [ ] **Feladat**: A Relay saját konfigurációját egy, a rendszerben definiált sémával (`relay.config.schema.yaml`) validálja induláskor.
-        *   [ ] **DoD**: A Relay indításkor betölti a `relay.config.schema.yaml`-t, és validálja a saját, környezeti változókból és/vagy fájlból betöltött konfigurációját. Hibás vagy hiányos konfiguráció esetén a program egyértelmű hibaüzenettel, azonnal leáll (fail-fast). A séma a konfiguráció ön-dokumentációjaként is szolgál.
+        *   [x] **Feladat**: A Relay saját konfigurációját egy, a rendszerben definiált sémával (`config/relay.config.schema.yaml`) validálja induláskor.
+        *   [x] **DoD**: `cabinet.ValidateSchema` exportálva; `validateConfig` a main-ben; `config/relay.config.schema.yaml` séma dokumentálja az összes CIC_* változót. Hibás konfig → Fatal. Dokumentálva `ai/SYSTEM_CONTEXT.md`-ben.
 
     *   **M8.3: Titokkezelés szétválasztása (Single Responsibility)**
         *   [ ] **Feladat**: A külső forrásból (pl. Vault) származó titkok betöltését egy dedikált, a fájlrendszer-alapú komponens-betöltéstől független függvénybe kell szervezni.
@@ -245,7 +245,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 
 | Milestone | State   | Megjegyzés |
 |-----------| ------- | ---------- |
-| M-Konfig  | Missing | |
+| M-Konfig  | **Done**    | Séma-vezérelt önvalidáció kész (M8.1 + M8.2) |
 | M0        | Done    | |
 | M1        | Done    | |
 | M2        | **Done**    | ExecutionGraph, schema validáció, ProofTrace kész |

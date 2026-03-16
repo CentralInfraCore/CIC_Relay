@@ -151,7 +151,7 @@ entries:
     accept: make test
 
   - task: "dogfooding-config-schema"
-    status: todo
+    status: done
     priority: 10
     milestone: M8.2 / M-Konfig
     prompt: |
