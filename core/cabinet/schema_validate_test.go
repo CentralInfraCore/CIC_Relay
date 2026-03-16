@@ -6,6 +6,44 @@ import (
 	"testing"
 )
 
+func TestValidateSchema(t *testing.T) {
+	t.Run("empty accepts passes anything", func(t *testing.T) {
+		if err := ValidateSchema(nil, map[string]interface{}{}); err != nil {
+			t.Fatalf("expected nil, got %v", err)
+		}
+	})
+
+	t.Run("matching $schema passes", func(t *testing.T) {
+		data := map[string]interface{}{"$schema": "relay.config@1.0", "x": 1}
+		if err := ValidateSchema([]string{"relay.config@1.0"}, data); err != nil {
+			t.Fatalf("expected nil, got %v", err)
+		}
+	})
+
+	t.Run("non-matching $schema returns ErrInvalid", func(t *testing.T) {
+		data := map[string]interface{}{"$schema": "other@1.0"}
+		err := ValidateSchema([]string{"relay.config@1.0"}, data)
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("expected ErrInvalid, got %v", err)
+		}
+	})
+
+	t.Run("missing $schema key returns ErrInvalid", func(t *testing.T) {
+		data := map[string]interface{}{"x": 1}
+		err := ValidateSchema([]string{"relay.config@1.0"}, data)
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("expected ErrInvalid, got %v", err)
+		}
+	})
+
+	t.Run("non-map input returns ErrInvalid", func(t *testing.T) {
+		err := ValidateSchema([]string{"relay.config@1.0"}, "not a map")
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("expected ErrInvalid, got %v", err)
+		}
+	})
+}
+
 func TestValidateInputSchema(t *testing.T) {
 	ctx := context.Background()
 	mod := func(accepts ...string) *ModuleDescriptor {

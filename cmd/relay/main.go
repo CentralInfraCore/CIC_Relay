@@ -183,6 +183,19 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+// validateConfig validates the loaded configuration using the cabinet schema engine.
+// This is "dogfooding": the relay validates its own config with the same mechanism
+// it uses to validate workflow inputs (cabinet.ValidateSchema / $schema key check).
+func validateConfig(cfg *config) error {
+	configMap := map[string]interface{}{
+		"$schema":               "relay.config@1.0",
+		"max_json_input_size":   cfg.MaxJSONInputSize,
+		"max_wasm_module_size":  cfg.MaxWASMModuleSize,
+		"hashing_timeout":       cfg.HashingTimeout.String(),
+	}
+	return cabinet.ValidateSchema([]string{"relay.config@1.0"}, configMap)
+}
+
 // buildRecorderOption constructs a cabinet.WithRecorder option from environment variables.
 // Required env: VAULT_TOKEN (also read by vault SDK: VAULT_ADDR).
 // Optional env: CIC_VAULT_MOUNT (default "transit"), CIC_VAULT_KEY (default "cic-dev-sign-key"),
@@ -250,6 +263,11 @@ func main() {
 		"MaxWASMModuleSize": cfg.MaxWASMModuleSize,
 		"HashingTimeout":    cfg.HashingTimeout,
 	}).Info("Loaded configuration")
+
+	if err := validateConfig(cfg); err != nil {
+		logger.WithError(err).Fatal("FATAL: Configuration validation failed")
+	}
+	logger.Info("Configuration validated (relay.config@1.0)")
 
 	// --- Cabinet Service Initialization ---
 	instanceID := uuid.New().String()
