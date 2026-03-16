@@ -236,11 +236,111 @@ entries:
       - cmd/relay/bootstrap_test.go
     accept: make test
 
-  # --- Sprint 4 ---
+  # --- Sprint 4 — Tech Debt (külső audit alapján) ---
+
+  - task: "debug-cleanup"
+    status: todo
+    priority: 15
+    milestone: hygiene
+    prompt: |
+      Távolítsd el az összes debug print és kommentezett debug kód maradványt:
+        1. `core/cabinet/mock_wasm_manager.go:19` — aktív `fmt.Printf("DEBUG: ...")` sor
+        2. `core/cabinet/cicwasm.go:292` — kommentezett `// fmt.Printf("DEBUG: ...")` sor
+      Ellenőrizd az összes többi .go fájlt is `fmt.Printf.*DEBUG` mintára — ha van más, azt is.
+      Ez nem feature, nem refaktor — csak takarítás. Ne változtass logikán.
+    tests:
+      - (grep: nincs fmt.Printf.*DEBUG maradék)
+    accept: make test
+
+  - task: "ci-toolchain-sync"
+    status: todo
+    priority: 16
+    milestone: hygiene
+    prompt: |
+      A `go.mod` `go 1.24.0` / `toolchain go1.24.6`-ot deklarál, de a CI pipeline
+      (`.github/workflows/verify.yml`) `go-version: "1.21.x"`-et használ.
+      Ez silent build drift kockázatot jelent.
+      Javítás:
+        - Frissítsd a verify.yml összes `go-version` entry-jét `"1.24.x"`-re.
+        - Ellenőrizd, hogy van-e más workflow fájl (pl. symbols.yml) ahol szintén javítani kell.
+        - `make test` zöld marad a frissített verzióval.
+      Ne változtass go.mod-on — az a forrás igazság.
+    tests:
+      - .github/workflows/verify.yml
+      - .github/workflows/symbols.yml
+    accept: make test
+
+  - task: "makefile-ldflags-vars"
+    status: todo
+    priority: 17
+    milestone: hygiene
+    prompt: |
+      A `Makefile` a bináris build során ezeket injektálja ldflags-szal:
+        `-X main.BuildID=$(VERSION)-$(COMMIT)`
+        `-X main.CommitHash=$(COMMIT)`
+        `-X main.Timestamp=$(shell date -u +...)`
+      De a `cmd/relay/main.go`-ban ezek a változók (`BuildID`, `CommitHash`, `Timestamp`)
+      nincsenek deklarálva, ezért a linker injekció néma sikertelenséggel elvész.
+      Javítás: add hozzá a `cmd/relay/main.go`-hoz (package szinten):
+        var (
+            BuildID    = "dev"
+            CommitHash = "unknown"
+            Timestamp  = "unknown"
+        )
+      És loggold ki induláskor (INFO szint, `build_id`, `commit`, `timestamp` mezőkkel).
+      Ne változtass Makefile-on.
+    tests:
+      - cmd/relay/main_test.go (build metadata log megjelenik)
+    accept: make test
+
+  - task: "wasm-size-limit-single-source"
+    status: todo
+    priority: 18
+    milestone: M4.4
+    prompt: |
+      A WASM méretlimit két helyen él egymástól függetlenül:
+        1. `core/cabinet/validate.go:22` — `const MaxWASMModuleSize = 16 * 1024 * 1024` (hardcoded)
+        2. `cmd/relay/main.go` config — `MaxWASMModuleSize` env-ből, default `16 * 1024 * 1024`
+      Ezek egymástól függetlenül érvényesülnek — a config módosítása nem hat a validate.go logikára.
+      Javítás:
+        - Töröld a `validate.go`-beli `MaxWASMModuleSize` konstanst.
+        - A `NewModuleDescriptor` (vagy ahol a konstans használva van) kapja meg a limitet
+          paraméterként, vagy a cabinet service injektálja a konfiguráció alapján.
+        - Egyetlen forrás a limit értékére: a `config.MaxWASMModuleSize`.
+      Frissítsd az érintett teszteket.
+    tests:
+      - core/cabinet/service_unit_test.go
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  - task: "embedded-pki-key-audit"
+    status: todo
+    priority: 19
+    milestone: hygiene
+    prompt: |
+      Az `embedded/pki/` könyvtárban privát kulcsok találhatók (`root_ca.key`, `intermediate_ca.key`).
+      Ezek valószínűleg fejlesztői teszt kulcsok, de egy trust/PKI fókuszú projektben ez rossz optika
+      és biztonsági kockázat.
+      Feladatok:
+        1. Ellenőrizd: az `embedded/pki/*.key` fájlok tényleg csak teszt/dev kulcsok-e
+           (ne legyenek azonosak semmilyen éles infrastruktúrával).
+        2. Adj hozzá `embedded/pki/README.md`-t: "DEVELOPMENT ONLY — generated test keys,
+           never use in production" figyelmeztetéssel.
+        3. Adj hozzá `.gitignore` szabályt az `embedded/pki/*.key` fájlokhoz — ezentúl ne
+           kerüljenek commitba; a meglévőket hagyd (generáltak, nem változnak).
+        4. Dokumentáld `ai/SYSTEM_CONTEXT.md`-ben hogy a `cmd/relay/testdata/pki/` generált
+           kulcsok (`bootstrap_testdata.sh`), de az `embedded/pki/` kulcsok manuálisan commitáltak.
+      Ne töröld a meglévő kulcsokat — a tesztek függhetnek rájuk.
+    tests:
+      - embedded/pki/README.md létezik
+      - .gitignore tartalmaz embedded/pki/*.key szabályt
+    accept: make test
+
+  # --- Sprint 4 — Features ---
 
   - task: "ci-quality-gates"
     status: todo
-    priority: 15
+    priority: 20
     milestone: M7.2-M7.4
     prompt: |
       Bővítsd a `.github/workflows/verify.yml` CI pipeline-t a hiányzó quality gate lépésekkel:
@@ -257,7 +357,7 @@ entries:
 
   - task: "limit-schema-config"
     status: todo
-    priority: 16
+    priority: 21
     milestone: M4.4
     prompt: |
       Egészítsd ki a `config/relay.config.schema.yaml` sémát és a `validateConfig` logikát úgy,
@@ -278,7 +378,7 @@ entries:
 
   - task: "circuit-breaker-rate-limit"
     status: todo
-    priority: 17
+    priority: 22
     milestone: M9
     prompt: |
       Vezess be alapszintű Operations Safety védelmet a `cmd/relay/main.go` HTTP szerverbe:
@@ -300,7 +400,7 @@ entries:
 
   - task: "operator-bootstrap-lifecycle"
     status: todo
-    priority: 18
+    priority: 23
     milestone: M16.2-M16.3
     prompt: |
       Implementáld a Nexus Operator hiányzó Bootstrap és Lifecycle logikáját:
@@ -322,7 +422,7 @@ entries:
 
   - task: "nexus-upstream-source"
     status: todo
-    priority: 19
+    priority: 24
     milestone: M11
     prompt: |
       Implementáld az `UpstreamSource` IaC forrást a `core/nexus/iac/upstream.go`-ban.
