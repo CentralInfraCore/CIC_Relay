@@ -26,6 +26,11 @@ core/nexus         Control plane: IaC loader, recorder, crypto, sync, isolation,
 
 A `cabinet` és a `nexus` szándékosan független — különböző fejlődési ütemük van.
 
+A jelenlegi **futó runtime középpontja**: `cmd/relay` + `core/cabinet`.
+A `core/nexus` komponensei közül `recorder` és `crypto` aktívan bekötve;
+`iac`, `operator`, `sync`, `isolation` implementáltak, de a fő futási útvonalba
+még nincs minden bekötve.
+
 ---
 
 ## A trust ecosystem bootstrap probléma
@@ -39,26 +44,24 @@ de ez az ökoszisztéma még nem létezik teljesen. Ezért egyes komponensek
 | Komponens | Miért scaffold |
 |---|---|
 | `pki_verify.go` bekötése | CA lánc még nem bootstrapped |
-| `Setx` schema validáció TODO | Schema ökoszisztéma nem definiált |
-| `graph.go` üres | ExecutionGraph tervezés folyamatban |
 | `UpstreamSource` TODO | Relay federáció v2 téma |
 | `LocalWorker` in-process | 3-process isolation előfeltétele a Vault |
 
 Ha ilyen helyet találsz: **ne kösd be, ne "javítsd ki"** amíg az előfeltétel nem teljesül.
 
+**Ami már implementált (nem scaffold):**
+
+| Komponens | Állapot |
+|---|---|
+| `Setx` schema validáció | Kész — `validateInputSchema` minden lépésnél fut |
+| `graph.go` ExecutionGraph | Kész — lineáris, névvel ellátott kimenet-kulcsok |
+| Bootstrap audit log | Kész — `outcome: "skipped"`, `reason: "trust ecosystem not bootstrapped"` |
+| `ProofTrace` típus + chain_hash | Kész — per-step hash, chain_hash, recorder wiring |
+| Secrets separation | Kész — `loadSecretsFromVault` + `buildRecorderOption(secrets)` |
+
 ---
 
-## Amit SZABAD és KELL csinálni
-
-- A `core/cabinet` rétegen belül: schema validáció bekötése a `Setx`-be
-- `ProofTrace` típus bevezetése — a workflow végrehajtás kriptográfiai lenyomata
-- `Setx` → `recorder` összekötése — hogy a végrehajtás auditálható legyen
-- Lineáris `ExecutionGraph` a `graph.go`-ba — DAG nélkül, lépés→kimenet névvel
-- Az egyetlen valódi bug: `bootstrap.go`-ban `"outcome": "success"` → `"outcome": "skipped"`
-
----
-
-## A ProofTrace fogalma
+## A ProofTrace
 
 Minden workflow végrehajtásból egy ProofTrace keletkezik:
 
@@ -70,12 +73,13 @@ Minden workflow végrehajtásból egy ProofTrace keletkezik:
     { name: "step2", input_hash: "...", output_hash: "...", module: "..." },
   ],
   chain_hash:   SHA256(step1.output_hash + step2.output_hash + ...),
-  signature:    Vault.Sign(chain_hash),
+  signature:    Vault.Sign(chain_hash),   // ha recorder konfigurált
   timestamp:    UTC
 }
 ```
 
-Ez az entitás még nem létezik a kódban — ez a következő implementálandó egység.
+A `ProofTrace` a `core/cabinet` csomagban él. Recorder nélkül is épül
+(csak aláírás marad el) — a Vault hiánya nem fatális.
 
 ---
 
@@ -148,6 +152,9 @@ Folyamat:
 
 Ez a "dogfooding" elv: a rendszer saját eszközeit használja önmaga validálására.
 A séma egyben dokumentáció is — az összes `CIC_*` env változó ott van leírva.
+
+Megjegyzés: a jelenlegi validáció `$schema` ID egyezést ellenőriz, nem teljes értékű
+JSON Schema validációt — ez a mélység az első lépésként szándékos.
 
 ---
 
