@@ -92,3 +92,23 @@ entries:
     tests:
       - scripts/
     accept: make dev-vault && make verify
+
+  # --- Következő sprint ---
+
+  - task: "prod-recorder-wiring"
+    status: done
+    priority: 7
+    prompt: |
+      Kösd be a `cabinetService.recorder`-t produkciós szinten a `cmd/relay/main.go`-ban.
+      Adj hozzá `WithRecorder(r ExecutionRecorder) CabinetOption` funkcionális opciót
+      a `core/cabinet/service.go`-ba (variadic, backward-compatible).
+      A `main()` env változókból olvassa be a Vault konfigurációt
+      (`VAULT_ADDR`, `VAULT_TOKEN`, `CIC_VAULT_MOUNT` default "transit",
+      `CIC_VAULT_KEY` default "cic-dev-sign-key", `CIC_AUDIT_REPO_PATH` default "/var/lib/cic-relay/audit").
+      Ha Vault nem konfigurált (VAULT_TOKEN hiányzik): WARN log + nil recorder (nem fatal).
+      Ha Vault konfigurált: `VaultCryptoService` + `GitStateRecorder` + `WorkflowRecorder` összerakva,
+      `NewCabinetService` hívása `cabinet.WithRecorder(wr)` opcióval.
+      Ne változtasd meg a `Cabinet` interfészt.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make test

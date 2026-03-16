@@ -95,20 +95,35 @@ type cabinetService struct {
 	recorder    ExecutionRecorder // optional; nil = skip recording
 }
 
+// CabinetOption is a functional option for configuring a cabinetService.
+type CabinetOption func(*cabinetService)
+
+// WithRecorder sets an optional ExecutionRecorder on the service.
+// If nil, ProofTrace recording is skipped silently.
+func WithRecorder(r ExecutionRecorder) CabinetOption {
+	return func(s *cabinetService) {
+		s.recorder = r
+	}
+}
+
 // NewCabinetService creates a new Cabinet service with the given stores and WasmManager configuration.
-func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleStore, workflows WorkflowStore, wasmConfig WasmManagerConfig) (Cabinet, error) {
+func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleStore, workflows WorkflowStore, wasmConfig WasmManagerConfig, opts ...CabinetOption) (Cabinet, error) {
 	wasmManager, err := NewWasmManager(ctx, modules, wasmConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cabinet service: %w", err)
 	}
 
-	return &cabinetService{
+	svc := &cabinetService{
 		schemas:     schemas,
 		modules:     modules,
 		workflows:   workflows,
 		wasmManager: wasmManager,
 		clock:       func() string { return time.Now().UTC().Format(time.RFC3339) },
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc, nil
 }
 
 // Setx executes a workflow based on the function-oriented model.

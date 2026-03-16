@@ -209,7 +209,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
     *   [x] **M13.3: CryptoService Interfész**: Magas szintű API definiálása.
     *   [x] **M13.4: Recorder Integráció**: Commit aláírás bekötése.
     *   [x] **M13.5: Dev Vault Bootstrap**: `make dev-vault` — lokális in-memory Vault, paraméter nélkül, Transit kulcs auto-generálva. `make dev-vault-stop` leállítás. Dokumentálva `ai/SYSTEM_CONTEXT.md`-ben.
-    *   [ ] **M13.6: Produkciós Vault bekötés**: A `cabinetService.recorder` injektálása a bootstrap/main szinten valódi `GitStateRecorder`+`VaultCryptoService` kombinációval.
+    *   [x] **M13.6: Produkciós Vault bekötés**: `WithRecorder` functional option a `cabinet` csomagban. `buildRecorderOption` a `main.go`-ban: env változókból (`VAULT_TOKEN`, `CIC_VAULT_MOUNT`, `CIC_VAULT_KEY`, `CIC_AUDIT_REPO_PATH`) `VaultCryptoService`+`GitStateRecorder`+`WorkflowRecorder` összerakva. VAULT_TOKEN hiánya non-fatal (WARN + nil recorder).
 
 ### M14 — Központi Audit Szinkronizáció (Nexus Sync)
 * **Állapot:** Részben kész
@@ -259,7 +259,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M10       | Missing | |
 | M11       | Partial | |
 | M12       | **Done**    | WorkflowRecorder + Setx összekötés kész |
-| M13       | Partial | Dev Vault bootstrap kész, prod bekötés hiányzik |
+| M13       | **Done**    | Dev Vault bootstrap + prod recorder wiring kész |
 | M14       | Partial | |
 | M15       | Partial | |
 | M16       | Partial | |
