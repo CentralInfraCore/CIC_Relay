@@ -110,6 +110,65 @@ func TestNewMux(t *testing.T) {
 	}
 }
 
+func TestBuildRecorderOption_NoVaultToken(t *testing.T) {
+	t.Setenv("VAULT_TOKEN", "")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	opt := buildRecorderOption(logger)
+	assert.NotNil(t, opt, "option must not be nil even when Vault is unconfigured")
+
+	// Verify the option can be applied without panic.
+	wasmConfig := cabinet.WasmManagerConfig{LRUCacheSize: 1, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(),
+		cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(),
+		wasmConfig, opt)
+	assert.NoError(t, err)
+	assert.NotNil(t, svc)
+	_ = svc.Close(context.Background())
+}
+
+func TestBuildRecorderOption_WithVaultToken_ValidPath(t *testing.T) {
+	t.Setenv("VAULT_TOKEN", "dev-root-token")
+	t.Setenv("CIC_VAULT_MOUNT", "transit")
+	t.Setenv("CIC_VAULT_KEY", "cic-dev-sign-key")
+	t.Setenv("CIC_AUDIT_REPO_PATH", t.TempDir())
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	opt := buildRecorderOption(logger)
+	assert.NotNil(t, opt)
+
+	wasmConfig := cabinet.WasmManagerConfig{LRUCacheSize: 1, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(),
+		cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(),
+		wasmConfig, opt)
+	assert.NoError(t, err)
+	assert.NotNil(t, svc)
+	_ = svc.Close(context.Background())
+}
+
+func TestBuildRecorderOption_WithVaultToken_InvalidPath(t *testing.T) {
+	t.Setenv("VAULT_TOKEN", "dev-root-token")
+	t.Setenv("CIC_AUDIT_REPO_PATH", "/dev/null/nope/nope")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	opt := buildRecorderOption(logger)
+	assert.NotNil(t, opt, "option must not be nil even when git init fails")
+
+	wasmConfig := cabinet.WasmManagerConfig{LRUCacheSize: 1, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(),
+		cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(),
+		wasmConfig, opt)
+	assert.NoError(t, err)
+	assert.NotNil(t, svc)
+	_ = svc.Close(context.Background())
+}
+
 func TestMockCabinetService_PutSchema(t *testing.T) {
 	mockService := new(mockCabinetService)
 	schema := &cabinet.Schema{Meta: cabinet.BaseBlock{Name: "test-schema", Version: "1.0"}}

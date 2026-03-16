@@ -14,6 +14,8 @@ import (
 	"github.com/sirupsen/logrus" // Import logrus
 
 	"centralrelay/core/cabinet"
+	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/recorder"
 )
 
 // test seam: unit tesztben felülírható
@@ -173,6 +175,54 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+// buildRecorderOption constructs a cabinet.WithRecorder option from environment variables.
+// Required env: VAULT_TOKEN (also read by vault SDK: VAULT_ADDR).
+// Optional env: CIC_VAULT_MOUNT (default "transit"), CIC_VAULT_KEY (default "cic-dev-sign-key"),
+//
+//	CIC_AUDIT_REPO_PATH (default "/var/lib/cic-relay/audit").
+//
+// If VAULT_TOKEN is not set, returns a no-op option and logs a warning.
+func buildRecorderOption(logger *logrus.Logger) cabinet.CabinetOption {
+	vaultToken := os.Getenv("VAULT_TOKEN")
+	if vaultToken == "" {
+		logger.Warn("VAULT_TOKEN not set — ProofTrace recording disabled")
+		return cabinet.WithRecorder(nil)
+	}
+
+	mountPath := os.Getenv("CIC_VAULT_MOUNT")
+	if mountPath == "" {
+		mountPath = "transit"
+	}
+	keyName := os.Getenv("CIC_VAULT_KEY")
+	if keyName == "" {
+		keyName = "cic-dev-sign-key"
+	}
+	auditRepoPath := os.Getenv("CIC_AUDIT_REPO_PATH")
+	if auditRepoPath == "" {
+		auditRepoPath = "/var/lib/cic-relay/audit"
+	}
+
+	cryptoSvc, err := crypto.NewVaultCryptoService(mountPath, keyName)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to init Vault crypto service — ProofTrace recording disabled")
+		return cabinet.WithRecorder(nil)
+	}
+
+	gitRecorder, err := recorder.NewGitStateRecorder(auditRepoPath, cryptoSvc)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to init audit git recorder — ProofTrace recording disabled")
+		return cabinet.WithRecorder(nil)
+	}
+
+	wr := recorder.NewWorkflowRecorder(gitRecorder)
+	logger.WithFields(logrus.Fields{
+		"vault_mount":     mountPath,
+		"vault_key":       keyName,
+		"audit_repo_path": auditRepoPath,
+	}).Info("ProofTrace recording enabled")
+	return cabinet.WithRecorder(wr)
+}
+
 // run: külön függvény, hogy unit tesztben ne main()-t kelljen hívni
 func run(port string, logger *logrus.Logger, s *relayServer) error {
 	logger.Printf("✅ Central relay API started on %s", port) // This will use logrus's Printf
@@ -206,7 +256,9 @@ func main() {
 		LRUCacheSize:          100, // Default cache size
 		DefaultTimeoutSeconds: 5,   // Default timeout
 	}
-	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig)
+	recorderOpt := buildRecorderOption(logger)
+
+	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
 	}
