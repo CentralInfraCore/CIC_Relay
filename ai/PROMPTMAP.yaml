@@ -220,7 +220,7 @@ entries:
     accept: bash api_tests/smoke.sh
 
   - task: "secrets-separation"
-    status: todo
+    status: done
     priority: 14
     milestone: M8.3
     prompt: |
@@ -234,4 +234,108 @@ entries:
     tests:
       - cmd/relay/main_test.go
       - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  # --- Sprint 4 ---
+
+  - task: "ci-quality-gates"
+    status: todo
+    priority: 15
+    milestone: M7.2-M7.4
+    prompt: |
+      Bővítsd a `.github/workflows/verify.yml` CI pipeline-t a hiányzó quality gate lépésekkel:
+        1. `make lint` (staticcheck) — minden PR-on és main push-on.
+        2. `make vet` (go vet) — minden PR-on és main push-on.
+        3. Per-package coverage threshold (`make coverage-check-pkgs`) — minden PR-on.
+           Küszöbök: cabinet ≥ 95%, canonicalize ≥ 85%, certutils ≥ 70%, cmd/relay ≥ 80%, többi ≥ 75%.
+        4. Coverage HTML artifact feltöltése (`actions/upload-artifact`) a coverage-profile lépés után.
+      A meglévő lépések sorrendjét ne változtasd — csak add hozzá az újakat a megfelelő helyre.
+      Ha valamelyik lépés már létezik (pl. vet), csak ellenőrizd, ne duplázd.
+    tests:
+      - .github/workflows/verify.yml
+    accept: make vet && make lint
+
+  - task: "limit-schema-config"
+    status: todo
+    priority: 16
+    milestone: M4.4
+    prompt: |
+      Egészítsd ki a `config/relay.config.schema.yaml` sémát és a `validateConfig` logikát úgy,
+      hogy az összes LIMITS-korlát is schema-vezérelt legyen:
+        - `CIC_MAX_JSON_INPUT_SIZE` (bytes, default 1MB) — már env változó, de nincs range-check a sémában
+        - `CIC_MAX_WASM_MODULE_SIZE` (bytes, default 10MB) — ugyanez
+        - `CIC_HASHING_TIMEOUT` (duration string, pl. "5s") — formátum + minimum "1s" ellenőrzés
+        - `CIC_WASM_EXEC_TIMEOUT_SECONDS` (integer, ≥ 1) — ez jelenleg a WasmManagerConfig-ból jön,
+          de nincs env-ből konfigurálva; vezess be `CIC_WASM_EXEC_TIMEOUT_SECONDS` env változót,
+          default 30, minimum 1.
+      A `relay.config.schema.yaml`-ban minden mezőhöz add hozzá a `minimum`/`pattern` constraint-et
+      ha releváns. `validateConfig` szintén ellenőrizze a range-eket (Fatal ha sértett).
+      Frissítsd a teszteket és a `ai/SYSTEM_CONTEXT.md` Dogfooding szekcióját.
+    tests:
+      - cmd/relay/main_test.go
+      - config/relay.config.schema.yaml
+    accept: make test
+
+  - task: "circuit-breaker-rate-limit"
+    status: todo
+    priority: 17
+    milestone: M9
+    prompt: |
+      Vezess be alapszintű Operations Safety védelmet a `cmd/relay/main.go` HTTP szerverbe:
+        1. **Rate limiter**: Per-IP token bucket, max 100 req/s, burst 20.
+           Implementálás: `golang.org/x/time/rate` (már elérhető a Go std-n keresztül, ill. vendor-be).
+           429 Too Many Requests → `writeError(w, 429, "rate_limited", "too many requests")`.
+        2. **Concurrent request cap**: Max 50 párhuzamos request (semaphore pattern).
+           503 Service Unavailable → `writeError(w, 503, "overloaded", "server busy")`.
+        3. **Slow-loris védelem**: `http.Server.ReadHeaderTimeout = 5s`, `ReadTimeout = 30s`,
+           `WriteTimeout = 60s`, `IdleTimeout = 120s`.
+      Konfigurálható env változókon keresztül (`CIC_RATE_LIMIT_RPS`, `CIC_MAX_CONCURRENT_REQUESTS`).
+      Ne vezess be külső függőséget ha elkerülhető — standard lib + x/time/rate.
+      Add hozzá a limiteket a `config/relay.config.schema.yaml`-hoz és `validateConfig`-hoz.
+      Tesztek: middleware unit tesztek a rate limiterhez és a concurrent cap-hez.
+    tests:
+      - cmd/relay/main_test.go
+      - cmd/relay/main_api_test.go
+    accept: make test
+
+  - task: "operator-bootstrap-lifecycle"
+    status: todo
+    priority: 18
+    milestone: M16.2-M16.3
+    prompt: |
+      Implementáld a Nexus Operator hiányzó Bootstrap és Lifecycle logikáját:
+        **M16.2 — Bootstrap**: `core/nexus/operator/bootstrap.go`
+          - `BootstrapHost(ctx, hostDef HostDefinition) (*BootstrapToken, error)` függvény
+          - Token = HMAC-SHA256(hostID + timestamp, operatorSecret), time-limited (24h)
+          - A token a Git állapot repóba kerül commit-tal (recorder-en keresztül)
+          - Ha a recorder nil: WARN + folytatás (non-fatal, mint a többi helyen)
+        **M16.3 — Lifecycle**: `core/nexus/operator/lifecycle.go`
+          - `OnboardHost(ctx, token *BootstrapToken) error` — validálja a tokent, aktiválja a hostot
+          - `OffboardHost(ctx, hostID string) error` — deaktiválja, revoke token, commit
+          - Mindkét művelet audit logot generál (structured logrus)
+        Az operatorSecret-et env változóból olvasd (`CIC_OPERATOR_SECRET`), hiánya Fatal.
+        Ne kösd be a PKI-ba (M3 előfeltétel) — csak HMAC alapú, dokumentáld mint "pre-PKI scaffold".
+    tests:
+      - core/nexus/operator/bootstrap_test.go
+      - core/nexus/operator/lifecycle_test.go
+    accept: make test
+
+  - task: "nexus-upstream-source"
+    status: todo
+    priority: 19
+    milestone: M11
+    prompt: |
+      Implementáld az `UpstreamSource` IaC forrást a `core/nexus/iac/upstream.go`-ban.
+      Az `IaCSource` interfész (`FetchConfig`) már definiált — a `FileSource` a referencia implementáció.
+      Az `UpstreamSource`:
+        - HTTP GET kérést küld a konfigurált `upstream_url`-re
+        - Vár JSON vagy YAML választ (Content-Type alapján auto-detect)
+        - Timeout: 10s (context-alapú, `CIC_UPSTREAM_FETCH_TIMEOUT` env változóból)
+        - Hiba esetén: részletes wrapped error + logrus WARN (nem Fatal — degraded mode)
+        - Retry: maximum 3 kísérlet, exponenciális backoff (1s, 2s, 4s)
+      A forrás konfigurálható: `upstream_url` + opcionális `bearer_token` (env: `CIC_UPSTREAM_TOKEN`).
+      Ha `CIC_UPSTREAM_URL` nincs beállítva: FileSource marad az alapértelmezett (backward-compatible).
+      Tesztek: mock HTTP server-rel, timeout és retry szcenáriókkal.
+    tests:
+      - core/nexus/iac/upstream_test.go
     accept: make test
