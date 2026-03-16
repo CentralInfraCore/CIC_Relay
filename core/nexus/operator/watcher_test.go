@@ -61,12 +61,12 @@ func TestOperator_Run(t *testing.T) {
 func TestOperator_handleEvent(t *testing.T) {
 	op := NewOperator(nil)
 
-	t.Run("create event", func(t *testing.T) {
+	t.Run("create event — no lifecycle warns and continues", func(t *testing.T) {
 		err := op.handleEvent(context.Background(), Event{Type: EventCreate})
 		assert.NoError(t, err)
 	})
 
-	t.Run("delete event", func(t *testing.T) {
+	t.Run("delete event — no lifecycle warns and continues", func(t *testing.T) {
 		err := op.handleEvent(context.Background(), Event{Type: EventDelete})
 		assert.NoError(t, err)
 	})
@@ -75,6 +75,78 @@ func TestOperator_handleEvent(t *testing.T) {
 		err := op.handleEvent(context.Background(), Event{Type: "UNKNOWN"})
 		assert.Error(t, err)
 	})
+}
+
+func TestOperatorWithLifecycle_OnApply_Host(t *testing.T) {
+	b := NewBootstrapper([]byte("secret"), nil, silentLogger())
+	reg := NewHostRegistry()
+	lm := NewLifecycleManager(b, reg, nil, silentLogger())
+	op := NewOperatorWithLifecycle(nil, b, lm, silentLogger())
+
+	hostYAML := []byte("kind: Host\nmetadata:\n  name: node-01\n")
+	err := op.handleEvent(context.Background(), Event{
+		Type:     EventCreate,
+		FilePath: "hosts/node-01.yaml",
+		Content:  hostYAML,
+	})
+	assert.NoError(t, err)
+
+	h, ok := reg.get("node-01")
+	require.True(t, ok, "host should be registered")
+	assert.True(t, h.Active)
+}
+
+func TestOperatorWithLifecycle_OnApply_NonHost_Skipped(t *testing.T) {
+	b := NewBootstrapper([]byte("secret"), nil, silentLogger())
+	reg := NewHostRegistry()
+	lm := NewLifecycleManager(b, reg, nil, silentLogger())
+	op := NewOperatorWithLifecycle(nil, b, lm, silentLogger())
+
+	moduleYAML := []byte("kind: Module\nmetadata:\n  name: my-module\n")
+	err := op.handleEvent(context.Background(), Event{
+		Type:     EventCreate,
+		FilePath: "modules/my-module.yaml",
+		Content:  moduleYAML,
+	})
+	assert.NoError(t, err)
+	_, ok := reg.get("my-module")
+	assert.False(t, ok, "non-Host events should not be registered")
+}
+
+func TestOperatorWithLifecycle_OnDelete(t *testing.T) {
+	b := NewBootstrapper([]byte("secret"), nil, silentLogger())
+	reg := NewHostRegistry()
+	lm := NewLifecycleManager(b, reg, nil, silentLogger())
+	op := NewOperatorWithLifecycle(nil, b, lm, silentLogger())
+
+	// Onboard first
+	tok, _ := b.BootstrapHost(context.Background(), HostDefinition{HostID: "node-02"})
+	require.NoError(t, lm.OnboardHost(context.Background(), tok))
+
+	// Delete event — hostID derived from FilePath stem
+	err := op.handleEvent(context.Background(), Event{
+		Type:     EventDelete,
+		FilePath: "hosts/node-02.yaml",
+	})
+	assert.NoError(t, err)
+
+	h, ok := reg.get("node-02")
+	require.True(t, ok)
+	assert.False(t, h.Active)
+}
+
+func TestOperatorWithLifecycle_OnDelete_NotFound(t *testing.T) {
+	b := NewBootstrapper([]byte("secret"), nil, silentLogger())
+	reg := NewHostRegistry()
+	lm := NewLifecycleManager(b, reg, nil, silentLogger())
+	op := NewOperatorWithLifecycle(nil, b, lm, silentLogger())
+
+	err := op.handleEvent(context.Background(), Event{
+		Type:     EventDelete,
+		FilePath: "hosts/ghost.yaml",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
 }
 
 func TestPollingWatcher_Watch(t *testing.T) {

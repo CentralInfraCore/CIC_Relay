@@ -44,9 +44,10 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
 
 // PKIAssets holds the loaded public key infrastructure components.
 type PKIAssets struct {
-	Roots         *x509.CertPool
-	Intermediates *x509.CertPool
-	CRLs          []*x509.RevocationList
+	Roots            *x509.CertPool
+	Intermediates    *x509.CertPool
+	CRLs             []*x509.RevocationList
+	TrustStoreLoaded bool // true when at least one root CA was loaded
 }
 
 // ComponentHeader defines the common fields for identifying a component type.
@@ -270,14 +271,31 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 			cert, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
 				auditLogger.WithField("outcome", "failure").WithError(err).Error("Failed to parse certificate from signature file.")
-			} else {
-				// Trust ecosystem not yet bootstrapped — signature verification is not implemented.
-				// The certificate is parsed and logged for audit purposes only.
+			} else if !pkiAssets.TrustStoreLoaded {
+				// Trust ecosystem not bootstrapped — skip verification, log for audit.
 				auditLogger.WithFields(logrus.Fields{
 					"outcome":        "skipped",
 					"reason":         "trust ecosystem not bootstrapped",
 					"signer_subject": cert.Subject.String(),
 				}).Warn("Signature verification skipped: CA chain not available.")
+			} else {
+				// M3: full X.509 chain verification — EKU=CodeSigning, CRL + SPKI pinning included.
+				verifyOpts := cabinet.VerifyOptions{
+					Roots:         pkiAssets.Roots,
+					Intermediates: pkiAssets.Intermediates,
+					KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+					CRLs:          pkiAssets.CRLs,
+				}
+				chains, verifyErr := cabinet.VerifyCertificateChain(cert, verifyOpts)
+				if verifyErr != nil {
+					auditLogger.WithField("outcome", "rejected").WithError(verifyErr).Error("PKI chain verification failed — module rejected.")
+					return fmt.Errorf("PKI verification failed for %q: %w", moduleID, verifyErr)
+				}
+				auditLogger.WithFields(logrus.Fields{
+					"outcome":        "verified",
+					"signer_subject": cert.Subject.String(),
+					"chain_length":   len(chains[0]),
+				}).Info("Certificate chain verified.")
 			}
 		}
 	}
@@ -344,6 +362,7 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 			if cert.IsCA {
 				if cert.Subject.String() == cert.Issuer.String() { // Self-signed, so it's a root
 					assets.Roots.AddCert(cert)
+					assets.TrustStoreLoaded = true
 				} else {
 					assets.Intermediates.AddCert(cert)
 				}
