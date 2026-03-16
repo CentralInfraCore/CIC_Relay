@@ -16,16 +16,21 @@
 ## Trust ecosystem tudatosság
 - [ ] Ha placeholder-t látok: megvizsgáltam, hogy trust ecosystem hiányából fakad-e
 - [ ] Nem kötöttem be PKI/CA logikát ott ahol az előfeltétel (CA lánc) még nem áll fenn
-- [ ] A `"outcome": "skipped"` log helyett nem írtam `"success"`-t nem ellenőrzött kódútban
-- [ ] `UpstreamSource`, `graph.go`, `LocalWorker` in-process jellegét nem "javítottam"
+- [ ] `UpstreamSource`, `LocalWorker` in-process jellegét nem "javítottam"
 
 ## ProofTrace integritás
-- [ ] Ha Setx végrehajtást érintek: a hash lánc megőrzött vagy tervszerűen bővített
+- [ ] Ha `Setx` végrehajtást érintek: a hash lánc megőrzött vagy tervszerűen bővített
 - [ ] Új workflow lépés esetén: az input/output hash-elhető és determinisztikus
 - [ ] A recorder összekötés szemantikája nem sérül
+- [ ] `loadSecretsFromVault` null-safe: nil secrets → nil recorder, nem panic
 
 ## Kód minőség
 - [ ] Interface-ek mögé bújtatott logika (nem direkten a struct-on)
 - [ ] Új függőség esetén: mock interfész is elkészült
-- [ ] Sentinel hibák használata (`ErrInvalid`, `ErrNotFound`, `ErrConflict`)
+- [ ] Sentinel hibák használata (`ErrInvalid`, `ErrNotFound`, `ErrConflict`, `ErrTimeout`)
 - [ ] Context propagálás végig (nem `context.Background()` belső hívásokban)
+- [ ] HTTP hibák: `writeError(w, status, code, msg)` — nem `http.Error`
+
+## Szimbólum drift
+- [ ] Új exportált szimbólum esetén: `make check-symbols` zöld
+- [ ] Ha SYMBOLS.md driftett: `make symbols` futtatva és commitálva
