@@ -87,8 +87,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
         *   [x] **Feladat**: A hibák egy jól definiált névtérbe kerülnek (pl. `cabinet.ErrInvalidInput`).
         *   [x] **DoD**: A rendszerben használt összes sentinel hiba konzisztensen névtérbe van rendezve.
     *   **M5.2: Egységes JSON-payload**
-        *   [ ] **Feladat**: A rendszer által visszaadott hibáknak egységes JSON struktúrával kell rendelkezniük.
-        *   [ ] **DoD**: Minden API válaszban azonos JSON hibaformátumot használunk.
+        *   [x] **Feladat**: A rendszer által visszaadott hibáknak egységes JSON struktúrával kell rendelkezniük.
+        *   [x] **DoD**: `writeError` helper — minden hiba `{"error":"...","code":"..."}` formátumban, Content-Type: application/json.
     *   **M5.3: HTTP status mapping**
         *   [x] **Feladat**: A különböző típusú hibákhoz megfelelő HTTP státuszkódokat kell rendelni.
         *   [x] **DoD**: A hibákhoz rendelt HTTP státuszkódok konzisztensek és a HTTP specifikációnak megfelelnek.
