@@ -186,7 +186,7 @@ entries:
     accept: make test
 
   - task: "symbols-ci-check"
-    status: todo
+    status: done
     priority: 12
     milestone: M7.1
     prompt: |
