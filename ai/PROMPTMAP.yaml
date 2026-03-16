@@ -399,7 +399,7 @@ entries:
     accept: make test
 
   - task: "operator-bootstrap-lifecycle"
-    status: todo
+    status: done
     priority: 23
     milestone: M16.2-M16.3
     prompt: |
