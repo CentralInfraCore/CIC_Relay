@@ -30,3 +30,7 @@ CurrentTest/
 git_logst_secret.txt
 gitlog.txt
 merged_graph_data_cleaned.ndjson
+
+# Embedded PKI dev keys — do not commit new key material here
+# (existing keys are test-only and grandfathered in)
+embedded/pki/*.key

@@ -289,8 +289,6 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 		return "", formatErrorJson("HOST_ERROR", fmt.Sprintf("failed to read result from wasm memory at ptr=%d, len=%d", resultPtr, resultLen), nil)
 	}
 
-	// fmt.Printf("DEBUG: Read resultBytes from WASM memory: %q (len: %d)\n", resultBytes, resultLen)
-
 	type GuestResult struct {
 		Data  json.RawMessage `json:"data"`
 		Error json.RawMessage `json:"error"`

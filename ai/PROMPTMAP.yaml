@@ -239,7 +239,7 @@ entries:
   # --- Sprint 4 — Tech Debt (külső audit alapján) ---
 
   - task: "debug-cleanup"
-    status: todo
+    status: done
     priority: 15
     milestone: hygiene
     prompt: |
@@ -253,7 +253,7 @@ entries:
     accept: make test
 
   - task: "ci-toolchain-sync"
-    status: todo
+    status: done
     priority: 16
     milestone: hygiene
     prompt: |
@@ -271,7 +271,7 @@ entries:
     accept: make test
 
   - task: "makefile-ldflags-vars"
-    status: todo
+    status: done
     priority: 17
     milestone: hygiene
     prompt: |
@@ -294,7 +294,7 @@ entries:
     accept: make test
 
   - task: "wasm-size-limit-single-source"
-    status: todo
+    status: done
     priority: 18
     milestone: M4.4
     prompt: |
@@ -314,7 +314,7 @@ entries:
     accept: make test
 
   - task: "embedded-pki-key-audit"
-    status: todo
+    status: done
     priority: 19
     milestone: hygiene
     prompt: |

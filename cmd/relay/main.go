@@ -18,6 +18,17 @@ import (
 	"centralrelay/core/nexus/recorder"
 )
 
+// Build metadata — injected by Makefile ldflags:
+//
+//	-X main.BuildID=$(VERSION)-$(COMMIT)
+//	-X main.CommitHash=$(COMMIT)
+//	-X main.Timestamp=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+var (
+	BuildID    = "dev"
+	CommitHash = "unknown"
+	Timestamp  = "unknown"
+)
+
 // test seam: unit tesztben felülírható
 var listenAndServe = http.ListenAndServe
 
@@ -31,9 +42,9 @@ type config struct {
 // loadConfig loads configuration from environment variables.
 func loadConfig() (*config, error) {
 	cfg := &config{
-		MaxJSONInputSize:  4 * 1024 * 1024,  // Default to 4 MB
-		MaxWASMModuleSize: 16 * 1024 * 1024, // Default to 16 MB
-		HashingTimeout:    5 * time.Second,  // Default to 5 seconds
+		MaxJSONInputSize:  4 * 1024 * 1024,           // Default to 4 MB
+		MaxWASMModuleSize: cabinet.MaxWASMModuleSize,  // Single source: cabinet package constant
+		HashingTimeout:    5 * time.Second,            // Default to 5 seconds
 	}
 
 	if val := os.Getenv("CIC_MAX_JSON_INPUT_SIZE"); val != "" {
@@ -279,6 +290,12 @@ func run(port string, logger *logrus.Logger, s *relayServer) error {
 func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{}) // Structured logging in JSON format
+
+	logger.WithFields(logrus.Fields{
+		"build_id":   BuildID,
+		"commit":     CommitHash,
+		"build_time": Timestamp,
+	}).Info("Starting cic-relay")
 
 	cfg, err := loadConfig()
 	if err != nil {

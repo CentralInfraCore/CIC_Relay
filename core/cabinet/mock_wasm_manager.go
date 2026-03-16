@@ -2,7 +2,6 @@ package cabinet
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -16,7 +15,6 @@ type MockWasmManager struct {
 // It allows tests to specify what cicWasmHost instance (or error) should be returned.
 func (m *MockWasmManager) NewHostInstance(ctx context.Context, moduleID string) (cicWasmHost, error) {
 	args := m.Called(ctx, moduleID)
-	fmt.Printf("DEBUG: args.Get(0) type: %T, value: %+v\n", args.Get(0), args.Get(0)) // <-- Hozzáadva
 	// The first return argument can be nil if we are testing an error case.
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
