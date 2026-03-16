@@ -126,14 +126,14 @@ Ez a fájl az AI-támogatott roadmap állapota.
 * **Megjegyzés:** A betöltéskori signature+hash ellenőrzés alapjai (revocation, SPKI-pinning) megvannak, de a logika nincs bekötve a futási útvonalba, és nincs rollout-gate vagy rollback-logika.
 * **Részfeladatok (checklist):**
     *   **M7.1: Symbols szinkronizáció**
-        *   [ ] **Feladat**: Implementálni egy CI ellenőrzést, amely biztosítja, hogy a `context/SYMBOLS.md` fájl szinkronban van a kódbázis publikus szimbólumaival (drift=0).
-        *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a `SYMBOLS.md` tartalma eltér a kódbázisban definiált publikus szimbólumoktól.
+        *   [x] **Feladat**: Implementálni egy CI ellenőrzést, amely biztosítja, hogy a `context/SYMBOLS.md` fájl szinkronban van a kódbázis publikus szimbólumaival (drift=0).
+        *   [x] **DoD**: A CI/CD pipeline sikertelen, ha a `SYMBOLS.md` tartalma eltér a kódbázisban definiált publikus szimbólumoktól.
         *   **Részfeladatok (checklist):**
-            *   [ ] **M7.1.1: Specifikáció és szabályok definiálása**: Létrehozni a `docs/engineering/symbols_spec.md` fájlt, amely leírja a publikus API definícióját, a szimbólumok kanonikus formátumát és a szűrési szabályokat.
-            *   [ ] **M7.1.2: Konfigurációs fájlok létrehozása**: Létrehozni a `context/SYMBOLS.ALLOWPKGS` fájlt a publikus csomagok listájával.
-            *   [ ] **M7.1.3: Generátor eszköz implementálása**: Létrehozni a `tools/symbolsgen` eszközt, amely a specifikáció alapján generálja a `SYMBOLS.md` fájlt.
-            *   [ ] **M7.1.4: CI-integráció**: Beépíteni a `verify.yml`-be egy lépést, ami a generátorral ellenőrzi a `SYMBOLS.md` naprakészségét.
-            *   [ ] **M7.1.5: Baseline `SYMBOLS.md` létrehozása**: Generálni és manuálisan ellenőrizni az első, "golden" `SYMBOLS.md` fájlt.
+            *   [x] **M7.1.1**: `docs/engineering/symbols_spec.md` létezik.
+            *   [x] **M7.1.2**: `context/SYMBOLS.ALLOWPKGS` létezik.
+            *   [x] **M7.1.3**: `tools/symbolsgen` implementálva.
+            *   [x] **M7.1.4**: `verify.yml` "Check for symbol drift" lépés (`go run ./tools/symbolsgen && git diff --exit-code`).
+            *   [x] **M7.1.5**: `context/SYMBOLS.md` baseline generálva, tetején "auto-generated" megjegyzés.
     *   **M7.2: Code quality checks (lint/staticcheck/go vet)**
         *   [ ] **Feladat**: Integrálni a lint, staticcheck és go vet eszközöket a CI/CD pipeline-ba a kódminőség automatikus ellenőrzésére.
         *   [ ] **DoD**: A CI/CD pipeline sikertelen, ha a kód nem felel meg a lintelési, statikus analízis és go vet ellenőrzéseknek.
