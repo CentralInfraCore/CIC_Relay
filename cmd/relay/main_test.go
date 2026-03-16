@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 func TestRun_ServerStart(t *testing.T) {
 	// Override the listenAndServe function to immediately return, preventing the server from actually starting.
 	originalListenAndServe := listenAndServe
-	listenAndServe = func(addr string, handler http.Handler) error {
+	listenAndServe = func(srv *http.Server) error {
 		return nil
 	}
 	defer func() { listenAndServe = originalListenAndServe }()
@@ -40,7 +40,7 @@ func TestRun_ServerStart(t *testing.T) {
 
 	server := &relayServer{
 		api:    mockAPI,
-		config: &config{},
+		config: &config{RateLimitRPS: 100, MaxConcurrentRequests: 50},
 		logger: logger,
 	}
 
@@ -58,6 +58,8 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	assert.Equal(t, int64(4*1024*1024), cfg.MaxJSONInputSize)
 	assert.Equal(t, int64(16*1024*1024), cfg.MaxWASMModuleSize)
 	assert.Equal(t, 30, cfg.WasmExecTimeoutSeconds)
+	assert.Equal(t, 100, cfg.RateLimitRPS)
+	assert.Equal(t, 50, cfg.MaxConcurrentRequests)
 }
 func TestLoadConfig_AllEnvSet(t *testing.T) {
 	t.Setenv("CIC_MAX_JSON_INPUT_SIZE", "8192")
@@ -126,6 +128,40 @@ func TestLoadConfig_WasmExecTimeout_InvalidZero(t *testing.T) {
 	assert.Contains(t, err.Error(), "CIC_WASM_EXEC_TIMEOUT_SECONDS")
 }
 
+func TestLoadConfig_RateLimitRPS_Custom(t *testing.T) {
+	t.Setenv("CIC_RATE_LIMIT_RPS", "200")
+
+	cfg, err := loadConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, 200, cfg.RateLimitRPS)
+}
+
+func TestLoadConfig_RateLimitRPS_Invalid(t *testing.T) {
+	t.Setenv("CIC_RATE_LIMIT_RPS", "0")
+
+	cfg, err := loadConfig()
+	assert.Nil(t, cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CIC_RATE_LIMIT_RPS")
+}
+
+func TestLoadConfig_MaxConcurrent_Custom(t *testing.T) {
+	t.Setenv("CIC_MAX_CONCURRENT_REQUESTS", "10")
+
+	cfg, err := loadConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, 10, cfg.MaxConcurrentRequests)
+}
+
+func TestLoadConfig_MaxConcurrent_Invalid(t *testing.T) {
+	t.Setenv("CIC_MAX_CONCURRENT_REQUESTS", "0")
+
+	cfg, err := loadConfig()
+	assert.Nil(t, cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CIC_MAX_CONCURRENT_REQUESTS")
+}
+
 func TestNewMux(t *testing.T) {
 	server := &relayServer{}
 	mux := newMux(server)
@@ -144,6 +180,8 @@ func TestValidateConfig_Valid(t *testing.T) {
 		MaxWASMModuleSize:      16 * 1024 * 1024,
 		HashingTimeout:         5 * time.Second,
 		WasmExecTimeoutSeconds: 30,
+		RateLimitRPS:           100,
+		MaxConcurrentRequests:  50,
 	}
 	assert.NoError(t, validateConfig(cfg))
 }
@@ -154,6 +192,8 @@ func TestValidateConfig_RangeViolation_JSONSize(t *testing.T) {
 		MaxWASMModuleSize:      16 * 1024 * 1024,
 		HashingTimeout:         5 * time.Second,
 		WasmExecTimeoutSeconds: 30,
+		RateLimitRPS:           100,
+		MaxConcurrentRequests:  50,
 	}
 	assert.Error(t, validateConfig(cfg))
 }
@@ -164,6 +204,8 @@ func TestValidateConfig_RangeViolation_WASMSize(t *testing.T) {
 		MaxWASMModuleSize:      0,
 		HashingTimeout:         5 * time.Second,
 		WasmExecTimeoutSeconds: 30,
+		RateLimitRPS:           100,
+		MaxConcurrentRequests:  50,
 	}
 	assert.Error(t, validateConfig(cfg))
 }
@@ -174,6 +216,8 @@ func TestValidateConfig_RangeViolation_HashingTimeout(t *testing.T) {
 		MaxWASMModuleSize:      16 * 1024 * 1024,
 		HashingTimeout:         500 * time.Millisecond,
 		WasmExecTimeoutSeconds: 30,
+		RateLimitRPS:           100,
+		MaxConcurrentRequests:  50,
 	}
 	assert.Error(t, validateConfig(cfg))
 }
@@ -184,6 +228,32 @@ func TestValidateConfig_RangeViolation_WasmExecTimeout(t *testing.T) {
 		MaxWASMModuleSize:      16 * 1024 * 1024,
 		HashingTimeout:         5 * time.Second,
 		WasmExecTimeoutSeconds: 0,
+		RateLimitRPS:           100,
+		MaxConcurrentRequests:  50,
+	}
+	assert.Error(t, validateConfig(cfg))
+}
+
+func TestValidateConfig_RangeViolation_RateLimitRPS(t *testing.T) {
+	cfg := &config{
+		MaxJSONInputSize:       4 * 1024 * 1024,
+		MaxWASMModuleSize:      16 * 1024 * 1024,
+		HashingTimeout:         5 * time.Second,
+		WasmExecTimeoutSeconds: 30,
+		RateLimitRPS:           0,
+		MaxConcurrentRequests:  50,
+	}
+	assert.Error(t, validateConfig(cfg))
+}
+
+func TestValidateConfig_RangeViolation_MaxConcurrent(t *testing.T) {
+	cfg := &config{
+		MaxJSONInputSize:       4 * 1024 * 1024,
+		MaxWASMModuleSize:      16 * 1024 * 1024,
+		HashingTimeout:         5 * time.Second,
+		WasmExecTimeoutSeconds: 30,
+		RateLimitRPS:           100,
+		MaxConcurrentRequests:  0,
 	}
 	assert.Error(t, validateConfig(cfg))
 }

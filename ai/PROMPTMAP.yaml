@@ -377,7 +377,7 @@ entries:
     accept: make test
 
   - task: "circuit-breaker-rate-limit"
-    status: todo
+    status: done
     priority: 22
     milestone: M9
     prompt: |

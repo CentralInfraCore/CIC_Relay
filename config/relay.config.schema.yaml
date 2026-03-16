@@ -14,6 +14,9 @@ spec:
     CIC_MAX_WASM_MODULE_SIZE: "integer, bytes, min 1, default 16777216 (16 MB)"
     CIC_HASHING_TIMEOUT: "duration string, min 1s, default 5s"
     CIC_WASM_EXEC_TIMEOUT_SECONDS: "integer, seconds, min 1, default 30"
+    # Operations safety
+    CIC_RATE_LIMIT_RPS: "integer, requests/sec per IP, min 1, default 100"
+    CIC_MAX_CONCURRENT_REQUESTS: "integer, max in-flight requests, min 1, default 50"
     # Vault integration (optional — recording disabled if absent)
     VAULT_ADDR: "string, Vault server address (Vault SDK env)"
     VAULT_TOKEN: "string, Vault token (Vault SDK env, optional)"
