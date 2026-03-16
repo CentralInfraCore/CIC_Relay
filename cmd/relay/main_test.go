@@ -57,6 +57,7 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	assert.NotNil(t, cfg)
 	assert.Equal(t, int64(4*1024*1024), cfg.MaxJSONInputSize)
 	assert.Equal(t, int64(16*1024*1024), cfg.MaxWASMModuleSize)
+	assert.Equal(t, 30, cfg.WasmExecTimeoutSeconds)
 }
 func TestLoadConfig_AllEnvSet(t *testing.T) {
 	t.Setenv("CIC_MAX_JSON_INPUT_SIZE", "8192")
@@ -98,6 +99,33 @@ func TestLoadConfig_InvalidHashingTimeout(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid value for CIC_HASHING_TIMEOUT")
 }
 
+func TestLoadConfig_WasmExecTimeout_Custom(t *testing.T) {
+	t.Setenv("CIC_WASM_EXEC_TIMEOUT_SECONDS", "60")
+
+	cfg, err := loadConfig()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, 60, cfg.WasmExecTimeoutSeconds)
+}
+
+func TestLoadConfig_WasmExecTimeout_InvalidNotNumber(t *testing.T) {
+	t.Setenv("CIC_WASM_EXEC_TIMEOUT_SECONDS", "notanumber")
+
+	cfg, err := loadConfig()
+	assert.Nil(t, cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid value for CIC_WASM_EXEC_TIMEOUT_SECONDS")
+}
+
+func TestLoadConfig_WasmExecTimeout_InvalidZero(t *testing.T) {
+	t.Setenv("CIC_WASM_EXEC_TIMEOUT_SECONDS", "0")
+
+	cfg, err := loadConfig()
+	assert.Nil(t, cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CIC_WASM_EXEC_TIMEOUT_SECONDS")
+}
+
 func TestNewMux(t *testing.T) {
 	server := &relayServer{}
 	mux := newMux(server)
@@ -112,17 +140,52 @@ func TestNewMux(t *testing.T) {
 
 func TestValidateConfig_Valid(t *testing.T) {
 	cfg := &config{
-		MaxJSONInputSize:  4 * 1024 * 1024,
-		MaxWASMModuleSize: 16 * 1024 * 1024,
-		HashingTimeout:    5 * time.Second,
+		MaxJSONInputSize:       4 * 1024 * 1024,
+		MaxWASMModuleSize:      16 * 1024 * 1024,
+		HashingTimeout:         5 * time.Second,
+		WasmExecTimeoutSeconds: 30,
 	}
 	assert.NoError(t, validateConfig(cfg))
 }
 
-func TestValidateConfig_NilEquivalent(t *testing.T) {
-	// Zero values still produce a valid $schema key — should pass.
-	cfg := &config{}
-	assert.NoError(t, validateConfig(cfg))
+func TestValidateConfig_RangeViolation_JSONSize(t *testing.T) {
+	cfg := &config{
+		MaxJSONInputSize:       0,
+		MaxWASMModuleSize:      16 * 1024 * 1024,
+		HashingTimeout:         5 * time.Second,
+		WasmExecTimeoutSeconds: 30,
+	}
+	assert.Error(t, validateConfig(cfg))
+}
+
+func TestValidateConfig_RangeViolation_WASMSize(t *testing.T) {
+	cfg := &config{
+		MaxJSONInputSize:       4 * 1024 * 1024,
+		MaxWASMModuleSize:      0,
+		HashingTimeout:         5 * time.Second,
+		WasmExecTimeoutSeconds: 30,
+	}
+	assert.Error(t, validateConfig(cfg))
+}
+
+func TestValidateConfig_RangeViolation_HashingTimeout(t *testing.T) {
+	cfg := &config{
+		MaxJSONInputSize:       4 * 1024 * 1024,
+		MaxWASMModuleSize:      16 * 1024 * 1024,
+		HashingTimeout:         500 * time.Millisecond,
+		WasmExecTimeoutSeconds: 30,
+	}
+	assert.Error(t, validateConfig(cfg))
+}
+
+func TestValidateConfig_RangeViolation_WasmExecTimeout(t *testing.T) {
+	cfg := &config{
+		MaxJSONInputSize:       4 * 1024 * 1024,
+		MaxWASMModuleSize:      16 * 1024 * 1024,
+		HashingTimeout:         5 * time.Second,
+		WasmExecTimeoutSeconds: 0,
+	}
+	assert.Error(t, validateConfig(cfg))
 }
 
 func TestLoadSecretsFromVault_NoToken(t *testing.T) {

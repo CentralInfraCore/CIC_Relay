@@ -356,7 +356,7 @@ entries:
     accept: make vet && make lint
 
   - task: "limit-schema-config"
-    status: todo
+    status: done
     priority: 21
     milestone: M4.4
     prompt: |

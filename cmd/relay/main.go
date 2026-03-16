@@ -34,17 +34,19 @@ var listenAndServe = http.ListenAndServe
 
 // config holds the application's configuration.
 type config struct {
-	MaxJSONInputSize  int64
-	MaxWASMModuleSize int64
-	HashingTimeout    time.Duration // Added for M4
+	MaxJSONInputSize      int64
+	MaxWASMModuleSize     int64
+	HashingTimeout        time.Duration
+	WasmExecTimeoutSeconds int
 }
 
 // loadConfig loads configuration from environment variables.
 func loadConfig() (*config, error) {
 	cfg := &config{
-		MaxJSONInputSize:  4 * 1024 * 1024,           // Default to 4 MB
-		MaxWASMModuleSize: cabinet.MaxWASMModuleSize,  // Single source: cabinet package constant
-		HashingTimeout:    5 * time.Second,            // Default to 5 seconds
+		MaxJSONInputSize:       4 * 1024 * 1024,          // Default to 4 MB
+		MaxWASMModuleSize:      cabinet.MaxWASMModuleSize, // Single source: cabinet package constant
+		HashingTimeout:         5 * time.Second,           // Default to 5 seconds
+		WasmExecTimeoutSeconds: 30,                        // Default WASM execution timeout
 	}
 
 	if val := os.Getenv("CIC_MAX_JSON_INPUT_SIZE"); val != "" {
@@ -69,6 +71,17 @@ func loadConfig() (*config, error) {
 			return nil, fmt.Errorf("invalid value for CIC_HASHING_TIMEOUT: %w", err)
 		}
 		cfg.HashingTimeout = timeout
+	}
+
+	if val := os.Getenv("CIC_WASM_EXEC_TIMEOUT_SECONDS"); val != "" {
+		secs, err := strconv.Atoi(val)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for CIC_WASM_EXEC_TIMEOUT_SECONDS: %w", err)
+		}
+		if secs < 1 {
+			return nil, fmt.Errorf("invalid value for CIC_WASM_EXEC_TIMEOUT_SECONDS: must be >= 1, got %d", secs)
+		}
+		cfg.WasmExecTimeoutSeconds = secs
 	}
 
 	return cfg, nil
@@ -201,12 +214,26 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 // validateConfig validates the loaded configuration using the cabinet schema engine.
 // This is "dogfooding": the relay validates its own config with the same mechanism
 // it uses to validate workflow inputs (cabinet.ValidateSchema / $schema key check).
+// Range constraints are also enforced directly before the schema ID check.
 func validateConfig(cfg *config) error {
+	if cfg.MaxJSONInputSize < 1 {
+		return fmt.Errorf("max_json_input_size must be >= 1, got %d", cfg.MaxJSONInputSize)
+	}
+	if cfg.MaxWASMModuleSize < 1 {
+		return fmt.Errorf("max_wasm_module_size must be >= 1, got %d", cfg.MaxWASMModuleSize)
+	}
+	if cfg.HashingTimeout < time.Second {
+		return fmt.Errorf("hashing_timeout must be >= 1s, got %s", cfg.HashingTimeout)
+	}
+	if cfg.WasmExecTimeoutSeconds < 1 {
+		return fmt.Errorf("wasm_exec_timeout_seconds must be >= 1, got %d", cfg.WasmExecTimeoutSeconds)
+	}
 	configMap := map[string]interface{}{
-		"$schema":               "relay.config@1.0",
-		"max_json_input_size":   cfg.MaxJSONInputSize,
-		"max_wasm_module_size":  cfg.MaxWASMModuleSize,
-		"hashing_timeout":       cfg.HashingTimeout.String(),
+		"$schema":                    "relay.config@1.0",
+		"max_json_input_size":        cfg.MaxJSONInputSize,
+		"max_wasm_module_size":       cfg.MaxWASMModuleSize,
+		"hashing_timeout":            cfg.HashingTimeout.String(),
+		"wasm_exec_timeout_seconds":  cfg.WasmExecTimeoutSeconds,
 	}
 	return cabinet.ValidateSchema([]string{"relay.config@1.0"}, configMap)
 }
@@ -322,8 +349,8 @@ func main() {
 	moduleStore := cabinet.NewMemModuleStore()
 
 	wasmConfig := cabinet.WasmManagerConfig{
-		LRUCacheSize:          100, // Default cache size
-		DefaultTimeoutSeconds: 5,   // Default timeout
+		LRUCacheSize:          100,
+		DefaultTimeoutSeconds: uint32(cfg.WasmExecTimeoutSeconds),
 	}
 	secrets := loadSecretsFromVault(logger)
 	recorderOpt := buildRecorderOption(logger, secrets)
