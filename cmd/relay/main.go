@@ -36,26 +36,26 @@ func loadConfig() (*config, error) {
 		HashingTimeout:    5 * time.Second,  // Default to 5 seconds
 	}
 
-	if val := os.Getenv("MAX_JSON_INPUT_SIZE"); val != "" {
+	if val := os.Getenv("CIC_MAX_JSON_INPUT_SIZE"); val != "" {
 		size, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for MAX_JSON_INPUT_SIZE: %w", err)
+			return nil, fmt.Errorf("invalid value for CIC_MAX_JSON_INPUT_SIZE: %w", err)
 		}
 		cfg.MaxJSONInputSize = size
 	}
 
-	if val := os.Getenv("MAX_WASM_MODULE_SIZE"); val != "" {
+	if val := os.Getenv("CIC_MAX_WASM_MODULE_SIZE"); val != "" {
 		size, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for MAX_WASM_MODULE_SIZE: %w", err)
+			return nil, fmt.Errorf("invalid value for CIC_MAX_WASM_MODULE_SIZE: %w", err)
 		}
 		cfg.MaxWASMModuleSize = size
 	}
 
-	if val := os.Getenv("HASHING_TIMEOUT"); val != "" {
+	if val := os.Getenv("CIC_HASHING_TIMEOUT"); val != "" {
 		timeout, err := time.ParseDuration(val)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for HASHING_TIMEOUT: %w", err)
+			return nil, fmt.Errorf("invalid value for CIC_HASHING_TIMEOUT: %w", err)
 		}
 		cfg.HashingTimeout = timeout
 	}

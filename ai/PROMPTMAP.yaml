@@ -93,7 +93,7 @@ entries:
       - scripts/
     accept: make dev-vault && make verify
 
-  # --- Következő sprint ---
+  # --- Sprint 2 (done) ---
 
   - task: "prod-recorder-wiring"
     status: done
@@ -111,4 +111,127 @@ entries:
       Ne változtasd meg a `Cabinet` interfészt.
     tests:
       - cmd/relay/main_test.go
+    accept: make test
+
+  # --- Sprint 3 (következő) ---
+
+  - task: "env-cic-prefix"
+    status: done
+    priority: 8
+    milestone: M8.1
+    prompt: |
+      A `cmd/relay/main.go` `loadConfig` és `buildRecorderOption` függvényekben
+      minden env változót láss el `CIC_` prefixszel:
+        MAX_JSON_INPUT_SIZE    → CIC_MAX_JSON_INPUT_SIZE
+        MAX_WASM_MODULE_SIZE   → CIC_MAX_WASM_MODULE_SIZE
+        HASHING_TIMEOUT        → CIC_HASHING_TIMEOUT
+        CIC_VAULT_MOUNT, CIC_VAULT_KEY, CIC_AUDIT_REPO_PATH — már jók
+        VAULT_ADDR, VAULT_TOKEN — Vault SDK saját változói, ezeket NE nevezd át
+          (a Vault Go SDK VAULT_ADDR és VAULT_TOKEN változókat vár, ezek nem CIC névterűek)
+      Frissítsd a teszteket is. Ne változtass más logikán.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make test
+
+  - task: "uniform-error-json"
+    status: todo
+    priority: 9
+    milestone: M5.2
+    prompt: |
+      Minden HTTP hibaválasz egységes JSON struktúrával térjen vissza:
+        {"error": "<message>", "code": "<snake_case_code>"}
+      Jelenleg a handlerek `http.Error`-t használnak, ami plain text választ ad.
+      Vezess be egy `writeError(w, code int, errCode, msg string)` segédfüggvényt
+      a `cmd/relay/main.go`-ban, és cseréld ki az összes `http.Error` hívást rá.
+      A Content-Type legyen `application/json` minden hibánál.
+      Frissítsd a handler teszteket: ellenőrizzék a JSON body tartalmát is.
+    tests:
+      - cmd/relay/main_api_test.go
+      - cmd/relay/main_test.go
+    accept: make test
+
+  - task: "dogfooding-config-schema"
+    status: todo
+    priority: 10
+    milestone: M8.2 / M-Konfig
+    prompt: |
+      A Relay induláskor validálja a saját konfigurációját a cabinet schema engine-nel.
+      1. Hozz létre `config/relay.config.schema.yaml` fájlt (Kind: Schema), amely leírja
+         az összes CIC_ prefixű config paramétert: típus, kötelező/opcionális, leírás.
+      2. A `loadConfig` után (main.go) töltsd be ezt a sémát és validáld a betöltött
+         konfigurációt mint map[string]interface{} a schema `$schema` kulcsával.
+         Érvénytelen konfig esetén Fatal + egyértelmű hibaüzenet.
+      3. A validációhoz a `cabinet` csomag `validateInputSchema` logikáját használd
+         (nem kell új engine — a meglévő Accepts-alapú validáció elég első lépésként).
+      4. Frissítsd az `ai/SYSTEM_CONTEXT.md`-t a dogfooding mechanizmus leírásával.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make test
+
+  - task: "wasm-exec-timeout"
+    status: todo
+    priority: 11
+    milestone: M4.3
+    prompt: |
+      Vezess be per-step CPU/idő korlátot a `Setx` WASM végrehajtásban.
+      A `WasmManagerConfig`-ban már van `DefaultTimeoutSeconds int` mező — ezt
+      használd: minden WASM dispatch előtt hozz létre `context.WithTimeout`-ot.
+      Native Go moduloknál NEM kell timeout (bízunk bennük).
+      Ha a context lejár: `ErrTimeout` sentinel hiba (új, a `cabinet` csomagban),
+      HTTP 504-re map-elve a handler szinten.
+      Adj hozzá teszteket: timeout lejár → ErrTimeout, normál futás → ok.
+    tests:
+      - core/cabinet/service_unit_test.go
+      - cmd/relay/main_api_test.go
+    accept: make test
+
+  - task: "symbols-ci-check"
+    status: todo
+    priority: 12
+    milestone: M7.1
+    prompt: |
+      A `make check-symbols` target már létezik (symbolsgen futtatás + git diff).
+      Kösd be a CI pipeline-ba: hozz létre `.github/workflows/symbols.yml`-t
+      (vagy bővítsd a meglévő workflow-t), amely `make check-symbols`-t futtat
+      minden PR-on és minden main push-on.
+      Ha a SYMBOLS.md drift > 0: a CI fail-el.
+      Dokumentáld a `context/SYMBOLS.md` tetején egy rövid megjegyzéssel
+      hogy ez auto-generált, kézzel ne módosítsd.
+    tests:
+      - .github/workflows/
+    accept: make check-symbols
+
+  - task: "e2e-smoke-tests"
+    status: todo
+    priority: 13
+    milestone: M6.5
+    prompt: |
+      Hozz létre `api_tests/smoke.sh` bash szkriptet, amely `docker compose up`
+      után curl-lel teszteli a fő útvonalakat:
+        GET  /         → 200, {"status":"ok",...}
+        GET  /healthz  → 200, {"status":"ok"}
+        GET  /readyz   → 200, {"status":"ok"}
+        POST /set      → 400 (üres body), valid JSON hibapayload
+      A szkript exit 0 ha minden pass, exit 1 ha bármely assertion fail.
+      Frissítsd a Makefile `test-api` targetét hogy ezt futtassa.
+      Dokumentáld a `ai/SYSTEM_CONTEXT.md`-ben az E2E futtatás módját.
+    tests:
+      - api_tests/smoke.sh
+    accept: bash api_tests/smoke.sh
+
+  - task: "secrets-separation"
+    status: todo
+    priority: 14
+    milestone: M8.3
+    prompt: |
+      Válaszd szét a titokkezelést a komponens-betöltéstől a `cmd/relay/main.go`-ban.
+      A `buildRecorderOption` már külön van — ez a minta.
+      Hozz létre `loadSecretsFromVault(ctx, logger) (*VaultSecrets, error)` függvényt,
+      amely kizárólag Vault-tal kommunikál (token, PKI certs ha szükséges).
+      A `loadInstalledComponents` NE tartalmazzon hálózati/titok logikát.
+      Ez refaktor: a viselkedés nem változik, csak a felelősségek szétválnak.
+      Frissítsd a teszteket hogy az új struktúrát tükrözzék.
+    tests:
+      - cmd/relay/main_test.go
+      - cmd/relay/bootstrap_test.go
     accept: make test
