@@ -137,9 +137,9 @@ test: ## Run unit tests (verbose, race)
 		GO111MODULE=on GOFLAGS="$(GOFLAGS)" go test $(GO_RACE) -v $$PKGS \
 	)
 
-test-api: ## Run instrumented API tests
-	@echo "🔬 Running instrumented API tests..."
-	@bash ./api_tests/test_endpoints.sh
+test-api: ## Run E2E smoke tests against a running relay (RELAY_URL=http://localhost:8080)
+	@echo "🔬 Running E2E smoke tests..."
+	@bash ./api_tests/smoke.sh
 
 coverage: coverage-profile coverage-html ## Run tests with coverage (profile + HTML)
 	@echo "Coverage HTML: $(COVERAGE_HTML)"

@@ -202,7 +202,7 @@ entries:
     accept: make check-symbols
 
   - task: "e2e-smoke-tests"
-    status: todo
+    status: done
     priority: 13
     milestone: M6.5
     prompt: |

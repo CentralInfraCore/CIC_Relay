@@ -111,6 +111,25 @@ Fontos tudnivalók:
 
 ---
 
+## E2E Smoke Tesztek
+
+```bash
+# Indítsd el a relay-t (pl. make build && ./output/<commit>/cic-relay)
+RELAY_URL=http://localhost:8080 make test-api
+```
+
+A `api_tests/smoke.sh` script a következőket ellenőrzi:
+- `GET /` → 200, `{"status":"ok",...}`
+- `GET /healthz` → 200, `{"status":"ok"}`
+- `GET /readyz` → 200, `{"status":"ok"}`
+- `POST /set` üres body → 400, JSON error `{"code":"invalid_request",...}`
+- `GET /set` → 405, JSON error `{"code":"method_not_allowed",...}`
+
+A `RELAY_URL` env változóval konfigurálható a cél (default: `http://localhost:8080`).
+Csak egy futó relay instance ellen futtatható — nem indít infrastruktúrát.
+
+---
+
 ## Dogfooding — Séma-vezérelt önvalidáció
 
 A rendszer induláskor a saját cabinet schema engine-jével validálja a saját konfigurációját.
