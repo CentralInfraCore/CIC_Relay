@@ -163,8 +163,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
         *   [x] **DoD**: `cabinet.ValidateSchema` exportálva; `validateConfig` a main-ben; `config/relay.config.schema.yaml` séma dokumentálja az összes CIC_* változót. Hibás konfig → Fatal. Dokumentálva `ai/SYSTEM_CONTEXT.md`-ben.
 
     *   **M8.3: Titokkezelés szétválasztása (Single Responsibility)**
-        *   [ ] **Feladat**: A külső forrásból (pl. Vault) származó titkok betöltését egy dedikált, a fájlrendszer-alapú komponens-betöltéstől független függvénybe kell szervezni.
-        *   [ ] **DoD**: Létrejön egy dedikált `loadSecretsFromVault` (vagy hasonló nevű) függvény, amely kizárólag a külső titokkezelővel való kommunikációért felel. A `loadInstalledComponents` függvény nem tartalmaz semmilyen titokkezelési vagy hálózati logikát.
+        *   [x] **Feladat**: A külső forrásból (pl. Vault) származó titkok betöltését egy dedikált, a fájlrendszer-alapú komponens-betöltéstől független függvénybe kell szervezni.
+        *   [x] **DoD**: `loadSecretsFromVault(logger) *VaultSecrets` — kizárólag env var olvasás + Vault konfig aggregálása. `buildRecorderOption(logger, secrets)` — kapja a titkoket paraméterként. `loadInstalledComponents` nem tartalmaz titokkezelési logikát.
 
 ### M9 — Operations Safety (Circuit-Breaker, Rate-Limit)
 * **Állapot:** Hiányzik
@@ -250,11 +250,11 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M1        | Done    | |
 | M2        | **Done**    | ExecutionGraph, schema validáció, ProofTrace kész |
 | M3        | Partial | |
-| M4        | Partial | |
-| M5        | Partial | |
-| M6        | Partial | |
-| M7        | Partial | |
-| M8        | Partial | |
+| M4        | Partial | M4.3 kész, M4.4 (schema-alapú limit konfig) nyitott |
+| M5        | **Done**    | M5.2 uniform JSON error kész, minden M5 subtask zárva |
+| M6        | **Done**    | M6.5 E2E smoke tests kész, minden M6 subtask zárva |
+| M7        | Partial | M7.1 kész; M7.2 CI (verify.yml-ben megvan), M7.3-M7.4 nyitott |
+| M8        | **Done**    | M8.1+M8.2+M8.3 kész — env prefix, dogfooding, secrets separation |
 | M9        | Missing | |
 | M10       | Missing | |
 | M11       | Partial | |

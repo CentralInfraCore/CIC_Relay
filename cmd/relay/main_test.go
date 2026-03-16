@@ -125,13 +125,55 @@ func TestValidateConfig_NilEquivalent(t *testing.T) {
 	assert.NoError(t, validateConfig(cfg))
 }
 
-func TestBuildRecorderOption_NoVaultToken(t *testing.T) {
+func TestLoadSecretsFromVault_NoToken(t *testing.T) {
 	t.Setenv("VAULT_TOKEN", "")
 
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
 
-	opt := buildRecorderOption(logger)
+	secrets := loadSecretsFromVault(logger)
+	assert.Nil(t, secrets, "secrets must be nil when VAULT_TOKEN is not set")
+}
+
+func TestLoadSecretsFromVault_WithToken_Defaults(t *testing.T) {
+	t.Setenv("VAULT_TOKEN", "dev-root-token")
+	t.Setenv("CIC_VAULT_MOUNT", "")
+	t.Setenv("CIC_VAULT_KEY", "")
+	t.Setenv("CIC_AUDIT_REPO_PATH", "")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	secrets := loadSecretsFromVault(logger)
+	assert.NotNil(t, secrets)
+	assert.Equal(t, "dev-root-token", secrets.Token)
+	assert.Equal(t, "transit", secrets.MountPath)
+	assert.Equal(t, "cic-dev-sign-key", secrets.KeyName)
+	assert.Equal(t, "/var/lib/cic-relay/audit", secrets.AuditRepoPath)
+}
+
+func TestLoadSecretsFromVault_WithToken_CustomValues(t *testing.T) {
+	t.Setenv("VAULT_TOKEN", "my-token")
+	t.Setenv("CIC_VAULT_MOUNT", "custom-mount")
+	t.Setenv("CIC_VAULT_KEY", "custom-key")
+	t.Setenv("CIC_AUDIT_REPO_PATH", "/tmp/audit")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	secrets := loadSecretsFromVault(logger)
+	assert.NotNil(t, secrets)
+	assert.Equal(t, "my-token", secrets.Token)
+	assert.Equal(t, "custom-mount", secrets.MountPath)
+	assert.Equal(t, "custom-key", secrets.KeyName)
+	assert.Equal(t, "/tmp/audit", secrets.AuditRepoPath)
+}
+
+func TestBuildRecorderOption_NoVaultToken(t *testing.T) {
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	opt := buildRecorderOption(logger, nil)
 	assert.NotNil(t, opt, "option must not be nil even when Vault is unconfigured")
 
 	// Verify the option can be applied without panic.
@@ -145,15 +187,17 @@ func TestBuildRecorderOption_NoVaultToken(t *testing.T) {
 }
 
 func TestBuildRecorderOption_WithVaultToken_ValidPath(t *testing.T) {
-	t.Setenv("VAULT_TOKEN", "dev-root-token")
-	t.Setenv("CIC_VAULT_MOUNT", "transit")
-	t.Setenv("CIC_VAULT_KEY", "cic-dev-sign-key")
-	t.Setenv("CIC_AUDIT_REPO_PATH", t.TempDir())
+	secrets := &VaultSecrets{
+		Token:         "dev-root-token",
+		MountPath:     "transit",
+		KeyName:       "cic-dev-sign-key",
+		AuditRepoPath: t.TempDir(),
+	}
 
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
 
-	opt := buildRecorderOption(logger)
+	opt := buildRecorderOption(logger, secrets)
 	assert.NotNil(t, opt)
 
 	wasmConfig := cabinet.WasmManagerConfig{LRUCacheSize: 1, DefaultTimeoutSeconds: 1}
@@ -166,13 +210,17 @@ func TestBuildRecorderOption_WithVaultToken_ValidPath(t *testing.T) {
 }
 
 func TestBuildRecorderOption_WithVaultToken_InvalidPath(t *testing.T) {
-	t.Setenv("VAULT_TOKEN", "dev-root-token")
-	t.Setenv("CIC_AUDIT_REPO_PATH", "/dev/null/nope/nope")
+	secrets := &VaultSecrets{
+		Token:         "dev-root-token",
+		MountPath:     "transit",
+		KeyName:       "cic-dev-sign-key",
+		AuditRepoPath: "/dev/null/nope/nope",
+	}
 
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
 
-	opt := buildRecorderOption(logger)
+	opt := buildRecorderOption(logger, secrets)
 	assert.NotNil(t, opt, "option must not be nil even when git init fails")
 
 	wasmConfig := cabinet.WasmManagerConfig{LRUCacheSize: 1, DefaultTimeoutSeconds: 1}

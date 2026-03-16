@@ -200,18 +200,25 @@ func validateConfig(cfg *config) error {
 	return cabinet.ValidateSchema([]string{"relay.config@1.0"}, configMap)
 }
 
-// buildRecorderOption constructs a cabinet.WithRecorder option from environment variables.
-// Required env: VAULT_TOKEN (also read by vault SDK: VAULT_ADDR).
+// VaultSecrets holds Vault connection parameters loaded from the environment.
+type VaultSecrets struct {
+	Token         string
+	MountPath     string
+	KeyName       string
+	AuditRepoPath string
+}
+
+// loadSecretsFromVault reads Vault-related parameters from environment variables.
+// Returns nil if VAULT_TOKEN is not set — Vault is not configured, recording disabled (non-fatal).
+// Required env: VAULT_TOKEN (also used by the Vault SDK), VAULT_ADDR (Vault SDK).
 // Optional env: CIC_VAULT_MOUNT (default "transit"), CIC_VAULT_KEY (default "cic-dev-sign-key"),
 //
 //	CIC_AUDIT_REPO_PATH (default "/var/lib/cic-relay/audit").
-//
-// If VAULT_TOKEN is not set, returns a no-op option and logs a warning.
-func buildRecorderOption(logger *logrus.Logger) cabinet.CabinetOption {
-	vaultToken := os.Getenv("VAULT_TOKEN")
-	if vaultToken == "" {
+func loadSecretsFromVault(logger *logrus.Logger) *VaultSecrets {
+	token := os.Getenv("VAULT_TOKEN")
+	if token == "" {
 		logger.Warn("VAULT_TOKEN not set — ProofTrace recording disabled")
-		return cabinet.WithRecorder(nil)
+		return nil
 	}
 
 	mountPath := os.Getenv("CIC_VAULT_MOUNT")
@@ -227,13 +234,28 @@ func buildRecorderOption(logger *logrus.Logger) cabinet.CabinetOption {
 		auditRepoPath = "/var/lib/cic-relay/audit"
 	}
 
-	cryptoSvc, err := crypto.NewVaultCryptoService(mountPath, keyName)
+	return &VaultSecrets{
+		Token:         token,
+		MountPath:     mountPath,
+		KeyName:       keyName,
+		AuditRepoPath: auditRepoPath,
+	}
+}
+
+// buildRecorderOption constructs a cabinet.WithRecorder option from the provided VaultSecrets.
+// If secrets is nil (Vault not configured), returns a no-op option.
+func buildRecorderOption(logger *logrus.Logger, secrets *VaultSecrets) cabinet.CabinetOption {
+	if secrets == nil {
+		return cabinet.WithRecorder(nil)
+	}
+
+	cryptoSvc, err := crypto.NewVaultCryptoService(secrets.MountPath, secrets.KeyName)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to init Vault crypto service — ProofTrace recording disabled")
 		return cabinet.WithRecorder(nil)
 	}
 
-	gitRecorder, err := recorder.NewGitStateRecorder(auditRepoPath, cryptoSvc)
+	gitRecorder, err := recorder.NewGitStateRecorder(secrets.AuditRepoPath, cryptoSvc)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to init audit git recorder — ProofTrace recording disabled")
 		return cabinet.WithRecorder(nil)
@@ -241,9 +263,9 @@ func buildRecorderOption(logger *logrus.Logger) cabinet.CabinetOption {
 
 	wr := recorder.NewWorkflowRecorder(gitRecorder)
 	logger.WithFields(logrus.Fields{
-		"vault_mount":     mountPath,
-		"vault_key":       keyName,
-		"audit_repo_path": auditRepoPath,
+		"vault_mount":     secrets.MountPath,
+		"vault_key":       secrets.KeyName,
+		"audit_repo_path": secrets.AuditRepoPath,
 	}).Info("ProofTrace recording enabled")
 	return cabinet.WithRecorder(wr)
 }
@@ -286,7 +308,8 @@ func main() {
 		LRUCacheSize:          100, // Default cache size
 		DefaultTimeoutSeconds: 5,   // Default timeout
 	}
-	recorderOpt := buildRecorderOption(logger)
+	secrets := loadSecretsFromVault(logger)
+	recorderOpt := buildRecorderOption(logger, secrets)
 
 	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt)
 	if err != nil {
