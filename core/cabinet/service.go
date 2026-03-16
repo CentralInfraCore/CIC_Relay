@@ -229,7 +229,11 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 
 			if execErr == nil {
 				if errorResult != "null" && errorResult != "" {
-					execErr = fmt.Errorf("WASM function %s.%s returned error: %s", step.ComponentID, step.FunctionName, errorResult)
+					if isWasmTimeout(errorResult) {
+						execErr = fmt.Errorf("%w: WASM step %q exceeded time budget", ErrTimeout, step.Raw)
+					} else {
+						execErr = fmt.Errorf("WASM function %s.%s returned error: %s", step.ComponentID, step.FunctionName, errorResult)
+					}
 				} else {
 					var jsonResult interface{}
 					if err := json.Unmarshal([]byte(dataResult), &jsonResult); err != nil {
@@ -294,6 +298,15 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 
 func (c *cabinetService) Close(ctx context.Context) error {
 	return c.wasmManager.Close(ctx)
+}
+
+// isWasmTimeout checks whether a WASM errorResult string signals a timeout.
+// The cicwasm layer encodes timeouts as {"code":"TIMEOUT",...}.
+func isWasmTimeout(errorResult string) bool {
+	var v struct {
+		Code string `json:"code"`
+	}
+	return json.Unmarshal([]byte(errorResult), &v) == nil && v.Code == "TIMEOUT"
 }
 
 func (c *cabinetService) PutSchema(s *Schema) error {

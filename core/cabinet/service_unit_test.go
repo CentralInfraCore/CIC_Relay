@@ -296,6 +296,31 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 		mockCicWasmHost.AssertExpectations(t)
 	})
 
+	// --- Sub-test: WASM returns TIMEOUT error code ---
+	t.Run("wasm timeout returns ErrTimeout", func(t *testing.T) {
+		mockWasmManager := new(MockWasmManager)
+		mockCicWasmHost := new(MockCicWasmHost)
+
+		mockWasmManager.On("NewHostInstance", ctx, wasmMod.ID()).Return(mockCicWasmHost, nil).Once()
+		mockCicWasmHost.On("Process", ctx, wasmMod.ID(), "{\"input\":{\"msg\":\"test\"}}").
+			Return("", `{"code":"TIMEOUT","message":"wasm module execution timed out"}`).Once()
+		mockCicWasmHost.On("Close", ctx).Return(nil).Once()
+
+		svc := &cabinetService{modules: modStore, workflows: wfStore, wasmManager: mockWasmManager}
+
+		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.timeout", Version: "1.0"}, []string{"test.wasm@1.0.Process(input)"})
+		require.NoError(t, err)
+		svc.workflows.Put(wf)
+
+		payload := &SetPayload{WorkflowID: wf.ID(), Payload: map[string]any{"input": map[string]any{"msg": "test"}}}
+		_, err = svc.Setx(ctx, payload)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrTimeout, "timeout error result must wrap ErrTimeout")
+		mockWasmManager.AssertExpectations(t)
+		mockCicWasmHost.AssertExpectations(t)
+	})
+
 	// --- Sub-test: JSON marshaling of input fails ---
 	t.Run("json marshal fails", func(t *testing.T) {
 		// Channels cannot be marshaled to JSON.
