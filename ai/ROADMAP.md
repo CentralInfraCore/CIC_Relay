@@ -236,33 +236,33 @@ Ez a fájl az AI-támogatott roadmap állapota.
 * **DoD**: Egy új YAML fájl commitolása az infra repóba automatikusan eredményez egy működő, hitelesített új hostot/modult a rendszerben, emberi beavatkozás nélkül.
 * **Részfeladatok (checklist):**
     *   [x] **M16.1: Watcher**: Infra repo figyelés implementálása.
-    *   [ ] **M16.2: Bootstrap**: Token generálás implementálása.
-    *   [ ] **M16.3: Lifecycle**: Onboarding/Offboarding logika implementálása.
+    *   [x] **M16.2: Bootstrap**: HMAC-SHA256 token generálás, 24h TTL, recorder audit. (`operator/bootstrap.go`)
+    *   [x] **M16.3: Lifecycle**: OnboardHost + OffboardHost, structured logrus audit. (`operator/lifecycle.go`)
 
 ---
 
 ## Jelenlegi állapot (STATE)
 
-| Milestone | State   | Megjegyzés |
-|-----------| ------- | ---------- |
+| Milestone | State       | Megjegyzés |
+|-----------|-------------|------------|
 | M-Konfig  | **Done**    | Séma-vezérelt önvalidáció kész (M8.1 + M8.2) |
-| M0        | Done    | |
-| M1        | Done    | |
+| M0        | Done        | |
+| M1        | Done        | |
 | M2        | **Done**    | ExecutionGraph, schema validáció, ProofTrace kész |
-| M3        | Partial | |
-| M4        | Partial | M4.3 kész, M4.4 (schema-alapú limit konfig) nyitott |
+| M3        | Partial     | PKI verify (`pki_verify.go`) kész; bootstrap.go wiring folyamatban |
+| M4        | **Done**    | M4.4 kész: CIC_WASM_EXEC_TIMEOUT_SECONDS + range validáció |
 | M5        | **Done**    | M5.2 uniform JSON error kész, minden M5 subtask zárva |
 | M6        | **Done**    | M6.5 E2E smoke tests kész, minden M6 subtask zárva |
-| M7        | Partial | M7.1 kész; M7.2 CI (verify.yml-ben megvan), M7.3-M7.4 nyitott |
+| M7        | **Done**    | M7.1-M7.4 kész: symbols drift, vet/staticcheck, per-pkg thresholds, HTML coverage |
 | M8        | **Done**    | M8.1+M8.2+M8.3 kész — env prefix, dogfooding, secrets separation |
-| M9        | Missing | |
-| M10       | Missing | |
-| M11       | Partial | |
+| M9        | Partial     | `-trimpath` megvan, README frissítve; SBOM és release signing hiányzik |
+| M10       | **Done**    | Rate limiter (per-IP), concurrent cap, slow-loris timeouts implementálva |
+| M11       | **Done**    | UpstreamSource kész: HTTP GET, JSON/YAML auto-detect, retry/backoff |
 | M12       | **Done**    | WorkflowRecorder + Setx összekötés kész |
 | M13       | **Done**    | Dev Vault bootstrap + prod recorder wiring kész |
-| M14       | Partial | |
-| M15       | Partial | |
-| M16       | Partial | |
+| M14       | Partial     | |
+| M15       | Partial     | |
+| M16       | **Done**    | M16.1 Watcher + M16.2 Bootstrap + M16.3 Lifecycle kész |
 
 ---
 

@@ -3,7 +3,14 @@ package operator
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+
+	"centralrelay/core/nexus/types"
 )
 
 // EventType defines the type of change detected in the infrastructure repo.
@@ -30,14 +37,29 @@ type Watcher interface {
 
 // Operator manages the lifecycle of infrastructure entities based on Watcher events.
 type Operator struct {
-	Watcher Watcher
-	// TODO: Add dependencies for Bootstrap/Vault interaction
+	Watcher      Watcher
+	bootstrapper *Bootstrapper
+	lifecycle    *LifecycleManager
+	logger       *logrus.Logger
 }
 
-// NewOperator creates a new Operator.
+// NewOperator creates a basic Operator without lifecycle support.
+// For full bootstrap/lifecycle wiring use NewOperatorWithLifecycle.
 func NewOperator(watcher Watcher) *Operator {
 	return &Operator{
 		Watcher: watcher,
+		logger:  logrus.New(),
+	}
+}
+
+// NewOperatorWithLifecycle creates an Operator with full bootstrap and lifecycle support.
+// b and lm may be nil — operations are skipped with a WARN log.
+func NewOperatorWithLifecycle(watcher Watcher, b *Bootstrapper, lm *LifecycleManager, logger *logrus.Logger) *Operator {
+	return &Operator{
+		Watcher:      watcher,
+		bootstrapper: b,
+		lifecycle:    lm,
+		logger:       logger,
 	}
 }
 
@@ -52,10 +74,15 @@ func (o *Operator) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case event := <-events:
+		case event, ok := <-events:
+			if !ok {
+				return nil
+			}
 			if err := o.handleEvent(ctx, event); err != nil {
-				// Log error but continue processing other events
-				fmt.Printf("Error handling event %s %s: %v\n", event.Type, event.FilePath, err)
+				o.logger.WithError(err).WithFields(logrus.Fields{
+					"event_type": event.Type,
+					"file":       event.FilePath,
+				}).Warn("error handling operator event")
 			}
 		}
 	}
@@ -73,24 +100,48 @@ func (o *Operator) handleEvent(ctx context.Context, event Event) error {
 	}
 }
 
-// onApply handles creation or update of an entity (Onboarding).
+// onApply handles creation or update of a Host entity.
+// Parses the YAML content for Kind=Host, generates a bootstrap token,
+// and onboards the host via LifecycleManager.
 func (o *Operator) onApply(ctx context.Context, event Event) error {
-	// TODO:
-	// 1. Parse the content (YAML) to identify Kind (Host/Module).
-	// 2. Generate Bootstrap Token / Certificate via Vault.
-	// 3. Configure Policy.
-	fmt.Printf("Applying %s\n", event.FilePath)
-	return nil
+	if o.bootstrapper == nil || o.lifecycle == nil {
+		o.logger.WithField("file", event.FilePath).Warn("operator lifecycle not configured — skipping apply")
+		return nil
+	}
+
+	var base types.BaseComponent
+	if err := yaml.Unmarshal(event.Content, &base); err != nil {
+		return fmt.Errorf("parse component YAML %s: %w", event.FilePath, err)
+	}
+	if base.Kind != "Host" {
+		o.logger.WithFields(logrus.Fields{
+			"kind": base.Kind,
+			"file": event.FilePath,
+		}).Debug("skipping non-Host apply event")
+		return nil
+	}
+
+	hostID := base.Metadata.Name
+	tok, err := o.bootstrapper.BootstrapHost(ctx, HostDefinition{
+		HostID:   hostID,
+		Hostname: hostID,
+	})
+	if err != nil {
+		return fmt.Errorf("bootstrap host %q: %w", hostID, err)
+	}
+	return o.lifecycle.OnboardHost(ctx, tok)
 }
 
-// onDelete handles deletion of an entity (Offboarding).
+// onDelete handles deletion of a Host entity.
+// Derives the hostID from the FilePath stem and offboards the host.
 func (o *Operator) onDelete(ctx context.Context, event Event) error {
-	// TODO:
-	// 1. Identify the entity from the FilePath.
-	// 2. Revoke Certificate.
-	// 3. Delete Policy.
-	fmt.Printf("Deleting %s\n", event.FilePath)
-	return nil
+	if o.lifecycle == nil {
+		o.logger.WithField("file", event.FilePath).Warn("operator lifecycle not configured — skipping delete")
+		return nil
+	}
+
+	hostID := strings.TrimSuffix(filepath.Base(event.FilePath), filepath.Ext(event.FilePath))
+	return o.lifecycle.OffboardHost(ctx, hostID)
 }
 
 // PollingWatcher implements Watcher by periodically scanning a directory.

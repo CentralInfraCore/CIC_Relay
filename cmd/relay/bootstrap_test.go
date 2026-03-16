@@ -814,3 +814,114 @@ func TestRegisterNativeComponents_Errors(t *testing.T) {
 		mockCabinet.AssertExpectations(t)
 	})
 }
+
+// buildLoadedPKIAssets creates PKIAssets with TrustStoreLoaded=true using the
+// test root-ca and company-ca from testdata/pki/trust.
+func buildLoadedPKIAssets(t *testing.T) *PKIAssets {
+	t.Helper()
+	logger := newDiscardLogger()
+	rootPEM, err := fs.ReadFile(getSubFS(t, "pki/trust"), "root-ca.pem")
+	require.NoError(t, err)
+	interPEM, err := fs.ReadFile(getSubFS(t, "pki/trust/companies"), "company-ca.pem")
+	require.NoError(t, err)
+	mockFS := fstest.MapFS{
+		"root.pem":  {Data: rootPEM},
+		"inter.pem": {Data: interPEM},
+	}
+	assets, err := loadPKIAssets(mockFS, ".", logger)
+	require.NoError(t, err)
+	require.True(t, assets.TrustStoreLoaded, "test PKI trust store must be loaded")
+	return assets
+}
+
+// buildModuleFS builds a fstest.MapFS for a single module with an optional PEM cert.
+func buildModuleFS(t *testing.T, wasmCode []byte, pemData []byte) (fstest.MapFS, string) {
+	t.Helper()
+	hasher := sha256.New()
+	hasher.Write(wasmCode)
+	digest := hex.EncodeToString(hasher.Sum(nil))
+	yamlContent := fmt.Sprintf(`apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: pki.test
+  version: "1.0"
+wasmDigest: %q
+wasmSize: %d
+`, digest, len(wasmCode))
+
+	m := fstest.MapFS{
+		"pki_test.yaml": {Data: []byte(yamlContent)},
+		"pki_test.wasm": {Data: wasmCode},
+	}
+	if pemData != nil {
+		m["pki_test.pem"] = &fstest.MapFile{Data: pemData}
+	}
+	return m, "pki_test.yaml"
+}
+
+func TestLoadModule_PKIVerification_Valid(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	eeCert, err := fs.ReadFile(getSubFS(t, "pki/signers/sources/module"), "ee.pem")
+	require.NoError(t, err)
+
+	wasmCode := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+	moduleFS, yamlPath := buildModuleFS(t, wasmCode, eeCert)
+	yamlContent := moduleFS[yamlPath].Data
+	pkiAssets := buildLoadedPKIAssets(t)
+
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, pkiAssets, int64(16*1024*1024), logger)
+	require.NoError(t, err, "valid cert should pass PKI verification")
+	assert.Contains(t, logBuf.String(), "verified", "should log verified outcome")
+}
+
+func TestLoadModule_PKIVerification_WrongEKU(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	wrongEKUCert, err := fs.ReadFile(getSubFS(t, "pki/signers/negatives/client-only"), "ee.pem")
+	require.NoError(t, err)
+
+	wasmCode := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+	moduleFS, yamlPath := buildModuleFS(t, wasmCode, wrongEKUCert)
+	yamlContent := moduleFS[yamlPath].Data
+	pkiAssets := buildLoadedPKIAssets(t)
+	logger := newDiscardLogger()
+
+	err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, pkiAssets, int64(16*1024*1024), logger)
+	require.Error(t, err, "wrong EKU cert should be rejected")
+	assert.Contains(t, err.Error(), "PKI verification failed")
+}
+
+func TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	eeCert, err := fs.ReadFile(getSubFS(t, "pki/signers/sources/module"), "ee.pem")
+	require.NoError(t, err)
+
+	wasmCode := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+	moduleFS, yamlPath := buildModuleFS(t, wasmCode, eeCert)
+	yamlContent := moduleFS[yamlPath].Data
+
+	emptyPKI := &PKIAssets{
+		Roots:         x509.NewCertPool(),
+		Intermediates: x509.NewCertPool(),
+	}
+
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, emptyPKI, int64(16*1024*1024), logger)
+	require.NoError(t, err, "should load without error when trust store is not loaded")
+	assert.Contains(t, logBuf.String(), "skipped", "should log skipped outcome")
+}
