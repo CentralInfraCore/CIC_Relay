@@ -339,7 +339,7 @@ entries:
   # --- Sprint 4 — Features ---
 
   - task: "ci-quality-gates"
-    status: todo
+    status: done
     priority: 20
     milestone: M7.2-M7.4
     prompt: |
