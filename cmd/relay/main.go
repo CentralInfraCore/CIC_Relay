@@ -30,14 +30,18 @@ var (
 )
 
 // test seam: unit tesztben felülírható
-var listenAndServe = http.ListenAndServe
+var listenAndServe = func(srv *http.Server) error {
+	return srv.ListenAndServe()
+}
 
 // config holds the application's configuration.
 type config struct {
-	MaxJSONInputSize      int64
-	MaxWASMModuleSize     int64
-	HashingTimeout        time.Duration
+	MaxJSONInputSize       int64
+	MaxWASMModuleSize      int64
+	HashingTimeout         time.Duration
 	WasmExecTimeoutSeconds int
+	RateLimitRPS           int
+	MaxConcurrentRequests  int
 }
 
 // loadConfig loads configuration from environment variables.
@@ -47,6 +51,8 @@ func loadConfig() (*config, error) {
 		MaxWASMModuleSize:      cabinet.MaxWASMModuleSize, // Single source: cabinet package constant
 		HashingTimeout:         5 * time.Second,           // Default to 5 seconds
 		WasmExecTimeoutSeconds: 30,                        // Default WASM execution timeout
+		RateLimitRPS:           100,                       // Default rate limit
+		MaxConcurrentRequests:  50,                        // Default concurrent cap
 	}
 
 	if val := os.Getenv("CIC_MAX_JSON_INPUT_SIZE"); val != "" {
@@ -82,6 +88,28 @@ func loadConfig() (*config, error) {
 			return nil, fmt.Errorf("invalid value for CIC_WASM_EXEC_TIMEOUT_SECONDS: must be >= 1, got %d", secs)
 		}
 		cfg.WasmExecTimeoutSeconds = secs
+	}
+
+	if val := os.Getenv("CIC_RATE_LIMIT_RPS"); val != "" {
+		rps, err := strconv.Atoi(val)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for CIC_RATE_LIMIT_RPS: %w", err)
+		}
+		if rps < 1 {
+			return nil, fmt.Errorf("invalid value for CIC_RATE_LIMIT_RPS: must be >= 1, got %d", rps)
+		}
+		cfg.RateLimitRPS = rps
+	}
+
+	if val := os.Getenv("CIC_MAX_CONCURRENT_REQUESTS"); val != "" {
+		max, err := strconv.Atoi(val)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for CIC_MAX_CONCURRENT_REQUESTS: %w", err)
+		}
+		if max < 1 {
+			return nil, fmt.Errorf("invalid value for CIC_MAX_CONCURRENT_REQUESTS: must be >= 1, got %d", max)
+		}
+		cfg.MaxConcurrentRequests = max
 	}
 
 	return cfg, nil
@@ -228,12 +256,20 @@ func validateConfig(cfg *config) error {
 	if cfg.WasmExecTimeoutSeconds < 1 {
 		return fmt.Errorf("wasm_exec_timeout_seconds must be >= 1, got %d", cfg.WasmExecTimeoutSeconds)
 	}
+	if cfg.RateLimitRPS < 1 {
+		return fmt.Errorf("rate_limit_rps must be >= 1, got %d", cfg.RateLimitRPS)
+	}
+	if cfg.MaxConcurrentRequests < 1 {
+		return fmt.Errorf("max_concurrent_requests must be >= 1, got %d", cfg.MaxConcurrentRequests)
+	}
 	configMap := map[string]interface{}{
-		"$schema":                    "relay.config@1.0",
-		"max_json_input_size":        cfg.MaxJSONInputSize,
-		"max_wasm_module_size":       cfg.MaxWASMModuleSize,
-		"hashing_timeout":            cfg.HashingTimeout.String(),
-		"wasm_exec_timeout_seconds":  cfg.WasmExecTimeoutSeconds,
+		"$schema":                   "relay.config@1.0",
+		"max_json_input_size":       cfg.MaxJSONInputSize,
+		"max_wasm_module_size":      cfg.MaxWASMModuleSize,
+		"hashing_timeout":           cfg.HashingTimeout.String(),
+		"wasm_exec_timeout_seconds": cfg.WasmExecTimeoutSeconds,
+		"rate_limit_rps":            cfg.RateLimitRPS,
+		"max_concurrent_requests":   cfg.MaxConcurrentRequests,
 	}
 	return cabinet.ValidateSchema([]string{"relay.config@1.0"}, configMap)
 }
@@ -310,8 +346,16 @@ func buildRecorderOption(logger *logrus.Logger, secrets *VaultSecrets) cabinet.C
 
 // run: külön függvény, hogy unit tesztben ne main()-t kelljen hívni
 func run(port string, logger *logrus.Logger, s *relayServer) error {
-	logger.Printf("✅ Central relay API started on %s", port) // This will use logrus's Printf
-	return listenAndServe(port, newMux(s))
+	logger.Printf("✅ Central relay API started on %s", port)
+	srv := &http.Server{
+		Addr:              port,
+		Handler:           buildHandler(s),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+	return listenAndServe(srv)
 }
 
 func main() {
