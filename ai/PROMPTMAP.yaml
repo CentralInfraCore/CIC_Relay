@@ -536,7 +536,7 @@ entries:
   # --- Sprint 6 ---
 
   - task: "source-pinned-chain-hash"
-    status: todo
+    status: done
     priority: 29
     milestone: M17
     prompt: |
@@ -560,7 +560,7 @@ entries:
     accept: make test && make verify
 
   - task: "polling-watcher-state-diff"
-    status: todo
+    status: done
     priority: 30
     milestone: M18
     prompt: |
@@ -585,7 +585,7 @@ entries:
     accept: make test
 
   - task: "pki-verified-path-e2e"
-    status: todo
+    status: done
     priority: 32
     milestone: M3
     prompt: |
@@ -608,7 +608,7 @@ entries:
     accept: make test
 
   - task: "ci-build-module-schema"
-    status: todo
+    status: done
     priority: 31
     milestone: M19
     prompt: |
