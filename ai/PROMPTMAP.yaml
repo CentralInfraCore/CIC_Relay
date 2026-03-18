@@ -488,7 +488,7 @@ entries:
     accept: make test
 
   - task: "isolation-subprocess-ipc"
-    status: todo
+    status: done
     priority: 27
     milestone: M15
     prompt: |

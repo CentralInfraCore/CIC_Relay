@@ -261,7 +261,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M12       | **Done**    | WorkflowRecorder + Setx összekötés kész |
 | M13       | **Done**    | Dev Vault bootstrap + prod recorder wiring kész |
 | M14       | **Done**    | sync integrációs tesztek megvannak, coverage 83.3% (≥70%) |
-| M15       | Partial     | |
+| M15       | **Done**    | SubprocessWorker IPC + RunWorkerLoop + round-trip teszt; --mode=module-worker flag |
 | M16       | **Done**    | M16.1-M16.3 kész + M16.4: Operator bekötve main.go-ba (CIC_INFRA_REPO_PATH) |
 
 ---
