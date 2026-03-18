@@ -166,20 +166,29 @@ Ez a fájl az AI-támogatott roadmap állapota.
         *   [x] **Feladat**: A külső forrásból (pl. Vault) származó titkok betöltését egy dedikált, a fájlrendszer-alapú komponens-betöltéstől független függvénybe kell szervezni.
         *   [x] **DoD**: `loadSecretsFromVault(logger) *VaultSecrets` — kizárólag env var olvasás + Vault konfig aggregálása. `buildRecorderOption(logger, secrets)` — kapja a titkoket paraméterként. `loadInstalledComponents` nem tartalmaz titokkezelési logikát.
 
-### M9 — Operations Safety (Circuit-Breaker, Rate-Limit)
-* **Állapot:** Hiányzik
-* **Feladatok:** reprodukálható build (`-trimpath`, statikus bináris), SBOM generálás, artefaktok: bináris+hash+aláírás. README.md frissítve (cél, futtatás, config, limits, hibatérkép, health/ready). Operator guide (trust store rotáció, kulcsforgatás).
-* **DoD**: új üzemeltető 15 perc alatt beállítja, artefaktok auditálhatók.
-* **Megjegyzés:** Semmilyen Circuit-Breaker vagy Rate-Limiter modul, se limiter nincs a kódban.
+### M9 — Operations Safety (Circuit-Breaker, Rate-Limit) + Release Artifact Chain
+* **Állapot:** Done
+* **Feladatok:** Per-IP rate limiter (token bucket), concurrent request cap (semaphore), slow-loris timeouts; reprodukálható build (`-trimpath`, statikus bináris), SHA256 + CycloneDX SBOM.
+* **DoD**: `make release && make release-verify` zöld; rate limiter + concurrent cap tesztelve; `CIC_RATE_LIMIT_RPS`, `CIC_MAX_CONCURRENT_REQUESTS` konfigurálható.
+* **Részfeladatok (checklist):**
+    *   [x] Per-IP token bucket rate limiter (429 Too Many Requests)
+    *   [x] Concurrent request cap semaphore (503 Service Unavailable)
+    *   [x] Slow-loris védelem (ReadHeaderTimeout/ReadTimeout/WriteTimeout/IdleTimeout)
+    *   [x] `make release`: CGO_ENABLED=0, linux/amd64, -trimpath, -s -w → `dist/relay`
+    *   [x] `dist/relay.sha256` + `make release-verify`
+    *   [x] CycloneDX SBOM → `dist/sbom.json`
+    *   [x] `dist/` bejegyezve `.gitignore`-ba
 
 ### M10 — Enterprise Rollout Features
-* **Állapot:** Hiányzik
-* **Feladatok:** request-body cap + early discard, slow-loris védelem (idle timeout), párhuzamossági limit sapka a determinisztika megtartásával.
-* **DoD**: terhelési próba alatt is stabil memóriahasználat és latency.
-* **Megjegyzés:** A haladó biztonsági és üzemeltetési funkciók (licenc, mTLS, multi-tenant) nincsenek implementálva.
+* **Állapot:** Done
+* **Feladatok:** request-body cap, slow-loris védelem, párhuzamossági limit. (M9-be olvadt — a rate limiter + slow-loris + concurrent cap ott implementálva.)
+* **Részfeladatok (checklist):**
+    *   [x] Request-body size cap (M4.1-M4.2 részeként)
+    *   [x] Slow-loris védelem (M9-ben: ReadHeaderTimeout=5s, ReadTimeout=30s)
+    *   [x] Concurrent cap (M9-ben: semaphore, CIC_MAX_CONCURRENT_REQUESTS)
 
 ### M11 — IaC Feldolgozás és Gráf Építés (Nexus IaC)
-* **Állapot:** Részben kész
+* **Állapot:** Done
 * **Feladatok:** A rendszer bemenetét képező Infrastruktúra-leíró (IaC) adatok beolvasása, validálása és egy memóriabeli gráf-modellé alakítása, függetlenül attól, hogy az adat fájlrendszerből vagy API-n keresztül érkezik.
 * **DoD**: A rendszer képes mind fájlrendszerből, mind (mockolt) API válaszból felépíteni ugyanazt a gráfot. A forrás típusa konfigurálható.
 * **Részfeladatok (checklist):**
@@ -212,32 +221,35 @@ Ez a fájl az AI-támogatott roadmap állapota.
     *   [x] **M13.6: Produkciós Vault bekötés**: `WithRecorder` functional option a `cabinet` csomagban. `buildRecorderOption` a `main.go`-ban: env változókból (`VAULT_TOKEN`, `CIC_VAULT_MOUNT`, `CIC_VAULT_KEY`, `CIC_AUDIT_REPO_PATH`) `VaultCryptoService`+`GitStateRecorder`+`WorkflowRecorder` összerakva. VAULT_TOKEN hiánya non-fatal (WARN + nil recorder).
 
 ### M14 — Központi Audit Szinkronizáció (Nexus Sync)
-* **Állapot:** Részben kész
+* **Állapot:** Done
 * **Feladatok:** A lokális, részletes hibakeresési adatok tömörítése és biztonságos továbbítása egy központi audit repóba.
 * **DoD**: A központi Git repóban megjelennek a napi összesített commitok. A lokális repóban a régi branchek törlődnek (prune).
 * **Részfeladatok (checklist):**
     *   [x] **M14.1: Squash Logika**: Napi tömörítés implementálása.
     *   [x] **M14.2: Push Logika**: Központi repóba küldés implementálása.
     *   [x] **M14.3: Prune**: Takarítási logika implementálása.
+    *   [x] **M14.4: Integrációs tesztek**: 2 ephemeral git repo (t.TempDir()), squash → push → prune round-trip; coverage ≥ 70% (83.3% elért).
 
 ### M15 — Többrétegű Biztonsági Szeparáció (Nexus Isolation)
-* **Állapot:** Részben kész
+* **Állapot:** Done
 * **Feladatok:** A "Zero Trust" elv érvényesítése a titkosítási folyamatban a jogosultságok szétválasztásával.
 * **DoD**: A rendszer három különálló identitást használ a műveletekhez. A plaintext adat soha nem jelenik meg a koordinátor processz memóriájában, csak a végponti izolált környezetben.
 * **Részfeladatok (checklist):**
     *   [x] **M15.1: Identitás Definíciók**: Host/Relay/Module identity struktúrák.
     *   [x] **M15.2: Koordinátor**: Folyamatvezérlés implementálása.
-    *   [x] **M15.3: IPC**: Kommunikációs csatorna implementálása.
-    *   [x] **M15.4: Workerek**: Decrypt workerek implementálása.
+    *   [x] **M15.3: IPC**: Kommunikációs csatorna implementálása. `IPCRequest/IPCResponse` newline-delimited JSON; `RunWorkerLoop` (echo mode nil worker-rel).
+    *   [x] **M15.4: Workerek**: `SubprocessWorker` — `os.Executable()` + `--mode=module-worker`; `NewSubprocessWorker()` + `newSubprocessWorkerWithExe()` (test helper). Round-trip integrációs teszt: test binary echo mode-ban.
+    *   [x] **M15.5: main.go bekötés**: `--mode=module-worker` flag → `RunWorkerLoop` indítás, HTTP listener nincs.
 
 ### M16 — GitOps-vezérelt Életciklus (Nexus Operator)
-* **Állapot:** Részben kész
+* **Állapot:** Done
 * **Feladatok:** A rendszer entitásainak (hostok, modulok) dinamikus, automatizált kezelése egy központi "Infrastruktúra Állapot Repó" alapján.
 * **DoD**: Egy új YAML fájl commitolása az infra repóba automatikusan eredményez egy működő, hitelesített új hostot/modult a rendszerben, emberi beavatkozás nélkül.
 * **Részfeladatok (checklist):**
     *   [x] **M16.1: Watcher**: Infra repo figyelés implementálása.
     *   [x] **M16.2: Bootstrap**: HMAC-SHA256 token generálás, 24h TTL, recorder audit. (`operator/bootstrap.go`)
     *   [x] **M16.3: Lifecycle**: OnboardHost + OffboardHost, structured logrus audit. (`operator/lifecycle.go`)
+    *   [x] **M16.4: main.go wiring**: `CIC_INFRA_REPO_PATH` → `PollingWatcher(30s)` + `OperatorWithLifecycle` goroutine. `CIC_OPERATOR_SECRET` hiánya Fatal ha repo be van állítva. Backward-compatible (WARN ha nincs `CIC_INFRA_REPO_PATH`).
 
 ---
 
@@ -263,6 +275,48 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M14       | **Done**    | sync integrációs tesztek megvannak, coverage 83.3% (≥70%) |
 | M15       | **Done**    | SubprocessWorker IPC + RunWorkerLoop + round-trip teszt; --mode=module-worker flag |
 | M16       | **Done**    | M16.1-M16.3 kész + M16.4: Operator bekötve main.go-ba (CIC_INFRA_REPO_PATH) |
+| M17       | Tervezett   | Source-pinned chain_hash — ProofTrace SourceDigest (p29) |
+| M18       | Tervezett   | PollingWatcher state diff — CREATE/UPDATE/DELETE detektálás (p30) |
+| M19       | Tervezett   | CI build modul — native Go, make exec, artifact digest (p31) |
+
+### M17 — Source-Pinned ProofTrace (Chain Hash Integritás)
+* **Állapot:** Tervezett
+* **Fő cél:** A `ProofTrace` `chain_hash` első eleme legyen a forrás hash (git HEAD commit hash vagy explicit `source_digest`). Ez biztosítja, hogy a hash-lánc a forráskódtól az output-ig folytonos — a CI use-case alappillére.
+* **Részfeladatok (checklist):**
+    *   [ ] **M17.1**: `ProofTrace` struktúra bővítése `SourceDigest string` mezővel.
+    *   [ ] **M17.2**: `computeChainHash` frissítése: `source_digest` legyen az első összetevő.
+    *   [ ] **M17.3**: `SetPayload` opcionális `SourceDigest` mező (caller injektálja — git HEAD vagy build ID).
+    *   [ ] **M17.4**: `cmd/relay/main.go`: BuildID/CommitHash átadása mint source_digest a `Setx`-be.
+    *   [ ] **M17.5**: Tesztek + golden fájl frissítés (`make verify`).
+
+### M18 — PollingWatcher State Diff
+* **Állapot:** Tervezett
+* **Fő cél:** A `PollingWatcher` jelenleg csak skeleton — nem detektál változást. Implementálandó a state tracking diff (CREATE/UPDATE/DELETE események) a GitOps Operator production-ready működéséhez.
+* **Részfeladatok (checklist):**
+    *   [ ] **M18.1**: Fájl snapshot struktúra (path → content hash map).
+    *   [ ] **M18.2**: Diff logika: előző snapshot vs. aktuális scan → CREATE/UPDATE/DELETE esemény.
+    *   [ ] **M18.3**: Első futásnál minden meglévő fájl CREATE eseményt generál.
+    *   [ ] **M18.4**: Tesztek: tmpdir + fájl hozzáadás/módosítás/törlés → elvárt event szekvencia.
+
+### M19 — CI Build Modul (Relay-on-Relay CI)
+* **Állapot:** Tervezett
+* **Fő cél:** Első native Go modul a CI use-case-hez: build spec schema, Docker exec wrapper, artifact digest → ProofTrace bekötés.
+* **Részfeladatok (checklist):**
+    *   [ ] **M19.1**: `ci.build` schema: `build_target`, `docker_image`, `make_target`, `artifact_output`.
+    *   [ ] **M19.2**: Native Go modul: `core/modules/cibuild/` — Docker API hívás, stdout/stderr capture.
+    *   [ ] **M19.3**: Artifact digest (SHA256 of output binary) visszaadása mint step output.
+    *   [ ] **M19.4**: Integrációs teszt: mock Docker exec, artifact → ProofTrace step output hash.
+
+---
+
+## Jelenlegi sprint (Sprint 6)
+
+| Task | Milestone | Leírás |
+|------|-----------|--------|
+| p29  | M17       | source-pinned chain_hash — ProofTrace SourceDigest bekötés |
+| p30  | M18       | PollingWatcher state diff implementáció |
+| p31  | M19       | CI build modul schema + native Go skeleton |
+| p32  | M3        | PKI verified path e2e tesztek — teljes lánc, wrong-EKU/wrong-chain negative case-ek |
 
 ---
 

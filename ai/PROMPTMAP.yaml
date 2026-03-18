@@ -532,3 +532,103 @@ entries:
       - cmd/relay/main_test.go
       - config/relay.config.schema.yaml
     accept: make test
+
+  # --- Sprint 6 ---
+
+  - task: "source-pinned-chain-hash"
+    status: todo
+    priority: 29
+    milestone: M17
+    prompt: |
+      A `ProofTrace` `chain_hash` jelenleg csak a step output hash-eket láncolja.
+      A CI use-case-hez szükséges, hogy a chain_hash első összetevője a forrás digest legyen,
+      biztosítva a forrástól az output-ig folytonos kriptográfiai láncot.
+      Feladatok:
+        1. `ProofTrace` struktúra: adj hozzá `SourceDigest string` mezőt (json:"source_digest")
+        2. `computeChainHash(sourceDigest string, steps []ProofTraceStep) string`:
+           a hash input = sourceDigest + step output hash-ek konkatenációja
+        3. `SetPayload`: adj hozzá opcionális `SourceDigest string` mezőt
+           (caller injektálja — git HEAD hash, BuildID, vagy üres string ha nem ismert)
+        4. `Setx`: adja át a SetPayload.SourceDigest-et a computeChainHash-nek
+        5. `cmd/relay/main.go`: adja át a `CommitHash` build variablet mint SourceDigest
+           a SetPayload-be (HTTP handler szinten)
+        6. Golden tesztek frissítése ha szükséges (`make verify`)
+      DoD: `make test` zöld + `make verify` zöld; a ProofTrace JSON tartalmaz `source_digest` mezőt.
+    tests:
+      - core/cabinet/proof_trace_test.go
+      - core/cabinet/service_unit_test.go
+    accept: make test && make verify
+
+  - task: "polling-watcher-state-diff"
+    status: todo
+    priority: 30
+    milestone: M18
+    prompt: |
+      A `core/nexus/operator/watcher.go` `PollingWatcher.Watch()` metódusa jelenleg
+      skeleton — a TODO komment szerint nincs state tracking, nem detektál változást.
+      Implementáld a state diff logikát:
+        1. Fájl snapshot struktúra: `map[string]string` (path → SHA256 content hash)
+        2. `scanDir(rootPath string) (map[string]string, error)`: rekurzív directory scan,
+           minden fájl content hash-e SHA256-tal számolva (a content-ből, nem a path-ból)
+        3. Diff logika:
+           - Első tick: minden fájl → CREATE esemény
+           - Következő tickek: előző snapshot vs. aktuális →
+             * Új fájl: CREATE
+             * Megváltozott hash: UPDATE (content is bekerül az Event-be)
+             * Eltűnt fájl: DELETE (Content = nil)
+        4. `Event.Content`: fájl tartalma ([]byte) CREATE/UPDATE esetén; nil DELETE esetén
+        5. A snapshot az előző tickről megmarad a goroutine-ban (state a goroutine-ban él)
+      Ne változtass a `Watcher` interfészen és az `Event` struktúrán (backward-compatible).
+      Tesztek: tmpdir + fájl create/update/delete → elvárt event szekvencia.
+    tests:
+      - core/nexus/operator/watcher_test.go
+    accept: make test
+
+  - task: "pki-verified-path-e2e"
+    status: todo
+    priority: 32
+    milestone: M3
+    prompt: |
+      A `bootstrap.go` PKI wiring kész (`VerifyCertificateChain` hívva ha `TrustStoreLoaded`),
+      de nincs teszt ami a teljes verified path-on halad végig (jelenleg csak a `skipped` ág van tesztelve).
+      A testdata PKI infrastruktúra megvan (`testdata/pki/`). Feladatok:
+        1. `cmd/relay/bootstrap_test.go`: adj hozzá tesztet `TestLoadModule_PKIVerified` névvel
+           - Betölti a `testdata/pki/trust/root-ca.pem` root CA-t
+           - Betölti az intermediate CA-t (ha van)
+           - Egy érvényes EKU=CodeSigning leaf cert-tel aláírt modult tölt be
+           - Elvárt: outcome="verified" log + modul betöltve (nem rejected)
+        2. `TestLoadModule_PKIRejected_WrongEKU`: wrong EKU cert → `PKI verification failed` error
+        3. `TestLoadModule_PKIRejected_WrongChain`: idegen root CA → rejected
+        4. Ha a meglévő testdata cert-ek nem alkalmasak (pl. lejárt), regeneráld a
+           releváns cert-eket `crypto/x509`-cel in-process (ne shell script).
+      Ne változtass a `pki_verify.go` vagy `bootstrap.go` logikán — csak tesztek.
+      DoD: `make test` zöld; a verified path lefedett; coverage a `cmd/relay` package-ben nő.
+    tests:
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  - task: "ci-build-module-schema"
+    status: todo
+    priority: 31
+    milestone: M19
+    prompt: |
+      Hozz létre egy `ci.build` native Go modult a CI use-case első lépéseként.
+      Ez a modul egy build parancsot futtat (make target) és visszaadja az artifact digestjét.
+        1. Schema: `config/schemas/ci.build.schema.yaml` (Kind: Schema)
+           Mezők: `build_target` (string, required), `docker_image` (string, optional),
+           `make_target` (string, default "build"), `artifact_output` (string, required)
+        2. Native Go modul: `core/modules/cibuild/cibuild.go`
+           - `Execute(ctx, input interface{}) (interface{}, error)` — a cabinet NativeFunc signature-nek megfelelő
+           - Futtat: `exec.CommandContext(ctx, "make", input.make_target)`
+           - Output: `{"artifact_path": "...", "artifact_digest": "<sha256>", "exit_code": 0}`
+           - Timeout: 5 perc (context-alapú)
+           - A parancs stdout/stderr logolva (logrus INFO/WARN)
+        3. Regisztráció: `cmd/relay/bootstrap.go` `registerNativeComponents()`-ben
+           registrálja a `ci.build@1.0` modult a `build` function névvel
+        4. Unit tesztek: mock exec (testable command injection), artifact digest számítás
+      Ne indíts valódi Docker-t — a modul csak make-t hív, a Docker a make target dolga.
+      DoD: `make test` zöld; a modul regisztrálva és elérhető a relay-en keresztül.
+    tests:
+      - core/modules/cibuild/cibuild_test.go
+      - config/schemas/ci.build.schema.yaml
+    accept: make test
