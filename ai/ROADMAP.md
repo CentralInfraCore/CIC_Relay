@@ -309,6 +309,14 @@ Ez a fájl az AI-támogatott roadmap állapota.
 
 ---
 
+## Sprint 7 — Lezárva
+
+| Task | Milestone | Állapot | Leírás |
+|------|-----------|---------|--------|
+| p33  | M9        | Done    | Timestamp kivétele release ldflags-ből — RELEASE_LD_FLAGS |
+| p34  | M9        | Done    | cyclonedx-gomod @latest → pinelt verzió |
+| p35  | M2        | Done    | registerNativeComponents() behívása main() runtime útvonalán |
+
 ## Sprint 6 — Lezárva
 
 | Task | Milestone | Állapot | Leírás |

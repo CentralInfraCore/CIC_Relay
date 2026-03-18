@@ -631,4 +631,68 @@ entries:
     tests:
       - core/modules/cibuild/cibuild_test.go
       - config/schemas/ci.build.schema.yaml
+
+  # --- Sprint 7 — Reproducibility & Bootstrap hardening ---
+
+  - task: "reproducible-release-ldflags"
+    status: done
+    priority: 33
+    milestone: M9
+    prompt: |
+      A `make release` target `$(LD_FLAGS)`-ot használ, ami tartalmaz
+      `Timestamp=$(shell date -u +...)` injektálást.
+      Ez megakadályozza, hogy ugyanabból a forrásból két különböző időpontban
+      byte-azonos bináris keletkezzen — a "reproducible build" állítás így nem teljes.
+      Javítás:
+        1. Definiálj `RELEASE_LD_FLAGS`-t a Makefile-ban — csak `BuildID` és `CommitHash`,
+           timestamp NÉLKÜL.
+        2. A `release` target használja `$(RELEASE_LD_FLAGS) -s -w`-t `$(LD_FLAGS)` helyett.
+        3. A dev/test build (`build`, `build-canonicalize`) maradjon `$(LD_FLAGS)`-szel
+           (timestamp megtartható debugginghoz).
+      DoD: `make release` kétszer futtatva azonos sha256-ot ad ugyanabból a forrásból.
+    tests:
+      - Makefile (release target)
+    accept: make release && make release-verify
+
+  - task: "pin-sbom-tool-version"
+    status: done
+    priority: 34
+    milestone: M9
+    prompt: |
+      A `make release` target `cyclonedx-gomod@latest`-et futtat, ami:
+        - reprodukálhatóságot tör (időben változó tool),
+        - hálózati függést visz a release folyamatba,
+        - különböző buildeknél különböző SBOM-ot generálhat.
+      Javítás:
+        1. Definiálj `CYCLONEDX_GOMOD_VERSION ?= v1.8.0`-t a Makefile-ban.
+        2. A `release` target `@latest` helyett `@$(CYCLONEDX_GOMOD_VERSION)`-t használjon.
+        3. A `go.mod`-ba add hozzá tool dependency-ként:
+           `require github.com/CycloneDX/cyclonedx-gomod v1.8.0`
+           és futtasd `go mod tidy`-t hogy a go.sum frissüljön.
+      DoD: `make release` offline (cache-ből) is ugyanazt a SBOM generálót használja.
+    tests:
+      - Makefile (release target)
+      - go.mod
+    accept: make release && make release-verify
+
+  - task: "register-native-components-main"
+    status: done
+    priority: 35
+    milestone: M2
+    prompt: |
+      A `registerNativeComponents()` függvény létezik `cmd/relay/bootstrap.go`-ban,
+      de nincs meghívva a `main()` runtime útvonalán — csak tesztben érhető el.
+      Ez azt jelenti, hogy a `core.test@1.0` és `ci.build@1.0` modulok
+      élő relay indításakor nem elérhetők.
+      Javítás:
+        1. `main()`: a `loadInstalledComponents` hívása ELŐTT hívd meg:
+           `if err := registerNativeComponents(loadCtx, cabinetSvc); err != nil { Fatal }`
+        2. A hívás sorrendje: registerNative → loadInstalled (a native-ek mindig elérhetők)
+        3. Frissítsd a `main_test.go`-ban a vonatkozó teszt elvárásokat ha szükséges.
+      DoD: `make test` zöld; `GET /` válasz tartalmazza a registrált native modulokat
+      (vagy legalább a relay elindul hibamentesen).
+    tests:
+      - cmd/relay/main.go
+      - cmd/relay/main_test.go
+    accept: make test
     accept: make test

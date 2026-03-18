@@ -25,8 +25,11 @@ COVERAGE_FILE ?= /output/$(COMMIT)/coverage.out
 COVERAGE_HTML ?= /output/$(COMMIT)/coverage.html
 
 # ---- Build flags ----
-LD_FLAGS ?= -X main.BuildID=$(VERSION)-$(COMMIT) \
-            -X main.CommitHash=$(COMMIT) \
+# RELEASE_LD_FLAGS: timestamp-free — produces byte-identical binaries from the same source.
+RELEASE_LD_FLAGS ?= -X main.BuildID=$(VERSION)-$(COMMIT) \
+                    -X main.CommitHash=$(COMMIT)
+# LD_FLAGS: includes Timestamp for dev/debug builds (not used in `make release`).
+LD_FLAGS ?= $(RELEASE_LD_FLAGS) \
             -X main.Timestamp=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 GOFLAGS  ?= -mod=readonly -trimpath
@@ -226,16 +229,18 @@ dev-vault-stop: ## Stop local dev Vault
 	@bash scripts/dev-vault.sh --stop
 
 # ---- Release artifacts ----
+CYCLONEDX_GOMOD_VERSION ?= v1.8.0
+
 release: ## Build reproducible static binary + sha256 + CycloneDX SBOM into dist/
 	$(call GO_EXEC, \
 		mkdir -p /git-source/dist && \
 		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 			-trimpath \
-			-ldflags "$(LD_FLAGS) -s -w" \
+			-ldflags "$(RELEASE_LD_FLAGS) -s -w" \
 			-o /git-source/dist/relay \
 			./cmd/relay && \
 		sha256sum /git-source/dist/relay > /git-source/dist/relay.sha256 && \
-		GOFLAGS="" go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest \
+		GOFLAGS="" go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@$(CYCLONEDX_GOMOD_VERSION) \
 			mod -output /git-source/dist/sbom.json -json \
 	)
 	@echo "✅ Release artifacts: dist/relay  dist/relay.sha256  dist/sbom.json"

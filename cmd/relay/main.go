@@ -453,6 +453,12 @@ func main() {
 	loadCtx, cancel := context.WithTimeout(context.Background(), cfg.HashingTimeout)
 	defer cancel()
 
+	// Register built-in native modules first (core.test, ci.build, …).
+	if err := registerNativeComponents(loadCtx, cabinetSvc); err != nil {
+		logger.WithField("error", err).Fatal("FATAL: Failed to register native components")
+	}
+	logger.Info("Native components registered.")
+
 	// The path for installed components can be made configurable later (e.g., via flags or env vars)
 	// For now, it's hardcoded to /etc/cic-relay/components.d
 	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", "", cfg.MaxWASMModuleSize, logger); err != nil {
