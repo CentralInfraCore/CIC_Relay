@@ -15,6 +15,7 @@ import (
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/isolation"
 	"centralrelay/core/nexus/operator"
 	"centralrelay/core/nexus/recorder"
 )
@@ -385,6 +386,16 @@ func run(port string, logger *logrus.Logger, s *relayServer) error {
 }
 
 func main() {
+	// Worker mode: subprocess IPC loop (CIC_ISOLATION_MODE=subprocess).
+	// When the relay is spawned as a worker by SubprocessWorker it receives
+	// --mode=module-worker and runs the IPC loop instead of the HTTP server.
+	for _, arg := range os.Args[1:] {
+		if arg == "--mode=module-worker" {
+			isolation.RunWorkerLoop(context.Background(), os.Stdin, os.Stdout, nil)
+			return
+		}
+	}
+
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{}) // Structured logging in JSON format
 
