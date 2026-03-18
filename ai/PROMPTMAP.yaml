@@ -443,7 +443,7 @@ entries:
   # --- Sprint 5 ---
 
   - task: "sbom-release-artifact"
-    status: todo
+    status: done
     priority: 25
     milestone: M9
     prompt: |
