@@ -695,4 +695,39 @@ entries:
       - cmd/relay/main.go
       - cmd/relay/main_test.go
     accept: make test
+
+  # --- Sprint 8 ---
+
+  - task: "source-tree-hash-digest"
+    status: done
+    priority: 36
+    milestone: M20
+    prompt: |
+      A `SourceDigest` default értéke `CommitHash` volt — ez csak a commit objektumot
+      azonosítja, nem a teljes build-input határt. A ProofTrace valódi source-anchoring-ja
+      megköveteli a teljes source tree determinisztikus hash-ét.
+
+      Feladatok:
+        1. `pkg/sourcedigest/sourcedigest.go` — `ComputeTreeHash(rootPath string, excludes []string) (string, error)`:
+           - WalkDir, sorted by relPath (filepath.ToSlash normalizálás)
+           - SHA-256 per fájl content, aggregált hash: "relPath\x00hexContent\n" sorok
+           - DefaultExcludes: .git, output, dist, tmp, CurrentTest
+        2. `tools/sourcehash/main.go` — CLI: `go run ./tools/sourcehash [rootPath]`
+           kimenet: 64-char hex, trailing newline nélkül
+        3. `cmd/relay/main.go`:
+           - `SourceTreeHash = "unknown"` ldflags var
+           - setHandler: `SourceTreeHash != "unknown"` → tree hash; fallback CommitHash
+        4. `Makefile`:
+           - `release` + `build` target: `SOURCE_HASH=$$(go run ./tools/sourcehash .)` inline
+             és `-X main.SourceTreeHash=$$SOURCE_HASH` a ldflags-ben
+           - `sourcehash` phony target: `make sourcehash` kinyomtatja a tree hash-t
+        5. 7 unit teszt: Determinism, ContentSensitivity, AddedFile, PathSensitivity,
+           ExcludesDir, EmptyDir, SymlinksSkipped
+      DoD: `make test` zöld; ProofTrace `source_digest` mező a tree hash-t tartalmazza
+      release buildben; CommitHash csak dev fallback.
+    tests:
+      - pkg/sourcedigest/sourcedigest.go
+      - pkg/sourcedigest/sourcedigest_test.go
+      - tools/sourcehash/main.go
+      - cmd/relay/main.go
     accept: make test

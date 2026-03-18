@@ -25,10 +25,12 @@ import (
 //	-X main.BuildID=$(VERSION)-$(COMMIT)
 //	-X main.CommitHash=$(COMMIT)
 //	-X main.Timestamp=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+//	-X main.SourceTreeHash=$(shell go run ./tools/sourcehash .)  [release/build targets]
 var (
-	BuildID    = "dev"
-	CommitHash = "unknown"
-	Timestamp  = "unknown"
+	BuildID        = "dev"
+	CommitHash     = "unknown"
+	Timestamp      = "unknown"
+	SourceTreeHash = "unknown"
 )
 
 // test seam: unit tesztben felülírható
@@ -217,10 +219,17 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload: "+err.Error())
 		return
 	}
-	// Pin the chain to the running binary's commit hash so the ProofTrace
-	// is anchored to the source revision (source → output continuity).
+	// Pin the chain to the build-time source tree hash so the ProofTrace is
+	// anchored to the full build-input boundary, not just the commit pointer.
+	// SourceTreeHash covers all tracked source files (pkg/sourcedigest) and is
+	// injected at build time via -X main.SourceTreeHash.  Falls back to
+	// CommitHash in dev builds where the ldflag was not applied.
 	if payload.SourceDigest == "" {
-		payload.SourceDigest = CommitHash
+		if SourceTreeHash != "unknown" {
+			payload.SourceDigest = SourceTreeHash
+		} else {
+			payload.SourceDigest = CommitHash
+		}
 	}
 
 	resp, err := s.api.Setx(r.Context(), &payload)
@@ -405,9 +414,10 @@ func main() {
 	logger.SetFormatter(&logrus.JSONFormatter{}) // Structured logging in JSON format
 
 	logger.WithFields(logrus.Fields{
-		"build_id":   BuildID,
-		"commit":     CommitHash,
-		"build_time": Timestamp,
+		"build_id":         BuildID,
+		"commit":           CommitHash,
+		"build_time":       Timestamp,
+		"source_tree_hash": SourceTreeHash,
 	}).Info("Starting cic-relay")
 
 	cfg, err := loadConfig()

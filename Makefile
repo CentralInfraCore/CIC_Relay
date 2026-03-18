@@ -9,7 +9,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	manifest-verify manifest-update verify-full clean shell \
 	symbols check-symbols test-api deps \
 	dev-vault dev-vault-stop \
-	release release-verify
+	release release-verify sourcehash
 
 # Default to showing help
 all: help
@@ -26,6 +26,8 @@ COVERAGE_HTML ?= /output/$(COMMIT)/coverage.html
 
 # ---- Build flags ----
 # RELEASE_LD_FLAGS: timestamp-free — produces byte-identical binaries from the same source.
+# SourceTreeHash is injected inline in release/build recipes via:
+#   SOURCE_HASH=$$(go run ./tools/sourcehash .) && ... -X main.SourceTreeHash=$$SOURCE_HASH
 RELEASE_LD_FLAGS ?= -X main.BuildID=$(VERSION)-$(COMMIT) \
                     -X main.CommitHash=$(COMMIT)
 # LD_FLAGS: includes Timestamp for dev/debug builds (not used in `make release`).
@@ -234,9 +236,10 @@ CYCLONEDX_GOMOD_VERSION ?= v1.8.0
 release: ## Build reproducible static binary + sha256 + CycloneDX SBOM into dist/
 	$(call GO_EXEC, \
 		mkdir -p /git-source/dist && \
+		SOURCE_HASH=$$(go run ./tools/sourcehash .) && \
 		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 			-trimpath \
-			-ldflags "$(RELEASE_LD_FLAGS) -s -w" \
+			-ldflags "$(RELEASE_LD_FLAGS) -X main.SourceTreeHash=$$SOURCE_HASH -s -w" \
 			-o /git-source/dist/relay \
 			./cmd/relay && \
 		sha256sum /git-source/dist/relay > /git-source/dist/relay.sha256 && \
@@ -248,6 +251,9 @@ release: ## Build reproducible static binary + sha256 + CycloneDX SBOM into dist
 release-verify: ## Verify dist/relay checksum matches dist/relay.sha256
 	$(call GO_EXEC, cd /git-source && sha256sum -c dist/relay.sha256)
 	@echo "✅ Release checksum verified"
+
+sourcehash: ## Print deterministic source tree hash (pkg/sourcedigest)
+	$(call GO_EXEC, go run ./tools/sourcehash .)
 
 build-canonicalize: prepare ## build-canonicalize
 	@echo "🔨 Building canonicalize..."
@@ -298,9 +304,11 @@ COVERAGE_HTML ?= /output/$(COMMIT)/coverage.html
 # Build the application
 build: prepare quality test coverage coverage-check-pkgs ## Build binary with quality gates
 	@echo "🔨 Building $(APP_NAME)..."
-	docker compose exec builder sh -c ' cd /git-source/cmd/relay \
-		&& go build $(GO_RACE) $(GOFLAGS) -gcflags="$(GCFLAGS)" -ldflags "$(LDFLAGS)" \
-		 -o /output/$(COMMIT)/$(APP_NAME)'
+	docker compose exec builder sh -c ' cd /git-source \
+		&& SOURCE_HASH=$$(go run ./tools/sourcehash .) \
+		&& go build $(GO_RACE) $(GOFLAGS) -gcflags="$(GCFLAGS)" \
+		   -ldflags "$(LDFLAGS) -X main.SourceTreeHash=$$SOURCE_HASH" \
+		   -o /output/$(COMMIT)/$(APP_NAME) ./cmd/relay'
 	@echo "✅ Build complete at $(BUILD_DIR)/$(APP_NAME)"
 	@$(MAKE) manifest-src
 	@if [ -z "$(NO_PUBLISH)" ]; then $(MAKE) mq-publish; fi
