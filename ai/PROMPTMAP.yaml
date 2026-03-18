@@ -467,7 +467,7 @@ entries:
     accept: make release && make release-verify
 
   - task: "audit-sync-integration"
-    status: todo
+    status: done
     priority: 26
     milestone: M14
     prompt: |
@@ -511,7 +511,7 @@ entries:
     accept: make test
 
   - task: "m16-operator-watcher-wiring"
-    status: todo
+    status: done
     priority: 28
     milestone: M16.4
     prompt: |

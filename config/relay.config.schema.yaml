@@ -23,3 +23,6 @@ spec:
     CIC_VAULT_MOUNT: "string, Transit engine mount path, default transit"
     CIC_VAULT_KEY: "string, Transit signing key name, default cic-dev-sign-key"
     CIC_AUDIT_REPO_PATH: "string, local git audit repo path, default /var/lib/cic-relay/audit"
+    # Operator (optional — not started if CIC_INFRA_REPO_PATH is absent)
+    CIC_INFRA_REPO_PATH: "string, path to infra state repo watched by the Operator (optional)"
+    CIC_OPERATOR_SECRET: "string, HMAC-SHA256 secret for bootstrap token generation (required if CIC_INFRA_REPO_PATH is set)"

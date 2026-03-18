@@ -260,9 +260,9 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M11       | **Done**    | UpstreamSource kész: HTTP GET, JSON/YAML auto-detect, retry/backoff |
 | M12       | **Done**    | WorkflowRecorder + Setx összekötés kész |
 | M13       | **Done**    | Dev Vault bootstrap + prod recorder wiring kész |
-| M14       | Partial     | |
+| M14       | **Done**    | sync integrációs tesztek megvannak, coverage 83.3% (≥70%) |
 | M15       | Partial     | |
-| M16       | **Done**    | M16.1 Watcher + M16.2 Bootstrap + M16.3 Lifecycle kész |
+| M16       | **Done**    | M16.1-M16.3 kész + M16.4: Operator bekötve main.go-ba (CIC_INFRA_REPO_PATH) |
 
 ---
 

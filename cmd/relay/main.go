@@ -15,6 +15,7 @@ import (
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/operator"
 	"centralrelay/core/nexus/recorder"
 )
 
@@ -344,6 +345,31 @@ func buildRecorderOption(logger *logrus.Logger, secrets *VaultSecrets) cabinet.C
 	return cabinet.WithRecorder(wr)
 }
 
+// buildOperatorIfConfigured constructs and returns an Operator if CIC_INFRA_REPO_PATH is set.
+// Returns nil if CIC_INFRA_REPO_PATH is not set (operator is optional).
+// Calls logger.Fatal if CIC_INFRA_REPO_PATH is set but CIC_OPERATOR_SECRET is missing.
+func buildOperatorIfConfigured(logger *logrus.Logger) *operator.Operator {
+	infraPath := os.Getenv("CIC_INFRA_REPO_PATH")
+	if infraPath == "" {
+		logger.Warn("CIC_INFRA_REPO_PATH not set — Operator not started")
+		return nil
+	}
+
+	secret := os.Getenv("CIC_OPERATOR_SECRET")
+	if secret == "" {
+		logger.Fatal("FATAL: CIC_INFRA_REPO_PATH is set but CIC_OPERATOR_SECRET is missing — cannot generate bootstrap tokens")
+	}
+
+	watcher := operator.NewPollingWatcher(infraPath, 30*time.Second)
+	b := operator.NewBootstrapper([]byte(secret), nil, logger)
+	reg := operator.NewHostRegistry()
+	lm := operator.NewLifecycleManager(b, reg, nil, logger)
+	op := operator.NewOperatorWithLifecycle(watcher, b, lm, logger)
+
+	logger.WithField("infra_repo_path", infraPath).Info("Operator configured")
+	return op
+}
+
 // run: külön függvény, hogy unit tesztben ne main()-t kelljen hívni
 func run(port string, logger *logrus.Logger, s *relayServer) error {
 	logger.Printf("✅ Central relay API started on %s", port)
@@ -415,6 +441,18 @@ func main() {
 	// For now, it's hardcoded to /etc/cic-relay/components.d
 	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", "", cfg.MaxWASMModuleSize, logger); err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to load installed components")
+	}
+
+	// --- Operator Initialization (optional) ---
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if op := buildOperatorIfConfigured(logger); op != nil {
+		go func() {
+			if err := op.Run(ctx); err != nil {
+				logger.WithError(err).Warn("operator exited with error")
+			}
+		}()
 	}
 
 	// --- HTTP Server Initialization ---
