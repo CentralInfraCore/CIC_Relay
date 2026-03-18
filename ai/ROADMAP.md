@@ -279,6 +279,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M18       | **Done**    | PollingWatcher scanDir + emitDiff; CREATE/UPDATE/DELETE; 4 teszt |
 | M19       | **Done**    | ci.build@1.0 native Go modul; make exec, artifact SHA-256; config/schemas/ci.build.schema.yaml |
 | M20       | **Done**    | SourceDigest upgrade: pkg/sourcedigest determinisztikus tree hash; tools/sourcehash CLI; SourceTreeHash ldflags |
+| M21       | **Done**    | Hermetic build boundary: docker-compose.yaml image digest-pinning; CI Go 1.24.6 exact + staticcheck@v0.6.1 |
 
 ### M17 — Source-Pinned ProofTrace (Chain Hash Integritás)
 * **Állapot:** Done
@@ -315,6 +316,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
 | p36  | M20       | Done    | SourceDigest upgrade: source tree hash (pkg/sourcedigest + tools/sourcehash + SourceTreeHash ldflags) |
+| p37  | M21       | Done    | Builder image digest-pinning: docker-compose.yaml + CI Go verzió + staticcheck pinelve |
 
 ## Sprint 7 — Lezárva
 
@@ -342,6 +344,15 @@ Ez a fájl az AI-támogatott roadmap állapota.
     *   [x] **M20.3**: `cmd/relay/main.go` — `SourceTreeHash` ldflags var; setHandler: ha `SourceTreeHash != "unknown"` → tree hash, fallback CommitHash.
     *   [x] **M20.4**: `Makefile`: `release` + `build` target inline `SOURCE_HASH=$$(go run ./tools/sourcehash .)` + `-X main.SourceTreeHash=$$SOURCE_HASH`; `sourcehash` target.
     *   [x] **M20.5**: 7 unit teszt: Determinism, ContentSensitivity, AddedFile, PathSensitivity, ExcludesDir, EmptyDir, SymlinksSkipped.
+
+### M21 — Hermetic Build Boundary
+* **Állapot:** Done
+* **Fő cél:** A builder environment teljes lezárása: Docker image-ek digest-pinelése, CI Go toolchain exact verzió, CI tool verziók rögzítése. Az M20 source tree hash után ez a második réteg — a build environment maga is determinisztikus.
+* **Részfeladatok (checklist):**
+    *   [x] **M21.1**: `docker-compose.yaml` — minden image `tag@sha256:digest` formátumra frissítve (linux/amd64 manifest digest). Re-pin parancs dokumentálva kommentben.
+    *   [x] **M21.2**: `.github/workflows/verify.yml` — Go verzió `"1.24.x"` → `"1.24.6"` (mindkét job).
+    *   [x] **M21.3**: `.github/workflows/verify.yml` — `staticcheck@latest` → `staticcheck@v0.6.1` (megegyezik a `cache-populate` Makefile target verziójával).
+    *   [x] **M21.4**: `ai/SYSTEM_CONTEXT.md` — "Build-input boundary" tábla + digests dokumentálva + re-pin parancs.
 
 ---
 

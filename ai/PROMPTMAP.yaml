@@ -698,6 +698,7 @@ entries:
 
   # --- Sprint 8 ---
 
+
   - task: "source-tree-hash-digest"
     status: done
     priority: 36
@@ -731,3 +732,35 @@ entries:
       - tools/sourcehash/main.go
       - cmd/relay/main.go
     accept: make test
+
+  - task: "hermetic-build-boundary"
+    status: done
+    priority: 37
+    milestone: M21
+    prompt: |
+      A builder environment nem hermetikus: docker-compose.yaml image-ek tag-gel hivatkozottak
+      (nem digest), a CI Go verzió `1.24.x` (floated), a staticcheck `@latest` (floated).
+      Ezek különböző időpontban lefuttatott build-eket különböző binaryhoz vezethetnek,
+      ami megkérdőjelezi a reprodukálható build állítást.
+
+      Feladatok:
+        1. `docker-compose.yaml`:
+           - Minden image-et frissíts `tag@sha256:digest` formátumra (linux/amd64 manifest digest).
+           - Kommentben dokumentáld a re-pin parancsot.
+           - Digests (2026-03-18):
+             * golang:1.24.6       sha256:d6d07e5326853f71a30decb4d777467428e85c087433b3d76c8b74933abd48b1
+             * nats:2.10.12        sha256:dbab4c53c0de6b089ceb67849d41bdf54a0ad29e50f1105048fc5f19508db803
+             * natsio/nats-box:0.12.0 sha256:1a2c9c9281add7b81ccc886f92d2bc7a247c3ddfd99ecfab51f86a883b38cf7d
+        2. `.github/workflows/verify.yml`:
+           - Go verzió "1.24.x" → "1.24.6" (exact, mindkét job)
+           - staticcheck@latest → staticcheck@v0.6.1 (Makefile cache-populate-tal szinkronban)
+        3. `ai/SYSTEM_CONTEXT.md`:
+           - "Build-input boundary" szekció: tábla az összes rétegről státusszal
+           - Digests + re-pin parancs dokumentálva
+      DoD: docker-compose.yaml és verify.yml digest/verzió-pinelt;
+           SYSTEM_CONTEXT.md dokumentálja a teljes hermetic build boundary-t.
+    tests:
+      - docker-compose.yaml
+      - .github/workflows/verify.yml
+      - ai/SYSTEM_CONTEXT.md
+    accept: grep -q "sha256:" docker-compose.yaml

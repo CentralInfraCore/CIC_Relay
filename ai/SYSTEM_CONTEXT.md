@@ -166,22 +166,45 @@ explicit Go kódban vannak (`validateConfig` elején).
 
 ---
 
-## Release artifact lánc (M9)
+## Release artifact lánc (M9 + M20)
 
 A `make release` target reprodukálható, statikus binárist állít elő a `dist/` könyvtárba:
 
 ```bash
 make release          # dist/relay + dist/relay.sha256 + dist/sbom.json
 make release-verify   # sha256sum -c ellenőrzés
+make sourcehash       # source tree hash kinyomtatása (pkg/sourcedigest)
 ```
 
 A három artifact:
 - `dist/relay` — statikus linux/amd64 bináris (`CGO_ENABLED=0`, `-trimpath`, `-s -w`)
 - `dist/relay.sha256` — sha256 checksum, `sha256sum -c`-vel ellenőrizhető
-- `dist/sbom.json` — CycloneDX JSON SBOM (teljes függőségi fa)
+- `dist/sbom.json` — CycloneDX JSON SBOM, pinelt tool verzióval (`v1.8.0`)
 
 A `dist/` könyvtár `.gitignore`-ban van — generált artefakt, nem commitolható.
-Build metaadatok (`BuildID`, `CommitHash`, `Timestamp`) ldflags-szal injektálva, induláskor INFO log jelenik meg róluk.
+
+### Build-input boundary (hermetikus build)
+
+A reprodukálható build három rétegből áll:
+
+| Réteg | Mechanizmus | Státusz |
+|-------|-------------|---------|
+| Forrás tree | `SourceTreeHash` (pkg/sourcedigest, tools/sourcehash) | Kész |
+| Go dependency | `go.sum` + `-mod=readonly` | Kész |
+| Builder image | digest-pinelt (`golang:1.24.6@sha256:d6d07e...`) | Kész |
+| CI toolchain | Go `1.24.6` exact, `staticcheck@v0.6.1` | Kész |
+
+**Builder image digests** (docker-compose.yaml, linux/amd64):
+- `golang:1.24.6` → `sha256:d6d07e5326853f71a30decb4d777467428e85c087433b3d76c8b74933abd48b1`
+- `nats:2.10.12` → `sha256:dbab4c53c0de6b089ceb67849d41bdf54a0ad29e50f1105048fc5f19508db803`
+- `natsio/nats-box:0.12.0` → `sha256:1a2c9c9281add7b81ccc886f92d2bc7a247c3ddfd99ecfab51f86a883b38cf7d`
+
+Re-pin parancs:
+```bash
+docker manifest inspect <image>:<tag> | jq '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest'
+```
+
+Build metaadatok ldflags-szal injektálva (`BuildID`, `CommitHash`, `Timestamp`, `SourceTreeHash`), induláskor INFO log jelenik meg róluk.
 
 ---
 
