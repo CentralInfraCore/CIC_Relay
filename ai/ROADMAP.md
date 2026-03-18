@@ -275,48 +275,48 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M14       | **Done**    | sync integrációs tesztek megvannak, coverage 83.3% (≥70%) |
 | M15       | **Done**    | SubprocessWorker IPC + RunWorkerLoop + round-trip teszt; --mode=module-worker flag |
 | M16       | **Done**    | M16.1-M16.3 kész + M16.4: Operator bekötve main.go-ba (CIC_INFRA_REPO_PATH) |
-| M17       | Tervezett   | Source-pinned chain_hash — ProofTrace SourceDigest (p29) |
-| M18       | Tervezett   | PollingWatcher state diff — CREATE/UPDATE/DELETE detektálás (p30) |
-| M19       | Tervezett   | CI build modul — native Go, make exec, artifact digest (p31) |
+| M17       | **Done**    | ProofTrace.SourceDigest + computeChainHash(sourceDigest, steps); CommitHash injektálva setHandler-ből |
+| M18       | **Done**    | PollingWatcher scanDir + emitDiff; CREATE/UPDATE/DELETE; 4 teszt |
+| M19       | **Done**    | ci.build@1.0 native Go modul; make exec, artifact SHA-256; config/schemas/ci.build.schema.yaml |
 
 ### M17 — Source-Pinned ProofTrace (Chain Hash Integritás)
-* **Állapot:** Tervezett
+* **Állapot:** Done
 * **Fő cél:** A `ProofTrace` `chain_hash` első eleme legyen a forrás hash (git HEAD commit hash vagy explicit `source_digest`). Ez biztosítja, hogy a hash-lánc a forráskódtól az output-ig folytonos — a CI use-case alappillére.
 * **Részfeladatok (checklist):**
-    *   [ ] **M17.1**: `ProofTrace` struktúra bővítése `SourceDigest string` mezővel.
-    *   [ ] **M17.2**: `computeChainHash` frissítése: `source_digest` legyen az első összetevő.
-    *   [ ] **M17.3**: `SetPayload` opcionális `SourceDigest` mező (caller injektálja — git HEAD vagy build ID).
-    *   [ ] **M17.4**: `cmd/relay/main.go`: BuildID/CommitHash átadása mint source_digest a `Setx`-be.
-    *   [ ] **M17.5**: Tesztek + golden fájl frissítés (`make verify`).
+    *   [x] **M17.1**: `ProofTrace.SourceDigest string` mező (json:"source_digest,omitempty").
+    *   [x] **M17.2**: `computeChainHash(sourceDigest, steps)`: source_digest az első összetevő.
+    *   [x] **M17.3**: `SetPayload.SourceDigest` opcionális mező — caller injektálja.
+    *   [x] **M17.4**: `setHandler`: `CommitHash` build változó injektálva SourceDigest-ként ha üres.
+    *   [x] **M17.5**: `make test` + `make verify` zöld.
 
 ### M18 — PollingWatcher State Diff
-* **Állapot:** Tervezett
+* **Állapot:** Done
 * **Fő cél:** A `PollingWatcher` jelenleg csak skeleton — nem detektál változást. Implementálandó a state tracking diff (CREATE/UPDATE/DELETE események) a GitOps Operator production-ready működéséhez.
 * **Részfeladatok (checklist):**
-    *   [ ] **M18.1**: Fájl snapshot struktúra (path → content hash map).
-    *   [ ] **M18.2**: Diff logika: előző snapshot vs. aktuális scan → CREATE/UPDATE/DELETE esemény.
-    *   [ ] **M18.3**: Első futásnál minden meglévő fájl CREATE eseményt generál.
-    *   [ ] **M18.4**: Tesztek: tmpdir + fájl hozzáadás/módosítás/törlés → elvárt event szekvencia.
+    *   [x] **M18.1**: `scanDir`: path → SHA-256 content hash snapshot.
+    *   [x] **M18.2**: `emitDiff`: prev vs. curr → CREATE/UPDATE/DELETE events.
+    *   [x] **M18.3**: Első tick (prev=nil): minden fájl CREATE eseményt kap.
+    *   [x] **M18.4**: 4 teszt: Create/Update/Delete/EmptyDir.
 
 ### M19 — CI Build Modul (Relay-on-Relay CI)
-* **Állapot:** Tervezett
+* **Állapot:** Done
 * **Fő cél:** Első native Go modul a CI use-case-hez: build spec schema, Docker exec wrapper, artifact digest → ProofTrace bekötés.
 * **Részfeladatok (checklist):**
-    *   [ ] **M19.1**: `ci.build` schema: `build_target`, `docker_image`, `make_target`, `artifact_output`.
-    *   [ ] **M19.2**: Native Go modul: `core/modules/cibuild/` — Docker API hívás, stdout/stderr capture.
-    *   [ ] **M19.3**: Artifact digest (SHA256 of output binary) visszaadása mint step output.
-    *   [ ] **M19.4**: Integrációs teszt: mock Docker exec, artifact → ProofTrace step output hash.
+    *   [x] **M19.1**: `config/schemas/ci.build.schema.yaml` — build_target, make_target, artifact_output.
+    *   [x] **M19.2**: `core/modules/cibuild/cibuild.go` — make exec, 5 perc timeout, stdout/stderr logrus.
+    *   [x] **M19.3**: Artifact SHA-256 digest visszaadva Output struct-ban mint step output.
+    *   [x] **M19.4**: Tesztek: parseInput, fileDigest, MakeFails, Success (tmpdir Makefile).
 
 ---
 
-## Jelenlegi sprint (Sprint 6)
+## Sprint 6 — Lezárva
 
-| Task | Milestone | Leírás |
-|------|-----------|--------|
-| p29  | M17       | source-pinned chain_hash — ProofTrace SourceDigest bekötés |
-| p30  | M18       | PollingWatcher state diff implementáció |
-| p31  | M19       | CI build modul schema + native Go skeleton |
-| p32  | M3        | PKI verified path e2e tesztek — teljes lánc, wrong-EKU/wrong-chain negative case-ek |
+| Task | Milestone | Állapot | Leírás |
+|------|-----------|---------|--------|
+| p29  | M17       | Done    | ProofTrace.SourceDigest + computeChainHash anchoring |
+| p30  | M18       | Done    | PollingWatcher scanDir + emitDiff (CREATE/UPDATE/DELETE) |
+| p31  | M19       | Done    | ci.build@1.0 native Go modul + schema |
+| p32  | M3        | Done    | PKI WrongChain e2e teszt (in-process ECDSA cert gen) |
 
 ---
 
