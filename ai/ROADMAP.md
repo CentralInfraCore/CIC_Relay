@@ -278,6 +278,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M17       | **Done**    | ProofTrace.SourceDigest + computeChainHash(sourceDigest, steps); CommitHash injektálva setHandler-ből |
 | M18       | **Done**    | PollingWatcher scanDir + emitDiff; CREATE/UPDATE/DELETE; 4 teszt |
 | M19       | **Done**    | ci.build@1.0 native Go modul; make exec, artifact SHA-256; config/schemas/ci.build.schema.yaml |
+| M20       | **Done**    | SourceDigest upgrade: pkg/sourcedigest determinisztikus tree hash; tools/sourcehash CLI; SourceTreeHash ldflags |
 
 ### M17 — Source-Pinned ProofTrace (Chain Hash Integritás)
 * **Állapot:** Done
@@ -309,6 +310,12 @@ Ez a fájl az AI-támogatott roadmap állapota.
 
 ---
 
+## Sprint 8 — Folyamatban
+
+| Task | Milestone | Állapot | Leírás |
+|------|-----------|---------|--------|
+| p36  | M20       | Done    | SourceDigest upgrade: source tree hash (pkg/sourcedigest + tools/sourcehash + SourceTreeHash ldflags) |
+
 ## Sprint 7 — Lezárva
 
 | Task | Milestone | Állapot | Leírás |
@@ -325,6 +332,16 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | p30  | M18       | Done    | PollingWatcher scanDir + emitDiff (CREATE/UPDATE/DELETE) |
 | p31  | M19       | Done    | ci.build@1.0 native Go modul + schema |
 | p32  | M3        | Done    | PKI WrongChain e2e teszt (in-process ECDSA cert gen) |
+
+### M20 — Source Tree Hash (Build-Input Digest Upgrade)
+* **Állapot:** Done
+* **Fő cél:** A `SourceDigest` default értéke CommitHash volt — ez csak a commit objektumot azonosítja, nem a teljes build-input határt. A valódi ProofTrace source-anchoring megköveteli a teljes source tree determinisztikus hash-ét.
+* **Részfeladatok (checklist):**
+    *   [x] **M20.1**: `pkg/sourcedigest/sourcedigest.go` — determinisztikus tree hash: WalkDir sorted, platform-independent forward-slash normalizálás, SHA-256 aggregáció. DefaultExcludes: .git, output, dist, tmp, CurrentTest.
+    *   [x] **M20.2**: `tools/sourcehash/main.go` — CLI wrapper, `go run ./tools/sourcehash .` build-time futtatható.
+    *   [x] **M20.3**: `cmd/relay/main.go` — `SourceTreeHash` ldflags var; setHandler: ha `SourceTreeHash != "unknown"` → tree hash, fallback CommitHash.
+    *   [x] **M20.4**: `Makefile`: `release` + `build` target inline `SOURCE_HASH=$$(go run ./tools/sourcehash .)` + `-X main.SourceTreeHash=$$SOURCE_HASH`; `sourcehash` target.
+    *   [x] **M20.5**: 7 unit teszt: Determinism, ContentSensitivity, AddedFile, PathSensitivity, ExcludesDir, EmptyDir, SymlinksSkipped.
 
 ---
 
