@@ -255,7 +255,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M6        | **Done**    | M6.5 E2E smoke tests kész, minden M6 subtask zárva |
 | M7        | **Done**    | M7.1-M7.4 kész: symbols drift, vet/staticcheck, per-pkg thresholds, HTML coverage |
 | M8        | **Done**    | M8.1+M8.2+M8.3 kész — env prefix, dogfooding, secrets separation |
-| M9        | Partial     | `-trimpath` megvan, README frissítve; SBOM és release signing hiányzik |
+| M9        | **Done**    | `make release`: statikus bináris + sha256 + CycloneDX SBOM; `make release-verify` |
 | M10       | **Done**    | Rate limiter (per-IP), concurrent cap, slow-loris timeouts implementálva |
 | M11       | **Done**    | UpstreamSource kész: HTTP GET, JSON/YAML auto-detect, retry/backoff |
 | M12       | **Done**    | WorkflowRecorder + Setx összekötés kész |

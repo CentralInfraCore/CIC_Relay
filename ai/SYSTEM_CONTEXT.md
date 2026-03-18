@@ -166,6 +166,25 @@ explicit Go kódban vannak (`validateConfig` elején).
 
 ---
 
+## Release artifact lánc (M9)
+
+A `make release` target reprodukálható, statikus binárist állít elő a `dist/` könyvtárba:
+
+```bash
+make release          # dist/relay + dist/relay.sha256 + dist/sbom.json
+make release-verify   # sha256sum -c ellenőrzés
+```
+
+A három artifact:
+- `dist/relay` — statikus linux/amd64 bináris (`CGO_ENABLED=0`, `-trimpath`, `-s -w`)
+- `dist/relay.sha256` — sha256 checksum, `sha256sum -c`-vel ellenőrizhető
+- `dist/sbom.json` — CycloneDX JSON SBOM (teljes függőségi fa)
+
+A `dist/` könyvtár `.gitignore`-ban van — generált artefakt, nem commitolható.
+Build metaadatok (`BuildID`, `CommitHash`, `Timestamp`) ldflags-szal injektálva, induláskor INFO log jelenik meg róluk.
+
+---
+
 ## Mérce
 
 ```

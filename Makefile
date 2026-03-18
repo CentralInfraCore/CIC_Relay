@@ -8,7 +8,8 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	tdd cache-populate mq-publish verify-auto verify-debug \
 	manifest-verify manifest-update verify-full clean shell \
 	symbols check-symbols test-api deps \
-	dev-vault dev-vault-stop
+	dev-vault dev-vault-stop \
+	release release-verify
 
 # Default to showing help
 all: help
@@ -223,6 +224,25 @@ dev-vault: ## Start local in-memory Vault for development (host-side, requires v
 
 dev-vault-stop: ## Stop local dev Vault
 	@bash scripts/dev-vault.sh --stop
+
+# ---- Release artifacts ----
+release: ## Build reproducible static binary + sha256 + CycloneDX SBOM into dist/
+	$(call GO_EXEC, \
+		mkdir -p /git-source/dist && \
+		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+			-trimpath \
+			-ldflags "$(LD_FLAGS) -s -w" \
+			-o /git-source/dist/relay \
+			./cmd/relay && \
+		sha256sum /git-source/dist/relay > /git-source/dist/relay.sha256 && \
+		GOFLAGS="" go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest \
+			mod -output /git-source/dist/sbom.json -json \
+	)
+	@echo "✅ Release artifacts: dist/relay  dist/relay.sha256  dist/sbom.json"
+
+release-verify: ## Verify dist/relay checksum matches dist/relay.sha256
+	$(call GO_EXEC, cd /git-source && sha256sum -c dist/relay.sha256)
+	@echo "✅ Release checksum verified"
 
 build-canonicalize: prepare ## build-canonicalize
 	@echo "🔨 Building canonicalize..."
