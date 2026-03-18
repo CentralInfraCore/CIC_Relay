@@ -452,8 +452,8 @@ func TestSetx_ProofTrace(t *testing.T) {
 	assert.NotEmpty(t, step.OutputHash)
 	assert.NotEmpty(t, trace.ChainHash)
 
-	// ChainHash must equal SHA256 of the single output hash.
-	assert.Equal(t, computeChainHash(trace.Steps), trace.ChainHash)
+	// ChainHash must equal SHA256(sourceDigest + output hashes). SourceDigest is "" here.
+	assert.Equal(t, computeChainHash("", trace.Steps), trace.ChainHash)
 
 	// Determinism: same input → same hashes.
 	resp2, err := svc.Setx(ctx, payload)

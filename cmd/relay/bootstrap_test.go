@@ -3,18 +3,25 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"embed"
 	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"centralrelay/core/cabinet"
 	"centralrelay/pkg/canonicaljson"
@@ -751,35 +758,33 @@ func newDiscardLogger() *logrus.Logger {
 
 // TestRegisterNativeComponents verifies that the native components are correctly registered in the cabinet.
 func TestRegisterNativeComponents(t *testing.T) {
-	// 1. Setup
-	// Create a mock cabinet service that will act as a receptor for our registration call.
 	mockCabinet := new(mockCabinetService)
 
-	// 2. Define Expectations
-	// We expect the PutModule method to be called exactly once.
-	// We will capture the argument passed to it to inspect it further.
-	var capturedModule *cabinet.ModuleDescriptor
+	// Collect all registered modules in order.
+	var registeredModules []*cabinet.ModuleDescriptor
 	mockCabinet.On("PutModule", mock.Anything).Run(func(args mock.Arguments) {
-		capturedModule = args.Get(0).(*cabinet.ModuleDescriptor)
-	}).Return(nil).Once()
+		registeredModules = append(registeredModules, args.Get(0).(*cabinet.ModuleDescriptor))
+	}).Return(nil).Times(2) // core.test + ci.build
 
-	// 3. Execute
-	// Call the function that is supposed to register our native components.
 	err := registerNativeComponents(context.Background(), mockCabinet)
 	require.NoError(t, err, "registerNativeComponents should not return an error")
-
-	// 4. Verify
-	// Assert that PutModule was indeed called.
 	mockCabinet.AssertExpectations(t)
 
-	// Inspect the captured module to ensure it's the one we expect.
-	require.NotNil(t, capturedModule, "A module descriptor should have been captured")
-	assert.Equal(t, "core.test@1.0", capturedModule.ID(), "The registered module should have the correct ID")
-	require.NotNil(t, capturedModule.NativeImpl, "The module should have a native implementation")
+	require.Len(t, registeredModules, 2, "expected two native modules to be registered")
 
-	// Check if the 'echo' function is present in the native implementation map.
-	_, ok := capturedModule.NativeImpl["echo"]
-	assert.True(t, ok, "The native implementation should contain an 'echo' function")
+	// First: core.test
+	coreTest := registeredModules[0]
+	assert.Equal(t, "core.test@1.0", coreTest.ID())
+	require.NotNil(t, coreTest.NativeImpl)
+	_, ok := coreTest.NativeImpl["echo"]
+	assert.True(t, ok, "core.test should expose 'echo' function")
+
+	// Second: ci.build
+	ciBuild := registeredModules[1]
+	assert.Equal(t, "ci.build@1.0", ciBuild.ID())
+	require.NotNil(t, ciBuild.NativeImpl)
+	_, ok = ciBuild.NativeImpl["build"]
+	assert.True(t, ok, "ci.build should expose 'build' function")
 }
 
 func TestRegisterNativeComponents_Errors(t *testing.T) {
@@ -897,6 +902,68 @@ func TestLoadModule_PKIVerification_WrongEKU(t *testing.T) {
 
 	err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, pkiAssets, int64(16*1024*1024), logger)
 	require.Error(t, err, "wrong EKU cert should be rejected")
+	assert.Contains(t, err.Error(), "PKI verification failed")
+}
+
+// generateForeignLeafPEM creates a leaf cert signed by a freshly-generated root CA
+// that is NOT registered in any PKIAssets trust store — simulating an untrusted chain.
+func generateForeignLeafPEM(t *testing.T) []byte {
+	t.Helper()
+
+	// Generate foreign root CA key + cert.
+	foreignKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	foreignRootTmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Foreign Root CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+	}
+	foreignRootDER, err := x509.CreateCertificate(rand.Reader, foreignRootTmpl, foreignRootTmpl, &foreignKey.PublicKey, foreignKey)
+	require.NoError(t, err)
+	foreignRoot, err := x509.ParseCertificate(foreignRootDER)
+	require.NoError(t, err)
+
+	// Generate leaf key + cert signed by foreign root with CodeSigning EKU.
+	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	leafTmpl := &x509.Certificate{
+		SerialNumber:    big.NewInt(2),
+		Subject:         pkix.Name{CommonName: "Foreign Signer"},
+		NotBefore:       time.Now().Add(-time.Hour),
+		NotAfter:        time.Now().Add(24 * time.Hour),
+		ExtKeyUsage:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		KeyUsage:        x509.KeyUsageDigitalSignature,
+	}
+	leafDER, err := x509.CreateCertificate(rand.Reader, leafTmpl, foreignRoot, &leafKey.PublicKey, foreignKey)
+	require.NoError(t, err)
+
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafDER})
+}
+
+// TestLoadModule_PKIVerification_WrongChain verifies that a cert signed by an unknown
+// root CA is rejected even if the EKU is correct.
+func TestLoadModule_PKIVerification_WrongChain(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	foreignLeafPEM := generateForeignLeafPEM(t)
+	wasmCode := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+	moduleFS, yamlPath := buildModuleFS(t, wasmCode, foreignLeafPEM)
+	yamlContent := moduleFS[yamlPath].Data
+
+	// Trust store loaded with the project's own root CA — foreign root is NOT in it.
+	pkiAssets := buildLoadedPKIAssets(t)
+	logger := newDiscardLogger()
+
+	err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, pkiAssets, int64(16*1024*1024), logger)
+	require.Error(t, err, "cert signed by foreign root should be rejected")
 	assert.Contains(t, err.Error(), "PKI verification failed")
 }
 

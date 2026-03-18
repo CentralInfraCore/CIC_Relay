@@ -273,10 +273,11 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		clockFn = func() string { return time.Now().UTC().Format(time.RFC3339) }
 	}
 	trace := &ProofTrace{
-		WorkflowID: workflow.ID(),
-		Steps:      traceSteps,
-		ChainHash:  computeChainHash(traceSteps),
-		Timestamp:  clockFn(),
+		WorkflowID:   workflow.ID(),
+		SourceDigest: in.SourceDigest,
+		Steps:        traceSteps,
+		ChainHash:    computeChainHash(in.SourceDigest, traceSteps),
+		Timestamp:    clockFn(),
 	}
 
 	// 4. Record the execution (non-fatal: Vault may be unavailable).

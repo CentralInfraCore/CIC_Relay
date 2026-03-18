@@ -2,7 +2,10 @@ package operator
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -159,23 +162,86 @@ func NewPollingWatcher(rootPath string, interval time.Duration) *PollingWatcher 
 	}
 }
 
+// scanDir walks rootPath and returns a map of relative path → SHA-256 content hash.
+func scanDir(rootPath string) (map[string]string, error) {
+	snapshot := make(map[string]string)
+	err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(data)
+		rel, _ := filepath.Rel(rootPath, path)
+		snapshot[rel] = hex.EncodeToString(sum[:])
+		return nil
+	})
+	return snapshot, err
+}
+
+// emitDiff computes CREATE/UPDATE/DELETE events between prev and curr snapshots
+// and sends them on ch. First call should pass prev=nil to emit CREATE for all files.
+func emitDiff(ctx context.Context, ch chan<- Event, prev, curr map[string]string, rootPath string) {
+	// New or changed files → CREATE / UPDATE
+	for relPath, currHash := range curr {
+		var evType EventType
+		if prevHash, existed := prev[relPath]; !existed {
+			evType = EventCreate
+		} else if prevHash != currHash {
+			evType = EventUpdate
+		} else {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(rootPath, relPath))
+		if err != nil {
+			logrus.WithField("path", relPath).WithError(err).Warn("watcher: failed to read file for event")
+			continue
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case ch <- Event{Type: evType, FilePath: relPath, Content: data}:
+		}
+	}
+	// Removed files → DELETE
+	for relPath := range prev {
+		if _, exists := curr[relPath]; !exists {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- Event{Type: EventDelete, FilePath: relPath, Content: nil}:
+			}
+		}
+	}
+}
+
 func (pw *PollingWatcher) Watch(ctx context.Context) (<-chan Event, error) {
-	events := make(chan Event)
+	events := make(chan Event, 16)
 
 	go func() {
 		defer close(events)
 		ticker := time.NewTicker(pw.Interval)
 		defer ticker.Stop()
 
-		// TODO: Implement state tracking to detect diffs (new/modified/deleted files).
-		// For now, this is just a skeleton.
+		var prev map[string]string // nil on first tick → all files are CREATE
 
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				// Scan directory and emit events...
+				curr, err := scanDir(pw.RootPath)
+				if err != nil {
+					logrus.WithField("root", pw.RootPath).WithError(err).Warn("watcher: scan failed")
+					continue
+				}
+				emitDiff(ctx, events, prev, curr, pw.RootPath)
+				prev = curr
 			}
 		}
 	}()

@@ -217,6 +217,11 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload: "+err.Error())
 		return
 	}
+	// Pin the chain to the running binary's commit hash so the ProofTrace
+	// is anchored to the source revision (source → output continuity).
+	if payload.SourceDigest == "" {
+		payload.SourceDigest = CommitHash
+	}
 
 	resp, err := s.api.Setx(r.Context(), &payload)
 	if err != nil {

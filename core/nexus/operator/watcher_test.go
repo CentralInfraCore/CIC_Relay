@@ -3,6 +3,8 @@ package operator
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -159,10 +161,8 @@ func TestPollingWatcher_Watch(t *testing.T) {
 	events, err := watcher.Watch(ctx)
 	require.NoError(t, err)
 
-	// To increase coverage, we need to let the goroutine run a bit
 	time.Sleep(20 * time.Millisecond)
 
-	// Verify channel is open
 	select {
 	case _, ok := <-events:
 		if !ok {
@@ -171,4 +171,107 @@ func TestPollingWatcher_Watch(t *testing.T) {
 	default:
 		// No event yet
 	}
+}
+
+func collectEvents(t *testing.T, ch <-chan Event, timeout time.Duration) []Event {
+	t.Helper()
+	var got []Event
+	deadline := time.After(timeout)
+	for {
+		select {
+		case ev, ok := <-ch:
+			if !ok {
+				return got
+			}
+			got = append(got, ev)
+		case <-deadline:
+			return got
+		}
+	}
+}
+
+func TestPollingWatcher_StateDiff_Create(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Write a file before starting the watcher.
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "host-a.yaml"), []byte("kind: Host\nmetadata:\n  name: a\n"), 0644))
+
+	watcher := NewPollingWatcher(tmpDir, 20*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	events, err := watcher.Watch(ctx)
+	require.NoError(t, err)
+
+	got := collectEvents(t, events, 200*time.Millisecond)
+	require.Len(t, got, 1)
+	assert.Equal(t, EventCreate, got[0].Type)
+	assert.Equal(t, "host-a.yaml", got[0].FilePath)
+	assert.NotEmpty(t, got[0].Content)
+}
+
+func TestPollingWatcher_StateDiff_Update(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "host-b.yaml")
+	require.NoError(t, os.WriteFile(filePath, []byte("version: 1"), 0644))
+
+	watcher := NewPollingWatcher(tmpDir, 20*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	events, err := watcher.Watch(ctx)
+	require.NoError(t, err)
+
+	// Drain CREATE event.
+	got := collectEvents(t, events, 100*time.Millisecond)
+	require.Len(t, got, 1, "expected one CREATE")
+
+	// Modify the file — should trigger UPDATE on next tick.
+	require.NoError(t, os.WriteFile(filePath, []byte("version: 2"), 0644))
+
+	got2 := collectEvents(t, events, 200*time.Millisecond)
+	require.Len(t, got2, 1)
+	assert.Equal(t, EventUpdate, got2[0].Type)
+	assert.Equal(t, "host-b.yaml", got2[0].FilePath)
+	assert.Equal(t, []byte("version: 2"), got2[0].Content)
+}
+
+func TestPollingWatcher_StateDiff_Delete(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "host-c.yaml")
+	require.NoError(t, os.WriteFile(filePath, []byte("kind: Host"), 0644))
+
+	watcher := NewPollingWatcher(tmpDir, 20*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	events, err := watcher.Watch(ctx)
+	require.NoError(t, err)
+
+	// Drain CREATE.
+	got := collectEvents(t, events, 100*time.Millisecond)
+	require.Len(t, got, 1, "expected CREATE")
+
+	// Delete the file.
+	require.NoError(t, os.Remove(filePath))
+
+	got2 := collectEvents(t, events, 200*time.Millisecond)
+	require.Len(t, got2, 1)
+	assert.Equal(t, EventDelete, got2[0].Type)
+	assert.Equal(t, "host-c.yaml", got2[0].FilePath)
+	assert.Nil(t, got2[0].Content)
+}
+
+func TestPollingWatcher_EmptyDir_NoEvents(t *testing.T) {
+	tmpDir := t.TempDir()
+	watcher := NewPollingWatcher(tmpDir, 20*time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	events, err := watcher.Watch(ctx)
+	require.NoError(t, err)
+
+	got := collectEvents(t, events, 150*time.Millisecond)
+	assert.Empty(t, got, "empty dir should produce no events")
 }
