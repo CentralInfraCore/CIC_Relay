@@ -19,11 +19,16 @@ type ProofTraceStep struct {
 // ProofTrace is the immutable audit record of a completed workflow execution.
 // Every field is deterministic and canonicalizable; no clock or RNG side-effects
 // are introduced here — the Timestamp must be injected by the caller.
+//
+// SourceDigest anchors the chain to the source revision. It is injected by the caller
+// (e.g. git HEAD commit hash or BuildID) and becomes the first input of ChainHash,
+// making the hash-chain continuous from source to output.
 type ProofTrace struct {
-	WorkflowID string           `json:"workflow_id"`
-	Steps      []ProofTraceStep `json:"steps"`
-	ChainHash  string           `json:"chain_hash"`
-	Timestamp  string           `json:"timestamp"`
+	WorkflowID   string           `json:"workflow_id"`
+	SourceDigest string           `json:"source_digest,omitempty"`
+	Steps        []ProofTraceStep `json:"steps"`
+	ChainHash    string           `json:"chain_hash"`
+	Timestamp    string           `json:"timestamp"`
 }
 
 // hashValue returns the hex-encoded SHA-256 of the canonical JSON representation of v.
@@ -36,10 +41,12 @@ func hashValue(v interface{}) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// computeChainHash returns SHA-256 of the concatenated output hashes of all steps.
-// An empty steps slice produces the hash of the empty string.
-func computeChainHash(steps []ProofTraceStep) string {
+// computeChainHash returns SHA-256 of: sourceDigest + concatenated output hashes of all steps.
+// sourceDigest anchors the chain to the source revision; pass "" when not available.
+// An empty sourceDigest with an empty steps slice produces the hash of the empty string.
+func computeChainHash(sourceDigest string, steps []ProofTraceStep) string {
 	var sb strings.Builder
+	sb.WriteString(sourceDigest)
 	for _, s := range steps {
 		sb.WriteString(s.OutputHash)
 	}

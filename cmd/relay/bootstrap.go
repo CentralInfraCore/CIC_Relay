@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/core/modules/cibuild"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -36,7 +37,20 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
 		return fmt.Errorf("failed to register core.test module: %w", err)
 	}
 
-	// TODO: Register other native components like 'core.config', 'postgresql', etc. here.
+	// --- Register ci.build module ---
+	ciBuildFuncs := make(cabinet.NativeFunctions)
+	ciBuildFuncs["build"] = cibuild.Execute
+
+	ciBuildMeta := cabinet.BaseBlock{Name: "ci.build", Version: "1.0", Description: "CI build module: runs a make target and returns the artifact SHA-256 digest."}
+	ciBuildModule, err := cabinet.NewModuleDescriptor(ctx, ciBuildMeta, "native/ci", nil, []string{"artifact_path", "artifact_digest", "exit_code"}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create ci.build module descriptor: %w", err)
+	}
+	ciBuildModule.NativeImpl = ciBuildFuncs
+
+	if err := svc.PutModule(ciBuildModule); err != nil {
+		return fmt.Errorf("failed to register ci.build module: %w", err)
+	}
 
 	logrus.Info("Successfully registered all native components.")
 	return nil
