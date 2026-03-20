@@ -226,8 +226,13 @@ func TestPollingWatcher_StateDiff_Update(t *testing.T) {
 	got := collectEvents(t, events, 100*time.Millisecond)
 	require.Len(t, got, 1, "expected one CREATE")
 
-	// Modify the file — should trigger UPDATE on next tick.
-	require.NoError(t, os.WriteFile(filePath, []byte("version: 2"), 0644))
+	// Atomic update: stage file outside the watched directory then rename in.
+	// A plain os.WriteFile truncates first, which can cause a spurious second
+	// UPDATE event if the ticker fires between truncate and write.
+	stageDir := t.TempDir()
+	stageFile := filepath.Join(stageDir, "host-b.yaml")
+	require.NoError(t, os.WriteFile(stageFile, []byte("version: 2"), 0644))
+	require.NoError(t, os.Rename(stageFile, filePath))
 
 	got2 := collectEvents(t, events, 200*time.Millisecond)
 	require.Len(t, got2, 1)
