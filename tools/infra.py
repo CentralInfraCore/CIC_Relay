@@ -99,6 +99,60 @@ class ReleaseManager:
     def _path(self, relative_path):
         return self.project_root / relative_path
 
+    def run_validation(self):
+        """
+        Validates the project against its schema and, if available,
+        verifies the cryptographic signature via Vault.
+
+        Steps:
+          1. Structural: project.yaml against project.schema.yaml (offline)
+          2. Checksum: recompute repo hash, compare with metadata.checksum (offline)
+          3. Signature: Vault Transit verify — non-fatal if Vault unavailable
+        """
+        self.logger.info("Step 1/3: Structural validation...")
+        self._validate_final_project_yaml()
+
+        self.logger.info("Step 2/3: Checksum verification...")
+        project_data = load_yaml(self._path("project.yaml")) or {}
+        metadata = project_data.get("metadata", {})
+        stored_checksum = metadata.get("checksum")
+
+        if stored_checksum:
+            tree_id = self.git_service.write_tree()
+            computed_checksum = get_reproducible_repo_hash(self.git_service, tree_id)
+            if computed_checksum != stored_checksum:
+                raise ValidationFailureError(
+                    f"Checksum mismatch: stored={stored_checksum}, computed={computed_checksum}"
+                )
+            self.logger.info(f"✓ Checksum verified: {computed_checksum}")
+        else:
+            self.logger.warning("No checksum in metadata, skipping checksum verification.")
+
+        self.logger.info("Step 3/3: Signature verification via Vault...")
+        signature = metadata.get("sign")
+        vault_key_name = self.config.get("vault_key_name")
+
+        if not signature or not vault_key_name:
+            self.logger.warning("No signature or vault_key_name in config, skipping.")
+            return
+
+        try:
+            data_to_sign = {
+                "name": metadata.get("name", "unknown"),
+                "version": metadata.get("version", ""),
+                "checksum": metadata.get("checksum", ""),
+            }
+            data_json = json.dumps(data_to_sign, sort_keys=True, separators=(",", ":"))
+            digest = hashlib.sha256(data_json.encode("utf-8")).digest()
+            digest_b64 = base64.b64encode(digest).decode("utf-8")
+
+            valid = self.vault_service.verify(digest_b64, signature, vault_key_name)
+            if not valid:
+                raise ValidationFailureError("Signature verification failed: Vault returned invalid.")
+            self.logger.info("✓ Signature verified via Vault.")
+        except VaultServiceError as e:
+            self.logger.warning(f"Vault unavailable, skipping signature verification: {e}")
+
     def _check_base_branch_and_version(
         self, release_version: str, skip_git_state_checks: bool = False
     ):
