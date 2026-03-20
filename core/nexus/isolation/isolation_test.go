@@ -100,6 +100,74 @@ func TestCoordinator_Unwrap_Errors(t *testing.T) {
 	})
 }
 
+func TestCoordinator_Unwrap_WorkerResponseErrors(t *testing.T) {
+	t.Run("relay response error", func(t *testing.T) {
+		hostWorker := new(MockWorker)
+		relayWorker := new(MockWorker)
+		moduleWorker := new(MockWorker)
+		coordinator := NewCoordinator(hostWorker, relayWorker, moduleWorker)
+
+		relayWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Error: errors.New("relay payload corrupted")}, nil)
+
+		_, err := coordinator.Unwrap(context.Background(), []byte("data"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "relay worker error")
+	})
+
+	t.Run("module response error", func(t *testing.T) {
+		hostWorker := new(MockWorker)
+		relayWorker := new(MockWorker)
+		moduleWorker := new(MockWorker)
+		coordinator := NewCoordinator(hostWorker, relayWorker, moduleWorker)
+
+		relayWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Payload: []byte("ok")}, nil)
+		moduleWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Error: errors.New("module payload corrupted")}, nil)
+
+		_, err := coordinator.Unwrap(context.Background(), []byte("data"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "module worker error")
+	})
+
+	t.Run("host decryption transport error", func(t *testing.T) {
+		hostWorker := new(MockWorker)
+		relayWorker := new(MockWorker)
+		moduleWorker := new(MockWorker)
+		coordinator := NewCoordinator(hostWorker, relayWorker, moduleWorker)
+
+		relayWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Payload: []byte("ok")}, nil)
+		moduleWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Payload: []byte("ok")}, nil)
+		hostWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(nil, errors.New("host fail"))
+
+		_, err := coordinator.Unwrap(context.Background(), []byte("data"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "host decryption failed")
+	})
+
+	t.Run("host response error", func(t *testing.T) {
+		hostWorker := new(MockWorker)
+		relayWorker := new(MockWorker)
+		moduleWorker := new(MockWorker)
+		coordinator := NewCoordinator(hostWorker, relayWorker, moduleWorker)
+
+		relayWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Payload: []byte("ok")}, nil)
+		moduleWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Payload: []byte("ok")}, nil)
+		hostWorker.On("Decrypt", mock.Anything, mock.Anything).
+			Return(&DecryptResponse{Error: errors.New("host payload corrupted")}, nil)
+
+		_, err := coordinator.Unwrap(context.Background(), []byte("data"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "host worker error")
+	})
+}
+
 func TestLocalWorker_Decrypt(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockCrypto := new(MockCryptoService)

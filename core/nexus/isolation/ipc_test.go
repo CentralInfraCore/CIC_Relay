@@ -5,11 +5,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -96,6 +98,59 @@ func TestRunWorkerLoop_ContextCancelled(t *testing.T) {
 	RunWorkerLoop(ctx, strings.NewReader(req), &out, nil)
 	// Should exit early without writing a response.
 	assert.Equal(t, 0, out.Len())
+}
+
+func TestRunWorkerLoop_WithWorker_Success(t *testing.T) {
+	mockWorker := new(MockWorker)
+	payload := []byte("plaintext")
+	mockWorker.On("Decrypt", mock.Anything, mock.MatchedBy(func(r DecryptRequest) bool {
+		return string(r.Payload) == "ciphertext"
+	})).Return(&DecryptResponse{Payload: payload}, nil)
+
+	encoded := base64.StdEncoding.EncodeToString([]byte("ciphertext"))
+	req := `{"op":"decrypt","payload":"` + encoded + `","key_id":""}` + "\n"
+
+	var out bytes.Buffer
+	RunWorkerLoop(context.Background(), strings.NewReader(req), &out, mockWorker)
+
+	var resp IPCResponse
+	require.NoError(t, json.NewDecoder(&out).Decode(&resp))
+	assert.Empty(t, resp.Error)
+	got, err := base64.StdEncoding.DecodeString(resp.Result)
+	require.NoError(t, err)
+	assert.Equal(t, payload, got)
+}
+
+func TestRunWorkerLoop_WithWorker_DecryptError(t *testing.T) {
+	mockWorker := new(MockWorker)
+	mockWorker.On("Decrypt", mock.Anything, mock.Anything).
+		Return(nil, errors.New("crypto service down"))
+
+	encoded := base64.StdEncoding.EncodeToString([]byte("data"))
+	req := `{"op":"decrypt","payload":"` + encoded + `","key_id":""}` + "\n"
+
+	var out bytes.Buffer
+	RunWorkerLoop(context.Background(), strings.NewReader(req), &out, mockWorker)
+
+	var resp IPCResponse
+	require.NoError(t, json.NewDecoder(&out).Decode(&resp))
+	assert.Contains(t, resp.Error, "crypto service down")
+}
+
+func TestRunWorkerLoop_WithWorker_ResponseError(t *testing.T) {
+	mockWorker := new(MockWorker)
+	mockWorker.On("Decrypt", mock.Anything, mock.Anything).
+		Return(&DecryptResponse{Error: errors.New("key not found")}, nil)
+
+	encoded := base64.StdEncoding.EncodeToString([]byte("data"))
+	req := `{"op":"decrypt","payload":"` + encoded + `","key_id":""}` + "\n"
+
+	var out bytes.Buffer
+	RunWorkerLoop(context.Background(), strings.NewReader(req), &out, mockWorker)
+
+	var resp IPCResponse
+	require.NoError(t, json.NewDecoder(&out).Decode(&resp))
+	assert.Contains(t, resp.Error, "key not found")
 }
 
 // --- SubprocessWorker round-trip integration test ---
