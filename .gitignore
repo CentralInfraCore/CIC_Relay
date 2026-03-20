@@ -37,3 +37,10 @@ dist/
 # Embedded PKI dev keys — do not commit new key material here
 # (existing keys are test-only and grandfathered in)
 embedded/pki/*.key
+/.idea/
+/.pip-cache/
+/p_venv/
+/*/*/*/__pycache__/
+/*/*/__pycache__/
+/*/__pycache__/
+/.coverage
