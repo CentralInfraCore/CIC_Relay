@@ -169,6 +169,73 @@ def test_sign_digest_wrong_length(mock_post, vault_service, caplog):
     assert "Digest length is not 32 bytes" in caplog.text
 
 
+VALID_SIGNATURE = "vault:v1:test-signature"
+
+
+def test_verify_dry_run(dry_run_vault_service):
+    """Test that verify in dry-run mode returns True."""
+    assert dry_run_vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key") is True
+
+
+def test_verify_invalid_base64(vault_service):
+    """Test that verify fails with invalid base64 digest."""
+    with pytest.raises(VaultServiceError, match="Invalid Base64 digest format"):
+        vault_service.verify("not-base64!!", VALID_SIGNATURE, "my-key")
+
+
+@patch("requests.post")
+def test_verify_success(mock_post, vault_service):
+    """Test a successful verification."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"data": {"valid": True}}
+    mock_post.return_value = mock_response
+
+    result = vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key")
+    assert result is True
+    call_args = mock_post.call_args
+    assert call_args.kwargs["json"]["signature"] == VALID_SIGNATURE
+    assert call_args.kwargs["json"]["prehashed"] is True
+
+
+@patch("requests.post")
+def test_verify_invalid_signature(mock_post, vault_service):
+    """Test that Vault returning valid=False raises ValidationFailureError."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"data": {"valid": False}}
+    mock_post.return_value = mock_response
+
+    result = vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key")
+    assert result is False
+
+
+@patch("requests.post")
+def test_verify_request_exception(mock_post, vault_service):
+    """Test that a requests exception is wrapped in VaultServiceError."""
+    mock_post.side_effect = requests.exceptions.RequestException("Connection error")
+    with pytest.raises(VaultServiceError, match="Vault verify request failed"):
+        vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key")
+
+
+@patch("requests.post")
+def test_verify_missing_valid_field(mock_post, vault_service):
+    """Test handling of a response missing the valid field."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"data": {}}
+    mock_post.return_value = mock_response
+    with pytest.raises(VaultServiceError, match="Unexpected 'valid' field"):
+        vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key")
+
+
+@patch("requests.post")
+def test_verify_http_error(mock_post, vault_service):
+    """Test that an HTTP error is handled."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("403 Forbidden")
+    mock_post.return_value = mock_response
+    with pytest.raises(VaultServiceError, match="Vault verify request failed"):
+        vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key")
+
+
 def test_get_certificate_dry_run(dry_run_vault_service):
     """Test that get_certificate in dry-run mode returns a placeholder."""
     certificate = dry_run_vault_service.get_certificate("kv/data", "my-secret", "cert")

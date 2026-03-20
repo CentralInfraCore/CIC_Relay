@@ -160,6 +160,103 @@ class TestHelperFunctions:
             get_reproducible_repo_hash(mock_git_service, "dummy_tree_id")
 
 
+class TestRunValidation:
+    def _make_manager(self, mock_services):
+        return ReleaseManager(
+            config=mock_services["config"],
+            git_service=mock_services["git_service"],
+            vault_service=mock_services["vault_service"],
+            project_root=mock_services["project_root"],
+            dry_run=mock_services["dry_run"],
+            logger=mock_services["logger"],
+        )
+
+    def test_validation_success_with_signature(self, mock_services, mocker):
+        """Full happy path: schema valid, checksum matches, signature valid."""
+        mocker.patch(
+            "tools.infra.load_yaml",
+            return_value={
+                "metadata": {
+                    "name": "base",
+                    "version": "1.0.0",
+                    "checksum": "dummy_hash_b64",
+                    "sign": "vault:v1:dummy-sig",
+                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                },
+            },
+        )
+        mock_services["vault_service"].verify.return_value = True
+        manager = self._make_manager(mock_services)
+        manager.run_validation()
+        mock_services["vault_service"].verify.assert_called_once()
+
+    def test_validation_success_no_signature(self, mock_services, mocker):
+        """Passes when no signature field — signature step is skipped."""
+        mocker.patch(
+            "tools.infra.load_yaml",
+            return_value={
+                "metadata": {
+                    "name": "base", "version": "1.0.0", "checksum": "dummy_hash_b64",
+                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                },
+            },
+        )
+        manager = self._make_manager(mock_services)
+        manager.run_validation()
+        mock_services["vault_service"].verify.assert_not_called()
+
+    def test_validation_checksum_mismatch(self, mock_services, mocker):
+        """Fails when stored checksum differs from computed."""
+        mocker.patch(
+            "tools.infra.load_yaml",
+            return_value={
+                "metadata": {
+                    "name": "base", "version": "1.0.0", "checksum": "wrong_checksum",
+                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                },
+            },
+        )
+        from tools.infra import ValidationFailureError
+        manager = self._make_manager(mock_services)
+        with pytest.raises(ValidationFailureError, match="Checksum mismatch"):
+            manager.run_validation()
+
+    def test_validation_signature_invalid(self, mock_services, mocker):
+        """Fails when Vault returns valid=False."""
+        mocker.patch(
+            "tools.infra.load_yaml",
+            return_value={
+                "metadata": {
+                    "name": "base", "version": "1.0.0", "checksum": "dummy_hash_b64",
+                    "sign": "vault:v1:bad-sig",
+                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                },
+            },
+        )
+        mock_services["vault_service"].verify.return_value = False
+        from tools.infra import ValidationFailureError
+        manager = self._make_manager(mock_services)
+        with pytest.raises(ValidationFailureError, match="Signature verification failed"):
+            manager.run_validation()
+
+    def test_validation_vault_unavailable_is_warning(self, mock_services, mocker):
+        """Vault error during verify is non-fatal — logged as warning."""
+        mocker.patch(
+            "tools.infra.load_yaml",
+            return_value={
+                "metadata": {
+                    "name": "base", "version": "1.0.0", "checksum": "dummy_hash_b64",
+                    "sign": "vault:v1:sig",
+                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                },
+            },
+        )
+        mock_services["vault_service"].verify.side_effect = VaultServiceError("connection refused")
+        manager = self._make_manager(mock_services)
+        manager.run_validation()  # must not raise
+        mock_services["logger"].warning.assert_called()
+
+
 class TestReleaseManagerPhases:
     def test_developer_preparation_phase_success(self, mock_services):
         manager = ReleaseManager(

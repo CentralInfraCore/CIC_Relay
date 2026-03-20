@@ -13,7 +13,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	symbols check-symbols test-api deps \
 	dev-vault dev-vault-stop \
 	release release-relay release-verify sourcehash validate \
-	up down repo.init typecheck check build-crt-parser build-canonicalize \
+	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki \
 	infra-down infra.help
 
 # Default to showing help
@@ -359,9 +359,34 @@ coverage-check-pkgs: ## Fail if per-package coverage < threshold
 		done'
 
 # =============================================================================
+# PKI asset fetch (build-time, requires local Vault)
+# =============================================================================
+# Vault KV mount and cert key — must match vault-sign-agent.sh KEY_NAME + --cic-dir load
+VAULT_KV_MOUNT    ?= cic-my-sign-key
+VAULT_SOURCE_CA   ?= CICSourceCA
+PKI_CERT_FIELD    ?= bar
+PKI_OUT           := embedded/pki/cic-source-ca.pem
+
+fetch-pki: ## Fetch CICSourceCA cert from local Vault → embedded/pki/cic-source-ca.pem
+	@echo "Fetching CICSourceCA from Vault ($(VAULT_ADDR))..."
+	@test -n "$$VAULT_ADDR"  || { echo "VAULT_ADDR not set"; exit 1; }
+	@test -n "$$VAULT_TOKEN" || \
+		{ VAULT_TOKEN=$$(cat $$XDG_RUNTIME_DIR/vault/sign-token 2>/dev/null) && \
+		  test -n "$$VAULT_TOKEN" || { echo "VAULT_TOKEN not set and sign-token not found"; exit 1; }; }
+	@VAULT_TOKEN=$${VAULT_TOKEN:-$$(cat $$XDG_RUNTIME_DIR/vault/sign-token)} && \
+	 VAULT_CACERT=$${VAULT_CACERT:-$$XDG_RUNTIME_DIR/vault/server.crt} && \
+	 vault kv get \
+		-address="$$VAULT_ADDR" \
+		-tls-skip-verify \
+		-mount=$(VAULT_KV_MOUNT) \
+		-field=$(PKI_CERT_FIELD) \
+		$(VAULT_SOURCE_CA) > $(PKI_OUT)
+	@echo "CICSourceCA written to $(PKI_OUT)"
+
+# =============================================================================
 # Go Relay Build
 # =============================================================================
-build-relay: prepare quality test-go coverage coverage-check-pkgs ## Build relay binary with quality gates
+build-relay: fetch-pki prepare quality test-go coverage coverage-check-pkgs ## Build relay binary with quality gates
 	@echo "Building $(APP_NAME)..."
 	docker compose exec builder sh -c ' cd /git-source \
 		&& SOURCE_HASH=$$(go run ./tools/sourcehash .) \

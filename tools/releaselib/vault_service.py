@@ -114,6 +114,58 @@ class VaultService:
                 cause=e,
             )
 
+    def verify(self, digest_b64: str, signature: str, key_name: str) -> bool:
+        """
+        Verifies a signature against a pre-hashed, base64-encoded digest
+        using Vault's Transit Engine. Returns True if valid.
+        """
+        if self.dry_run:
+            self.logger.info("[DRY-RUN] Skipping Vault verify. Returning True.")
+            return True
+
+        try:
+            base64.b64decode(digest_b64, validate=True)
+        except (TypeError, ValueError) as e:
+            raise VaultServiceError(f"Invalid Base64 digest format: {e}") from e
+
+        response = None
+        try:
+            self.logger.debug(
+                f"Verifying signature with Vault at {self.vault_addr} for key {key_name}..."
+            )
+            response = requests.post(
+                f"{self.vault_addr}/v1/transit/verify/{key_name}",
+                headers={"X-Vault-Token": self.vault_token},
+                json={
+                    "input": digest_b64,
+                    "signature": signature,
+                    "prehashed": True,
+                    "hash_algorithm": "sha2-256",
+                },
+                verify=self.verify_tls,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+
+            valid = response.json().get("data", {}).get("valid")
+            if not isinstance(valid, bool):
+                raise VaultServiceError(
+                    f"Unexpected 'valid' field in Vault response: {response.text}"
+                )
+            return valid
+        except requests.exceptions.RequestException as e:
+            raise VaultServiceError(f"Vault verify request failed: {e}", cause=e)
+        except ValueError as e:
+            raw = response.text if response else "No response text available."
+            raise VaultServiceError(
+                f"Invalid JSON in Vault verify response: {e}. Raw: {raw}", cause=e
+            )
+        except (AttributeError, KeyError, TypeError) as e:
+            raw = response.text if response else "No response text available."
+            raise VaultServiceError(
+                f"Could not parse verify response: {e}. Raw: {raw}", cause=e
+            )
+
     def get_certificate(self, mount_path: str, secret_name: str, secret_key: str):
         """
         Retrieves a certificate (or any secret) from Vault's KV v2 engine.
