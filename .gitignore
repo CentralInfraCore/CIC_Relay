@@ -37,8 +37,7 @@ dist/
 # Embedded PKI dev keys — do not commit new key material here
 # (existing keys are test-only and grandfathered in)
 embedded/pki/*.key
-# Production PKI assets — fetched from local Vault at build time (make fetch-pki)
-embedded/pki/cic-source-ca.pem
+# Production PKI assets: placeholder is committed; make fetch-pki overwrites with real cert.
 /.idea/
 /.pip-cache/
 /p_venv/
