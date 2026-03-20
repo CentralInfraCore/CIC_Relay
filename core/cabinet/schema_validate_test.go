@@ -42,6 +42,14 @@ func TestValidateSchema(t *testing.T) {
 			t.Fatalf("expected ErrInvalid, got %v", err)
 		}
 	})
+
+	t.Run("$schema not a string returns ErrInvalid", func(t *testing.T) {
+		data := map[string]interface{}{"$schema": 42}
+		err := ValidateSchema([]string{"relay.config@1.0"}, data)
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("expected ErrInvalid, got %v", err)
+		}
+	})
 }
 
 func TestValidateInputSchema(t *testing.T) {

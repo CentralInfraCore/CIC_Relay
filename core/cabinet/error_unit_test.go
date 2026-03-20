@@ -44,6 +44,16 @@ func TestSentinelPredicates(t *testing.T) {
 			t.Fatalf("IsNotFound returned true for other errors")
 		}
 	})
+
+	t.Run("IsTimeout works", func(t *testing.T) {
+		w := fmt.Errorf("wrap: %w", ErrTimeout)
+		if !IsTimeout(w) {
+			t.Fatalf("IsTimeout(wrapped ErrTimeout) = false, want true")
+		}
+		if IsTimeout(ErrInvalid) || IsTimeout(ErrNotFound) || IsTimeout(errors.New("x")) {
+			t.Fatalf("IsTimeout returned true for non-ErrTimeout")
+		}
+	})
 }
 
 func TestValidationError_Error_EmptyReturnsErrInvalid(t *testing.T) {

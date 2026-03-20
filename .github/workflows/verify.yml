@@ -33,7 +33,7 @@ jobs:
 
       - name: Check for symbol drift
         run: |
-          go run ./tools/symbolsgen
+          go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md
           git diff --exit-code context/SYMBOLS.md
 
       - name: Build canonicalize (local, no Docker)
@@ -70,17 +70,22 @@ jobs:
           set -euo pipefail
           FAIL=0
           for p in $(go list ./... | grep -v /vendor/); do
+            # Skip main-only packages and pure-types packages (no testable functions)
+            case "$p" in
+              */tools/sourcehash)  echo "$p: skip (main package)"; continue ;;
+              */core/nexus/types)  echo "$p: skip (types-only package)"; continue ;;
+            esac
             go test -coverprofile=/tmp/pkg_cover.out "$p" > /dev/null 2>&1 || continue
             pc=$(go tool cover -func=/tmp/pkg_cover.out | awk 'END{gsub(/%/,""); print $3+0}')
             case "$p" in
-              */core/cabinet)     min=95 ;;
-              */tools/canonicalize) min=85 ;;
-              */tools/certutils)  min=70 ;;
-              */cmd/relay)        min=80 ;;
-              *)                  min=75 ;;
+              */core/cabinet)        min=95 ;;
+              */tools/canonicalize)  min=85 ;;
+              */tools/certutils)     min=70 ;;
+              */cmd/relay)           min=80 ;;
+              *)                     min=75 ;;
             esac
             echo "$p: ${pc}% (min ${min}%)"
-            awk -v p="$pc" -v m="$min" 'BEGIN{ if (p+0 < m+0) { print "FAIL: coverage below threshold"; exit 1 } }'  || FAIL=1
+            awk -v p="$pc" -v m="$min" 'BEGIN{ if (p+0 < m+0) { print "FAIL: coverage below threshold"; exit 1 } }' || FAIL=1
           done
           exit $FAIL
 

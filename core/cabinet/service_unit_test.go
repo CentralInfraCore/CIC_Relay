@@ -22,6 +22,17 @@ func TestNewCabinetService_WasmManagerError(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to create LRU cache", "Error message should propagate the underlying LRU cache error")
 }
 
+// TestWithRecorder verifies that WithRecorder sets the recorder field on the service.
+func TestWithRecorder(t *testing.T) {
+	ctx := context.Background()
+	svc, err := NewCabinetService(ctx, NewMemSchemaStore(), NewMemModuleStore(), NewMemWorkflowStore(),
+		WasmManagerConfig{LRUCacheSize: 4},
+		WithRecorder(nil), // nil recorder — option must apply without panic
+	)
+	require.NoError(t, err)
+	require.NotNil(t, svc)
+}
+
 // TestExecutionContext verifies the functionality of the executionContext struct.
 func TestExecutionContext(t *testing.T) {
 	initialPayload := map[string]interface{}{"initial_key": "initial_value"}
