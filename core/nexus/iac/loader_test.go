@@ -37,6 +37,12 @@ func TestLoader_Load_Success(t *testing.T) {
 	service, ok := graph.Services["service-a"]
 	require.True(t, ok, "service 'service-a' should exist")
 	assert.Equal(t, "test-module", service.Spec.Module)
+	require.Len(t, service.Spec.Resources, 1, "service should have one resource")
+	res := service.Spec.Resources[0]
+	assert.Equal(t, "resource-01", res.Meta.Name)
+	assert.Equal(t, "core.test", res.SchemaRef.Name)
+	assert.Equal(t, "1.0", res.SchemaRef.Version)
+	assert.Equal(t, "present", res.State.Desired)
 }
 
 func TestLoader_Load_RelativePaths(t *testing.T) {

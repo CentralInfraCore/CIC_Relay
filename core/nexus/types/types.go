@@ -77,8 +77,35 @@ type Service struct {
 }
 
 type ServiceSpec struct {
-	Module string                 `json:"module" yaml:"module"` // Reference to the schema/module name (e.g., "postgresql")
-	Config map[string]interface{} `json:"config" yaml:"config"` // The actual configuration payload
+	Module    string                 `json:"module" yaml:"module"`               // Reference to the schema/module name (e.g., "postgresql")
+	Config    map[string]interface{} `json:"config,omitempty" yaml:"config,omitempty"` // Legacy configuration payload
+	Resources []ResourceSpec         `json:"resources,omitempty" yaml:"resources,omitempty"` // Schema-driven resource declarations
+}
+
+// ResourceSpec declares a single managed resource within a Service.
+type ResourceSpec struct {
+	Meta         ResourceMeta           `json:"meta" yaml:"meta"`
+	SchemaRef    SchemaRef              `json:"schemaRef" yaml:"schemaRef"`
+	Spec         map[string]interface{} `json:"spec,omitempty" yaml:"spec,omitempty"`
+	State        ResourceState          `json:"state,omitempty" yaml:"state,omitempty"`
+	Dependencies []string               `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+}
+
+// SchemaRef identifies a schema by name and version in the Cabinet registry.
+type SchemaRef struct {
+	Name    string `json:"name" yaml:"name"`
+	Version string `json:"version" yaml:"version"`
+}
+
+// ResourceState holds the desired lifecycle state of a resource.
+type ResourceState struct {
+	Desired string `json:"desired,omitempty" yaml:"desired,omitempty"` // "present" or "absent"
+}
+
+// ResourceMeta holds identifying metadata for a resource instance.
+type ResourceMeta struct {
+	Name string `json:"name" yaml:"name"`
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 }
 
 // Graph represents the in-memory execution graph.

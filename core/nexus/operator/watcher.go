@@ -38,11 +38,17 @@ type Watcher interface {
 	Watch(ctx context.Context) (<-chan Event, error)
 }
 
+// ResourceValidator validates a single resource against an external schema registry.
+type ResourceValidator interface {
+	ValidateResource(ctx context.Context, res types.ResourceSpec) error
+}
+
 // Operator manages the lifecycle of infrastructure entities based on Watcher events.
 type Operator struct {
 	Watcher      Watcher
 	bootstrapper *Bootstrapper
 	lifecycle    *LifecycleManager
+	validator    ResourceValidator // nil = schema validation skipped
 	logger       *logrus.Logger
 }
 
@@ -64,6 +70,13 @@ func NewOperatorWithLifecycle(watcher Watcher, b *Bootstrapper, lm *LifecycleMan
 		lifecycle:    lm,
 		logger:       logger,
 	}
+}
+
+// WithValidator attaches a ResourceValidator to the Operator.
+// When set, every Service resource is validated against the schema registry before activation.
+func (o *Operator) WithValidator(v ResourceValidator) *Operator {
+	o.validator = v
+	return o
 }
 
 // Run starts the operator loop.
@@ -103,24 +116,31 @@ func (o *Operator) handleEvent(ctx context.Context, event Event) error {
 	}
 }
 
-// onApply handles creation or update of a Host entity.
-// Parses the YAML content for Kind=Host, generates a bootstrap token,
-// and onboards the host via LifecycleManager.
+// onApply handles creation or update of a Host or Service entity.
 func (o *Operator) onApply(ctx context.Context, event Event) error {
-	if o.bootstrapper == nil || o.lifecycle == nil {
-		o.logger.WithField("file", event.FilePath).Warn("operator lifecycle not configured — skipping apply")
-		return nil
-	}
-
 	var base types.BaseComponent
 	if err := yaml.Unmarshal(event.Content, &base); err != nil {
 		return fmt.Errorf("parse component YAML %s: %w", event.FilePath, err)
 	}
-	if base.Kind != "Host" {
+
+	switch base.Kind {
+	case "Host":
+		return o.onApplyHost(ctx, event, base)
+	case "Service":
+		return o.onApplyService(ctx, event)
+	default:
 		o.logger.WithFields(logrus.Fields{
 			"kind": base.Kind,
 			"file": event.FilePath,
-		}).Debug("skipping non-Host apply event")
+		}).Debug("skipping unknown kind in apply event")
+		return nil
+	}
+}
+
+// onApplyHost generates a bootstrap token and onboards the host via LifecycleManager.
+func (o *Operator) onApplyHost(ctx context.Context, event Event, base types.BaseComponent) error {
+	if o.bootstrapper == nil || o.lifecycle == nil {
+		o.logger.WithField("file", event.FilePath).Warn("operator lifecycle not configured — skipping host apply")
 		return nil
 	}
 
@@ -133,6 +153,37 @@ func (o *Operator) onApply(ctx context.Context, event Event) error {
 		return fmt.Errorf("bootstrap host %q: %w", hostID, err)
 	}
 	return o.lifecycle.OnboardHost(ctx, tok)
+}
+
+// onApplyService validates each resource in the service against the schema registry
+// and logs resources that are ready for activation.
+func (o *Operator) onApplyService(ctx context.Context, event Event) error {
+	var svc types.Service
+	if err := yaml.Unmarshal(event.Content, &svc); err != nil {
+		return fmt.Errorf("parse Service YAML %s: %w", event.FilePath, err)
+	}
+
+	for _, res := range svc.Spec.Resources {
+		log := o.logger.WithFields(logrus.Fields{
+			"service":  svc.Metadata.Name,
+			"resource": res.Meta.Name,
+			"schema":   res.SchemaRef.Name + "@" + res.SchemaRef.Version,
+		})
+
+		if o.validator != nil {
+			if err := o.validator.ValidateResource(ctx, res); err != nil {
+				log.WithError(err).Warn("resource validation failed — skipping activation")
+				continue
+			}
+		}
+
+		if res.State.Desired == "present" {
+			log.Info("resource validated and ready for activation")
+		} else {
+			log.WithField("desired", res.State.Desired).Debug("resource not desired present — skipping activation")
+		}
+	}
+	return nil
 }
 
 // onDelete handles deletion of a Host entity.

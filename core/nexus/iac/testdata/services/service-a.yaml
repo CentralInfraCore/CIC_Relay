@@ -4,5 +4,14 @@ metadata:
   name: service-a
 spec:
   module: test-module
-  config:
-    key: value
+  resources:
+    - meta:
+        name: resource-01
+        kind: test-resource
+      schemaRef:
+        name: core.test
+        version: "1.0"
+      spec:
+        key: value
+      state:
+        desired: present
