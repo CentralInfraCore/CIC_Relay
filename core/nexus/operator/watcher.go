@@ -43,12 +43,20 @@ type ResourceValidator interface {
 	ValidateResource(ctx context.Context, res types.ResourceSpec) error
 }
 
+// ResourceActivator executes the lifecycle action for a validated, desired-present resource.
+// The implementation bridges nexus/operator to core/cabinet without a direct import.
+type ResourceActivator interface {
+	Activate(ctx context.Context, svcName string, res types.ResourceSpec) error
+}
+
 // Operator manages the lifecycle of infrastructure entities based on Watcher events.
 type Operator struct {
 	Watcher      Watcher
 	bootstrapper *Bootstrapper
 	lifecycle    *LifecycleManager
-	validator    ResourceValidator // nil = schema validation skipped
+	validator    ResourceValidator  // nil = schema validation skipped
+	activator    ResourceActivator  // nil = activation logged but not executed
+	graph        *types.Graph       // nil = dependency gating skipped (lenient)
 	logger       *logrus.Logger
 }
 
@@ -76,6 +84,21 @@ func NewOperatorWithLifecycle(watcher Watcher, b *Bootstrapper, lm *LifecycleMan
 // When set, every Service resource is validated against the schema registry before activation.
 func (o *Operator) WithValidator(v ResourceValidator) *Operator {
 	o.validator = v
+	return o
+}
+
+// WithActivator attaches a ResourceActivator to the Operator.
+// When set, resources with state.desired=present are passed to the activator after validation.
+func (o *Operator) WithActivator(a ResourceActivator) *Operator {
+	o.activator = a
+	return o
+}
+
+// WithGraph provides the full infrastructure graph for dependency resolution.
+// When set, a resource is only activated if all its declared dependencies exist in the graph
+// with at least one resource declaring state.desired=present.
+func (o *Operator) WithGraph(g *types.Graph) *Operator {
+	o.graph = g
 	return o
 }
 
@@ -177,13 +200,56 @@ func (o *Operator) onApplyService(ctx context.Context, event Event) error {
 			}
 		}
 
-		if res.State.Desired == "present" {
-			log.Info("resource validated and ready for activation")
-		} else {
+		if res.State.Desired != "present" {
 			log.WithField("desired", res.State.Desired).Debug("resource not desired present — skipping activation")
+			continue
+		}
+
+		if !o.depsReady(res.Dependencies) {
+			log.WithField("dependencies", res.Dependencies).Warn("resource dependencies not ready — skipping activation")
+			continue
+		}
+
+		if o.activator != nil {
+			if err := o.activator.Activate(ctx, svc.Metadata.Name, res); err != nil {
+				log.WithError(err).Warn("resource activation failed")
+				continue
+			}
+			log.Info("resource activated")
+		} else {
+			log.Info("resource ready for activation (no activator configured)")
 		}
 	}
 	return nil
+}
+
+// depsReady returns true if all named service dependencies exist in the graph
+// and have at least one resource declaring state.desired=present.
+// When no graph is set, the check is lenient (returns true).
+func (o *Operator) depsReady(deps []string) bool {
+	if len(deps) == 0 {
+		return true
+	}
+	if o.graph == nil {
+		return true
+	}
+	for _, dep := range deps {
+		svc, ok := o.graph.Services[dep]
+		if !ok {
+			return false
+		}
+		hasPresent := false
+		for _, r := range svc.Spec.Resources {
+			if r.State.Desired == "present" {
+				hasPresent = true
+				break
+			}
+		}
+		if !hasPresent {
+			return false
+		}
+	}
+	return true
 }
 
 // onDelete handles deletion of a Host entity.
