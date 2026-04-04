@@ -138,6 +138,7 @@ func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.rootHandler)
 	mux.HandleFunc("/set", s.setHandler)
+	mux.HandleFunc("/v1/schema/compile", s.compileHandler)
 	mux.HandleFunc("/healthz", s.healthzHandler)
 	mux.HandleFunc("/readyz", s.readyzHandler)
 	return mux
@@ -463,15 +464,31 @@ func main() {
 	loadCtx, cancel := context.WithTimeout(context.Background(), cfg.HashingTimeout)
 	defer cancel()
 
+	// --- PKI Trust Bootstrap ---
+	trustMode := resolveTrustMode(logger)
+	pkiAssets, err := bootstrapPKI(trustMode, embeddedFS, logger)
+	if err != nil {
+		logger.WithError(err).Fatal("FATAL: PKI bootstrap failed")
+	}
+	logger.WithFields(logrus.Fields{
+		"trust_mode":         trustMode,
+		"trust_store_loaded": pkiAssets.TrustStoreLoaded,
+	}).Info("PKI trust store ready")
+
 	// Register built-in native modules first (core.test, ci.build, …).
 	if err := registerNativeComponents(loadCtx, cabinetSvc); err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to register native components")
 	}
 	logger.Info("Native components registered.")
 
+	// Load embedded schemas and workflows.
+	if err := loadEmbeddedComponents(loadCtx, cabinetSvc, embeddedFS, embeddedFS, embeddedFS, "embedded/pki", cfg.MaxWASMModuleSize, logger); err != nil {
+		logger.WithField("error", err).Fatal("FATAL: Failed to load embedded components")
+	}
+
 	// The path for installed components can be made configurable later (e.g., via flags or env vars)
 	// For now, it's hardcoded to /etc/cic-relay/components.d
-	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", "", cfg.MaxWASMModuleSize, logger); err != nil {
+	if err := loadInstalledComponents(loadCtx, cabinetSvc, "/etc/cic-relay/components.d", pkiAssets, cfg.MaxWASMModuleSize, logger); err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to load installed components")
 	}
 

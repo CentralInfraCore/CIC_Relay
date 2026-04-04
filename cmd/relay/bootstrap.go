@@ -15,6 +15,7 @@ import (
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/modules/cibuild"
+	"centralrelay/core/modules/schemacompile"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -50,6 +51,53 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
 
 	if err := svc.PutModule(ciBuildModule); err != nil {
 		return fmt.Errorf("failed to register ci.build module: %w", err)
+	}
+
+	// --- Register cic.source.assert module ---
+	assertMeta := cabinet.BaseBlock{Name: "cic.source.assert", Version: "1.0", Description: "Source assertion validator (stub)."}
+	assertModule, err := cabinet.NewModuleDescriptor(ctx, assertMeta, "native/schema", nil, []string{"asserted", "policy_version", "schema", "version", "metadata", "spec", "raw_yaml"}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create cic.source.assert module descriptor: %w", err)
+	}
+	assertModule.NativeImpl = cabinet.NativeFunctions{"assert": schemacompile.AssertSource}
+	if err := svc.PutModule(assertModule); err != nil {
+		return fmt.Errorf("failed to register cic.source.assert module: %w", err)
+	}
+
+	// --- Register cic.schema.build module ---
+	buildMeta := cabinet.BaseBlock{Name: "cic.schema.build", Version: "1.0", Description: "Schema build module (stub)."}
+	buildModule, err := cabinet.NewModuleDescriptor(ctx, buildMeta, "native/schema", nil, []string{"schema", "version", "raw_artifact", "metadata", "spec"}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create cic.schema.build module descriptor: %w", err)
+	}
+	buildModule.NativeImpl = cabinet.NativeFunctions{"build": schemacompile.BuildSchema}
+	if err := svc.PutModule(buildModule); err != nil {
+		return fmt.Errorf("failed to register cic.schema.build module: %w", err)
+	}
+
+	// --- Register cic.artifact.sign module ---
+	signMeta := cabinet.BaseBlock{Name: "cic.artifact.sign", Version: "1.0", Description: "Artifact sign module (stub)."}
+	signModule, err := cabinet.NewModuleDescriptor(ctx, signMeta, "native/schema", nil, []string{"artifact", "build_hash", "cic_sign", "cic_signed_ca"}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create cic.artifact.sign module descriptor: %w", err)
+	}
+	signModule.NativeImpl = cabinet.NativeFunctions{"sign": schemacompile.SignArtifact}
+	if err := svc.PutModule(signModule); err != nil {
+		return fmt.Errorf("failed to register cic.artifact.sign module: %w", err)
+	}
+
+	// --- Register cic.schema.compile workflow ---
+	compileMeta := cabinet.BaseBlock{Name: "cic.schema.compile", Version: "1.0", Description: "Schema compilation workflow: assert source, build, sign artifact."}
+	compileWorkflow, err := cabinet.NewWorkflow(ctx, compileMeta, []string{
+		"cic.source.assert@1.0.assert(input) -> assert_result",
+		"cic.schema.build@1.0.build(assert_result) -> artifact",
+		"cic.artifact.sign@1.0.sign(artifact) -> signed_artifact",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create cic.schema.compile workflow: %w", err)
+	}
+	if err := svc.PutWorkflow(compileWorkflow); err != nil {
+		return fmt.Errorf("failed to register cic.schema.compile workflow: %w", err)
 	}
 
 	logrus.Info("Successfully registered all native components.")
@@ -111,24 +159,8 @@ func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas fs
 }
 
 // loadInstalledComponents loads components from a given filesystem path.
-func loadInstalledComponents(ctx context.Context, svc cabinet.Cabinet, componentsPath, pkiPath string, maxWasmModuleSize int64, logger *logrus.Logger) error {
-	var pkiAssets *PKIAssets
-	var err error
-
-	if pkiPath != "" {
-		pkiAssets, err = loadPKIAssets(os.DirFS(pkiPath), ".", logger)
-		if err != nil {
-			return fmt.Errorf("failed to load installed PKI assets: %w", err)
-		}
-	} else {
-		// If pkiPath is empty, no PKI assets are loaded.
-		// Initialize with empty PKIAssets.
-		pkiAssets = &PKIAssets{
-			Roots:         x509.NewCertPool(),
-			Intermediates: x509.NewCertPool(),
-			CRLs:          []*x509.RevocationList{},
-		}
-	}
+// pkiAssets must not be nil — pass the result of bootstrapPKI for trust-verified loading.
+func loadInstalledComponents(ctx context.Context, svc cabinet.Cabinet, componentsPath string, pkiAssets *PKIAssets, maxWasmModuleSize int64, logger *logrus.Logger) error {
 
 	fileInfo, err := os.Stat(componentsPath)
 	if err != nil {
