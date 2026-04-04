@@ -692,8 +692,8 @@ func TestLoadInstalledComponents_Success(t *testing.T) {
 	componentsDir, err := filepath.Abs("testdata/minimal")
 	require.NoError(t, err)
 
-	// No pki path to simplify the test and focus on component loading.
-	err = loadInstalledComponents(context.Background(), svc, componentsDir, "", maxWasmSize, logger)
+	// No PKI verification needed for this test — use empty trust store.
+	err = loadInstalledComponents(context.Background(), svc, componentsDir, emptyPKIAssets(), maxWasmSize, logger)
 	logOutput := logBuf.String() // Capture log output
 	require.NoError(t, err, "loadInstalledComponents failed. Logs:\n%s", logOutput)
 
@@ -719,7 +719,7 @@ func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 		var logBuf bytes.Buffer
 		logger.SetOutput(&logBuf)
 
-		err := loadInstalledComponents(context.Background(), svc, "/path/to/non/existent/dir", "", maxWasmSize, logger)
+		err := loadInstalledComponents(context.Background(), svc, "/path/to/non/existent/dir", emptyPKIAssets(), maxWasmSize, logger)
 		require.NoError(t, err)
 		assert.Contains(t, logBuf.String(), "Installed components directory not found, skipping.")
 	})
@@ -730,22 +730,9 @@ func TestLoadInstalledComponents_PathErrors(t *testing.T) {
 		require.NoError(t, err)
 		tempFile.Close()
 
-		loadErr := loadInstalledComponents(context.Background(), svc, tempFile.Name(), "", maxWasmSize, logger)
+		loadErr := loadInstalledComponents(context.Background(), svc, tempFile.Name(), emptyPKIAssets(), maxWasmSize, logger)
 		require.Error(t, loadErr)
 		assert.Contains(t, loadErr.Error(), "path is a file, not a directory")
-	})
-
-	t.Run("pki path is a file", func(t *testing.T) {
-		logger := newDiscardLogger()
-		componentsDir := t.TempDir()
-
-		pkiFile, err := os.CreateTemp(t.TempDir(), "pki_file")
-		require.NoError(t, err)
-		pkiFile.Close()
-
-		err = loadInstalledComponents(context.Background(), svc, componentsDir, pkiFile.Name(), maxWasmSize, logger)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to load installed PKI assets")
 	})
 }
 
@@ -756,6 +743,16 @@ func newDiscardLogger() *logrus.Logger {
 	return logger
 }
 
+// emptyPKIAssets returns a PKIAssets with empty pools (TrustStoreLoaded=false).
+// Use this in tests that focus on component loading, not PKI verification.
+func emptyPKIAssets() *PKIAssets {
+	return &PKIAssets{
+		Roots:         x509.NewCertPool(),
+		Intermediates: x509.NewCertPool(),
+		CRLs:          []*x509.RevocationList{},
+	}
+}
+
 // TestRegisterNativeComponents verifies that the native components are correctly registered in the cabinet.
 func TestRegisterNativeComponents(t *testing.T) {
 	mockCabinet := new(mockCabinetService)
@@ -764,13 +761,20 @@ func TestRegisterNativeComponents(t *testing.T) {
 	var registeredModules []*cabinet.ModuleDescriptor
 	mockCabinet.On("PutModule", mock.Anything).Run(func(args mock.Arguments) {
 		registeredModules = append(registeredModules, args.Get(0).(*cabinet.ModuleDescriptor))
-	}).Return(nil).Times(2) // core.test + ci.build
+	}).Return(nil).Times(5) // core.test + ci.build + cic.source.assert + cic.schema.build + cic.artifact.sign
+
+	var registeredWorkflows []*cabinet.Workflow
+	mockCabinet.On("PutWorkflow", mock.Anything).Run(func(args mock.Arguments) {
+		registeredWorkflows = append(registeredWorkflows, args.Get(0).(*cabinet.Workflow))
+	}).Return(nil).Times(1) // cic.schema.compile
 
 	err := registerNativeComponents(context.Background(), mockCabinet)
 	require.NoError(t, err, "registerNativeComponents should not return an error")
 	mockCabinet.AssertExpectations(t)
 
-	require.Len(t, registeredModules, 2, "expected two native modules to be registered")
+	require.Len(t, registeredModules, 5, "expected five native modules to be registered")
+	require.Len(t, registeredWorkflows, 1, "expected one workflow to be registered")
+	assert.Equal(t, "cic.schema.compile@1.0", registeredWorkflows[0].ID())
 
 	// First: core.test
 	coreTest := registeredModules[0]
@@ -785,6 +789,27 @@ func TestRegisterNativeComponents(t *testing.T) {
 	require.NotNil(t, ciBuild.NativeImpl)
 	_, ok = ciBuild.NativeImpl["build"]
 	assert.True(t, ok, "ci.build should expose 'build' function")
+
+	// Third: cic.source.assert
+	sourceAssert := registeredModules[2]
+	assert.Equal(t, "cic.source.assert@1.0", sourceAssert.ID())
+	require.NotNil(t, sourceAssert.NativeImpl)
+	_, ok = sourceAssert.NativeImpl["assert"]
+	assert.True(t, ok, "cic.source.assert should expose 'assert' function")
+
+	// Fourth: cic.schema.build
+	schemaBuild := registeredModules[3]
+	assert.Equal(t, "cic.schema.build@1.0", schemaBuild.ID())
+	require.NotNil(t, schemaBuild.NativeImpl)
+	_, ok = schemaBuild.NativeImpl["build"]
+	assert.True(t, ok, "cic.schema.build should expose 'build' function")
+
+	// Fifth: cic.artifact.sign
+	artifactSign := registeredModules[4]
+	assert.Equal(t, "cic.artifact.sign@1.0", artifactSign.ID())
+	require.NotNil(t, artifactSign.NativeImpl)
+	_, ok = artifactSign.NativeImpl["sign"]
+	assert.True(t, ok, "cic.artifact.sign should expose 'sign' function")
 }
 
 func TestRegisterNativeComponents_Errors(t *testing.T) {
