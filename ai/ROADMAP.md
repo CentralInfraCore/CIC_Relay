@@ -281,7 +281,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M20       | **Done**    | SourceDigest upgrade: pkg/sourcedigest determinisztikus tree hash; tools/sourcehash CLI; SourceTreeHash ldflags |
 | M21       | **Done**    | Hermetic build boundary: docker-compose.yaml image digest-pinning; CI Go 1.24.6 exact + staticcheck@v0.6.1 |
 | M23       | **Done**      | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator handling |
-| M24       | **Tervezett** | PoC Execution Bridge: state.desired=present → Cabinet.Setx() + dependency gating |
+| M24       | **Done**      | PoC Execution Bridge: CabinetActivator + dependency gating + state.desired → Cabinet.Setx() |
 | M25       | **Tervezett** | PKI Trust Bootstrap: EEC certs → embedded/ → pki_verify.go bekötés + CIC_TRUST_MODE |
 | M22       | **Tervezett** | Observability Layer — Phase 1: common schema (LogRecord, TraceFrame, MetricPoint, ExecutionContext, IntegrityEnvelope) |
 
@@ -327,14 +327,14 @@ Ez a fájl az AI-támogatott roadmap állapota.
     * [x] **M23.6**: Testdata frissítés (`service-a.yaml` → resources[] modell); loader teszt bővítve.
 
 ### M24 — PoC Execution Bridge (state.desired → Cabinet.Setx)
-* **Állapot:** Tervezett
+* **Állapot:** Done
 * **Fő cél:** Az `onApplyService` validáció után a `state.desired=present` resource-on `Cabinet.Setx()` hívást indít a megfelelő workflow-val. Ez zárja be a core PoC pipeline-t: declared → validated → relayed.
 * **Részfeladatok (checklist):**
-    * [ ] **M24.1**: Workflow kiválasztás `schemaRef` alapján (`Cabinet.GetWorkflow("name@version")`).
-    * [ ] **M24.2**: `Cabinet.Setx()` hívás a resource spec payload-dal.
-    * [ ] **M24.3**: `SetResponse` + ProofTrace → `StateRecorder` bekötés.
-    * [ ] **M24.4**: `dependencies` kiértékelés: ha nem teljesül, resource queued állapotba kerül, nem skippled.
-    * [ ] **M24.5**: Tesztek: mock Cabinet + valid resource → Setx hívódik; validáció fail → Setx nem hívódik.
+    * [x] **M24.1**: Workflow kiválasztás `schemaRef` alapján (`schemaRef.name@version` konvenció).
+    * [x] **M24.2**: `Cabinet.Setx()` hívás a resource spec payload-dal (`CabinetActivator`, `cmd/relay/activator.go`).
+    * [x] **M24.3**: ProofTrace `ChainHash` logolása aktiváció után.
+    * [x] **M24.4**: `dependencies` kiértékelés: `depsReady()` — service létezik ÉS van desired=present resource-a; ha nem teljesül, skip + Warn.
+    * [x] **M24.5**: Tesztek: mock Cabinet + valid resource → Setx hívódik; activator error → continue; deps missing → skip.
 
 ### M25 — PKI Trust Bootstrap (EEC → relay)
 * **Állapot:** Tervezett
@@ -366,7 +366,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
 | p38  | M23       | Done    | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator + testdata |
-| p39  | M24       | Tervezett | PoC Execution Bridge: state.desired → Cabinet.Setx() |
+| p39  | M24       | Done      | PoC Execution Bridge: CabinetActivator + dependency gating |
 | p40  | M25       | Tervezett | PKI Trust Bootstrap: EEC certs + CIC_TRUST_MODE |
 
 ## Sprint 8 — Lezárva

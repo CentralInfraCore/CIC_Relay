@@ -933,7 +933,7 @@ entries:
     accept: make test
 
   - task: "state-desired-execution"
-    status: todo
+    status: done
     priority: 39
     milestone: M24
     prompt: |
