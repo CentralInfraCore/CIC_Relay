@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"centralrelay/core/nexus/types"
 )
 
 // MockWatcher is a mock implementation of the Watcher interface.
@@ -265,6 +267,141 @@ func TestPollingWatcher_StateDiff_Delete(t *testing.T) {
 	assert.Equal(t, EventDelete, got2[0].Type)
 	assert.Equal(t, "host-c.yaml", got2[0].FilePath)
 	assert.Nil(t, got2[0].Content)
+}
+
+// mockActivator records Activate calls for assertion in tests.
+type mockActivator struct {
+	calls []struct {
+		svcName string
+		resName string
+	}
+	err error
+}
+
+func (m *mockActivator) Activate(_ context.Context, svcName string, res types.ResourceSpec) error {
+	m.calls = append(m.calls, struct {
+		svcName string
+		resName string
+	}{svcName, res.Meta.Name})
+	return m.err
+}
+
+func makeServiceYAML(svcName, resName, desired string, deps []string) []byte {
+	depStr := ""
+	for _, d := range deps {
+		depStr += "\n        - " + d
+	}
+	return []byte(`apiVersion: cic/v1
+kind: Service
+metadata:
+  name: ` + svcName + `
+spec:
+  module: test-mod
+  resources:
+    - meta:
+        name: ` + resName + `
+      schemaRef:
+        name: core.test
+        version: "1.0"
+      state:
+        desired: ` + desired + `
+      dependencies:` + depStr + `
+`)
+}
+
+func TestOnApplyService_DesiredPresent_Activated(t *testing.T) {
+	act := &mockActivator{}
+	op := NewOperator(nil).WithActivator(act)
+
+	err := op.handleEvent(context.Background(), Event{
+		Type:    EventCreate,
+		Content: makeServiceYAML("svc-a", "res-01", "present", nil),
+	})
+	require.NoError(t, err)
+	require.Len(t, act.calls, 1)
+	assert.Equal(t, "svc-a", act.calls[0].svcName)
+	assert.Equal(t, "res-01", act.calls[0].resName)
+}
+
+func TestOnApplyService_DesiredAbsent_NotActivated(t *testing.T) {
+	act := &mockActivator{}
+	op := NewOperator(nil).WithActivator(act)
+
+	err := op.handleEvent(context.Background(), Event{
+		Type:    EventCreate,
+		Content: makeServiceYAML("svc-b", "res-02", "absent", nil),
+	})
+	require.NoError(t, err)
+	assert.Empty(t, act.calls)
+}
+
+func TestOnApplyService_DepsNotInGraph_Skipped(t *testing.T) {
+	act := &mockActivator{}
+	graph := &types.Graph{Services: map[string]*types.Service{}}
+	op := NewOperator(nil).WithActivator(act).WithGraph(graph)
+
+	err := op.handleEvent(context.Background(), Event{
+		Type:    EventCreate,
+		Content: makeServiceYAML("svc-c", "res-03", "present", []string{"missing-dep"}),
+	})
+	require.NoError(t, err)
+	assert.Empty(t, act.calls, "activation must be skipped when dep is absent from graph")
+}
+
+func TestOnApplyService_DepsReady_Activated(t *testing.T) {
+	act := &mockActivator{}
+	graph := &types.Graph{
+		Services: map[string]*types.Service{
+			"dep-svc": {
+				Spec: types.ServiceSpec{
+					Resources: []types.ResourceSpec{
+						{State: types.ResourceState{Desired: "present"}},
+					},
+				},
+			},
+		},
+	}
+	op := NewOperator(nil).WithActivator(act).WithGraph(graph)
+
+	err := op.handleEvent(context.Background(), Event{
+		Type:    EventCreate,
+		Content: makeServiceYAML("svc-d", "res-04", "present", []string{"dep-svc"}),
+	})
+	require.NoError(t, err)
+	require.Len(t, act.calls, 1)
+	assert.Equal(t, "res-04", act.calls[0].resName)
+}
+
+func TestOnApplyService_ActivatorError_ContinuesNextResource(t *testing.T) {
+	act := &mockActivator{err: errors.New("activation failed")}
+	op := NewOperator(nil).WithActivator(act)
+
+	// Two resources in one service; activator fails on first → second also attempted
+	content := []byte(`apiVersion: cic/v1
+kind: Service
+metadata:
+  name: svc-e
+spec:
+  module: test-mod
+  resources:
+    - meta:
+        name: res-05
+      schemaRef:
+        name: core.test
+        version: "1.0"
+      state:
+        desired: present
+    - meta:
+        name: res-06
+      schemaRef:
+        name: core.test
+        version: "1.0"
+      state:
+        desired: present
+`)
+	err := op.handleEvent(context.Background(), Event{Type: EventCreate, Content: content})
+	require.NoError(t, err, "handleEvent must not propagate activator errors")
+	assert.Len(t, act.calls, 2, "both resources must be attempted despite first failure")
 }
 
 func TestPollingWatcher_EmptyDir_NoEvents(t *testing.T) {
