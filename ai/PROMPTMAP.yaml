@@ -696,6 +696,148 @@ entries:
       - cmd/relay/main_test.go
     accept: make test
 
+  # --- Sprint 9 ---
+
+  - task: "obs-common-schema"
+    status: todo
+    priority: 38
+    milestone: M22.1-M22.5
+    prompt: |
+      Hozz létre egy `pkg/obs/` csomagot a CIC Relay operatív observability rétegének
+      alaptípusaival. Ez az OTel-szemléletű, de OTel SDK-mentes belső modell első fázisa.
+      A ProofTrace (core/cabinet/proof_trace.go) megmarad — ez mellé épül, nem helyette.
+
+      Referencia-doc: `docs/hu/concept/obs_modell.md`
+
+      **M22.1 — pkg/obs/types.go**
+      Alaptípusok (nincs OTel import):
+
+        type Resource struct {
+            ServiceName       string
+            ServiceVersion    string
+            ServiceInstanceID string
+            Environment       string
+            RelayRole         string
+        }
+
+        type ExecutionContext struct {
+            ExecutionID       string
+            RequestID         string
+            CorrelationID     string
+            ProofTraceID      string
+            WorkflowID        string
+            WorkflowStep      string
+            ParentExecutionID string
+            StartKind         string // http | timer | internal | callback | replay
+        }
+
+        type LogRecord struct {
+            TimestampUnixNs int64
+            SeverityNumber  int
+            SeverityText    string
+            EventName       string   // pl. "relay.validation.failed"
+            Category        string   // lifecycle|transport|workflow|validation|proof|security|config|performance
+            Message         string
+            ExecutionRef    ExecutionContext
+            TraceRef        TraceRef
+            ProofRef        ProofRef
+            Attributes      map[string]string
+            Error           *ObsError
+        }
+
+        type TraceRef struct { TraceID, FrameID string }
+        type ProofRef struct { ProofTraceID, StepHash string; StepIndex int }
+
+        type TraceFrame struct {
+            FrameID       string
+            TraceID       string
+            ParentFrameID string
+            Name          string   // pl. "relay.workflow.step.validate"
+            Kind          string   // server|client|internal|validation|proof|storage|transport|adapter
+            Status        string   // ok|error|timeout|rejected|cancelled|partial
+            StartedAtUnixNs int64
+            EndedAtUnixNs   int64
+            DurationNs      int64
+            Attributes    map[string]string
+            Events        []FrameEvent
+            Error         *ObsError
+        }
+
+        type FrameEvent struct { Name string; UnixNs int64; Attributes map[string]string }
+
+        type ObsError struct { Type, Code, Message string; Retryable bool }
+
+        type CounterPoint   struct { Name string; Value int64;   TimestampUnixNs int64; Attributes map[string]string }
+        type GaugePoint     struct { Name string; Value float64; TimestampUnixNs int64; Attributes map[string]string }
+        type HistogramPoint struct {
+            Name string; Count uint64; Sum, Min, Max float64
+            Buckets []Bucket; TimestampUnixNs int64; Attributes map[string]string
+        }
+        type Bucket struct { UpperBound float64; Count uint64 }
+
+        type IntegrityEnvelope struct {
+            RecordHash      string
+            GlobalChainHash string
+            TypeChainHash   string
+            SequenceNo      uint64
+            TypeSequenceNo  uint64
+            SignerID        string
+            KeyID           string
+            Signature       string
+        }
+
+      **M22.2 — pkg/obs/chain.go**
+      Hash-lánc számítás a `pkg/canonicaljson` alapján:
+        - `RecordHash(v interface{}) (string, error)` — canonical JSON SHA256 hex
+        - `NextGlobalChain(prevGlobalHash, recordHash string) string` — SHA256(prev||record)
+        - `NextTypeChain(prevTypeHash, recordHash string) string` — SHA256(prev||record)
+      Az üres prevHash esetén az üres string a kiindulópont (konzisztens a ProofTrace-szel).
+
+      **M22.3 — pkg/obs/sink.go**
+      Interfészek és NoopSink:
+        type TraceSink  interface { EmitFrame(TraceFrame) error }
+        type LogSink    interface { EmitLog(LogRecord) error }
+        type MetricSink interface {
+            EmitCounter(CounterPoint) error
+            EmitGauge(GaugePoint) error
+            EmitHistogram(HistogramPoint) error
+        }
+        // NoopSink: minden interfészt implementál, minden művelet nil-t ad vissza.
+
+      **M22.4 — pkg/obs/registry.go**
+      MetricInstrument regiszter:
+        type MetricInstrument struct {
+            Name          string
+            Kind          string // counter|gauge|histogram
+            Unit          string
+            Description   string
+            AttributeKeys []string
+            Stability     string // experimental|stable|internal
+        }
+        type MetricRegistry struct { ... }
+        func (r *MetricRegistry) Register(i MetricInstrument) error
+        func (r *MetricRegistry) Lookup(name string) (MetricInstrument, bool)
+      Névtér-validáció: a `name`-nek `relay.` prefixszel kell kezdődnie, különben error.
+
+      **M22.5 — pkg/obs/obs_test.go**
+      Unit tesztek:
+        - RecordHash determinisztikus (azonos input → azonos hash)
+        - GlobalChainHash lánc konzisztens (3 lépés sorban, változás detektálható)
+        - TypeChainHash két különböző típusra független lánc
+        - MetricRegistry: valid és invalid névtér regisztráció
+        - NoopSink: minden emit nil-t ad
+
+      Fontos megszorítások:
+        - Nincs `go.opentelemetry.io` import
+        - Nincs `context.Context` baggage dependency
+        - Nincs wall-clock a types.go-ban (a caller adja a TimestampUnixNs értéket)
+        - `pkg/canonicaljson` használata a kanonizáláshoz
+        - A signing (IntegrityEnvelope.Signature) scaffold: mező megvan, kitöltés a signing
+          service feladata (M22 scope-on kívül, de a struct helye itt van)
+    tests:
+      - pkg/obs/obs_test.go
+    accept: make test
+
   # --- Sprint 8 ---
 
 
@@ -764,3 +906,110 @@ entries:
       - .github/workflows/verify.yml
       - ai/SYSTEM_CONTEXT.md
     accept: grep -q "sha256:" docker-compose.yaml
+
+  # --- Sprint 9 ---
+
+  - task: "iac-resource-schema"
+    status: done
+    priority: 38
+    milestone: M23
+    prompt: |
+      A Service IaC modell kiterjesztése `ResourceSpec`-alapú schema-vezérelt erőforrás-kezelésre.
+
+      Elvégzett feladatok:
+        1. `core/nexus/types/types.go` — új típusok: `ResourceSpec`, `SchemaRef`,
+           `ResourceState`, `ResourceMeta`; `ServiceSpec.Resources []ResourceSpec` mező
+        2. `core/nexus/iac/validator.go` (ÚJ) — `IaCValidator`:
+           - `Validate(ctx, graph)`: minden Service minden resource-án iterál
+           - `ValidateResource(ctx, res)`: schemaRef → `Cabinet.GetSchema("name@version")`
+           - Hibajelzés: `"service/X resource/Y: schemaRef not found: name@version"`
+        3. `core/nexus/iac/testdata/services/service-a.yaml` — frissítve resources[] modellre
+        4. `core/nexus/iac/loader_test.go` — resource unmarshal assertiók
+        5. `core/nexus/operator/watcher.go` — `ResourceValidator` interfész,
+           `WithValidator()`, `onApplyService()` — per-resource validáció + activation log
+    tests:
+      - core/nexus/iac/loader_test.go
+      - core/nexus/operator/watcher.go
+    accept: make test
+
+  - task: "state-desired-execution"
+    status: todo
+    priority: 39
+    milestone: M24
+    prompt: |
+      Kösd be a `state.desired == "present"` feltételt a tényleges Cabinet lifecycle-ba.
+
+      Feladatok:
+        1. `core/nexus/operator/watcher.go` — `onApplyService`:
+           - `state.desired == "present"` → `lifecycle.OnboardResource(ctx, svc, res)` hívás
+           - dependency gating: `res.Dependencies` minden elemét ellenőrizd (létezik-e
+             `graph.Services[dep]` és `state.desired == "present"`)
+           - logolás: unresolved dep → Warn + skip; resolved → Info "resource activated"
+        2. `core/nexus/operator/lifecycle.go` (vagy meglévő) —
+           `OnboardResource(ctx, svc Service, res ResourceSpec) error`
+           - Hívja a `Cabinet.Setx()` megfelelő workflow-val (mock vagy stub elfogadható PoC-ban)
+        3. `core/nexus/operator/watcher_test.go` — unit tesztek:
+           - desired=present + dep kész → activation hívódik
+           - desired=absent → skip
+           - desired=present + dep hiányzik → skip + warn
+      DoD: `go test ./core/nexus/operator/...` zöld; activation csak ha desired=present és
+           minden dependency resolved.
+    tests:
+      - core/nexus/operator/watcher_test.go
+    accept: go test ./core/nexus/operator/...
+
+  - task: "pki-eec-trust-bootstrap"
+    status: todo
+    priority: 40
+    milestone: M25
+    prompt: |
+      Wire az EEC tanúsítványok beágyazása és a `pki_verify.go` aktiválása.
+
+      Kontextus: Az EEC könyvtárban léteznek (`CICPlatformCA2026.pem`, `CICSourceCA2026.pem`,
+      stb.) — a PKI nem fog kell létrehozni, csak bekötni.
+
+      Feladatok:
+        1. `cmd/relay/embedded/` könyvtár:
+           - `CICDeveloperCA.pem` és `CICPlatformCA.pem` beágyazva `//go:embed` direktívával
+        2. `cmd/relay/pki_bootstrap.go` (ÚJ):
+           - `CIC_TRUST_MODE` env var: `"dev"` | `"prod"` (default: `"dev"`)
+           - `"dev"` → `CICDeveloperCA.pem` betöltése
+           - `"prod"` → `CICPlatformCA.pem` betöltése
+           - Visszaadja a megfelelő `*x509.CertPool`-t
+        3. `core/cabinet/pki_verify.go` bekötése:
+           - `NewPKIVerifier(pool *x509.CertPool)` → `bootstrap.go`-ban inicializálva
+           - `loadModule`: placeholder helyett valódi PEM chain verify
+        4. `cmd/relay/bootstrap_test.go` — tesztek:
+           - `CIC_TRUST_MODE=dev` → DeveloperCA pool
+           - `CIC_TRUST_MODE=prod` → PlatformCA pool
+           - ismeretlen mód → error
+      DoD: `pki_verify.go` aktívan fut `loadModule`-ban; `CIC_TRUST_MODE` env var vezérli
+           a trust anchor-t; `make test` zöld.
+    tests:
+      - cmd/relay/bootstrap_test.go
+      - cmd/relay/pki_bootstrap.go
+    accept: make test
+
+  - task: "relay-trust-branch-config"
+    status: todo
+    priority: 41
+    milestone: M25
+    prompt: |
+      A relay induláskor egyetlen CA gyökeret tölt be (`CIC_TRUST_MODE`), és ezt auditálja.
+
+      Feladatok:
+        1. `cmd/relay/bootstrap.go`:
+           - Induláskor logolj `"trust_mode"` és `"ca_anchor"` mezőket (audit trail)
+           - Ha `CIC_TRUST_MODE` nincs beállítva → default `"dev"` + WARN log
+        2. `cmd/relay/main.go`:
+           - Startup banner tartalmazza: `trust_mode`, `ca_anchor` digest (SHA256 első 8 byte)
+        3. Dokumentáció: `docs/en/reality/relay.md` és `docs/hu/reality/relay.md` már
+           tartalmazza a trust branch izolációt (done) — ellenőrizd hogy a kódban szereplő
+           `CIC_TRUST_MODE` env var neve egyezik a doksi példáival
+        4. `cmd/relay/bootstrap_test.go`:
+           - Startup audit log tartalmaz-e `trust_mode` mezőt
+      DoD: `CIC_TRUST_MODE` env var a teljes trust branch konfigurációt vezérli;
+           minden relay startup audit log-olható trust anchor-ral indul.
+    tests:
+      - cmd/relay/bootstrap_test.go
+    accept: make test

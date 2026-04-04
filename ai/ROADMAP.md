@@ -280,6 +280,10 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M19       | **Done**    | ci.build@1.0 native Go modul; make exec, artifact SHA-256; config/schemas/ci.build.schema.yaml |
 | M20       | **Done**    | SourceDigest upgrade: pkg/sourcedigest determinisztikus tree hash; tools/sourcehash CLI; SourceTreeHash ldflags |
 | M21       | **Done**    | Hermetic build boundary: docker-compose.yaml image digest-pinning; CI Go 1.24.6 exact + staticcheck@v0.6.1 |
+| M23       | **Done**      | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator handling |
+| M24       | **Tervezett** | PoC Execution Bridge: state.desired=present → Cabinet.Setx() + dependency gating |
+| M25       | **Tervezett** | PKI Trust Bootstrap: EEC certs → embedded/ → pki_verify.go bekötés + CIC_TRUST_MODE |
+| M22       | **Tervezett** | Observability Layer — Phase 1: common schema (LogRecord, TraceFrame, MetricPoint, ExecutionContext, IntegrityEnvelope) |
 
 ### M17 — Source-Pinned ProofTrace (Chain Hash Integritás)
 * **Állapot:** Done
@@ -311,7 +315,61 @@ Ez a fájl az AI-támogatott roadmap állapota.
 
 ---
 
-## Sprint 8 — Folyamatban
+### M23 — IaC Schema Integration (ResourceSpec + IaCValidator)
+* **Állapot:** Done
+* **Fő cél:** A `kind: Service` IaC modell séma-vezérelt resource deklarációt kap. Az `IaCValidator` feloldja a `schemaRef`-et a Cabinet sémajegyzékben, validálja a resource-okat, és az Operator Service eseménynél is validál.
+* **Részfeladatok (checklist):**
+    * [x] **M23.1**: `types.ResourceSpec`, `SchemaRef`, `ResourceState`, `ResourceMeta` típusok bevezetése (`core/nexus/types/types.go`).
+    * [x] **M23.2**: `ServiceSpec.Resources []ResourceSpec` mező — backward-compatible (Config mező megmarad).
+    * [x] **M23.3**: `IaCValidator` (`core/nexus/iac/validator.go`) — `schemaRef → Cabinet.GetSchema("name@version")` feloldás, resource- és graph-szintű validáció.
+    * [x] **M23.4**: `ResourceValidator` interfész az `operator` csomagban; `Operator.WithValidator()` functional option.
+    * [x] **M23.5**: `onApplyService` — Service eseménynél resource-onkénti validáció + `state.desired=present` logolás.
+    * [x] **M23.6**: Testdata frissítés (`service-a.yaml` → resources[] modell); loader teszt bővítve.
+
+### M24 — PoC Execution Bridge (state.desired → Cabinet.Setx)
+* **Állapot:** Tervezett
+* **Fő cél:** Az `onApplyService` validáció után a `state.desired=present` resource-on `Cabinet.Setx()` hívást indít a megfelelő workflow-val. Ez zárja be a core PoC pipeline-t: declared → validated → relayed.
+* **Részfeladatok (checklist):**
+    * [ ] **M24.1**: Workflow kiválasztás `schemaRef` alapján (`Cabinet.GetWorkflow("name@version")`).
+    * [ ] **M24.2**: `Cabinet.Setx()` hívás a resource spec payload-dal.
+    * [ ] **M24.3**: `SetResponse` + ProofTrace → `StateRecorder` bekötés.
+    * [ ] **M24.4**: `dependencies` kiértékelés: ha nem teljesül, resource queued állapotba kerül, nem skippled.
+    * [ ] **M24.5**: Tesztek: mock Cabinet + valid resource → Setx hívódik; validáció fail → Setx nem hívódik.
+
+### M25 — PKI Trust Bootstrap (EEC → relay)
+* **Állapot:** Tervezett
+* **Fő cél:** Az EEC-ben már meglévő CA tanúsítványok betöltése a relay trust store-jába, a `pki_verify.go` bekötése, és a `CIC_TRUST_MODE` alapú branch-elkülönítés megvalósítása.
+* **Architekturális alap:** A relay trust ágak (dev/prod) dokumentálva: `docs/hu/reality/relay.md` és `docs/en/reality/relay.md`.
+* **Részfeladatok (checklist):**
+    * [ ] **M25.1**: `CIC_TRUST_MODE=dev|prod` env var; a relay induláskor csak az egyik CA fát tölti be.
+    * [ ] **M25.2**: `CICPlatformCA2026.pem`, `CICSourceCA2026.pem` → `embedded/pki/` (public certs, nem privát kulcsok).
+    * [ ] **M25.3**: `bootstrap.go` `buildVerifyOptions()` — `VerifyOptions{Roots, Intermediates, CRLs}` összerakása a betöltött CA tanúsítványokból.
+    * [ ] **M25.4**: `pki_verify.go` bekötése a modul-betöltési útvonalba — a `"trust ecosystem not bootstrapped"` scaffold-állapot megszűnik.
+    * [ ] **M25.5**: Tesztek: `TRUST_MODE=dev` → DeveloperCA-val aláírt modul átmegy; `TRUST_MODE=prod` → ugyanaz visszautasítva.
+* **Előfeltétel:** EEC CA tanúsítványok elérhetők (`CIC/EEC/`); `pki_verify.go` már implementálva (M3).
+
+### M22 — Observability Layer (Phase 1: Common Schema)
+* **Állapot:** Tervezett
+* **Fő cél:** OTel-szemléletű, de OTel SDK-mentes operatív megfigyelhetőségi réteg alaptípusainak bevezetése. A `ProofTrace` (truth layer) megmarad — ez mellé épül egy elkülönített observability layer a strukturált logoláshoz, metrikákhoz és végrehajtási keretekhez.
+* **Referencia:** `docs/hu/concept/obs_modell.md`
+* **Részfeladatok (checklist):**
+    *   [ ] **M22.1**: `pkg/obs/types.go` — alaptípusok: `Resource`, `ExecutionContext`, `LogRecord`, `TraceFrame`, `CounterPoint`, `GaugePoint`, `HistogramPoint`, `IntegrityEnvelope`
+    *   [ ] **M22.2**: `pkg/obs/chain.go` — `RecordHash`, `GlobalChainHash`, `TypeChainHash` számítás (`pkg/canonicaljson` alapú)
+    *   [ ] **M22.3**: `pkg/obs/sink.go` — `TraceSink`, `LogSink`, `MetricSink` interfészek; `NoopSink` implementáció
+    *   [ ] **M22.4**: `pkg/obs/registry.go` — `MetricInstrument` regiszter; névtér-validáció (`relay.*` prefix kötelező)
+    *   [ ] **M22.5**: Unit tesztek: hash-lánc konzisztencia, canonical form stabilitás, névtér-validáció
+* **Előfeltétel:** `pkg/canonicaljson` (megvan), `core/nexus/crypto` Vault signing (megvan, M13)
+* **Nem cél ebben a fázisban:** OTel export, Prometheus bridge, ProofTrace projection
+
+## Sprint 9 — Folyamatban
+
+| Task | Milestone | Állapot | Leírás |
+|------|-----------|---------|--------|
+| p38  | M23       | Done    | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator + testdata |
+| p39  | M24       | Tervezett | PoC Execution Bridge: state.desired → Cabinet.Setx() |
+| p40  | M25       | Tervezett | PKI Trust Bootstrap: EEC certs + CIC_TRUST_MODE |
+
+## Sprint 8 — Lezárva
 
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
