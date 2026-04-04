@@ -959,7 +959,7 @@ entries:
     accept: go test ./core/nexus/operator/...
 
   - task: "pki-eec-trust-bootstrap"
-    status: todo
+    status: done
     priority: 40
     milestone: M25
     prompt: |

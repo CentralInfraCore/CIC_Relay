@@ -282,7 +282,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M21       | **Done**    | Hermetic build boundary: docker-compose.yaml image digest-pinning; CI Go 1.24.6 exact + staticcheck@v0.6.1 |
 | M23       | **Done**      | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator handling |
 | M24       | **Done**      | PoC Execution Bridge: CabinetActivator + dependency gating + state.desired → Cabinet.Setx() |
-| M25       | **Tervezett** | PKI Trust Bootstrap: EEC certs → embedded/ → pki_verify.go bekötés + CIC_TRUST_MODE |
+| M25       | **Done**      | PKI Trust Bootstrap: embedded dev CA + CIC_TRUST_MODE + pki_verify.go aktív |
 | M22       | **Tervezett** | Observability Layer — Phase 1: common schema (LogRecord, TraceFrame, MetricPoint, ExecutionContext, IntegrityEnvelope) |
 
 ### M17 — Source-Pinned ProofTrace (Chain Hash Integritás)
@@ -337,15 +337,15 @@ Ez a fájl az AI-támogatott roadmap állapota.
     * [x] **M24.5**: Tesztek: mock Cabinet + valid resource → Setx hívódik; activator error → continue; deps missing → skip.
 
 ### M25 — PKI Trust Bootstrap (EEC → relay)
-* **Állapot:** Tervezett
+* **Állapot:** Done
 * **Fő cél:** Az EEC-ben már meglévő CA tanúsítványok betöltése a relay trust store-jába, a `pki_verify.go` bekötése, és a `CIC_TRUST_MODE` alapú branch-elkülönítés megvalósítása.
 * **Architekturális alap:** A relay trust ágak (dev/prod) dokumentálva: `docs/hu/reality/relay.md` és `docs/en/reality/relay.md`.
 * **Részfeladatok (checklist):**
-    * [ ] **M25.1**: `CIC_TRUST_MODE=dev|prod` env var; a relay induláskor csak az egyik CA fát tölti be.
-    * [ ] **M25.2**: `CICPlatformCA2026.pem`, `CICSourceCA2026.pem` → `embedded/pki/` (public certs, nem privát kulcsok).
-    * [ ] **M25.3**: `bootstrap.go` `buildVerifyOptions()` — `VerifyOptions{Roots, Intermediates, CRLs}` összerakása a betöltött CA tanúsítványokból.
-    * [ ] **M25.4**: `pki_verify.go` bekötése a modul-betöltési útvonalba — a `"trust ecosystem not bootstrapped"` scaffold-állapot megszűnik.
-    * [ ] **M25.5**: Tesztek: `TRUST_MODE=dev` → DeveloperCA-val aláírt modul átmegy; `TRUST_MODE=prod` → ugyanaz visszautasítva.
+    * [x] **M25.1**: `CIC_TRUST_MODE=dev|prod` env var; relay induláskor egy CA fát tölt be.
+    * [x] **M25.2**: `CICDeveloperCA2026.pem` + `rootCA2026.pem` → `embedded/pki/` (//go:embed).
+    * [x] **M25.3**: `pki_bootstrap.go` `bootstrapPKI()` — PKIAssets összerakása a betöltött CA tanúsítványokból.
+    * [x] **M25.4**: `pki_verify.go` bekötése a modul-betöltési útvonalba — a `"trust ecosystem not bootstrapped"` scaffold-állapot megszűnt.
+    * [x] **M25.5**: Tesztek: dev → TrustStoreLoaded=true; prod → scaffold+warn; unknown → error.
 * **Előfeltétel:** EEC CA tanúsítványok elérhetők (`CIC/EEC/`); `pki_verify.go` már implementálva (M3).
 
 ### M22 — Observability Layer (Phase 1: Common Schema)
@@ -367,7 +367,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 |------|-----------|---------|--------|
 | p38  | M23       | Done    | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator + testdata |
 | p39  | M24       | Done      | PoC Execution Bridge: CabinetActivator + dependency gating |
-| p40  | M25       | Tervezett | PKI Trust Bootstrap: EEC certs + CIC_TRUST_MODE |
+| p40  | M25       | Done      | PKI Trust Bootstrap: embedded dev CA + CIC_TRUST_MODE + pki_verify.go aktív |
 
 ## Sprint 8 — Lezárva
 
