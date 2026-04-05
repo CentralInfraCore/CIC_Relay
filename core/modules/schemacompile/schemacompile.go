@@ -10,11 +10,18 @@ package schemacompile
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
 )
+
+// CertVerifyFunc is called with the parsed developer certificate from source_assertion.
+// Return a non-nil error to reject the assertion.
+// If nil is passed as the verifier, certificate chain verification is skipped (stub mode).
+type CertVerifyFunc func(cert *x509.Certificate) error
 
 // cicSchemasArtifact mirrors the structure produced by CIC-Schemas generate_signed_artifact.
 // Used for parsing the source_assertion YAML in AssertSource.
@@ -23,12 +30,26 @@ type cicSchemasArtifact struct {
 	Spec     interface{}            `yaml:"spec"`
 }
 
-// AssertSource is the native function for cic.source.assert@1.0.
+// NewAssertSourceFunc returns a native function for cic.source.assert@1.0 wired with
+// the provided certificate verifier. Pass nil to run in stub mode (no chain verification).
 //
-// If source_assertion is present in the input, it parses the developer-signed
-// CIC-Schemas artifact YAML and validates the required metadata fields.
-// If absent, it passes the input through (stub mode, Layer 1 not yet wired).
+// The returned function:
+//   - passes through inputs without source_assertion (stub mode)
+//   - validates required metadata fields when source_assertion is present
+//   - parses and verifies the PEM certificate in metadata.createdBy.certificate via verify
+func NewAssertSourceFunc(verify CertVerifyFunc) func(context.Context, interface{}) (interface{}, error) {
+	return func(_ context.Context, input interface{}) (interface{}, error) {
+		return assertSourceImpl(input, verify)
+	}
+}
+
+// AssertSource is the legacy no-verifier entry point (stub mode, Layer 1 not yet wired).
+// Use NewAssertSourceFunc to inject a real PKI verifier.
 func AssertSource(_ context.Context, input interface{}) (interface{}, error) {
+	return assertSourceImpl(input, nil)
+}
+
+func assertSourceImpl(input interface{}, verify CertVerifyFunc) (interface{}, error) {
 	m, ok := input.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("cic.source.assert: expected map, got %T", input)
@@ -60,10 +81,26 @@ func AssertSource(_ context.Context, input interface{}) (interface{}, error) {
 			return nil, fmt.Errorf("cic.source.assert: source_assertion metadata.%s is required", field)
 		}
 	}
+	var certPEM string
 	if cb, _ := artifact.Metadata["createdBy"].(map[string]interface{}); cb == nil {
 		return nil, fmt.Errorf("cic.source.assert: source_assertion metadata.createdBy is required")
-	} else if cert, _ := cb["certificate"].(string); cert == "" {
+	} else if certPEM, _ = cb["certificate"].(string); certPEM == "" {
 		return nil, fmt.Errorf("cic.source.assert: source_assertion metadata.createdBy.certificate is required")
+	}
+
+	// L0.3 — X.509 certificate chain verification.
+	if verify != nil {
+		block, _ := pem.Decode([]byte(certPEM))
+		if block == nil || block.Type != "CERTIFICATE" {
+			return nil, fmt.Errorf("cic.source.assert: createdBy.certificate is not a valid PEM CERTIFICATE block")
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("cic.source.assert: failed to parse createdBy.certificate: %w", err)
+		}
+		if err := verify(cert); err != nil {
+			return nil, fmt.Errorf("cic.source.assert: certificate verification failed: %w", err)
+		}
 	}
 
 	// Cross-check name/version from the request against the assertion.

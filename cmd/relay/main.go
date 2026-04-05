@@ -501,7 +501,7 @@ func main() {
 	}).Info("PKI trust store ready")
 
 	// Register built-in native modules first (core.test, ci.build, …).
-	if err := registerNativeComponents(loadCtx, cabinetSvc); err != nil {
+	if err := registerNativeComponents(loadCtx, cabinetSvc, pkiAssets); err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to register native components")
 	}
 	logger.Info("Native components registered.")

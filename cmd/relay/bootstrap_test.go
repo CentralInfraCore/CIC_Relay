@@ -768,7 +768,7 @@ func TestRegisterNativeComponents(t *testing.T) {
 		registeredWorkflows = append(registeredWorkflows, args.Get(0).(*cabinet.Workflow))
 	}).Return(nil).Times(2) // cic.schema.compile + cert.selfsigned
 
-	err := registerNativeComponents(context.Background(), mockCabinet)
+	err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{})
 	require.NoError(t, err, "registerNativeComponents should not return an error")
 	mockCabinet.AssertExpectations(t)
 
@@ -831,7 +831,7 @@ func TestRegisterNativeComponents_Errors(t *testing.T) {
 		})
 
 		mockCabinet := new(mockCabinetService)
-		err := registerNativeComponents(context.Background(), mockCabinet)
+		err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{})
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create core.test module descriptor")
@@ -844,7 +844,7 @@ func TestRegisterNativeComponents_Errors(t *testing.T) {
 		// Expect PutModule to be called and return an error
 		mockCabinet.On("PutModule", mock.Anything).Return(expectedErr).Once()
 
-		err := registerNativeComponents(context.Background(), mockCabinet)
+		err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{})
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, expectedErr)
