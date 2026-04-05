@@ -761,20 +761,21 @@ func TestRegisterNativeComponents(t *testing.T) {
 	var registeredModules []*cabinet.ModuleDescriptor
 	mockCabinet.On("PutModule", mock.Anything).Run(func(args mock.Arguments) {
 		registeredModules = append(registeredModules, args.Get(0).(*cabinet.ModuleDescriptor))
-	}).Return(nil).Times(5) // core.test + ci.build + cic.source.assert + cic.schema.build + cic.artifact.sign
+	}).Return(nil).Times(6) // core.test + ci.build + cic.source.assert + cic.schema.build + cic.artifact.sign + cert.selfsigned
 
 	var registeredWorkflows []*cabinet.Workflow
 	mockCabinet.On("PutWorkflow", mock.Anything).Run(func(args mock.Arguments) {
 		registeredWorkflows = append(registeredWorkflows, args.Get(0).(*cabinet.Workflow))
-	}).Return(nil).Times(1) // cic.schema.compile
+	}).Return(nil).Times(2) // cic.schema.compile + cert.selfsigned
 
 	err := registerNativeComponents(context.Background(), mockCabinet)
 	require.NoError(t, err, "registerNativeComponents should not return an error")
 	mockCabinet.AssertExpectations(t)
 
-	require.Len(t, registeredModules, 5, "expected five native modules to be registered")
-	require.Len(t, registeredWorkflows, 1, "expected one workflow to be registered")
+	require.Len(t, registeredModules, 6, "expected six native modules to be registered")
+	require.Len(t, registeredWorkflows, 2, "expected two workflows to be registered")
 	assert.Equal(t, "cic.schema.compile@1.0", registeredWorkflows[0].ID())
+	assert.Equal(t, "cert.selfsigned@1.0", registeredWorkflows[1].ID())
 
 	// First: core.test
 	coreTest := registeredModules[0]
@@ -810,6 +811,13 @@ func TestRegisterNativeComponents(t *testing.T) {
 	require.NotNil(t, artifactSign.NativeImpl)
 	_, ok = artifactSign.NativeImpl["sign"]
 	assert.True(t, ok, "cic.artifact.sign should expose 'sign' function")
+
+	// Sixth: cert.selfsigned
+	certSelfSigned := registeredModules[5]
+	assert.Equal(t, "cert.selfsigned@1.0", certSelfSigned.ID())
+	require.NotNil(t, certSelfSigned.NativeImpl)
+	_, ok = certSelfSigned.NativeImpl["generate"]
+	assert.True(t, ok, "cert.selfsigned should expose 'generate' function")
 }
 
 func TestRegisterNativeComponents_Errors(t *testing.T) {

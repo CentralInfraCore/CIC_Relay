@@ -1,0 +1,9 @@
+apiVersion: relay.cic.com/v1
+kind: Workflow
+metadata:
+  name: cert.selfsigned
+  version: "1.0"
+  description: "Self-signed certificate generation workflow (dev level)."
+spec:
+  steps:
+    - "cert.selfsigned@1.0.generate(input) -> cert"
