@@ -1,0 +1,28 @@
+entrypoint: false
+tags:
+  - observation
+  - concept
+  - runtime
+  - validation
+  - workflow
+  - cic
+category:
+  - definition
+  - behavior
+  - architecture
+related_nodes:
+  - core/cabinet/proof_trace
+  - concept/allapotmodell
+  - concept/dependency_modell
+  - concept/graf_vegrehajtas
+used_in:
+  - runtime_eval
+  - architecture
+  - cic_design
+description: >
+  Defines the two-layer observability model for CIC Relay: the ProofTrace truth layer
+  (deterministic, cryptographic) and the operational observability layer (LogRecord,
+  TraceFrame, MetricPoint). Specifies the integrity model (hash-chained logs, signed
+  metric artifacts), the ExecutionContext correlation struct, the policy layer, and the
+  future OTel projection adapter. Establishes the strict separation between proof and
+  observation concerns.
