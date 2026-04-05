@@ -15,6 +15,7 @@ import (
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/iac"
 	"centralrelay/core/nexus/isolation"
 	"centralrelay/core/nexus/operator"
 	"centralrelay/core/nexus/recorder"
@@ -364,7 +365,12 @@ func buildRecorderOption(logger *logrus.Logger, secrets *VaultSecrets) cabinet.C
 // buildOperatorIfConfigured constructs and returns an Operator if CIC_INFRA_REPO_PATH is set.
 // Returns nil if CIC_INFRA_REPO_PATH is not set (operator is optional).
 // Calls logger.Fatal if CIC_INFRA_REPO_PATH is set but CIC_OPERATOR_SECRET is missing.
-func buildOperatorIfConfigured(logger *logrus.Logger) *operator.Operator {
+//
+// The operator is fully wired:
+//   - IaCValidator → Cabinet.GetSchema (schema-bound resource validation)
+//   - CabinetActivator → Cabinet.Setx (execution bridge)
+//   - IaC graph loaded upfront for dependency gating (WithGraph)
+func buildOperatorIfConfigured(ctx context.Context, cabinetSvc cabinet.Cabinet, logger *logrus.Logger) *operator.Operator {
 	infraPath := os.Getenv("CIC_INFRA_REPO_PATH")
 	if infraPath == "" {
 		logger.Warn("CIC_INFRA_REPO_PATH not set — Operator not started")
@@ -376,13 +382,30 @@ func buildOperatorIfConfigured(logger *logrus.Logger) *operator.Operator {
 		logger.Fatal("FATAL: CIC_INFRA_REPO_PATH is set but CIC_OPERATOR_SECRET is missing — cannot generate bootstrap tokens")
 	}
 
+	// Load the full IaC graph for dependency gating.
+	graph, err := iac.NewLoader(iac.NewFileSource(infraPath)).Load(ctx)
+	if err != nil {
+		logger.WithError(err).Warn("IaC graph load failed — operator will run without dependency gating")
+		graph = nil
+	}
+
 	watcher := operator.NewPollingWatcher(infraPath, 30*time.Second)
 	b := operator.NewBootstrapper([]byte(secret), nil, logger)
 	reg := operator.NewHostRegistry()
 	lm := operator.NewLifecycleManager(b, reg, nil, logger)
-	op := operator.NewOperatorWithLifecycle(watcher, b, lm, logger)
 
-	logger.WithField("infra_repo_path", infraPath).Info("Operator configured")
+	op := operator.NewOperatorWithLifecycle(watcher, b, lm, logger).
+		WithValidator(iac.NewIaCValidator(cabinetSvc)).
+		WithActivator(NewCabinetActivator(cabinetSvc, logger))
+
+	if graph != nil {
+		op = op.WithGraph(graph)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"infra_repo_path": infraPath,
+		"graph_loaded":    graph != nil,
+	}).Info("Operator configured")
 	return op
 }
 
@@ -496,7 +519,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if op := buildOperatorIfConfigured(logger); op != nil {
+	if op := buildOperatorIfConfigured(ctx, cabinetSvc, logger); op != nil {
 		go func() {
 			if err := op.Run(ctx); err != nil {
 				logger.WithError(err).Warn("operator exited with error")
