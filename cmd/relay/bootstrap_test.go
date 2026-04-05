@@ -581,7 +581,7 @@ wasmSize: 999
 	t.Run("module validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
 		invalidMetaYamlPath := "invalid_meta.yaml"
-		wasmContent := []byte{0x00, 0x61, 0x73, 0x6d}
+		wasmContent := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
 		hasher := sha256.New()
 		hasher.Write(wasmContent)
 		correctDigest := hex.EncodeToString(hasher.Sum(nil))
@@ -592,7 +592,7 @@ kind: Module
 metadata:
   version: "1.0" # Missing name
 wasmDigest: "%s"
-wasmSize: 4
+wasmSize: 8
 `, correctDigest))
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, invalidMetaYamlPath), invalidMetaYamlContent, 0644))
 		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "invalid_meta.wasm"), wasmContent, 0644))

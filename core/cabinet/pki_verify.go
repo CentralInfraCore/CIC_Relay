@@ -26,6 +26,11 @@ func checkRevocation(chains [][]*x509.Certificate, crls []*x509.RevocationList) 
 	for _, chain := range chains {
 		for _, cert := range chain {
 			for _, crl := range crls {
+				// Only check revocation entries from CRLs issued by this certificate's issuer.
+				// Comparing issuer DN prevents a CRL from one CA from revoking certs of another.
+				if crl.Issuer.String() != cert.Issuer.String() {
+					continue
+				}
 				for _, revokedCert := range crl.RevokedCertificateEntries {
 					if cert.SerialNumber.Cmp(revokedCert.SerialNumber) == 0 {
 						return fmt.Errorf("certificate with serial number %s is revoked", cert.SerialNumber)

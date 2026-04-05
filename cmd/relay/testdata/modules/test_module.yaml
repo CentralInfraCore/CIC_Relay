@@ -4,11 +4,10 @@ metadata:
   name: test.module
   version: "1.0"
   description: "A test WASM module."
-  checksum: "cf02acbb6fb563378c95f7736c3263ee4f22a5aaa1a2f0df9dd6193d68be33a9"
 type: executor
 accepts:
   - "test.schema@1.0"
 outputKeys:
   - "result"
-wasmDigest: "40096c6325699a99b1af0bfc4878bc36a072886530580bd5395f12802c37c1c8"
+wasmDigest: "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
 wasmSize: 8

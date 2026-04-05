@@ -21,9 +21,9 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 	if v.WorkflowID == "" {
 		return fmt.Errorf("%w: workflow_id is required", ErrInvalid)
 	}
-	if len(v.Modules) == 0 {
-		return fmt.Errorf("%w: modules must not be empty", ErrInvalid)
-	}
+	// Modules is optional: the execution engine resolves modules from workflow step
+	// ComponentIDs, not from this field. When provided, each listed module is validated
+	// to exist — but an empty list is accepted.
 
 	// Handle options priority validation
 	if v.Options == nil {

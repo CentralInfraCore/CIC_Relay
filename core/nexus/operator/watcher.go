@@ -58,14 +58,18 @@ type Operator struct {
 	activator    ResourceActivator  // nil = activation logged but not executed
 	graph        *types.Graph       // nil = dependency gating skipped (lenient)
 	logger       *logrus.Logger
+	// hostFiles caches filePath → metadata.name mappings seen during CREATE/UPDATE events.
+	// Used by onDelete to resolve the correct hostID when the file is already gone.
+	hostFiles map[string]string
 }
 
 // NewOperator creates a basic Operator without lifecycle support.
 // For full bootstrap/lifecycle wiring use NewOperatorWithLifecycle.
 func NewOperator(watcher Watcher) *Operator {
 	return &Operator{
-		Watcher: watcher,
-		logger:  logrus.New(),
+		Watcher:   watcher,
+		logger:    logrus.New(),
+		hostFiles: make(map[string]string),
 	}
 }
 
@@ -77,6 +81,7 @@ func NewOperatorWithLifecycle(watcher Watcher, b *Bootstrapper, lm *LifecycleMan
 		bootstrapper: b,
 		lifecycle:    lm,
 		logger:       logger,
+		hostFiles:    make(map[string]string),
 	}
 }
 
@@ -168,6 +173,8 @@ func (o *Operator) onApplyHost(ctx context.Context, event Event, base types.Base
 	}
 
 	hostID := base.Metadata.Name
+	// Cache filePath → hostID so onDelete can resolve it even after the file is gone.
+	o.hostFiles[event.FilePath] = hostID
 	tok, err := o.bootstrapper.BootstrapHost(ctx, HostDefinition{
 		HostID:   hostID,
 		Hostname: hostID,
@@ -253,14 +260,24 @@ func (o *Operator) depsReady(deps []string) bool {
 }
 
 // onDelete handles deletion of a Host entity.
-// Derives the hostID from the FilePath stem and offboards the host.
+// Resolves hostID from the cached metadata.name seen during CREATE/UPDATE.
+// Falls back to the filename stem if the file was never seen (e.g. operator restart).
 func (o *Operator) onDelete(ctx context.Context, event Event) error {
 	if o.lifecycle == nil {
 		o.logger.WithField("file", event.FilePath).Warn("operator lifecycle not configured — skipping delete")
 		return nil
 	}
 
-	hostID := strings.TrimSuffix(filepath.Base(event.FilePath), filepath.Ext(event.FilePath))
+	hostID, cached := o.hostFiles[event.FilePath]
+	if !cached {
+		// Fallback: derive from filename stem. Only correct if filename == metadata.name.
+		hostID = strings.TrimSuffix(filepath.Base(event.FilePath), filepath.Ext(event.FilePath))
+		o.logger.WithFields(logrus.Fields{
+			"file":    event.FilePath,
+			"host_id": hostID,
+		}).Warn("onDelete: hostID not in cache — using filename stem (may mismatch metadata.name)")
+	}
+	delete(o.hostFiles, event.FilePath)
 	return o.lifecycle.OffboardHost(ctx, hostID)
 }
 

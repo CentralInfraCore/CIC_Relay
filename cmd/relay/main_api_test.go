@@ -32,6 +32,8 @@ func TestSetHandler_Success(t *testing.T) {
 	mockAPI := new(mockCabinetService)
 	// When the Set method is called with any context and any payload, return a specific response and no error.
 	expectedResponse := &cabinet.SetResponse{Results: map[string]any{"status": "all good"}}
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("GetModule", mock.Anything).Return(&cabinet.ModuleDescriptor{}, nil)
 	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(expectedResponse, nil)
 
 	// Create a logger that discards output for clean test logs.
@@ -50,7 +52,7 @@ func TestSetHandler_Success(t *testing.T) {
 
 	// Create the HTTP request body.
 	payload := map[string]any{
-		"workflowId": "test.workflow@1.0",
+		"workflow_id": "test.workflow@1.0",
 		"modules":    []string{"test.module@1.0"},
 	}
 	body, _ := json.Marshal(payload)
@@ -177,6 +179,7 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 	// 1. Setup
 	mockAPI := new(mockCabinetService)
 	// Tell the mock to return an ErrInvalid error.
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
 	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, cabinet.ErrInvalid)
 
 	logger := logrus.New()
@@ -189,7 +192,7 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 	}
 
 	// Create a valid request body, as the error happens deeper in the logic.
-	validBody := []byte(`{"workflowId": "any"}`)
+	validBody := []byte(`{"workflow_id": "any"}`)
 
 	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader(validBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -210,6 +213,7 @@ func TestSetHandler_CabinetInvalidError(t *testing.T) {
 // TestSetHandler_Timeout tests the handler's response to a timeout from the cabinet.
 func TestSetHandler_Timeout(t *testing.T) {
 	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
 	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("%w: step timed out", cabinet.ErrTimeout))
 
 	logger := logrus.New()
@@ -221,7 +225,7 @@ func TestSetHandler_Timeout(t *testing.T) {
 		logger: logger,
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflowId":"any"}`)))
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -239,6 +243,7 @@ func TestSetHandler_CabinetInternalError(t *testing.T) {
 	mockAPI := new(mockCabinetService)
 	// Tell the mock to return a generic, non-validation error.
 	expectedErr := fmt.Errorf("unexpected database error")
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
 	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, expectedErr)
 
 	logger := logrus.New()
@@ -251,7 +256,7 @@ func TestSetHandler_CabinetInternalError(t *testing.T) {
 	}
 
 	// Create a valid request body.
-	validBody := []byte(`{"workflowId": "any"}`)
+	validBody := []byte(`{"workflow_id": "any"}`)
 
 	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader(validBody))
 	req.Header.Set("Content-Type", "application/json")

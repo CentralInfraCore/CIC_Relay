@@ -41,14 +41,30 @@ func hashValue(v interface{}) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// computeChainHash returns SHA-256 of: sourceDigest + concatenated output hashes of all steps.
+// computeChainHash returns SHA-256 over the full execution identity:
+//
+//	sourceDigest \x00 workflowID \x00 [per step: name \x00 module \x00 inputHash \x00 outputHash \x00]
+//
+// \x00 separators prevent hash collisions between adjacent fields.
 // sourceDigest anchors the chain to the source revision; pass "" when not available.
-// An empty sourceDigest with an empty steps slice produces the hash of the empty string.
-func computeChainHash(sourceDigest string, steps []ProofTraceStep) string {
+// workflowID binds the hash to the exact workflow definition that was executed.
+// InputHash and step Name are included so that two different workflows producing
+// the same outputs cannot share the same ChainHash.
+func computeChainHash(workflowID, sourceDigest string, steps []ProofTraceStep) string {
 	var sb strings.Builder
 	sb.WriteString(sourceDigest)
+	sb.WriteByte(0)
+	sb.WriteString(workflowID)
+	sb.WriteByte(0)
 	for _, s := range steps {
+		sb.WriteString(s.Name)
+		sb.WriteByte(0)
+		sb.WriteString(s.Module)
+		sb.WriteByte(0)
+		sb.WriteString(s.InputHash)
+		sb.WriteByte(0)
 		sb.WriteString(s.OutputHash)
+		sb.WriteByte(0)
 	}
 	sum := sha256.Sum256([]byte(sb.String()))
 	return hex.EncodeToString(sum[:])
