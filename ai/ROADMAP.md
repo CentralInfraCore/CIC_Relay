@@ -283,7 +283,8 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | M23       | **Done**      | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator handling |
 | M24       | **Done**      | PoC Execution Bridge: CabinetActivator + dependency gating + state.desired → Cabinet.Setx() |
 | M25       | **Done**      | PKI Trust Bootstrap: embedded dev CA + CIC_TRUST_MODE + pki_verify.go aktív |
-| M22       | **Tervezett** | Observability Layer — Phase 1: common schema (LogRecord, TraceFrame, MetricPoint, ExecutionContext, IntegrityEnvelope) |
+| M22       | **Done**      | Observability Layer Phase 1: pkg/obs alaptípusok, hash-lánc, sink interfészek, MetricInstrument registry |
+| M26       | **Done**      | L0.3 Source Assertion Validator: CertVerifyFunc factory, X.509 chain verify bekötve AssertSource-ba |
 
 ### M17 — Source-Pinned ProofTrace (Chain Hash Integritás)
 * **Állapot:** Done
@@ -361,11 +362,23 @@ Ez a fájl az AI-támogatott roadmap állapota.
 * **Előfeltétel:** `pkg/canonicaljson` (megvan), `core/nexus/crypto` Vault signing (megvan, M13)
 * **Nem cél ebben a fázisban:** OTel export, Prometheus bridge, ProofTrace projection
 
+### M26 — L0.3 Source Assertion Validator
+* **Állapot:** Done
+* **Fő cél:** Az `AssertSource` native function bekötése a PKI chain verificationbe. A `createdBy.certificate` X.509 tanúsítványa CICDeveloperCA2026-on keresztül verifikált, `ExtKeyUsageCodeSigning` EKU-val.
+* **Részfeladatok (checklist):**
+    *   [x] **M26.1**: `CertVerifyFunc` típus exportálása (`schemacompile` csomag) — `func(*x509.Certificate) error`
+    *   [x] **M26.2**: `NewAssertSourceFunc(verify CertVerifyFunc)` factory — visszaad native function closure-t; nil verifier esetén stub mode (L1 nem wired)
+    *   [x] **M26.3**: `bootstrap.go` frissítése — `registerNativeComponents` kap `*PKIAssets` paramétert; `TrustStoreLoaded` esetén valódi verifier closure épül (`VerifyCertificateChain` + `EKU=CodeSigning`)
+    *   [x] **M26.4**: Unit tesztek: valid lánc átmegy, untrusted CA elutasítva, invalid PEM elutasítva, nil verifier skip, schema/version mismatch
+* **Előfeltétel:** `cabinet.VerifyCertificateChain` (M3/M25, megvan), `PKIAssets` (bootstrap, megvan)
+* **Nem cél ebben a fázisban:** `metadata.checksum` spec-tartalom cross-validáció (L0.4), Layer 2 (cicSign)
+
 ## Sprint 10 — Folyamatban
 
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
 | p41  | M22       | Done    | Observability Layer Phase 1: pkg/obs alaptípusok + hash-lánc + sink interfészek |
+| p42  | M26       | Done    | L0.3 Source Assertion Validator: CertVerifyFunc factory + X.509 chain verify + tesztek |
 
 ## Sprint 9 — Lezárva
 

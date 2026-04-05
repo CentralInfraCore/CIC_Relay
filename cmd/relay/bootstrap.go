@@ -22,7 +22,8 @@ import (
 )
 
 // registerNativeComponents creates and registers all built-in Go components in the cabinet.
-func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
+// pkiAssets must not be nil; pass the result of bootstrapPKI.
+func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAssets *PKIAssets) error {
 	// --- Register core.test module ---
 	testFuncs := make(cabinet.NativeFunctions)
 	testFuncs["echo"] = cabinet.CoreEcho
@@ -55,12 +56,26 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
 	}
 
 	// --- Register cic.source.assert module ---
-	assertMeta := cabinet.BaseBlock{Name: "cic.source.assert", Version: "1.0", Description: "Source assertion validator (stub)."}
+	// L0.3: wire certificate chain verification when PKI trust store is loaded.
+	var certVerify schemacompile.CertVerifyFunc
+	if pkiAssets.TrustStoreLoaded {
+		certVerify = func(cert *x509.Certificate) error {
+			opts := cabinet.VerifyOptions{
+				Roots:         pkiAssets.Roots,
+				Intermediates: pkiAssets.Intermediates,
+				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+				CRLs:          pkiAssets.CRLs,
+			}
+			_, err := cabinet.VerifyCertificateChain(cert, opts)
+			return err
+		}
+	}
+	assertMeta := cabinet.BaseBlock{Name: "cic.source.assert", Version: "1.0", Description: "Source assertion validator (L0.3)."}
 	assertModule, err := cabinet.NewModuleDescriptor(ctx, assertMeta, "native/schema", nil, []string{"asserted", "policy_version", "schema", "version", "metadata", "spec", "raw_yaml"}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create cic.source.assert module descriptor: %w", err)
 	}
-	assertModule.NativeImpl = cabinet.NativeFunctions{"assert": schemacompile.AssertSource}
+	assertModule.NativeImpl = cabinet.NativeFunctions{"assert": schemacompile.NewAssertSourceFunc(certVerify)}
 	if err := svc.PutModule(assertModule); err != nil {
 		return fmt.Errorf("failed to register cic.source.assert module: %w", err)
 	}
