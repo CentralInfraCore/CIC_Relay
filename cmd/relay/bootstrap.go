@@ -15,6 +15,7 @@ import (
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/modules/cibuild"
+	"centralrelay/core/modules/certselfsigned"
 	"centralrelay/core/modules/schemacompile"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -98,6 +99,32 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet) error {
 	}
 	if err := svc.PutWorkflow(compileWorkflow); err != nil {
 		return fmt.Errorf("failed to register cic.schema.compile workflow: %w", err)
+	}
+
+	// --- Register cert.selfsigned module ---
+	certFuncs := make(cabinet.NativeFunctions)
+	certFuncs["generate"] = certselfsigned.Generate
+
+	certMeta := cabinet.BaseBlock{Name: "cert.selfsigned", Version: "1.0", Description: "Self-signed ECDSA P-256 certificate generator."}
+	certModule, err := cabinet.NewModuleDescriptor(ctx, certMeta, "native/cert", []string{"cert.selfsigned@1.0"}, []string{"cert_pem", "key_pem", "common_name", "not_before", "not_after"}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create cert.selfsigned module descriptor: %w", err)
+	}
+	certModule.NativeImpl = certFuncs
+	if err := svc.PutModule(certModule); err != nil {
+		return fmt.Errorf("failed to register cert.selfsigned module: %w", err)
+	}
+
+	// --- Register cert.selfsigned workflow ---
+	certWorkflowMeta := cabinet.BaseBlock{Name: "cert.selfsigned", Version: "1.0", Description: "Self-signed certificate generation workflow (dev level)."}
+	certWorkflow, err := cabinet.NewWorkflow(ctx, certWorkflowMeta, []string{
+		"cert.selfsigned@1.0.generate(input) -> cert",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create cert.selfsigned workflow: %w", err)
+	}
+	if err := svc.PutWorkflow(certWorkflow); err != nil {
+		return fmt.Errorf("failed to register cert.selfsigned workflow: %w", err)
 	}
 
 	logrus.Info("Successfully registered all native components.")
