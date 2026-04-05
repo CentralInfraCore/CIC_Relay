@@ -1,9 +1,6 @@
 package cabinet
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,46 +8,49 @@ import (
 )
 
 func TestComputeChainHash(t *testing.T) {
-	t.Run("empty sourceDigest and no steps produces hash of empty string", func(t *testing.T) {
-		sum := sha256.Sum256([]byte(""))
-		want := hex.EncodeToString(sum[:])
-		assert.Equal(t, want, computeChainHash("", nil))
+	t.Run("all empty inputs produces deterministic hash", func(t *testing.T) {
+		h := computeChainHash("", "", nil)
+		assert.Len(t, h, 64)
 	})
 
-	t.Run("sourceDigest only anchors the chain", func(t *testing.T) {
-		digest := "abc123"
-		sum := sha256.Sum256([]byte(digest))
-		want := hex.EncodeToString(sum[:])
-		assert.Equal(t, want, computeChainHash(digest, nil))
+	t.Run("workflowID is included in hash", func(t *testing.T) {
+		h1 := computeChainHash("wf-a", "src", nil)
+		h2 := computeChainHash("wf-b", "src", nil)
+		assert.NotEqual(t, h1, h2)
 	})
 
-	t.Run("steps without sourceDigest concatenates output hashes", func(t *testing.T) {
-		steps := []ProofTraceStep{
-			{OutputHash: "hash1"},
-			{OutputHash: "hash2"},
-		}
-		sum := sha256.Sum256([]byte("hash1hash2"))
-		want := hex.EncodeToString(sum[:])
-		assert.Equal(t, want, computeChainHash("", steps))
+	t.Run("sourceDigest anchors the chain", func(t *testing.T) {
+		h1 := computeChainHash("wf", "rev1", nil)
+		h2 := computeChainHash("wf", "rev2", nil)
+		assert.NotEqual(t, h1, h2)
 	})
 
-	t.Run("sourceDigest + steps are concatenated in order", func(t *testing.T) {
-		steps := []ProofTraceStep{
-			{OutputHash: "aaa"},
-			{OutputHash: "bbb"},
-		}
-		var sb strings.Builder
-		sb.WriteString("src")
-		sb.WriteString("aaa")
-		sb.WriteString("bbb")
-		sum := sha256.Sum256([]byte(sb.String()))
-		want := hex.EncodeToString(sum[:])
-		assert.Equal(t, want, computeChainHash("src", steps))
+	t.Run("step name is included in hash", func(t *testing.T) {
+		s1 := []ProofTraceStep{{Name: "step-a", Module: "m", InputHash: "i", OutputHash: "o"}}
+		s2 := []ProofTraceStep{{Name: "step-b", Module: "m", InputHash: "i", OutputHash: "o"}}
+		assert.NotEqual(t, computeChainHash("wf", "src", s1), computeChainHash("wf", "src", s2))
+	})
+
+	t.Run("inputHash is included in hash", func(t *testing.T) {
+		s1 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in1", OutputHash: "out"}}
+		s2 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in2", OutputHash: "out"}}
+		assert.NotEqual(t, computeChainHash("wf", "src", s1), computeChainHash("wf", "src", s2))
+	})
+
+	t.Run("outputHash is included in hash", func(t *testing.T) {
+		s1 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in", OutputHash: "out1"}}
+		s2 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in", OutputHash: "out2"}}
+		assert.NotEqual(t, computeChainHash("wf", "src", s1), computeChainHash("wf", "src", s2))
+	})
+
+	t.Run("same inputs produce same hash (determinism)", func(t *testing.T) {
+		steps := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "i", OutputHash: "o"}}
+		assert.Equal(t, computeChainHash("wf", "src", steps), computeChainHash("wf", "src", steps))
 	})
 
 	t.Run("different sourceDigest produces different hash", func(t *testing.T) {
-		h1 := computeChainHash("rev1", nil)
-		h2 := computeChainHash("rev2", nil)
+		h1 := computeChainHash("wf", "rev1", nil)
+		h2 := computeChainHash("wf", "rev2", nil)
 		assert.NotEqual(t, h1, h2)
 	})
 }

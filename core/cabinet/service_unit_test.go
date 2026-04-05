@@ -97,7 +97,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 	wfStore := NewMemWorkflowStore()
 
 	// Create a WASM module descriptor
-	wasmMod, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test.wasm", Version: "1.0"}, "wasm/test", nil, nil, []byte{0x00, 0x61, 0x73, 0x6d})
+	wasmMod, err := NewModuleDescriptor(ctx, BaseBlock{Name: "test.wasm", Version: "1.0"}, "wasm/test", nil, nil, []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00})
 	require.NoError(t, err)
 	modStore.Put(wasmMod)
 
@@ -463,8 +463,8 @@ func TestSetx_ProofTrace(t *testing.T) {
 	assert.NotEmpty(t, step.OutputHash)
 	assert.NotEmpty(t, trace.ChainHash)
 
-	// ChainHash must equal SHA256(sourceDigest + output hashes). SourceDigest is "" here.
-	assert.Equal(t, computeChainHash("", trace.Steps), trace.ChainHash)
+	// ChainHash must be reproducible from workflowID + sourceDigest + steps.
+	assert.Equal(t, computeChainHash(trace.WorkflowID, "", trace.Steps), trace.ChainHash)
 
 	// Determinism: same input → same hashes.
 	resp2, err := svc.Setx(ctx, payload)

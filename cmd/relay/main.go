@@ -234,7 +234,9 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp, err := s.api.Setx(r.Context(), &payload)
+	// Route through API.Set() to enforce ValidateSet (workflow exists, modules resolvable,
+	// options.priority valid) before delegating to Cabinet.Setx().
+	resp, err := cabinet.NewAPI(s.api).Set(r.Context(), &payload)
 	if err != nil {
 		if cabinet.IsTimeout(err) {
 			logEntry.WithField("outcome", "timeout").WithError(err).Warn("Workflow execution timed out")

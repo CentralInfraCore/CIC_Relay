@@ -349,25 +349,31 @@ Ez a fájl az AI-támogatott roadmap állapota.
 * **Előfeltétel:** EEC CA tanúsítványok elérhetők (`CIC/EEC/`); `pki_verify.go` már implementálva (M3).
 
 ### M22 — Observability Layer (Phase 1: Common Schema)
-* **Állapot:** Tervezett
+* **Állapot:** Done
 * **Fő cél:** OTel-szemléletű, de OTel SDK-mentes operatív megfigyelhetőségi réteg alaptípusainak bevezetése. A `ProofTrace` (truth layer) megmarad — ez mellé épül egy elkülönített observability layer a strukturált logoláshoz, metrikákhoz és végrehajtási keretekhez.
 * **Referencia:** `docs/hu/concept/obs_modell.md`
 * **Részfeladatok (checklist):**
-    *   [ ] **M22.1**: `pkg/obs/types.go` — alaptípusok: `Resource`, `ExecutionContext`, `LogRecord`, `TraceFrame`, `CounterPoint`, `GaugePoint`, `HistogramPoint`, `IntegrityEnvelope`
-    *   [ ] **M22.2**: `pkg/obs/chain.go` — `RecordHash`, `GlobalChainHash`, `TypeChainHash` számítás (`pkg/canonicaljson` alapú)
-    *   [ ] **M22.3**: `pkg/obs/sink.go` — `TraceSink`, `LogSink`, `MetricSink` interfészek; `NoopSink` implementáció
-    *   [ ] **M22.4**: `pkg/obs/registry.go` — `MetricInstrument` regiszter; névtér-validáció (`relay.*` prefix kötelező)
-    *   [ ] **M22.5**: Unit tesztek: hash-lánc konzisztencia, canonical form stabilitás, névtér-validáció
+    *   [x] **M22.1**: `pkg/obs/types.go` — alaptípusok: `Resource`, `ExecutionContext`, `LogRecord`, `TraceFrame`, `CounterPoint`, `GaugePoint`, `HistogramPoint`, `IntegrityEnvelope`
+    *   [x] **M22.2**: `pkg/obs/chain.go` — `RecordHash`, `GlobalChainHash`, `TypeChainHash` számítás (`pkg/canonicaljson` alapú)
+    *   [x] **M22.3**: `pkg/obs/sink.go` — `TraceSink`, `LogSink`, `MetricSink` interfészek; `NoopSink` implementáció
+    *   [x] **M22.4**: `pkg/obs/registry.go` — `MetricInstrument` regiszter; névtér-validáció (`relay.*` prefix kötelező)
+    *   [x] **M22.5**: Unit tesztek: hash-lánc konzisztencia, canonical form stabilitás, névtér-validáció
 * **Előfeltétel:** `pkg/canonicaljson` (megvan), `core/nexus/crypto` Vault signing (megvan, M13)
 * **Nem cél ebben a fázisban:** OTel export, Prometheus bridge, ProofTrace projection
 
-## Sprint 9 — Folyamatban
+## Sprint 10 — Folyamatban
+
+| Task | Milestone | Állapot | Leírás |
+|------|-----------|---------|--------|
+| p41  | M22       | Done    | Observability Layer Phase 1: pkg/obs alaptípusok + hash-lánc + sink interfészek |
+
+## Sprint 9 — Lezárva
 
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
 | p38  | M23       | Done    | IaC Schema Integration: ResourceSpec + IaCValidator + Service operator + testdata |
-| p39  | M24       | Done      | PoC Execution Bridge: CabinetActivator + dependency gating |
-| p40  | M25       | Done      | PKI Trust Bootstrap: embedded dev CA + CIC_TRUST_MODE + pki_verify.go aktív |
+| p39  | M24       | Done    | PoC Execution Bridge: CabinetActivator + dependency gating |
+| p40  | M25       | Done    | PKI Trust Bootstrap: embedded dev CA + CIC_TRUST_MODE + pki_verify.go aktív |
 
 ## Sprint 8 — Lezárva
 

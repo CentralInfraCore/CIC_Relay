@@ -1,19 +1,40 @@
 package cabinet
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // NewModuleDescriptor constructs a ModuleDescriptor by calling the single central entry point for validation and checksum calculation.
+//
+// WASM canonicalization contract: custom sections are stripped from wasmCode *before*
+// building the composite data struct used for checksum. This ensures the checksum is
+// over the canonical (deterministic) form of the module, regardless of non-functional
+// metadata embedded by compilers. The stripped bytes are also stored in the descriptor
+// so that stored and executed bytes always match the checksummed form.
 func NewModuleDescriptor(ctx context.Context, meta BaseBlock, moduleType string, accepts []string, outputKeys []string, wasmCode []byte) (*ModuleDescriptor, error) {
-	// Create a temporary descriptor to use its GetData() method, which contains the correct data selection logic.
+	// Canonicalize WASM bytes before checksum — strip non-deterministic custom sections.
+	canonicalWasm := wasmCode
+	if len(wasmCode) > 0 {
+		stripped, err := stripWasmModuleFunc(wasmCode)
+		if err != nil {
+			return nil, fmt.Errorf("%w: wasm canonicalization failed: %v", ErrInvalid, err)
+		}
+		canonicalWasm = stripped
+	}
+
+	// Build composite data from canonical bytes for checksum calculation.
 	tempDescriptorForData := &ModuleDescriptor{
 		Type:       moduleType,
 		Accepts:    accepts,
 		OutputKeys: outputKeys,
-		WasmCode:   wasmCode,
+		WasmCode:   canonicalWasm,
 	}
 	data := tempDescriptorForData.GetData()
 
-	// Call the single central entry point to validate and compute the checksum.
+	// validateAndChecksum receives a composite struct (not raw []byte), so the
+	// KindModule WASM-stripping branch in validateAndChecksum is intentionally
+	// bypassed here — stripping was already performed above.
 	sum, err := validateAndChecksum(ctx, &meta, KindModule, data)
 	if err != nil {
 		return nil, err
@@ -26,7 +47,7 @@ func NewModuleDescriptor(ctx context.Context, meta BaseBlock, moduleType string,
 		Type:       moduleType,
 		Accepts:    accepts,
 		OutputKeys: outputKeys,
-		WasmCode:   wasmCode,
+		WasmCode:   canonicalWasm, // store canonical form
 	}, nil
 }
 

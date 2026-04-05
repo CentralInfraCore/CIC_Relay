@@ -419,34 +419,41 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 			continue
 		}
 
-		block, _ := pem.Decode(content)
-		if block == nil {
-			logger.WithField("path", file.Name()).Warn("No PEM data found in file")
-			continue
-		}
-
-		switch block.Type {
-		case "CERTIFICATE":
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				logger.WithFields(logrus.Fields{"path": file.Name(), "error": err}).Warn("Failed to parse certificate")
-				continue
+		rest := content
+		anyBlock := false
+		for len(rest) > 0 {
+			var block *pem.Block
+			block, rest = pem.Decode(rest)
+			if block == nil {
+				break
 			}
-			if cert.IsCA {
-				if cert.Subject.String() == cert.Issuer.String() { // Self-signed, so it's a root
-					assets.Roots.AddCert(cert)
-					assets.TrustStoreLoaded = true
-				} else {
-					assets.Intermediates.AddCert(cert)
+			anyBlock = true
+			switch block.Type {
+			case "CERTIFICATE":
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					logger.WithFields(logrus.Fields{"path": file.Name(), "error": err}).Warn("Failed to parse certificate")
+					continue
 				}
+				if cert.IsCA {
+					if cert.Subject.String() == cert.Issuer.String() { // Self-signed, so it's a root
+						assets.Roots.AddCert(cert)
+						assets.TrustStoreLoaded = true
+					} else {
+						assets.Intermediates.AddCert(cert)
+					}
+				}
+			case "X509 CRL":
+				crl, err := x509.ParseRevocationList(block.Bytes)
+				if err != nil {
+					logger.WithFields(logrus.Fields{"path": file.Name(), "error": err}).Warn("Failed to parse CRL")
+					continue
+				}
+				assets.CRLs = append(assets.CRLs, crl)
 			}
-		case "X509 CRL":
-			crl, err := x509.ParseRevocationList(block.Bytes)
-			if err != nil {
-				logger.WithFields(logrus.Fields{"path": file.Name(), "error": err}).Warn("Failed to parse CRL")
-				continue
-			}
-			assets.CRLs = append(assets.CRLs, crl)
+		}
+		if !anyBlock {
+			logger.WithField("path", file.Name()).Warn("No PEM data found in file")
 		}
 	}
 	logger.Info("Successfully loaded PKI assets")

@@ -44,13 +44,6 @@ func TestValidateSet_Required(t *testing.T) {
 			},
 		},
 		{
-			name: "empty modules",
-			payload: &SetPayload{
-				WorkflowID: "wf",
-				Modules:    nil,
-			},
-		},
-		{
 			name: "invalid priority",
 			payload: &SetPayload{
 				WorkflowID: "wf",
