@@ -1,0 +1,7 @@
+apiVersion: cic/v1
+kind: Relay
+metadata:
+  name: dev-relay-01
+spec:
+  hosts:
+    - ./hosts/app-host.yaml
