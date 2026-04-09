@@ -600,14 +600,16 @@ func main() {
 	}
 
 	// --- HTTP Server Initialization ---
-	noop := obs.NoopSink{}
+	// Wire the obs layer to the structured logrus logger so that every
+	// TraceFrame / LogRecord / metric emission lands in the JSON log stream.
+	logrusSink := obs.NewLogrusSink(logger)
 	server := &relayServer{
 		api:        cabinetSvc,
 		config:     cfg,
 		logger:     logger,
-		traceSink:  noop,
-		logSink:    noop,
-		metricSink: noop,
+		traceSink:  logrusSink,
+		logSink:    logrusSink,
+		metricSink: logrusSink,
 		obsResource: obs.Resource{
 			RelayID:   instanceID,
 			Component: "cmd/relay",
