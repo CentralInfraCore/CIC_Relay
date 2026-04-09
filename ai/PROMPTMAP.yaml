@@ -1020,29 +1020,33 @@ entries:
     status: done
     priority: 43
     milestone: M22.6
+    # Implementálva: pkg/obs/capture.go + cmd/relay/main.go setHandler wiring
+
+  - task: "obs-logrus-sink"
+    status: done
+    priority: 44
+    milestone: M22.7
     prompt: |
-      Az M22 Phase 1 (`pkg/obs`) alaptípusok megvannak, de egyetlen relay kódút sem emittál
-      belőlük. Kösd be a `pkg/obs` sinkeket a `cmd/relay` tényleges útvonalaiba.
+      Az M22.6-ban az obs sinkek `NoopSink{}`-be mentek — minden emittált adat elveszett.
+      Kösd be a meglévő logrus loggert obs backendként, hogy minden TraceFrame, LogRecord
+      és metrika a relay JSON log streamjébe kerüljön, új infrastruktúra nélkül.
 
       Feladatok:
-        1. `relayServer` struct: adj hozzá `traceSink obs.TraceSink`, `logSink obs.LogSink`,
-           `metricSink obs.MetricSink`, `obsResource obs.Resource` mezőket.
-        2. Nil-safe emit helprek: `emitTrace`, `emitLog`, `emitCounter` — ha a sink nil,
-           csendben skip (meglévő tesztek struct literal-t használnak, nem törhetnek meg).
-        3. `setHandler` wiring:
-           - Defer: minden return path után `TraceFrame` (name="relay.set", attrs: status, workflow_id)
-             és `CounterPoint` (name="relay.requests.total", attrs: handler, status) emittál.
-           - traceStatus értékek: "ok" | "rejected" | "timeout" | "error"
-           - Sikeres végrehajtás után: `LogRecord` (message="relay.set.completed", ExecCtx.WorkflowID)
-        4. `main()`: injektálj `obs.NoopSink{}` alapértelmezettként mindhárom sinkbe.
-        5. `pkg/obs/capture.go` (új): `CaptureSink` — thread-safe in-memory sink tesztekhez.
-        6. Tesztek (`cmd/relay/main_api_test.go`):
-           - ObsEmission_Success: 1 TraceFrame (ok) + 1 Counter + 1 LogRecord
-           - ObsEmission_MethodNotAllowed: TraceFrame status=rejected, nincs LogRecord
-           - ObsEmission_Timeout: TraceFrame status=timeout
-           - ObsEmission_NilSinks: nil sinkeknél nincs panic
-      DoD: `make test` zöld; `pkg/obs` aktívan emittál minden /set hívásban.
+        1. `pkg/obs/logrus_sink.go` (új): `LogrusSink` struct, `NewLogrusSink(logger)`.
+           - `RecordTrace`: logrus fields: obs.type=trace, obs.name, obs.trace_id, obs.attr.*,
+             obs.workflow_id ha ExecCtx != nil; status=error/timeout → Warn, egyébként Info.
+           - `RecordLog`: level mapping (info/warn/warning/error → logrus szint).
+           - `RecordCounter`, `RecordGauge`, `RecordHistogram` → logrus Debug.
+        2. `cmd/relay/main.go`: `NoopSink{}` → `obs.NewLogrusSink(logger)` mindhárom sinkbe.
+        3. Tesztek (`pkg/obs/obs_test.go`):
+           - LogrusSink implementálja mindhárom interfészt (compile check)
+           - RecordTrace minden status értékre nem panikol
+           - RecordLog level mapping nem panikol
+           - Metrika emitterek nem panikol
+           - CaptureSink: compile check + records gyűjtése
+      DoD: `make test` zöld; minden /set hívás TraceFrame + LogRecord + CounterPoint
+           megjelenik a relay JSON log outputjában.
     tests:
-      - cmd/relay/main_api_test.go
-      - pkg/obs/capture.go
+      - pkg/obs/logrus_sink.go
+      - pkg/obs/obs_test.go
     accept: make test

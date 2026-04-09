@@ -349,6 +349,15 @@ Ez a fájl az AI-támogatott roadmap állapota.
     * [x] **M25.5**: Tesztek: dev → TrustStoreLoaded=true; prod → scaffold+warn; unknown → error.
 * **Előfeltétel:** EEC CA tanúsítványok elérhetők (`CIC/EEC/`); `pki_verify.go` már implementálva (M3).
 
+### M22.7 — Observability Layer (Phase 3: LogrusSink)
+* **Állapot:** Done
+* **Fő cél:** Az obs emissziók bekötése a meglévő logrus JSON log streambe. Minden `TraceFrame`, `LogRecord` és metrika megjelenik a relay strukturált JSON outputjában — külső infrastruktúra nélkül.
+* **Részfeladatok (checklist):**
+    *   [x] **M22.7.1**: `pkg/obs/logrus_sink.go` — `LogrusSink`: `RecordTrace` (Info/Warn status alapján), `RecordLog` (level mapping), `RecordCounter/Gauge/Histogram` (Debug)
+    *   [x] **M22.7.2**: `main()`: `obs.NewLogrusSink(logger)` inject mindhárom sinkbe (`NoopSink` helyett)
+    *   [x] **M22.7.3**: Tesztek: compile check, RecordTrace összes status, level mapping, metrikák, CaptureSink gyűjtés
+* **Előfeltétel:** M22.6 (obs sinkek bekötve a relayServer-be)
+
 ### M22.6 — Observability Layer (Phase 2: Relay Wiring)
 * **Állapot:** Done
 * **Fő cél:** A `pkg/obs` alaptípusok bekötése a tényleges relay kódutakba. A `setHandler` minden végrehajtáshoz TraceFrame-t, CounterPoint-ot és sikernél LogRecord-ot emittál.
@@ -389,6 +398,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
 | p43  | M22.6     | Done    | Obs Relay Wiring: setHandler TraceFrame + LogRecord + CounterPoint + CaptureSink |
+| p44  | M22.7     | Done    | LogrusSink: obs → logrus JSON bridge; minden /set emisszió látható a log streamben |
 
 ## Sprint 10 — Lezárva
 

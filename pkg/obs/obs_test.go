@@ -1,10 +1,18 @@
 package obs_test
 
 import (
+	"io"
 	"testing"
 
 	"centralrelay/pkg/obs"
+	"github.com/sirupsen/logrus"
 )
+
+func newDiscardLogger() *logrus.Logger {
+	l := logrus.New()
+	l.SetOutput(io.Discard)
+	return l
+}
 
 // --- chain tests ---
 
@@ -150,4 +158,86 @@ func TestNoopSink_ImplementsAllSinks(t *testing.T) {
 	var _ obs.TraceSink = n
 	var _ obs.LogSink = n
 	var _ obs.MetricSink = n
+}
+
+// --- LogrusSink tests ---
+
+func TestLogrusSink_ImplementsAllSinks(t *testing.T) {
+	logger := newDiscardLogger()
+	s := obs.NewLogrusSink(logger)
+	var _ obs.TraceSink = s
+	var _ obs.LogSink = s
+	var _ obs.MetricSink = s
+}
+
+func TestLogrusSink_RecordTrace_DoesNotPanic(t *testing.T) {
+	s := obs.NewLogrusSink(newDiscardLogger())
+	for _, status := range []string{"ok", "rejected", "error", "timeout", ""} {
+		s.RecordTrace(obs.TraceFrame{
+			TraceID: "t1", SpanID: "s1", Name: "relay.set",
+			StartTime: "2026-04-09T00:00:00Z", EndTime: "2026-04-09T00:00:01Z",
+			Resource: obs.Resource{RelayID: "r1", Component: "cmd/relay"},
+			ExecCtx:  &obs.ExecutionContext{WorkflowID: "wf@1.0", SourceDigest: "abc"},
+			Attrs:    map[string]string{"status": status},
+		})
+	}
+}
+
+func TestLogrusSink_RecordLog_LevelMapping(t *testing.T) {
+	s := obs.NewLogrusSink(newDiscardLogger())
+	for _, level := range []string{"info", "warn", "warning", "error", "unknown"} {
+		s.RecordLog(obs.LogRecord{
+			Timestamp: "2026-04-09T00:00:00Z",
+			Level:     level,
+			Message:   "relay.set.completed",
+			Resource:  obs.Resource{RelayID: "r1", Component: "cmd/relay"},
+			ExecCtx:   &obs.ExecutionContext{WorkflowID: "wf@1.0"},
+			Attrs:     map[string]string{"req_id": "x"},
+		})
+	}
+}
+
+func TestLogrusSink_Metrics_DoNotPanic(t *testing.T) {
+	s := obs.NewLogrusSink(newDiscardLogger())
+	res := obs.Resource{RelayID: "r1", Component: "cmd/relay"}
+	s.RecordCounter(obs.CounterPoint{Name: "relay.requests.total", Value: 1,
+		Timestamp: "2026-04-09T00:00:00Z", Resource: res,
+		Attrs: map[string]string{"handler": "set"}})
+	s.RecordGauge(obs.GaugePoint{Name: "relay.queue.depth", Value: 3.5,
+		Timestamp: "2026-04-09T00:00:00Z", Resource: res})
+	s.RecordHistogram(obs.HistogramPoint{Name: "relay.latency.ms", Count: 10, Sum: 250,
+		Timestamp: "2026-04-09T00:00:00Z", Resource: res})
+}
+
+// --- CaptureSink tests ---
+
+func TestCaptureSink_ImplementsAllSinks(t *testing.T) {
+	c := &obs.CaptureSink{}
+	var _ obs.TraceSink = c
+	var _ obs.LogSink = c
+	var _ obs.MetricSink = c
+}
+
+func TestCaptureSink_CollectsRecords(t *testing.T) {
+	c := &obs.CaptureSink{}
+	res := obs.Resource{RelayID: "r1", Component: "cmd/relay"}
+
+	c.RecordTrace(obs.TraceFrame{TraceID: "t1", Name: "relay.set", Resource: res})
+	c.RecordLog(obs.LogRecord{Level: "info", Message: "done", Resource: res})
+	c.RecordCounter(obs.CounterPoint{Name: "relay.requests.total", Value: 1, Resource: res})
+	c.RecordGauge(obs.GaugePoint{Name: "relay.queue.depth", Value: 2.0, Resource: res})
+	c.RecordHistogram(obs.HistogramPoint{Name: "relay.latency.ms", Count: 5, Resource: res})
+
+	if len(c.Traces) != 1 {
+		t.Errorf("expected 1 trace, got %d", len(c.Traces))
+	}
+	if len(c.Logs) != 1 {
+		t.Errorf("expected 1 log, got %d", len(c.Logs))
+	}
+	if len(c.Counters) != 1 {
+		t.Errorf("expected 1 counter, got %d", len(c.Counters))
+	}
+	if c.Counters[0].Value != 1 {
+		t.Errorf("counter value: got %d, want 1", c.Counters[0].Value)
+	}
 }
