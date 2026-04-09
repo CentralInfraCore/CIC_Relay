@@ -349,6 +349,16 @@ Ez a fájl az AI-támogatott roadmap állapota.
     * [x] **M25.5**: Tesztek: dev → TrustStoreLoaded=true; prod → scaffold+warn; unknown → error.
 * **Előfeltétel:** EEC CA tanúsítványok elérhetők (`CIC/EEC/`); `pki_verify.go` már implementálva (M3).
 
+### M27 — L0.4: Spec Checksum Cross-Validation
+* **Állapot:** Done
+* **Fő cél:** A `metadata.checksum` tényleges tartalom-validációja. L0.3 a *ki* kérdést zárta le (tanúsítványlánc). L0.4 a *mit* kérdést zárja le: a spec tartalma megfelel-e a deklarált checksumnak.
+* **Definíció:** `metadata.checksum = sha256(canonical_json(spec))` — 64 char lowercase hex, prefix nélkül (CIC-Schemas `artifact.py:compute_spec_checksum` alapján).
+* **Részfeladatok (checklist):**
+    *   [x] **M27.1**: `assertSourceImpl`: ha `artifact.Spec != nil` → `canonicaljson.ToJSON(spec)` → sha256 → hex → compare; mismatch → "metadata.checksum mismatch" error
+    *   [x] **M27.2**: `schemacompile_test.go`: `specChecksumHex` helper + pre-computed vars; stub checksumok → valódi értékek; 4 új L0.4 teszt
+* **Előfeltétel:** L0.3 (M26, megvan), `pkg/canonicaljson` (megvan)
+* **Nem cél ebben a fázisban:** Layer 2 (cicSign — `cic_sign`, `cic_signed_ca` mezők validációja)
+
 ### M22.7 — Observability Layer (Phase 3: LogrusSink)
 * **Állapot:** Done
 * **Fő cél:** Az obs emissziók bekötése a meglévő logrus JSON log streambe. Minden `TraceFrame`, `LogRecord` és metrika megjelenik a relay strukturált JSON outputjában — külső infrastruktúra nélkül.
@@ -399,6 +409,7 @@ Ez a fájl az AI-támogatott roadmap állapota.
 |------|-----------|---------|--------|
 | p43  | M22.6     | Done    | Obs Relay Wiring: setHandler TraceFrame + LogRecord + CounterPoint + CaptureSink |
 | p44  | M22.7     | Done    | LogrusSink: obs → logrus JSON bridge; minden /set emisszió látható a log streamben |
+| p45  | M27       | Done    | L0.4: metadata.checksum spec content cross-validation (sha256 canonical_json) |
 
 ## Sprint 10 — Lezárva
 

@@ -5,8 +5,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -14,8 +16,28 @@ import (
 	"time"
 
 	"centralrelay/core/modules/schemacompile"
+	"centralrelay/pkg/canonicaljson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+// specChecksumHex computes sha256(canonical_json(spec)) as a lowercase hex string.
+// This mirrors CIC-Schemas artifact.py:compute_spec_checksum.
+func specChecksumHex(spec interface{}) string {
+	b, err := canonicaljson.ToJSON(spec)
+	if err != nil {
+		panic("specChecksumHex: " + err.Error())
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
+// Pre-computed checksums for common spec shapes used across tests.
+var (
+	// emptySpecChecksum = sha256(canonical_json({}))
+	emptySpecChecksum = specChecksumHex(map[string]interface{}{})
+	// fieldsSpecChecksum = sha256(canonical_json({"fields":[]}))
+	fieldsSpecChecksum = specChecksumHex(map[string]interface{}{"fields": []interface{}{}})
 )
 
 // --- PKI helpers ---
@@ -82,14 +104,14 @@ func assertionYAML(certPEM string) string {
 	return fmt.Sprintf(`metadata:
   name: test.schema
   version: "1.0"
-  checksum: "abc123"
+  checksum: "%s"
   sign: "sig"
   createdBy:
     certificate: |
 %s
 spec:
   fields: []
-`, indentCert(certPEM))
+`, fieldsSpecChecksum, indentCert(certPEM))
 }
 
 func indentCert(certPEM string) string {
@@ -171,17 +193,17 @@ func TestAssertSource_WithVerifier_UntrustedCA(t *testing.T) {
 
 func TestAssertSource_WithVerifier_InvalidPEM(t *testing.T) {
 	fn := schemacompile.NewAssertSourceFunc(func(cert *x509.Certificate) error { return nil })
-	yaml := `metadata:
+	yamlStr := fmt.Sprintf(`metadata:
   name: test.schema
   version: "1.0"
-  checksum: "abc"
+  checksum: "%s"
   sign: "sig"
   createdBy:
     certificate: "not-a-pem"
 spec: {}
-`
+`, emptySpecChecksum)
 	_, err := fn(context.Background(), map[string]interface{}{
-		"source_assertion": yaml,
+		"source_assertion": yamlStr,
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not a valid PEM CERTIFICATE block")
@@ -228,17 +250,17 @@ func TestAssertSource_VersionMismatch(t *testing.T) {
 func TestAssertSource_NilVerifier_SkipsCertCheck(t *testing.T) {
 	// With nil verifier, even an invalid cert PEM should not fail cert check
 	fn := schemacompile.NewAssertSourceFunc(nil)
-	yaml := `metadata:
+	yamlStr := fmt.Sprintf(`metadata:
   name: test.schema
   version: "1.0"
-  checksum: "abc"
+  checksum: "%s"
   sign: "sig"
   createdBy:
     certificate: "not-a-pem"
 spec: {}
-`
+`, emptySpecChecksum)
 	out, err := fn(context.Background(), map[string]interface{}{
-		"source_assertion": yaml,
+		"source_assertion": yamlStr,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
@@ -248,10 +270,89 @@ func minimalAssertion(name, version string) string {
 	return fmt.Sprintf(`metadata:
   name: %s
   version: "%s"
-  checksum: "abc"
+  checksum: "%s"
   sign: "sig"
   createdBy:
     certificate: "stub"
 spec: {}
-`, name, version)
+`, name, version, emptySpecChecksum)
+}
+
+// --- L0.4: metadata.checksum cross-validation tests ---
+
+func TestAssertSource_L04_ChecksumMismatch(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// Provide a wrong checksum — should be rejected.
+	yamlStr := `metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "deadbeef"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+spec: {}
+`
+	_, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "metadata.checksum mismatch")
+	assert.Contains(t, err.Error(), "deadbeef")
+}
+
+func TestAssertSource_L04_ChecksumValid_EmptySpec(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// emptySpecChecksum matches sha256(canonical_json({})).
+	yamlStr := fmt.Sprintf(`metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+spec: {}
+`, emptySpecChecksum)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
+}
+
+func TestAssertSource_L04_ChecksumValid_NonEmptySpec(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// fieldsSpecChecksum matches sha256(canonical_json({"fields":[]})).
+	yamlStr := fmt.Sprintf(`metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+spec:
+  fields: []
+`, fieldsSpecChecksum)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
+}
+
+func TestAssertSource_L04_NilSpec_SkipsChecksumCheck(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// spec absent (nil after unmarshal) — checksum check is skipped.
+	yamlStr := `metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "wrong-but-skipped"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+`
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
 }

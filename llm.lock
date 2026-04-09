@@ -1,4 +1,4 @@
-version: 4
+version: 5
 canonical_definitions: true
-last_changed: 2026-04-09T07:04:15Z
-note: PROMPTMAP: Sprint 11 obs-relay-wiring task hozzáadva
+last_changed: 2026-04-09T09:34:30Z
+note: PROMPTMAP: Sprint 11 obs-logrus-sink (p44, M22.7) accept kritérium hozzáadva
