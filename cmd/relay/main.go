@@ -19,6 +19,7 @@ import (
 	"centralrelay/core/nexus/isolation"
 	"centralrelay/core/nexus/operator"
 	"centralrelay/core/nexus/recorder"
+	"centralrelay/pkg/obs"
 )
 
 // Build metadata — injected by Makefile ldflags:
@@ -125,6 +126,33 @@ type relayServer struct {
 	api    cabinet.Cabinet // Use the interface type
 	config *config
 	logger *logrus.Logger // Use logrus logger
+	// obs sinks — nil-safe: handlers use emitTrace/emitLog/emitCounter helpers.
+	// Inject obs.NoopSink{} in production; obs.CaptureSink in tests.
+	traceSink   obs.TraceSink
+	logSink     obs.LogSink
+	metricSink  obs.MetricSink
+	obsResource obs.Resource // self-identification for obs records
+}
+
+// emitTrace emits a TraceFrame if a TraceSink is configured.
+func (s *relayServer) emitTrace(f obs.TraceFrame) {
+	if s.traceSink != nil {
+		s.traceSink.RecordTrace(f)
+	}
+}
+
+// emitLog emits a LogRecord if a LogSink is configured.
+func (s *relayServer) emitLog(r obs.LogRecord) {
+	if s.logSink != nil {
+		s.logSink.RecordLog(r)
+	}
+}
+
+// emitCounter emits a CounterPoint if a MetricSink is configured.
+func (s *relayServer) emitCounter(p obs.CounterPoint) {
+	if s.metricSink != nil {
+		s.metricSink.RecordCounter(p)
+	}
 }
 
 // writeError writes a uniform JSON error response: {"error":"<msg>","code":"<code>"}.
@@ -179,6 +207,30 @@ func (s *relayServer) readyzHandler(w http.ResponseWriter, r *http.Request) {
 // setHandler processes incoming SetPayload requests.
 func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
+	start := time.Now()
+	traceStatus := "ok"
+	var workflowID string
+
+	defer func() {
+		endTS := time.Now().UTC().Format(time.RFC3339Nano)
+		s.emitTrace(obs.TraceFrame{
+			TraceID:   reqID,
+			SpanID:    reqID,
+			Name:      "relay.set",
+			StartTime: start.UTC().Format(time.RFC3339Nano),
+			EndTime:   endTS,
+			Resource:  s.obsResource,
+			Attrs:     map[string]string{"status": traceStatus, "workflow_id": workflowID},
+		})
+		s.emitCounter(obs.CounterPoint{
+			Name:      "relay.requests.total",
+			Value:     1,
+			Timestamp: endTS,
+			Resource:  s.obsResource,
+			Attrs:     map[string]string{"handler": "set", "status": traceStatus},
+		})
+	}()
+
 	logEntry := s.logger.WithFields(logrus.Fields{
 		"req-id": reqID,
 		"path":   r.URL.Path,
@@ -187,6 +239,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	logEntry.Info("Handling set request")
 
 	if r.Method != http.MethodPost {
+		traceStatus = "rejected"
 		logEntry.WithField("outcome", "method_not_allowed").Warn("Only POST method is allowed")
 		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Only POST method is allowed")
 		return
@@ -197,6 +250,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	limitedReader := io.LimitReader(r.Body, s.config.MaxJSONInputSize+1)
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
+		traceStatus = "error"
 		logEntry.WithField("outcome", "read_error").WithError(err).Error("Failed to read request body")
 		writeError(w, http.StatusInternalServerError, "read_error", "Failed to read request")
 		return
@@ -205,6 +259,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the body length is greater than the allowed size, return 413.
 	if int64(len(body)) > s.config.MaxJSONInputSize {
+		traceStatus = "rejected"
 		logEntry.WithFields(logrus.Fields{
 			"outcome": "body_too_large",
 			"size":    len(body),
@@ -217,10 +272,13 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	var payload cabinet.SetPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
+		traceStatus = "rejected"
 		logEntry.WithField("outcome", "invalid_json").WithError(err).Warn("Invalid JSON payload")
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload: "+err.Error())
 		return
 	}
+	workflowID = payload.WorkflowID
+
 	// Pin the chain to the build-time source tree hash so the ProofTrace is
 	// anchored to the full build-input boundary, not just the commit pointer.
 	// SourceTreeHash covers all tracked source files (pkg/sourcedigest) and is
@@ -239,19 +297,31 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := cabinet.NewAPI(s.api).Set(r.Context(), &payload)
 	if err != nil {
 		if cabinet.IsTimeout(err) {
+			traceStatus = "timeout"
 			logEntry.WithField("outcome", "timeout").WithError(err).Warn("Workflow execution timed out")
 			writeError(w, http.StatusGatewayTimeout, "timeout", "Workflow execution timed out: "+err.Error())
 			return
 		}
 		if cabinet.IsInvalid(err) {
+			traceStatus = "rejected"
 			logEntry.WithField("outcome", "invalid_request").WithError(err).Warn("Invalid request")
 			writeError(w, http.StatusBadRequest, "invalid_request", "Invalid request: "+err.Error())
 			return
 		}
+		traceStatus = "error"
 		logEntry.WithField("outcome", "internal_error").WithError(err).Error("Internal server error during Set operation")
 		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error: "+err.Error())
 		return
 	}
+
+	s.emitLog(obs.LogRecord{
+		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		Level:     "info",
+		Message:   "relay.set.completed",
+		Resource:  s.obsResource,
+		ExecCtx:   &obs.ExecutionContext{WorkflowID: workflowID, SourceDigest: payload.SourceDigest},
+		Attrs:     map[string]string{"req_id": reqID},
+	})
 
 	logEntry.WithField("outcome", "success").Info("Set operation successful")
 	w.Header().Set("Content-Type", "application/json")
@@ -530,7 +600,19 @@ func main() {
 	}
 
 	// --- HTTP Server Initialization ---
-	server := &relayServer{api: cabinetSvc, config: cfg, logger: logger} // Pass the service which implements the interface
+	noop := obs.NoopSink{}
+	server := &relayServer{
+		api:        cabinetSvc,
+		config:     cfg,
+		logger:     logger,
+		traceSink:  noop,
+		logSink:    noop,
+		metricSink: noop,
+		obsResource: obs.Resource{
+			RelayID:   instanceID,
+			Component: "cmd/relay",
+		},
+	}
 
 	port := ":8080"
 	logger.Fatal(run(port, logger, server)) // Pass logrus logger to run function

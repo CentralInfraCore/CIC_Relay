@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/pkg/obs"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -272,6 +273,154 @@ func TestSetHandler_CabinetInternalError(t *testing.T) {
 
 	// Ensure the mock API was called.
 	mockAPI.AssertCalled(t, "Setx", mock.Anything, mock.Anything)
+}
+
+// --- M22.6: Obs emission tests ---
+
+// TestSetHandler_ObsEmission_Success verifies that a successful /set call emits
+// one TraceFrame (status=ok), one CounterPoint, and one LogRecord.
+func TestSetHandler_ObsEmission_Success(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("GetModule", mock.Anything).Return(&cabinet.ModuleDescriptor{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(
+		&cabinet.SetResponse{Results: map[string]any{"status": "ok"}}, nil,
+	)
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	sink := &obs.CaptureSink{}
+
+	server := &relayServer{
+		api:        mockAPI,
+		config:     &config{MaxJSONInputSize: 1024 * 1024},
+		logger:     logger,
+		traceSink:  sink,
+		logSink:    sink,
+		metricSink: sink,
+	}
+
+	body, _ := json.Marshal(map[string]any{"workflow_id": "my.workflow@1.0"})
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// TraceFrame
+	assert.Len(t, sink.Traces, 1, "expected one trace frame")
+	assert.Equal(t, "relay.set", sink.Traces[0].Name)
+	assert.Equal(t, "ok", sink.Traces[0].Attrs["status"])
+	assert.Equal(t, "my.workflow@1.0", sink.Traces[0].Attrs["workflow_id"])
+	assert.NotEmpty(t, sink.Traces[0].StartTime)
+	assert.NotEmpty(t, sink.Traces[0].EndTime)
+
+	// Counter
+	assert.Len(t, sink.Counters, 1, "expected one counter point")
+	assert.Equal(t, "relay.requests.total", sink.Counters[0].Name)
+	assert.Equal(t, int64(1), sink.Counters[0].Value)
+	assert.Equal(t, "set", sink.Counters[0].Attrs["handler"])
+	assert.Equal(t, "ok", sink.Counters[0].Attrs["status"])
+
+	// LogRecord
+	assert.Len(t, sink.Logs, 1, "expected one log record")
+	assert.Equal(t, "relay.set.completed", sink.Logs[0].Message)
+	assert.Equal(t, "info", sink.Logs[0].Level)
+	assert.NotNil(t, sink.Logs[0].ExecCtx)
+	assert.Equal(t, "my.workflow@1.0", sink.Logs[0].ExecCtx.WorkflowID)
+}
+
+// TestSetHandler_ObsEmission_MethodNotAllowed verifies that a rejected request
+// emits a TraceFrame with status=rejected (no LogRecord).
+func TestSetHandler_ObsEmission_MethodNotAllowed(t *testing.T) {
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	sink := &obs.CaptureSink{}
+
+	server := &relayServer{
+		api:        new(mockCabinetService),
+		config:     &config{MaxJSONInputSize: 1024},
+		logger:     logger,
+		traceSink:  sink,
+		logSink:    sink,
+		metricSink: sink,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/set", nil)
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+
+	assert.Len(t, sink.Traces, 1)
+	assert.Equal(t, "rejected", sink.Traces[0].Attrs["status"])
+
+	assert.Len(t, sink.Counters, 1)
+	assert.Equal(t, "rejected", sink.Counters[0].Attrs["status"])
+
+	assert.Empty(t, sink.Logs, "no log record on rejected requests")
+}
+
+// TestSetHandler_ObsEmission_Timeout verifies that a timed-out request
+// emits a TraceFrame with status=timeout.
+func TestSetHandler_ObsEmission_Timeout(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(
+		nil, fmt.Errorf("%w: step timed out", cabinet.ErrTimeout),
+	)
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	sink := &obs.CaptureSink{}
+
+	server := &relayServer{
+		api:        mockAPI,
+		config:     &config{MaxJSONInputSize: 1024 * 1024},
+		logger:     logger,
+		traceSink:  sink,
+		logSink:    sink,
+		metricSink: sink,
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/set",
+		bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusGatewayTimeout, w.Code)
+	assert.Len(t, sink.Traces, 1)
+	assert.Equal(t, "timeout", sink.Traces[0].Attrs["status"])
+	assert.Len(t, sink.Counters, 1)
+	assert.Equal(t, "timeout", sink.Counters[0].Attrs["status"])
+}
+
+// TestSetHandler_ObsEmission_NilSinks verifies that nil sinks do not panic.
+// Existing tests use &relayServer{} without obs fields (nil interface).
+func TestSetHandler_ObsEmission_NilSinks(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("GetModule", mock.Anything).Return(&cabinet.ModuleDescriptor{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(
+		&cabinet.SetResponse{Results: map[string]any{"ok": true}}, nil,
+	)
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	// No obs sinks — all nil. Must not panic.
+	server := &relayServer{
+		api:    mockAPI,
+		config: &config{MaxJSONInputSize: 1024 * 1024},
+		logger: logger,
+	}
+
+	body, _ := json.Marshal(map[string]any{"workflow_id": "any.workflow@1.0"})
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	assert.NotPanics(t, func() { server.setHandler(w, req) })
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 // TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz, /readyz, and /.

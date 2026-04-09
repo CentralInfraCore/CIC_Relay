@@ -699,7 +699,7 @@ entries:
   # --- Sprint 9 ---
 
   - task: "obs-common-schema"
-    status: todo
+    status: done
     priority: 38
     milestone: M22.1-M22.5
     prompt: |
@@ -991,7 +991,7 @@ entries:
     accept: make test
 
   - task: "relay-trust-branch-config"
-    status: todo
+    status: done
     priority: 41
     milestone: M25
     prompt: |
@@ -1012,4 +1012,37 @@ entries:
            minden relay startup audit log-olható trust anchor-ral indul.
     tests:
       - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  # --- Sprint 11 ---
+
+  - task: "obs-relay-wiring"
+    status: done
+    priority: 43
+    milestone: M22.6
+    prompt: |
+      Az M22 Phase 1 (`pkg/obs`) alaptípusok megvannak, de egyetlen relay kódút sem emittál
+      belőlük. Kösd be a `pkg/obs` sinkeket a `cmd/relay` tényleges útvonalaiba.
+
+      Feladatok:
+        1. `relayServer` struct: adj hozzá `traceSink obs.TraceSink`, `logSink obs.LogSink`,
+           `metricSink obs.MetricSink`, `obsResource obs.Resource` mezőket.
+        2. Nil-safe emit helprek: `emitTrace`, `emitLog`, `emitCounter` — ha a sink nil,
+           csendben skip (meglévő tesztek struct literal-t használnak, nem törhetnek meg).
+        3. `setHandler` wiring:
+           - Defer: minden return path után `TraceFrame` (name="relay.set", attrs: status, workflow_id)
+             és `CounterPoint` (name="relay.requests.total", attrs: handler, status) emittál.
+           - traceStatus értékek: "ok" | "rejected" | "timeout" | "error"
+           - Sikeres végrehajtás után: `LogRecord` (message="relay.set.completed", ExecCtx.WorkflowID)
+        4. `main()`: injektálj `obs.NoopSink{}` alapértelmezettként mindhárom sinkbe.
+        5. `pkg/obs/capture.go` (új): `CaptureSink` — thread-safe in-memory sink tesztekhez.
+        6. Tesztek (`cmd/relay/main_api_test.go`):
+           - ObsEmission_Success: 1 TraceFrame (ok) + 1 Counter + 1 LogRecord
+           - ObsEmission_MethodNotAllowed: TraceFrame status=rejected, nincs LogRecord
+           - ObsEmission_Timeout: TraceFrame status=timeout
+           - ObsEmission_NilSinks: nil sinkeknél nincs panic
+      DoD: `make test` zöld; `pkg/obs` aktívan emittál minden /set hívásban.
+    tests:
+      - cmd/relay/main_api_test.go
+      - pkg/obs/capture.go
     accept: make test
