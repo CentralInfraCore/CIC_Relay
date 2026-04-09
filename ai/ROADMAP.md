@@ -349,6 +349,17 @@ Ez a fájl az AI-támogatott roadmap állapota.
     * [x] **M25.5**: Tesztek: dev → TrustStoreLoaded=true; prod → scaffold+warn; unknown → error.
 * **Előfeltétel:** EEC CA tanúsítványok elérhetők (`CIC/EEC/`); `pki_verify.go` már implementálva (M3).
 
+### M22.6 — Observability Layer (Phase 2: Relay Wiring)
+* **Állapot:** Done
+* **Fő cél:** A `pkg/obs` alaptípusok bekötése a tényleges relay kódutakba. A `setHandler` minden végrehajtáshoz TraceFrame-t, CounterPoint-ot és sikernél LogRecord-ot emittál.
+* **Részfeladatok (checklist):**
+    *   [x] **M22.6.1**: `relayServer` obs mezők: `traceSink`, `logSink`, `metricSink`, `obsResource` + nil-safe emitter helperek
+    *   [x] **M22.6.2**: `setHandler` defer — TraceFrame (name="relay.set", status/workflow_id attrs) + CounterPoint (name="relay.requests.total")
+    *   [x] **M22.6.3**: Sikeres végrehajtás után LogRecord emittál (message="relay.set.completed", ExecCtx.WorkflowID)
+    *   [x] **M22.6.4**: `main()` NoopSink inject; `pkg/obs/capture.go` — CaptureSink tesztekhez
+    *   [x] **M22.6.5**: 4 obs teszt: Success, MethodNotAllowed, Timeout, NilSinks
+* **Előfeltétel:** M22 Phase 1 (`pkg/obs` alaptípusok, megvan)
+
 ### M22 — Observability Layer (Phase 1: Common Schema)
 * **Állapot:** Done
 * **Fő cél:** OTel-szemléletű, de OTel SDK-mentes operatív megfigyelhetőségi réteg alaptípusainak bevezetése. A `ProofTrace` (truth layer) megmarad — ez mellé épül egy elkülönített observability layer a strukturált logoláshoz, metrikákhoz és végrehajtási keretekhez.
@@ -373,7 +384,13 @@ Ez a fájl az AI-támogatott roadmap állapota.
 * **Előfeltétel:** `cabinet.VerifyCertificateChain` (M3/M25, megvan), `PKIAssets` (bootstrap, megvan)
 * **Nem cél ebben a fázisban:** `metadata.checksum` spec-tartalom cross-validáció (L0.4), Layer 2 (cicSign)
 
-## Sprint 10 — Folyamatban
+## Sprint 11 — Folyamatban
+
+| Task | Milestone | Állapot | Leírás |
+|------|-----------|---------|--------|
+| p43  | M22.6     | Done    | Obs Relay Wiring: setHandler TraceFrame + LogRecord + CounterPoint + CaptureSink |
+
+## Sprint 10 — Lezárva
 
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
