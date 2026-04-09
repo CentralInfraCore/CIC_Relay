@@ -15,6 +15,7 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	"centralrelay/pkg/canonicaljson"
 	"gopkg.in/yaml.v3"
 )
 
@@ -86,6 +87,25 @@ func assertSourceImpl(input interface{}, verify CertVerifyFunc) (interface{}, er
 		return nil, fmt.Errorf("cic.source.assert: source_assertion metadata.createdBy is required")
 	} else if certPEM, _ = cb["certificate"].(string); certPEM == "" {
 		return nil, fmt.Errorf("cic.source.assert: source_assertion metadata.createdBy.certificate is required")
+	}
+
+	// L0.4 — spec checksum cross-validation.
+	// metadata.checksum must equal sha256(canonical_json(spec)) — 64-char lowercase hex.
+	// This mirrors CIC-Schemas artifact.py:compute_spec_checksum (json.dumps sort_keys=True).
+	if artifact.Spec != nil {
+		specJSON, err := canonicaljson.ToJSON(artifact.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("cic.source.assert: failed to canonicalize spec for checksum: %w", err)
+		}
+		sum := sha256.Sum256(specJSON)
+		computed := hex.EncodeToString(sum[:])
+		declared, _ := artifact.Metadata["checksum"].(string)
+		if declared != computed {
+			return nil, fmt.Errorf(
+				"cic.source.assert: metadata.checksum mismatch: declared=%q computed=%q",
+				declared, computed,
+			)
+		}
 	}
 
 	// L0.3 — X.509 certificate chain verification.

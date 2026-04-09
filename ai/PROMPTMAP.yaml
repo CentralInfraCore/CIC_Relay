@@ -1026,6 +1026,33 @@ entries:
     status: done
     priority: 44
     milestone: M22.7
+
+  - task: "l04-spec-checksum-validation"
+    status: done
+    priority: 45
+    milestone: M27
+    prompt: |
+      L0.4: a `metadata.checksum` tényleges tartalom-validációja `assertSourceImpl`-ben.
+      Jelenleg csak a mező jelenléte ellenőrzött (nem üres string), az értéke nem.
+
+      Definíció (CIC-Schemas artifact.py:compute_spec_checksum):
+        metadata.checksum = sha256(canonical_json(spec))  — 64 char lowercase hex, nincs prefix
+
+      Feladatok:
+        1. `core/modules/schemacompile/schemacompile.go`:
+           - L0.4 blokk az L0.3 (cert verify) előtt:
+             `if artifact.Spec != nil` → `canonicaljson.ToJSON(spec)` → sha256 → hex
+             → compare `declared == computed`, ha nem: "metadata.checksum mismatch" error
+        2. `core/modules/schemacompile/schemacompile_test.go`:
+           - `specChecksumHex(spec)` helper + pre-computed `emptySpecChecksum`, `fieldsSpecChecksum`
+           - Meglévő stub checksumok ("abc", "abc123") → valódi értékek
+           - Új tesztek: L04_ChecksumMismatch, L04_ChecksumValid_EmptySpec,
+             L04_ChecksumValid_NonEmptySpec, L04_NilSpec_SkipsChecksumCheck
+      DoD: `make test` zöld; helytelen checksum → error; helyes checksum → átmegy.
+    tests:
+      - core/modules/schemacompile/schemacompile.go
+      - core/modules/schemacompile/schemacompile_test.go
+    accept: make test
     prompt: |
       Az M22.6-ban az obs sinkek `NoopSink{}`-be mentek — minden emittált adat elveszett.
       Kösd be a meglévő logrus loggert obs backendként, hogy minden TraceFrame, LogRecord
