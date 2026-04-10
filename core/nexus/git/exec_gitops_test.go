@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"centralrelay/pkg/obs"
 )
 
 // initBareTestRepo creates a non-bare git repo with one commit and returns its path.
@@ -116,4 +118,60 @@ func TestParsePortcelainStatus(t *testing.T) {
 	assert.Equal(t, "??", entries[1].State)
 	assert.Equal(t, "untracked.txt", entries[1].Path)
 	assert.Equal(t, "new.go", entries[2].Path)
+}
+
+// TestExecGitOps_SetObsSinks_MetricEmission verifies that after SetObsSinks,
+// a successful git op emits a relay.git.op_duration_ms histogram. (M31)
+func TestExecGitOps_SetObsSinks_MetricEmission(t *testing.T) {
+	srcDir := initBareTestRepo(t)
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+
+	reg := NewRepoRegistry()
+	reg.Register("obs-repo", cloneDir)
+	ops := NewExecGitOps(reg)
+
+	sink := &obs.CaptureSink{}
+	ops.SetObsSinks(sink, sink)
+
+	require.NoError(t, ops.Clone(context.Background(), "obs-repo", srcDir, "main"))
+
+	require.NotEmpty(t, sink.Histos, "expected at least one histogram after clone")
+	found := false
+	for _, h := range sink.Histos {
+		if h.Name == "relay.git.op_duration_ms" && h.Attrs["op"] == "clone" {
+			found = true
+			assert.Equal(t, int64(1), h.Count)
+			assert.Equal(t, "nexus/git", h.Resource.Component)
+		}
+	}
+	assert.True(t, found, "relay.git.op_duration_ms{op=clone} not found in histograms")
+}
+
+// TestExecGitOps_SetObsSinks_ErrorLog verifies that a failed git op emits a WARN log. (M31)
+func TestExecGitOps_SetObsSinks_ErrorLog(t *testing.T) {
+	reg := NewRepoRegistry()
+	reg.Register("fail-repo", t.TempDir()) // valid path but not a git repo
+	ops := NewExecGitOps(reg)
+
+	sink := &obs.CaptureSink{}
+	ops.SetObsSinks(sink, sink)
+
+	_, _ = ops.Status(context.Background(), "fail-repo") // will fail — not a git repo
+
+	require.NotEmpty(t, sink.Logs, "expected WARN log on failure")
+	assert.Equal(t, "WARN", sink.Logs[0].Level)
+	assert.Equal(t, "git op failed", sink.Logs[0].Message)
+	assert.Equal(t, "status", sink.Logs[0].Attrs["op"])
+}
+
+// TestExecGitOps_SetObsSinks_NilSafe verifies that nil sinks don't cause panics. (M31)
+func TestExecGitOps_SetObsSinks_NilSafe(t *testing.T) {
+	reg := NewRepoRegistry()
+	reg.Register("nil-repo", t.TempDir())
+	ops := NewExecGitOps(reg)
+	ops.SetObsSinks(nil, nil)
+
+	assert.NotPanics(t, func() {
+		_, _ = ops.Status(context.Background(), "nil-repo")
+	})
 }

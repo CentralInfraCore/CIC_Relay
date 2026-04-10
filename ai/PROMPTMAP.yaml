@@ -1187,3 +1187,15 @@ entries:
       - core/nexus/git/exec_gitops_test.go
       - core/nexus/git/registry_test.go
     accept: make test
+
+sprint: 13
+tasks:
+  - task: "git-registry-auto-wiring"
+    status: done
+    priority: 48
+    milestone: M30
+
+  - task: "obs-exec-gitops"
+    status: done
+    priority: 49
+    milestone: M31

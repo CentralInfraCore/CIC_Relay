@@ -571,9 +571,21 @@ func main() {
 	// Wire typed git host functions into the WASM runtime so WASM modules can
 	// perform git operations through a capability-bounded API.
 	gitRegistry := git.NewRepoRegistry()
-	wasmConfig.HostSetupFn = makeGitHostSetupFn(git.NewExecGitOps(gitRegistry))
+	// Auto-register well-known repos so WASM modules can reference them by stable IDs.
+	// Only env-configured paths are admitted — the whitelist principle is preserved.
+	if infraPath := os.Getenv("CIC_INFRA_REPO_PATH"); infraPath != "" {
+		gitRegistry.Register("infra", infraPath)
+		logger.WithField("repo_id", "infra").Debug("git: registered infra repo")
+	}
+	if iacPath := os.Getenv("CIC_GIT_SOURCE_LOCAL_PATH"); iacPath != "" {
+		gitRegistry.Register("iac-config", iacPath)
+		logger.WithField("repo_id", "iac-config").Debug("git: registered iac-config repo")
+	}
+	gitOps := git.NewExecGitOps(gitRegistry)
+	wasmConfig.HostSetupFn = makeGitHostSetupFn(gitOps)
 
 	logrusSink := obs.NewLogrusSink(logger)
+	gitOps.SetObsSinks(logrusSink, logrusSink) // relay.git.op_duration_ms + WARN logok
 	obsOpt := cabinet.WithObsSinks(logrusSink, logrusSink)
 	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, obsOpt)
 	if err != nil {
