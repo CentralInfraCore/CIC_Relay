@@ -15,6 +15,7 @@ import (
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/git"
 	"centralrelay/core/nexus/iac"
 	"centralrelay/core/nexus/isolation"
 	"centralrelay/core/nexus/operator"
@@ -566,6 +567,11 @@ func main() {
 	}
 	secrets := loadSecretsFromVault(logger)
 	recorderOpt := buildRecorderOption(logger, secrets)
+
+	// Wire typed git host functions into the WASM runtime so WASM modules can
+	// perform git operations through a capability-bounded API.
+	gitRegistry := git.NewRepoRegistry()
+	wasmConfig.HostSetupFn = makeGitHostSetupFn(git.NewExecGitOps(gitRegistry))
 
 	logrusSink := obs.NewLogrusSink(logger)
 	obsOpt := cabinet.WithObsSinks(logrusSink, logrusSink)
