@@ -1,4 +1,4 @@
-version: 10
+version: 11
 canonical_definitions: true
 last_changed: 2026-04-10T00:00:00Z
-note: "Sprint 13: M30 (GitRegistry auto-wiring) + M31 (obs ExecGitOps: relay.git.op_duration_ms + WARN logs)"
+note: "Sprint 13: M32 (TraceFrame chain_anchor: setHandler → ProofTrace.ChainHash link)"

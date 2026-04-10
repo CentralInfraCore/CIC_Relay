@@ -46,6 +46,7 @@ Ez a fájl az AI-támogatott roadmap aktív állapota.
 | M29       | **Done**      | GitSource: IaC konfig betöltés git repóból |
 | M30       | **Done**      | GitRegistry auto-wiring: CIC_INFRA_REPO_PATH + CIC_GIT_SOURCE_LOCAL_PATH auto-regisztráció |
 | M31       | **Done**      | obs wiring for git: relay.git.op_duration_ms histogram + WARN logok ExecGitOps-ban |
+| M32       | **Done**      | TraceFrame chain_anchor: setHandler link TraceFrame → ProofTrace.ChainHash |
 
 ---
 
@@ -70,12 +71,13 @@ Ez a fájl az AI-támogatott roadmap aktív állapota.
 
 ---
 
-## Sprint 13 — Folyamatban
+## Sprint 13 — Lezárva
 
 | Task | Milestone | Állapot | Leírás |
 |------|-----------|---------|--------|
 | p48  | M30       | Done    | GitRegistry auto-wiring: env-alapú repo regisztráció induláskor |
 | p49  | M31       | Done    | obs ExecGitOps: relay.git.op_duration_ms + WARN logok |
+| p50  | M32       | Done    | TraceFrame chain_anchor: setHandler → ProofTrace.ChainHash link |
 
 ---
 
