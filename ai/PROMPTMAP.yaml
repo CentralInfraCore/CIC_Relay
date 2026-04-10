@@ -1077,3 +1077,113 @@ entries:
       - pkg/obs/logrus_sink.go
       - pkg/obs/obs_test.go
     accept: make test
+  # --- Sprint 12 ---
+
+  - task: "git-source-iac"
+    status: todo
+    priority: 46
+    milestone: M29
+    prompt: |
+      Implementáld a `GitSource`-t mint IaC konfiguráció forrást git repóból.
+      Az `IaCSource` interfész (`FetchConfig`) már definiált — a `FileSource` a referencia implementáció.
+
+      Architekturális döntés: `os/exec("git", ...)` alapú, go-git library NEM kerül be.
+      CGO_ENABLED=0 megmarad. A minta: `recorder.go` `runGit` helper.
+
+      **M29.1 — core/nexus/iac/source_git.go**
+        type GitSourceConfig struct {
+            URL        string        // CIC_GIT_SOURCE_URL
+            Branch     string        // CIC_GIT_SOURCE_BRANCH, default: "main"
+            LocalPath  string        // CIC_GIT_SOURCE_LOCAL_PATH, kötelező ha URL be van állítva
+            SSHKeyPath string        // opcionális
+            Timeout    time.Duration // default: 30s
+        }
+        type GitSource struct { cfg GitSourceConfig }
+        func NewGitSource(cfg GitSourceConfig) *GitSource
+        func (s *GitSource) FetchConfig(ctx context.Context) (map[string][]byte, error)
+          - ha LocalPath nem létezik: git clone --branch <branch> --depth 1 <url> <localpath>
+          - ha létezik: git fetch origin + git checkout <branch>
+          - utána: FileSource{RootPath: LocalPath}.FetchConfig(ctx)
+
+      **M29.2 — Hardened git env** (minden exec.CommandContext hívásra):
+        cmd.Env = append(os.Environ(),
+            "GIT_CONFIG_NOSYSTEM=1",
+            "GIT_TERMINAL_PROMPT=0",
+            "GIT_ASKPASS=/bin/false",
+        )
+        + args-ban: -c core.hooksPath=/dev/null
+
+      **M29.3 — cmd/relay/main.go wiring**
+        Ha CIC_GIT_SOURCE_URL be van állítva → GitSource, különben FileSource (backward-compatible).
+        CIC_GIT_SOURCE_LOCAL_PATH hiánya CIC_GIT_SOURCE_URL esetén → Fatal.
+
+      **M29.4 — config/relay.config.schema.yaml**
+        CIC_GIT_SOURCE_URL, CIC_GIT_SOURCE_BRANCH, CIC_GIT_SOURCE_LOCAL_PATH dokumentálva.
+
+      **M29.5 — Tesztek (core/nexus/iac/source_git_test.go)**
+        - TestGitSource_CloneFresh: tmpdir bare repo → GitSource.FetchConfig() → YAML-ok visszajönnek
+        - TestGitSource_FetchExisting: már klónozott repo → fetch round-trip
+        - TestGitSource_InvalidURL: érvénytelen URL → wrapped error (nem Fatal)
+        - TestGitSource_Timeout: 1ms timeout → context deadline exceeded
+      DoD: make test zöld; CIC_GIT_SOURCE_URL → GitSource aktív.
+    tests:
+      - core/nexus/iac/source_git.go
+      - core/nexus/iac/source_git_test.go
+      - cmd/relay/main.go
+    accept: make test
+
+  - task: "git-host-functions-wazero"
+    status: todo
+    priority: 47
+    milestone: M28
+    prompt: |
+      Implementáld a git primitíveket wazero host functionként, hogy WASM modulok
+      typed API-n keresztül végezhessenek git műveleteket tetszőleges parancs kiadása nélkül.
+
+      Architekturális elv:
+        wasm -> typed host API -> os/exec git (hardened env)
+        WASM nem kap általános exec-et — csak: clone, fetch, commit, push, status
+        Repo whitelist: WASM csak regisztrált repoID-val hivatkozhat repóra
+
+      **M28.1 — core/nexus/git/gitops.go**
+        type StatusEntry struct { Path, State string }
+        type GitOps interface {
+            Clone(ctx context.Context, repoID, url, branch string) error
+            Fetch(ctx context.Context, repoID, remote string) error
+            Checkout(ctx context.Context, repoID, ref string) error
+            Commit(ctx context.Context, repoID, message string, paths []string) (string, error)
+            Push(ctx context.Context, repoID, remote, refspec string) error
+            Status(ctx context.Context, repoID string) ([]StatusEntry, error)
+        }
+
+      **M28.2 — core/nexus/git/exec_gitops.go**
+        type ExecGitOps struct { registry *RepoRegistry }
+        runGit(ctx, repoPath, args...): exec.CommandContext + hardened env
+          (GIT_CONFIG_NOSYSTEM=1, GIT_TERMINAL_PROMPT=0, GIT_ASKPASS=/bin/false,
+           -c core.hooksPath=/dev/null), stdout/stderr méretlimit 1MB
+
+      **M28.3 — core/nexus/git/registry.go**
+        type RepoRegistry struct { mu sync.RWMutex; repos map[string]string }
+        func (r *RepoRegistry) Register(repoID, localPath string)
+        func (r *RepoRegistry) Resolve(repoID string) (string, error)
+        Ismeretlen repoID -> fmt.Errorf("unknown repoID: %q") — WASM nem kaphat tetszőleges path-t
+
+      **M28.4 — wazero host function regisztráció**
+        cmd/relay/bootstrap.go registerGitHostFunctions(runtime, gitOps GitOps):
+        Minden host function: JSON kérés/válasz az ABI határon ([]byte oda, []byte vissza)
+        Regisztrált nevek: "git.clone", "git.fetch", "git.checkout", "git.commit",
+                          "git.push", "git.status"
+
+      **M28.5 — Tesztek (core/nexus/git/)**
+        - TestExecGitOps_CloneAndStatus: tmpdir bare repo, clone + status round-trip
+        - TestRepoRegistry_WhitelistEnforce: ismeretlen repoID → error
+        - TestRepoRegistry_KnownRepo: regisztrált repoID → helyes path
+        - TestHardenedEnv: a futtatott git process env-jében GIT_CONFIG_NOSYSTEM=1 jelen van
+      DoD: make test zöld; WASM modul hívhat git.clone-t; ismeretlen repoID rejected.
+    tests:
+      - core/nexus/git/gitops.go
+      - core/nexus/git/exec_gitops.go
+      - core/nexus/git/registry.go
+      - core/nexus/git/exec_gitops_test.go
+      - core/nexus/git/registry_test.go
+    accept: make test

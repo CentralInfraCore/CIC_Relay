@@ -14,6 +14,8 @@ import (
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"golang.org/x/sync/singleflight"
+
+	"centralrelay/pkg/obs"
 )
 
 // --- Configurable Parameters ---
@@ -35,6 +37,15 @@ type WasmManager struct {
 	compiledModules *lru.Cache[string, wazero.CompiledModule]
 	sf              singleflight.Group
 	closed          atomic.Bool
+	logSink         obs.LogSink
+	metricSink      obs.MetricSink
+}
+
+// SetObsSinks wires the observability sinks into the WasmManager.
+// Both sinks are nil-safe: passing nil disables the corresponding emissions.
+func (m *WasmManager) SetObsSinks(logSink obs.LogSink, metricSink obs.MetricSink) {
+	m.logSink = logSink
+	m.metricSink = metricSink
 }
 
 // NewWasmManager creates a new central WASM manager with the given configuration.
@@ -53,11 +64,26 @@ func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManager
 		return nil, fmt.Errorf("failed to instantiate wasi: %w", err)
 	}
 
+	// Allocate the manager first so the eviction closure can capture it.
+	m := &WasmManager{
+		runtime: r,
+		modules: modules,
+		config:  config,
+	}
+
 	onEvict := func(key string, mod wazero.CompiledModule) {
 		// When a module is evicted from the cache, ensure its native resources are freed.
 		// Using context.Background() as this happens asynchronously.
 		if err := mod.Close(context.Background()); err != nil {
-			// TODO: Log this eviction error with a proper logger.
+			if m.logSink != nil {
+				m.logSink.RecordLog(obs.LogRecord{
+					Timestamp: time.Now().UTC().Format(time.RFC3339),
+					Level:     "WARN",
+					Message:   "wasm module eviction close failed",
+					Resource:  obs.Resource{Component: "cicwasm"},
+					Attrs:     map[string]string{"module_key": key, "error": err.Error()},
+				})
+			}
 		}
 	}
 
@@ -67,12 +93,8 @@ func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManager
 		return nil, fmt.Errorf("failed to create LRU cache: %w", err)
 	}
 
-	return &WasmManager{
-		runtime:         r,
-		modules:         modules,
-		config:          config,
-		compiledModules: lruCache,
-	}, nil
+	m.compiledModules = lruCache
+	return m, nil
 }
 
 // PreCompileModule compiles a module and stores it in the cache.
@@ -102,11 +124,20 @@ func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wa
 			return nil, fmt.Errorf("module '%s' has no WASM code", moduleID)
 		}
 
-		// TODO: Record compilation duration with a metrics library: time.Since(start)
-		// start := time.Now()
+		start := time.Now()
 		compiled, err := m.runtime.CompileModule(ctx, moduleDesc.WasmCode)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile module '%s': %w", moduleID, err)
+		}
+		if m.metricSink != nil {
+			m.metricSink.RecordHistogram(obs.HistogramPoint{
+				Name:      "relay.wasm.compile_duration_ms",
+				Sum:       float64(time.Since(start).Milliseconds()),
+				Count:     1,
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+				Resource:  obs.Resource{Component: "cicwasm"},
+				Attrs:     map[string]string{"module_id": moduleID},
+			})
 		}
 
 		m.compiledModules.Add(cacheKey, compiled)
@@ -134,15 +165,24 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 	// Don't call the _start function, as these are libraries, not applications.
 	moduleConfig := wazero.NewModuleConfig().WithName(moduleID).WithStartFunctions()
 
-	// TODO: Record instantiation duration with a metrics library: time.Since(startInstantiation)
-	// startInstantiation := time.Now()
+	startInstantiation := time.Now()
 	instance, err := m.runtime.InstantiateModule(ctx, compiledMod, moduleConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate module '%s': %w", moduleID, err)
 	}
+	if m.metricSink != nil {
+		m.metricSink.RecordHistogram(obs.HistogramPoint{
+			Name:      "relay.wasm.instantiate_duration_ms",
+			Sum:       float64(time.Since(startInstantiation).Milliseconds()),
+			Count:     1,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Resource:  obs.Resource{Component: "cicwasm"},
+			Attrs:     map[string]string{"module_id": moduleID},
+		})
+	}
 
 	timeout := time.Duration(m.config.DefaultTimeoutSeconds) * time.Second
-	h, err := newCicWasmHost(ctx, instance, timeout)
+	h, err := newCicWasmHost(ctx, instance, timeout, m.logSink)
 	if err != nil {
 		instance.Close(ctx)
 		return nil, err
@@ -184,9 +224,10 @@ type CicWasmHost struct {
 	allocateFn   api.Function
 	deallocateFn api.Function
 	timeout      time.Duration
+	logSink      obs.LogSink
 }
 
-func newCicWasmHost(ctx context.Context, instance api.Module, timeout time.Duration) (*CicWasmHost, error) {
+func newCicWasmHost(ctx context.Context, instance api.Module, timeout time.Duration, logSink obs.LogSink) (*CicWasmHost, error) {
 	callFn := instance.ExportedFunction("Call")
 	allocateFn := instance.ExportedFunction("allocate")
 	deallocateFn := instance.ExportedFunction("deallocate")
@@ -200,6 +241,7 @@ func newCicWasmHost(ctx context.Context, instance api.Module, timeout time.Durat
 		allocateFn:   allocateFn,
 		deallocateFn: deallocateFn,
 		timeout:      timeout,
+		logSink:      logSink,
 	}, nil
 }
 
@@ -236,7 +278,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	}
 	defer func() {
 		if _, err := h.deallocateFn.Call(callCtx, uint64(opPtr), uint64(opLen)); err != nil {
-			// TODO: Log deallocation error at WARN level.
+			h.emitDeallocWarn("op", err)
 		}
 	}()
 
@@ -246,7 +288,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	}
 	defer func() {
 		if _, err := h.deallocateFn.Call(callCtx, uint64(authPtr), uint64(authLen)); err != nil {
-			// TODO: Log deallocation error at WARN level.
+			h.emitDeallocWarn("auth", err)
 		}
 	}()
 
@@ -256,7 +298,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	}
 	defer func() {
 		if _, err := h.deallocateFn.Call(callCtx, uint64(dataPtr), uint64(dataLen)); err != nil {
-			// TODO: Log deallocation error at WARN level.
+			h.emitDeallocWarn("input", err)
 		}
 	}()
 
@@ -275,7 +317,7 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 
 	defer func() {
 		if _, err := h.deallocateFn.Call(callCtx, uint64(resultPtr), uint64(resultLen)); err != nil {
-			// TODO: Log deallocation error at WARN level.
+			h.emitDeallocWarn("result", err)
 		}
 	}()
 
@@ -328,6 +370,21 @@ func (h *CicWasmHost) writeStringToWasm(ctx context.Context, s string) (uint32, 
 	}
 
 	return ptr, dataLen, nil
+}
+
+// emitDeallocWarn emits a WARN log record when a WASM memory deallocation fails.
+// It is a no-op if logSink is nil.
+func (h *CicWasmHost) emitDeallocWarn(ptrType string, err error) {
+	if h.logSink == nil {
+		return
+	}
+	h.logSink.RecordLog(obs.LogRecord{
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Level:     "WARN",
+		Message:   "wasm memory deallocation failed",
+		Resource:  obs.Resource{Component: "cicwasm"},
+		Attrs:     map[string]string{"ptr_type": ptrType, "error": err.Error()},
+	})
 }
 
 func formatErrorJson(code, message string, details interface{}) string {
