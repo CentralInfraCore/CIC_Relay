@@ -1080,7 +1080,7 @@ entries:
   # --- Sprint 12 ---
 
   - task: "git-source-iac"
-    status: todo
+    status: done
     priority: 46
     milestone: M29
     prompt: |

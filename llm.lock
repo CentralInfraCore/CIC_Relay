@@ -1,4 +1,4 @@
-version: 7
+version: 8
 canonical_definitions: true
 last_changed: 2026-04-10T00:00:00Z
-note: "M22.8 Done: cicwasm obs wiring — RecordHistogram (compile/instantiate) + RecordLog (dealloc WARN) + 4 új teszt"
+note: "M29 Done: GitSource (source_git.go) — clone/fetch, hardened env, CIC_GIT_SOURCE_URL wiring, 5 teszt"
