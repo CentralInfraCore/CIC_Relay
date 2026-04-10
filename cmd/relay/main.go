@@ -211,9 +211,14 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	traceStatus := "ok"
 	var workflowID string
+	var chainAnchor string // M32: links TraceFrame back to ProofTrace audit chain
 
 	defer func() {
 		endTS := time.Now().UTC().Format(time.RFC3339Nano)
+		traceAttrs := map[string]string{"status": traceStatus, "workflow_id": workflowID}
+		if chainAnchor != "" {
+			traceAttrs["chain_anchor"] = chainAnchor
+		}
 		s.emitTrace(obs.TraceFrame{
 			TraceID:   reqID,
 			SpanID:    reqID,
@@ -221,7 +226,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 			StartTime: start.UTC().Format(time.RFC3339Nano),
 			EndTime:   endTS,
 			Resource:  s.obsResource,
-			Attrs:     map[string]string{"status": traceStatus, "workflow_id": workflowID},
+			Attrs:     traceAttrs,
 		})
 		s.emitCounter(obs.CounterPoint{
 			Name:      "relay.requests.total",
@@ -313,6 +318,11 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 		logEntry.WithField("outcome", "internal_error").WithError(err).Error("Internal server error during Set operation")
 		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error: "+err.Error())
 		return
+	}
+
+	// M32: anchor TraceFrame to the ProofTrace audit chain.
+	if resp.Trace != nil {
+		chainAnchor = resp.Trace.ChainHash
 	}
 
 	s.emitLog(obs.LogRecord{

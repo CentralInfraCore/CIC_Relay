@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // assertErrorJSON checks that the response body is a valid error JSON with the expected code.
@@ -421,6 +422,78 @@ func TestSetHandler_ObsEmission_NilSinks(t *testing.T) {
 
 	assert.NotPanics(t, func() { server.setHandler(w, req) })
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// --- M32: TraceFrame chain_anchor tests ---
+
+// TestSetHandler_ChainAnchor_Success verifies that when Setx returns a ProofTrace
+// with a ChainHash, the TraceFrame carries a matching chain_anchor attribute.
+func TestSetHandler_ChainAnchor_Success(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("GetModule", mock.Anything).Return(&cabinet.ModuleDescriptor{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(
+		&cabinet.SetResponse{
+			Results: map[string]any{"status": "ok"},
+			Trace:   &cabinet.ProofTrace{ChainHash: "deadbeefcafe"},
+		}, nil,
+	)
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	sink := &obs.CaptureSink{}
+
+	server := &relayServer{
+		api:        mockAPI,
+		config:     &config{MaxJSONInputSize: 1024 * 1024},
+		logger:     logger,
+		traceSink:  sink,
+		logSink:    sink,
+		metricSink: sink,
+	}
+
+	body, _ := json.Marshal(map[string]any{"workflow_id": "my.workflow@1.0"})
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, sink.Traces, 1)
+	assert.Equal(t, "deadbeefcafe", sink.Traces[0].Attrs["chain_anchor"],
+		"TraceFrame must carry chain_anchor matching ProofTrace.ChainHash")
+	assert.Equal(t, "ok", sink.Traces[0].Attrs["status"])
+}
+
+// TestSetHandler_ChainAnchor_Error verifies that when Setx returns an error,
+// the TraceFrame does NOT carry a chain_anchor attribute.
+func TestSetHandler_ChainAnchor_Error(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	sink := &obs.CaptureSink{}
+
+	server := &relayServer{
+		api:        mockAPI,
+		config:     &config{MaxJSONInputSize: 1024 * 1024},
+		logger:     logger,
+		traceSink:  sink,
+		logSink:    sink,
+		metricSink: sink,
+	}
+
+	body, _ := json.Marshal(map[string]any{"workflow_id": "any"})
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	require.Len(t, sink.Traces, 1)
+	assert.Equal(t, "error", sink.Traces[0].Attrs["status"])
+	_, hasAnchor := sink.Traces[0].Attrs["chain_anchor"]
+	assert.False(t, hasAnchor, "TraceFrame must not carry chain_anchor on error")
 }
 
 // TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz, /readyz, and /.
