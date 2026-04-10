@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"centralrelay/pkg/obs"
 )
 
 const (
@@ -22,12 +24,21 @@ const (
 // All commands run with a hardened environment (no system config,
 // no interactive prompts, no hooks).
 type ExecGitOps struct {
-	registry *RepoRegistry
+	registry   *RepoRegistry
+	logSink    obs.LogSink
+	metricSink obs.MetricSink
 }
 
 // NewExecGitOps creates an ExecGitOps backed by the given registry.
 func NewExecGitOps(registry *RepoRegistry) *ExecGitOps {
 	return &ExecGitOps{registry: registry}
+}
+
+// SetObsSinks wires observability sinks into ExecGitOps.
+// Both arguments are nil-safe: passing nil disables the corresponding emissions.
+func (e *ExecGitOps) SetObsSinks(logSink obs.LogSink, metricSink obs.MetricSink) {
+	e.logSink = logSink
+	e.metricSink = metricSink
 }
 
 // Clone clones url into the local path registered for repoID.
@@ -162,13 +173,38 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 
-	if err := cmd.Run(); err != nil {
+	op := args[0] // subcommand name (clone, fetch, status, …)
+	start := time.Now()
+	runErr := cmd.Run()
+	elapsed := time.Since(start)
+
+	if e.metricSink != nil {
+		e.metricSink.RecordHistogram(obs.HistogramPoint{
+			Name:      "relay.git.op_duration_ms",
+			Sum:       float64(elapsed.Milliseconds()),
+			Count:     1,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Resource:  obs.Resource{Component: "nexus/git"},
+			Attrs:     map[string]string{"op": op},
+		})
+	}
+
+	if runErr != nil {
 		out := buf.Bytes()
-		// Truncate to 1MB to bound memory usage in error messages.
 		if len(out) > maxOutputSize {
 			out = out[:maxOutputSize]
 		}
-		return "", fmt.Errorf("git %s: %s (%w)", strings.Join(args, " "), strings.TrimSpace(string(out)), err)
+		msg := strings.TrimSpace(string(out))
+		if e.logSink != nil {
+			e.logSink.RecordLog(obs.LogRecord{
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+				Level:     "WARN",
+				Message:   "git op failed",
+				Resource:  obs.Resource{Component: "nexus/git"},
+				Attrs:     map[string]string{"op": op, "error": msg},
+			})
+		}
+		return "", fmt.Errorf("git %s: %s (%w)", strings.Join(args, " "), msg, runErr)
 	}
 
 	out := buf.Bytes()
