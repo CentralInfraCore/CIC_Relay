@@ -26,3 +26,7 @@ spec:
     # Operator (optional — not started if CIC_INFRA_REPO_PATH is absent)
     CIC_INFRA_REPO_PATH: "string, path to infra state repo watched by the Operator (optional)"
     CIC_OPERATOR_SECRET: "string, HMAC-SHA256 secret for bootstrap token generation (required if CIC_INFRA_REPO_PATH is set)"
+    # IaC git source (optional — FileSource used if CIC_GIT_SOURCE_URL is absent)
+    CIC_GIT_SOURCE_URL: "string, git remote URL for IaC config (optional; activates GitSource)"
+    CIC_GIT_SOURCE_BRANCH: "string, git branch to track, default main (used if CIC_GIT_SOURCE_URL is set)"
+    CIC_GIT_SOURCE_LOCAL_PATH: "string, local clone destination path (required if CIC_GIT_SOURCE_URL is set)"

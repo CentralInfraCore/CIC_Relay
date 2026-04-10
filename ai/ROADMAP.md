@@ -43,7 +43,7 @@ Ez a fájl az AI-támogatott roadmap aktív állapota.
 | M26       | Done        | L0.3 Source Assertion: CertVerifyFunc + X.509 chain verify |
 | M27       | Done        | L0.4 Spec Checksum: metadata.checksum = sha256(canonical_json(spec)) |
 | M28       | **Tervezett** | Git Host Functions: wazero git primitívek WASM moduloknak |
-| M29       | **Tervezett** | GitSource: IaC konfig betöltés git repóból |
+| M29       | **Done**      | GitSource: IaC konfig betöltés git repóból |
 
 ---
 

@@ -454,8 +454,28 @@ func buildOperatorIfConfigured(ctx context.Context, cabinetSvc cabinet.Cabinet, 
 		logger.Fatal("FATAL: CIC_INFRA_REPO_PATH is set but CIC_OPERATOR_SECRET is missing — cannot generate bootstrap tokens")
 	}
 
+	// Select IaC source: GitSource if CIC_GIT_SOURCE_URL is set, else FileSource.
+	var iacSource iac.IaCSource
+	if gitURL := os.Getenv("CIC_GIT_SOURCE_URL"); gitURL != "" {
+		localPath := os.Getenv("CIC_GIT_SOURCE_LOCAL_PATH")
+		if localPath == "" {
+			logger.Fatal("FATAL: CIC_GIT_SOURCE_URL is set but CIC_GIT_SOURCE_LOCAL_PATH is missing")
+		}
+		branch := os.Getenv("CIC_GIT_SOURCE_BRANCH")
+		if branch == "" {
+			branch = "main"
+		}
+		iacSource = iac.NewGitSource(iac.GitSourceConfig{
+			URL:       gitURL,
+			Branch:    branch,
+			LocalPath: localPath,
+		})
+	} else {
+		iacSource = iac.NewFileSource(infraPath)
+	}
+
 	// Load the full IaC graph for dependency gating.
-	graph, err := iac.NewLoader(iac.NewFileSource(infraPath)).Load(ctx)
+	graph, err := iac.NewLoader(iacSource).Load(ctx)
 	if err != nil {
 		logger.WithError(err).Warn("IaC graph load failed — operator will run without dependency gating")
 		graph = nil
