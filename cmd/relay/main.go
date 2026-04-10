@@ -547,7 +547,9 @@ func main() {
 	secrets := loadSecretsFromVault(logger)
 	recorderOpt := buildRecorderOption(logger, secrets)
 
-	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt)
+	logrusSink := obs.NewLogrusSink(logger)
+	obsOpt := cabinet.WithObsSinks(logrusSink, logrusSink)
+	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, obsOpt)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
 	}
@@ -600,9 +602,8 @@ func main() {
 	}
 
 	// --- HTTP Server Initialization ---
-	// Wire the obs layer to the structured logrus logger so that every
-	// TraceFrame / LogRecord / metric emission lands in the JSON log stream.
-	logrusSink := obs.NewLogrusSink(logger)
+	// logrusSink is already declared above (wired into cabinetSvc via WithObsSinks).
+	// Reuse the same sink for the relayServer obs fields.
 	server := &relayServer{
 		api:        cabinetSvc,
 		config:     cfg,

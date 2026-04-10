@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"centralrelay/pkg/obs"
 )
 
 // loadWasmFile is a test helper to load a compiled WASM module from the testdata directory.
@@ -597,4 +599,86 @@ func TestCicWasmHost_callGuest_Errors(t *testing.T) {
 		assert.Equal(t, "null", errorJson)
 		assert.JSONEq(t, `{"status":"ok"}`, dataJson)
 	})
+}
+
+// TestWasmManager_SetObsSinks_CompileMetric verifies that after SetObsSinks,
+// compiling a module emits a relay.wasm.compile_duration_ms histogram point. (M22.8)
+func TestWasmManager_SetObsSinks_CompileMetric(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "obs-test-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
+	require.NoError(t, err)
+	store.Put(md)
+
+	m, err := NewWasmManager(ctx, store, config)
+	require.NoError(t, err)
+	defer m.Close(ctx)
+
+	sink := &obs.CaptureSink{}
+	m.SetObsSinks(sink, sink)
+
+	_, err = m.PreCompileModule(ctx, md.ID())
+	require.NoError(t, err)
+
+	require.Len(t, sink.Histos, 1)
+	assert.Equal(t, "relay.wasm.compile_duration_ms", sink.Histos[0].Name)
+	assert.Equal(t, int64(1), sink.Histos[0].Count)
+	assert.Equal(t, "cicwasm", sink.Histos[0].Resource.Component)
+	assert.Equal(t, md.ID(), sink.Histos[0].Attrs["module_id"])
+}
+
+// TestWasmManager_SetObsSinks_InstantiateMetric verifies that NewHostInstance emits
+// a relay.wasm.instantiate_duration_ms histogram point after SetObsSinks. (M22.8)
+func TestWasmManager_SetObsSinks_InstantiateMetric(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "obs-inst-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
+	require.NoError(t, err)
+	store.Put(md)
+
+	m, err := NewWasmManager(ctx, store, config)
+	require.NoError(t, err)
+	defer m.Close(ctx)
+
+	sink := &obs.CaptureSink{}
+	m.SetObsSinks(sink, sink)
+
+	instance, err := m.NewHostInstance(ctx, md.ID())
+	require.NoError(t, err)
+	defer instance.Close(ctx)
+
+	// compile + instantiate = 2 histograms
+	require.Len(t, sink.Histos, 2)
+	names := []string{sink.Histos[0].Name, sink.Histos[1].Name}
+	assert.Contains(t, names, "relay.wasm.compile_duration_ms")
+	assert.Contains(t, names, "relay.wasm.instantiate_duration_ms")
+}
+
+// TestCicWasmHost_EmitDeallocWarn_NilSafe verifies that emitDeallocWarn is a no-op
+// when logSink is nil — no panic. (M22.8)
+func TestCicWasmHost_EmitDeallocWarn_NilSafe(t *testing.T) {
+	h := &CicWasmHost{logSink: nil}
+	assert.NotPanics(t, func() {
+		h.emitDeallocWarn("op", assert.AnError)
+	})
+}
+
+// TestCicWasmHost_EmitDeallocWarn_RecordsLog verifies that emitDeallocWarn emits
+// a WARN LogRecord when logSink is set. (M22.8)
+func TestCicWasmHost_EmitDeallocWarn_RecordsLog(t *testing.T) {
+	sink := &obs.CaptureSink{}
+	h := &CicWasmHost{logSink: sink}
+	h.emitDeallocWarn("result", assert.AnError)
+
+	require.Len(t, sink.Logs, 1)
+	assert.Equal(t, "WARN", sink.Logs[0].Level)
+	assert.Equal(t, "wasm memory deallocation failed", sink.Logs[0].Message)
+	assert.Equal(t, "cicwasm", sink.Logs[0].Resource.Component)
+	assert.Equal(t, "result", sink.Logs[0].Attrs["ptr_type"])
 }

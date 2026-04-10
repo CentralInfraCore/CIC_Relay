@@ -1,4 +1,4 @@
-version: 5
+version: 7
 canonical_definitions: true
-last_changed: 2026-04-09T09:34:30Z
-note: PROMPTMAP: Sprint 11 obs-logrus-sink (p44, M22.7) accept kritérium hozzáadva
+last_changed: 2026-04-10T00:00:00Z
+note: "M22.8 Done: cicwasm obs wiring — RecordHistogram (compile/instantiate) + RecordLog (dealloc WARN) + 4 új teszt"

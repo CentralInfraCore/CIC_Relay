@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"centralrelay/pkg/obs"
 )
 
 // cicWasmHost defines the interface for interacting with a live WASM instance.
@@ -103,6 +105,16 @@ type CabinetOption func(*cabinetService)
 func WithRecorder(r ExecutionRecorder) CabinetOption {
 	return func(s *cabinetService) {
 		s.recorder = r
+	}
+}
+
+// WithObsSinks wires observability sinks into the underlying WasmManager.
+// Both arguments are nil-safe: passing nil disables the corresponding emissions.
+func WithObsSinks(logSink obs.LogSink, metricSink obs.MetricSink) CabinetOption {
+	return func(s *cabinetService) {
+		if wm, ok := s.wasmManager.(*WasmManager); ok {
+			wm.SetObsSinks(logSink, metricSink)
+		}
 	}
 }
 
