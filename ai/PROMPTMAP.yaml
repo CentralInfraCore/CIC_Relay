@@ -1133,7 +1133,7 @@ entries:
     accept: make test
 
   - task: "git-host-functions-wazero"
-    status: todo
+    status: done
     priority: 47
     milestone: M28
     prompt: |

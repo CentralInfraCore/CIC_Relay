@@ -25,6 +25,10 @@ type WasmManagerConfig struct {
 	DefaultTimeoutSeconds uint32 `yaml:"default_timeout_seconds"`
 	DefaultMemoryPages    uint32 `yaml:"default_memory_pages"`
 	LRUCacheSize          int    `yaml:"lru_cache_size"`
+	// HostSetupFn, if non-nil, is called once after WASI instantiation to register
+	// additional host modules (e.g., typed git host functions for WASM modules).
+	// It receives the wazero runtime so it can instantiate host module builders.
+	HostSetupFn func(ctx context.Context, r wazero.Runtime) error `yaml:"-"`
 }
 
 // --- WasmManager: The Caching Compiler and Instance Factory ---
@@ -62,6 +66,14 @@ func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManager
 	if _, err := wasi_snapshot_preview1.Instantiate(ctx, r); err != nil {
 		r.Close(context.Background()) // Use background context for cleanup on failure.
 		return nil, fmt.Errorf("failed to instantiate wasi: %w", err)
+	}
+
+	// Register additional host modules (e.g., typed git host functions) if configured.
+	if config.HostSetupFn != nil {
+		if err := config.HostSetupFn(ctx, r); err != nil {
+			r.Close(context.Background())
+			return nil, fmt.Errorf("host module setup failed: %w", err)
+		}
 	}
 
 	// Allocate the manager first so the eviction closure can capture it.

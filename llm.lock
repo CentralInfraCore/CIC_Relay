@@ -1,4 +1,4 @@
-version: 8
+version: 9
 canonical_definitions: true
 last_changed: 2026-04-10T00:00:00Z
-note: "M29 Done: GitSource (source_git.go) — clone/fetch, hardened env, CIC_GIT_SOURCE_URL wiring, 5 teszt"
+note: "M28 Done: Git Host Functions — GitOps+RepoRegistry+ExecGitOps + wazero host module (git.*) + HostSetupFn wiring"

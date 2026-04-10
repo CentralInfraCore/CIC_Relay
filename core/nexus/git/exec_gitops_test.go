@@ -1,0 +1,119 @@
+package git
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// initBareTestRepo creates a non-bare git repo with one commit and returns its path.
+func initBareTestRepo(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+
+	gitEnv := []string{
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_ASKPASS=/bin/false",
+		"GIT_AUTHOR_NAME=Test",
+		"GIT_AUTHOR_EMAIL=test@test.local",
+		"GIT_COMMITTER_NAME=Test",
+		"GIT_COMMITTER_EMAIL=test@test.local",
+	}
+	mustGit := func(repoDir string, args ...string) {
+		t.Helper()
+		fullArgs := append([]string{"-c", "core.hooksPath=/dev/null"}, args...)
+		cmd := exec.Command("git", fullArgs...)
+		cmd.Dir = repoDir
+		cmd.Env = append(os.Environ(), gitEnv...)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, out)
+	}
+
+	mustGit(dir, "init", "-b", "main", dir)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "relay.yaml"), []byte("kind: Relay\n"), 0644))
+	mustGit(dir, "add", ".")
+	mustGit(dir, "commit", "-m", "init")
+	return dir
+}
+
+// TestExecGitOps_CloneAndStatus clones a local repo and checks that Status returns
+// an empty list (clean working tree).
+func TestExecGitOps_CloneAndStatus(t *testing.T) {
+	srcDir := initBareTestRepo(t)
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+
+	reg := NewRepoRegistry()
+	reg.Register("test-repo", cloneDir)
+	ops := NewExecGitOps(reg)
+
+	// Clone the source into cloneDir.
+	require.NoError(t, ops.Clone(context.Background(), "test-repo", srcDir, "main"))
+
+	// Status on a freshly cloned repo should be clean.
+	entries, err := ops.Status(context.Background(), "test-repo")
+	require.NoError(t, err)
+	assert.Empty(t, entries, "freshly cloned repo should have no uncommitted changes")
+}
+
+// TestExecGitOps_UnknownRepo verifies that any operation with an unregistered repoID fails.
+func TestExecGitOps_UnknownRepo(t *testing.T) {
+	reg := NewRepoRegistry()
+	ops := NewExecGitOps(reg)
+
+	_, err := ops.Status(context.Background(), "ghost")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `unknown repoID: "ghost"`)
+}
+
+// TestHardenedEnv verifies that git commands are executed with the required
+// hardened environment variables.
+func TestHardenedEnv(t *testing.T) {
+	// Create a fake "git" binary that writes its environment to a file.
+	binDir := t.TempDir()
+	envFile := filepath.Join(binDir, "env.txt")
+	scriptContent := fmt.Sprintf("#!/bin/sh\nprintenv > %s\nexit 0\n", envFile)
+	scriptPath := filepath.Join(binDir, "git")
+	require.NoError(t, os.WriteFile(scriptPath, []byte(scriptContent), 0755))
+
+	// Temporarily prepend binDir to PATH so our fake git is found first.
+	t.Setenv("PATH", binDir+string(filepath.ListSeparator)+os.Getenv("PATH"))
+
+	repoDir := t.TempDir()
+	reg := NewRepoRegistry()
+	reg.Register("env-test", repoDir)
+	ops := NewExecGitOps(reg)
+
+	// The fake git exits 0, so Status should succeed (empty result).
+	_, _ = ops.Status(context.Background(), "env-test")
+
+	captured, err := os.ReadFile(envFile)
+	require.NoError(t, err, "fake git script did not write env file")
+
+	env := string(captured)
+	assert.True(t, strings.Contains(env, "GIT_CONFIG_NOSYSTEM=1"),
+		"GIT_CONFIG_NOSYSTEM=1 must be set; got:\n%s", env)
+	assert.True(t, strings.Contains(env, "GIT_TERMINAL_PROMPT=0"),
+		"GIT_TERMINAL_PROMPT=0 must be set")
+	assert.True(t, strings.Contains(env, "GIT_ASKPASS=/bin/false"),
+		"GIT_ASKPASS=/bin/false must be set")
+}
+
+// TestParsePortcelainStatus validates the porcelain output parser.
+func TestParsePortcelainStatus(t *testing.T) {
+	input := " M modified.go\n?? untracked.txt\nR  old.go -> new.go\n"
+	entries := parsePortcelainStatus(input)
+	require.Len(t, entries, 3)
+	assert.Equal(t, " M", entries[0].State)
+	assert.Equal(t, "modified.go", entries[0].Path)
+	assert.Equal(t, "??", entries[1].State)
+	assert.Equal(t, "untracked.txt", entries[1].Path)
+	assert.Equal(t, "new.go", entries[2].Path)
+}
