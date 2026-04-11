@@ -30,11 +30,16 @@ BUILD_DIR ?= ./output/$(COMMIT)
 COVERAGE_FILE ?= /output/$(COMMIT)/coverage.out
 COVERAGE_HTML ?= /output/$(COMMIT)/coverage.html
 
+# BUILDER_IMAGE_DIGEST: pinned golang builder image digest from docker-compose.yaml.
+# Re-pin: grep -m1 'sha256:' docker-compose.yaml | grep -o 'sha256:[a-f0-9]*'
+BUILDER_IMAGE_DIGEST ?= sha256:d6d07e5326853f71a30decb4d777467428e85c087433b3d76c8b74933abd48b1
+
 # RELEASE_LD_FLAGS: timestamp-free — produces byte-identical binaries from the same source.
 # SourceTreeHash is injected inline in release/build recipes via:
 #   SOURCE_HASH=$$(go run ./tools/sourcehash .) && ... -X main.SourceTreeHash=$$SOURCE_HASH
 RELEASE_LD_FLAGS ?= -X main.BuildID=$(VERSION)-$(COMMIT) \
-                    -X main.CommitHash=$(COMMIT)
+                    -X main.CommitHash=$(COMMIT) \
+                    -X main.BuilderImageDigest=$(BUILDER_IMAGE_DIGEST)
 # LD_FLAGS: includes Timestamp for dev/debug builds (not used in `make release-relay`).
 LD_FLAGS ?= $(RELEASE_LD_FLAGS) \
             -X main.Timestamp=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)

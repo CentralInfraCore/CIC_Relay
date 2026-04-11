@@ -3,6 +3,7 @@ package merkle
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -159,4 +160,34 @@ func TestBuildVerificationRoot_ArtifactSizeZeroVsNonZero(t *testing.T) {
 	zero := &VerificationManifest{Artifact: ArtifactFields{ArtifactSize: 0}}
 	nonZero := &VerificationManifest{Artifact: ArtifactFields{ArtifactSize: 1}}
 	assert.NotEqual(t, BuildVerificationRoot(zero), BuildVerificationRoot(nonZero))
+}
+
+// --- BuildContext helpers ---
+
+func TestGoRuntimeDigest_Format(t *testing.T) {
+	d := GoRuntimeDigest()
+	assert.True(t, len(d) > 7 && d[:7] == "sha256:", "must be sha256: prefixed")
+	_, err := hex.DecodeString(d[7:])
+	require.NoError(t, err, "suffix must be valid hex")
+	assert.Len(t, d[7:], 64, "SHA-256 must be 64 hex chars")
+}
+
+func TestGoRuntimeDigest_Determinism(t *testing.T) {
+	assert.Equal(t, GoRuntimeDigest(), GoRuntimeDigest())
+}
+
+func TestGoSumDigest_MissingFile(t *testing.T) {
+	assert.Equal(t, NullMarker, GoSumDigest("/nonexistent/path/go.sum"))
+	assert.Equal(t, NullMarker, GoSumDigest(""))
+}
+
+func TestGoSumDigest_File(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "go.sum")
+	require.NoError(t, err)
+	_, _ = f.WriteString("github.com/foo v1.0.0 h1:abc\n")
+	f.Close()
+
+	d := GoSumDigest(f.Name())
+	assert.True(t, len(d) > 7 && d[:7] == "sha256:")
+	assert.Len(t, d[7:], 64)
 }

@@ -120,6 +120,8 @@ func TestLoadPKIAssets(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEqual(t, x509.NewCertPool(), assets.Roots, "should load root CAs")
 		assert.NotEqual(t, x509.NewCertPool(), assets.Intermediates, "should load intermediate CAs")
+		assert.True(t, len(assets.CAFingerprint) > 7 && assets.CAFingerprint[:7] == "sha256:",
+			"CAFingerprint must be set after loading root CA")
 	})
 
 	t.Run("empty path", func(t *testing.T) {
