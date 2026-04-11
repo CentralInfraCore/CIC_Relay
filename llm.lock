@@ -1,4 +1,4 @@
-version: 12
+version: 13
 canonical_definitions: true
 last_changed: 2026-04-11T00:00:00Z
-note: "Sprint 14: M33 (pkg/merkle: Merkle-root build provenance hash, VerificationManifest, BuildVerificationRoot)"
+note: "Sprint 14: M33+M34 (pkg/merkle Merkle-root + BuildContext + NewSignArtifactFunc integration)"

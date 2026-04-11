@@ -17,13 +17,15 @@ import (
 	"centralrelay/core/modules/cibuild"
 	"centralrelay/core/modules/certselfsigned"
 	"centralrelay/core/modules/schemacompile"
+	"centralrelay/pkg/merkle"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
 // registerNativeComponents creates and registers all built-in Go components in the cabinet.
 // pkiAssets must not be nil; pass the result of bootstrapPKI.
-func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAssets *PKIAssets) error {
+// bctx carries build-time metadata for the Merkle-root verification hash (M33).
+func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAssets *PKIAssets, bctx merkle.BuildContext) error {
 	// --- Register core.test module ---
 	testFuncs := make(cabinet.NativeFunctions)
 	testFuncs["echo"] = cabinet.CoreEcho
@@ -92,12 +94,13 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	}
 
 	// --- Register cic.artifact.sign module ---
-	signMeta := cabinet.BaseBlock{Name: "cic.artifact.sign", Version: "1.0", Description: "Artifact sign module (stub)."}
-	signModule, err := cabinet.NewModuleDescriptor(ctx, signMeta, "native/schema", nil, []string{"artifact", "build_hash", "cic_sign", "cic_signed_ca"}, nil)
+	signMeta := cabinet.BaseBlock{Name: "cic.artifact.sign", Version: "1.0", Description: "Artifact sign module (stub). Emits verification_root (M33)."}
+	signModule, err := cabinet.NewModuleDescriptor(ctx, signMeta, "native/schema", nil,
+		[]string{"artifact", "build_hash", "cic_sign", "cic_signed_ca", "verification_root"}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create cic.artifact.sign module descriptor: %w", err)
 	}
-	signModule.NativeImpl = cabinet.NativeFunctions{"sign": schemacompile.SignArtifact}
+	signModule.NativeImpl = cabinet.NativeFunctions{"sign": schemacompile.NewSignArtifactFunc(bctx)}
 	if err := svc.PutModule(signModule); err != nil {
 		return fmt.Errorf("failed to register cic.artifact.sign module: %w", err)
 	}

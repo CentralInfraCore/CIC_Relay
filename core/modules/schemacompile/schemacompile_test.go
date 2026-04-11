@@ -17,6 +17,7 @@ import (
 
 	"centralrelay/core/modules/schemacompile"
 	"centralrelay/pkg/canonicaljson"
+	"centralrelay/pkg/merkle"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -355,4 +356,80 @@ func TestAssertSource_L04_NilSpec_SkipsChecksumCheck(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
+}
+
+// --- M33: NewSignArtifactFunc + verification_root ---
+
+func TestNewSignArtifactFunc_VerificationRoot_Present(t *testing.T) {
+	bctx := merkle.BuildContext{
+		SourceRef:        "git:abc123",
+		SourceTreeDigest: "sha256:deadbeef",
+	}
+	fn := schemacompile.NewSignArtifactFunc(bctx)
+
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+		"schema":       "my.schema",
+		"version":      "1.0",
+	})
+	require.NoError(t, err)
+
+	m := out.(map[string]interface{})
+	root, ok := m["verification_root"].(string)
+	require.True(t, ok, "verification_root must be a string")
+	assert.Len(t, root, 64, "verification_root must be 64-char hex SHA-256")
+	_, decErr := hex.DecodeString(root)
+	assert.NoError(t, decErr, "verification_root must be valid hex")
+}
+
+func TestNewSignArtifactFunc_VerificationRoot_Determinism(t *testing.T) {
+	bctx := merkle.BuildContext{SourceRef: "git:abc123"}
+	fn := schemacompile.NewSignArtifactFunc(bctx)
+	input := map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+		"schema":       "my.schema",
+		"version":      "1.0",
+	}
+	out1, _ := fn(context.Background(), input)
+	out2, _ := fn(context.Background(), input)
+	assert.Equal(t,
+		out1.(map[string]interface{})["verification_root"],
+		out2.(map[string]interface{})["verification_root"],
+	)
+}
+
+func TestNewSignArtifactFunc_VerificationRoot_SensitiveToArtifact(t *testing.T) {
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{})
+	out1, _ := fn(context.Background(), map[string]interface{}{"raw_artifact": "version: 1\n"})
+	out2, _ := fn(context.Background(), map[string]interface{}{"raw_artifact": "version: 2\n"})
+	assert.NotEqual(t,
+		out1.(map[string]interface{})["verification_root"],
+		out2.(map[string]interface{})["verification_root"],
+		"different artifacts must yield different roots",
+	)
+}
+
+func TestNewSignArtifactFunc_VerificationRoot_SensitiveToBuildContext(t *testing.T) {
+	input := map[string]interface{}{"raw_artifact": "kind: SchemaArtifact\n"}
+	fn1 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:aaa"})
+	fn2 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:bbb"})
+	out1, _ := fn1(context.Background(), input)
+	out2, _ := fn2(context.Background(), input)
+	assert.NotEqual(t,
+		out1.(map[string]interface{})["verification_root"],
+		out2.(map[string]interface{})["verification_root"],
+		"different build contexts must yield different roots",
+	)
+}
+
+func TestSignArtifact_StillEmitsVerificationRoot(t *testing.T) {
+	// Zero-context SignArtifact still emits verification_root (NullMarker fields).
+	out, err := schemacompile.SignArtifact(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	root, ok := m["verification_root"].(string)
+	assert.True(t, ok, "verification_root must be present even without build context")
+	assert.Len(t, root, 64)
 }

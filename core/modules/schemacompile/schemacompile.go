@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	"centralrelay/pkg/canonicaljson"
+	"centralrelay/pkg/merkle"
 	"gopkg.in/yaml.v3"
 )
 
@@ -187,11 +188,27 @@ func BuildSchema(_ context.Context, input interface{}) (interface{}, error) {
 	}, nil
 }
 
-// SignArtifact is the native function for cic.artifact.sign@1.0.
+// SignArtifact is the native function for cic.artifact.sign@1.0 without build context.
+// Use NewSignArtifactFunc to get a context-aware version that emits verification_root.
 //
 // Computes a real build_hash (SHA-256 of the raw artifact YAML bytes).
 // cicSign and cicSignedCA remain stubs until Layer 2 (CICSourceCA signing) lands.
 func SignArtifact(_ context.Context, input interface{}) (interface{}, error) {
+	return newSignArtifactResult(input, merkle.BuildContext{})
+}
+
+// NewSignArtifactFunc returns a cic.artifact.sign@1.0 native function wired with
+// build-time context. The returned function emits a verification_root field in its
+// output — the Merkle-root hash of the full provenance manifest (M33).
+func NewSignArtifactFunc(bctx merkle.BuildContext) func(context.Context, interface{}) (interface{}, error) {
+	return func(_ context.Context, input interface{}) (interface{}, error) {
+		return newSignArtifactResult(input, bctx)
+	}
+}
+
+// newSignArtifactResult is the shared implementation for both SignArtifact and
+// NewSignArtifactFunc. It computes build_hash and verification_root.
+func newSignArtifactResult(input interface{}, bctx merkle.BuildContext) (interface{}, error) {
 	m, ok := input.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("cic.artifact.sign: expected map, got %T", input)
@@ -204,10 +221,44 @@ func SignArtifact(_ context.Context, input interface{}) (interface{}, error) {
 	sum := sha256.Sum256([]byte(rawArtifact))
 	buildHash := "sha256:" + hex.EncodeToString(sum[:])
 
+	schema, _ := m["schema"].(string)
+	version, _ := m["version"].(string)
+
+	// M33: compute Merkle-root verification hash from all available provenance inputs.
+	manifest := &merkle.VerificationManifest{
+		Version: 1,
+		Source: merkle.SourceFields{
+			SourceRef:        bctx.SourceRef,
+			SourceTreeDigest: bctx.SourceTreeDigest,
+		},
+		BuildEnv: merkle.BuildEnvFields{
+			DockerImageChecksum:  bctx.DockerImageChecksum,
+			ToolchainDigest:      bctx.ToolchainDigest,
+			DependencyLockDigest: bctx.DependencyLockDigest,
+			PipelinePolicyDigest: bctx.PipelinePolicyDigest,
+		},
+		Inputs: merkle.InputsFields{
+			// schema@version is the stable descriptor of the compiled schema input.
+			SchemaDescriptorDigest: schema + "@" + version,
+		},
+		Artifact: merkle.ArtifactFields{
+			ArtifactDigest: buildHash,
+			ArtifactSize:   int64(len(rawArtifact)),
+		},
+		Validation: merkle.ValidationFields{
+			CAFingerprint: bctx.CAFingerprint,
+			CertChainHash: bctx.CertChainHash,
+		},
+		Audit: merkle.AuditFields{
+			SigningPolicyDigest: bctx.SigningPolicyDigest,
+		},
+	}
+
 	return map[string]interface{}{
-		"artifact":      rawArtifact,
-		"build_hash":    buildHash,
-		"cic_sign":      "stub:pending",
-		"cic_signed_ca": "stub:pending",
+		"artifact":          rawArtifact,
+		"build_hash":        buildHash,
+		"cic_sign":          "stub:pending",
+		"cic_signed_ca":     "stub:pending",
+		"verification_root": merkle.BuildVerificationRoot(manifest),
 	}, nil
 }
