@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -30,11 +31,13 @@ import (
 //	-X main.CommitHash=$(COMMIT)
 //	-X main.Timestamp=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 //	-X main.SourceTreeHash=$(shell go run ./tools/sourcehash .)  [release/build targets]
+//	-X main.BuilderImageDigest=sha256:<digest>                   [release/build targets]
 var (
-	BuildID        = "dev"
-	CommitHash     = "unknown"
-	Timestamp      = "unknown"
-	SourceTreeHash = "unknown"
+	BuildID            = "dev"
+	CommitHash         = "unknown"
+	Timestamp          = "unknown"
+	SourceTreeHash     = "unknown"
+	BuilderImageDigest = "unknown" // pinned builder docker image digest (docker-compose.yaml)
 )
 
 // test seam: unit tesztben felülírható
@@ -621,11 +624,15 @@ func main() {
 		"trust_store_loaded": pkiAssets.TrustStoreLoaded,
 	}).Info("PKI trust store ready")
 
-	// M33: build context for Merkle-root verification hash, populated from ldflags vars.
+	// M34: build context for Merkle-root verification hash.
+	// ToolchainDigest: sha256 of the Go runtime version string (stable, no external dep).
+	// DockerImageChecksum: injected via -X main.BuilderImageDigest at build time.
 	bctx := merkle.BuildContext{
 		SourceRef:            CommitHash,
 		SourceTreeDigest:     SourceTreeHash,
 		DependencyLockDigest: merkle.GoSumDigest("go.sum"),
+		ToolchainDigest:      merkle.GoRuntimeDigest(),
+		DockerImageChecksum:  BuilderImageDigest,
 	}
 
 	// Register built-in native modules first (core.test, ci.build, …).

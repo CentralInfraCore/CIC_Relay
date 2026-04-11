@@ -25,7 +25,11 @@ import (
 // registerNativeComponents creates and registers all built-in Go components in the cabinet.
 // pkiAssets must not be nil; pass the result of bootstrapPKI.
 // bctx carries build-time metadata for the Merkle-root verification hash (M33).
+// CAFingerprint from pkiAssets is merged into bctx if not already set.
 func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAssets *PKIAssets, bctx merkle.BuildContext) error {
+	if bctx.CAFingerprint == "" {
+		bctx.CAFingerprint = pkiAssets.CAFingerprint
+	}
 	// --- Register core.test module ---
 	testFuncs := make(cabinet.NativeFunctions)
 	testFuncs["echo"] = cabinet.CoreEcho
@@ -154,7 +158,8 @@ type PKIAssets struct {
 	Roots            *x509.CertPool
 	Intermediates    *x509.CertPool
 	CRLs             []*x509.RevocationList
-	TrustStoreLoaded bool // true when at least one root CA was loaded
+	TrustStoreLoaded bool   // true when at least one root CA was loaded
+	CAFingerprint    string // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
 }
 
 // ComponentHeader defines the common fields for identifying a component type.
@@ -457,6 +462,10 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 					if cert.Subject.String() == cert.Issuer.String() { // Self-signed, so it's a root
 						assets.Roots.AddCert(cert)
 						assets.TrustStoreLoaded = true
+						if assets.CAFingerprint == "" {
+							sum := sha256.Sum256(cert.Raw)
+							assets.CAFingerprint = "sha256:" + hex.EncodeToString(sum[:])
+						}
 					} else {
 						assets.Intermediates.AddCert(cert)
 					}
