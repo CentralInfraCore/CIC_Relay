@@ -20,6 +20,7 @@ import (
 	"centralrelay/core/nexus/isolation"
 	"centralrelay/core/nexus/operator"
 	"centralrelay/core/nexus/recorder"
+	"centralrelay/pkg/merkle"
 	"centralrelay/pkg/obs"
 )
 
@@ -620,8 +621,15 @@ func main() {
 		"trust_store_loaded": pkiAssets.TrustStoreLoaded,
 	}).Info("PKI trust store ready")
 
+	// M33: build context for Merkle-root verification hash, populated from ldflags vars.
+	bctx := merkle.BuildContext{
+		SourceRef:            CommitHash,
+		SourceTreeDigest:     SourceTreeHash,
+		DependencyLockDigest: merkle.GoSumDigest("go.sum"),
+	}
+
 	// Register built-in native modules first (core.test, ci.build, …).
-	if err := registerNativeComponents(loadCtx, cabinetSvc, pkiAssets); err != nil {
+	if err := registerNativeComponents(loadCtx, cabinetSvc, pkiAssets, bctx); err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to register native components")
 	}
 	logger.Info("Native components registered.")
