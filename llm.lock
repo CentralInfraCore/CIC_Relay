@@ -1,4 +1,4 @@
-version: 11
+version: 12
 canonical_definitions: true
-last_changed: 2026-04-10T00:00:00Z
-note: "Sprint 13: M32 (TraceFrame chain_anchor: setHandler → ProofTrace.ChainHash link)"
+last_changed: 2026-04-11T00:00:00Z
+note: "Sprint 14: M33 (pkg/merkle: Merkle-root build provenance hash, VerificationManifest, BuildVerificationRoot)"
