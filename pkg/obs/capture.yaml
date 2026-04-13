@@ -1,0 +1,40 @@
+---
+package: obs
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: CaptureSink
+  kind: struct
+  description: CaptureSink is a thread-safe, in-memory sink for use in tests. It satisfies
+    TraceSink, LogSink, and MetricSink.
+  implements: []
+  references: []
+- name: RecordTrace
+  kind: method
+  receiver: CaptureSink
+  description: ''
+  references: []
+- name: RecordLog
+  kind: method
+  receiver: CaptureSink
+  description: ''
+  references: []
+- name: RecordCounter
+  kind: method
+  receiver: CaptureSink
+  description: ''
+  references: []
+- name: RecordGauge
+  kind: method
+  receiver: CaptureSink
+  description: ''
+  references: []
+- name: RecordHistogram
+  kind: method
+  receiver: CaptureSink
+  description: ''
+  references: []

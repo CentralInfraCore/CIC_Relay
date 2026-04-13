@@ -1,0 +1,28 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+- schema
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ValidateSchema
+  kind: func
+  description: ValidateSchema checks whether data carries a "$schema" key matching
+    one of accepts. If accepts is empty, all data passes. This is the exported counterpart
+    of validateInputSchema — usable without a ModuleDescriptor (e.g. for self-validation).
+  references: []
+- name: validateInputSchema
+  kind: func
+  description: validateInputSchema checks whether inputData declares a "$schema" key
+    that matches one of the module's accepted schema IDs. If the module declares no
+    accepted schemas (Accepts is empty), all inputs pass without inspection. This
+    preserves backward-compatibility with native modules that do not restrict their
+    input type. When Accepts is non-empty the input MUST be a map[string]interface{}
+    carrying a "$schema" string value whose value appears in the Accepts list. Any
+    deviation returns ErrInvalid.
+  references: []

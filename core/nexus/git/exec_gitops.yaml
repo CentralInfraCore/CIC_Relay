@@ -1,0 +1,84 @@
+---
+package: git
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ExecGitOps
+  kind: struct
+  description: ExecGitOps implements GitOps using os/exec("git", ...). All commands
+    run with a hardened environment (no system config, no interactive prompts, no
+    hooks).
+  implements: []
+  references:
+  - obs.LogSink
+  - obs.MetricSink
+- name: NewExecGitOps
+  kind: func
+  description: NewExecGitOps creates an ExecGitOps backed by the given registry.
+  references: []
+- name: SetObsSinks
+  kind: method
+  receiver: ExecGitOps
+  description: 'SetObsSinks wires observability sinks into ExecGitOps. Both arguments
+    are nil-safe: passing nil disables the corresponding emissions.'
+  references:
+  - obs.LogSink
+  - obs.MetricSink
+- name: Clone
+  kind: method
+  receiver: ExecGitOps
+  description: Clone clones url into the local path registered for repoID.
+  references: []
+- name: Fetch
+  kind: method
+  receiver: ExecGitOps
+  description: Fetch fetches the given remote for the registered repo.
+  references: []
+- name: Checkout
+  kind: method
+  receiver: ExecGitOps
+  description: Checkout checks out the given ref in the registered repo.
+  references: []
+- name: Commit
+  kind: method
+  receiver: ExecGitOps
+  description: Commit stages paths and creates a commit; returns the new commit hash.
+  references: []
+- name: Push
+  kind: method
+  receiver: ExecGitOps
+  description: Push pushes refspec to remote for the registered repo.
+  references: []
+- name: Status
+  kind: method
+  receiver: ExecGitOps
+  description: Status returns the working-tree status of the registered repo.
+  references: []
+- name: parsePortcelainStatus
+  kind: func
+  description: parsePortcelainStatus parses the output of `git status --porcelain`.
+  references: []
+- name: runGit
+  kind: method
+  receiver: ExecGitOps
+  description: runGit executes a git command with a hardened environment. dir is the
+    working directory; empty string means the caller's working directory.
+  references: []
+- name: runGitOutput
+  kind: method
+  receiver: ExecGitOps
+  description: runGitOutput executes a git command and returns its stdout as a string.
+  references: []
+- name: runGitOutputDir
+  kind: method
+  receiver: ExecGitOps
+  description: ''
+  references:
+  - obs.HistogramPoint
+  - obs.ResourceComponent
+  - obs.LogRecord

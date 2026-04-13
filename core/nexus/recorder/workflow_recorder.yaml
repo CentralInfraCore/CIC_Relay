@@ -1,0 +1,30 @@
+---
+package: recorder
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: WorkflowRecorder
+  kind: struct
+  description: 'WorkflowRecorder adapts StateRecorder to the cabinet.ExecutionRecorder
+    interface. It wraps each ProofTrace as the "actual" state and builds a minimal
+    ExpectedState from the workflowID. The Graph field is nil for workflow executions
+    (not IaC). It satisfies cabinet.ExecutionRecorder structurally: func Record(ctx
+    context.Context, workflowID string, trace interface{}) error'
+  implements: []
+  references: []
+- name: NewWorkflowRecorder
+  kind: func
+  description: NewWorkflowRecorder creates a WorkflowRecorder wrapping the given StateRecorder.
+  references: []
+- name: Record
+  kind: method
+  receiver: WorkflowRecorder
+  description: Record persists the ProofTrace via the underlying StateRecorder. workflowID
+    is used as the RunID; trace is stored as the actual state.
+  references:
+  - types.ExpectedState

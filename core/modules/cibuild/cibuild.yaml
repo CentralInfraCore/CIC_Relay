@@ -1,0 +1,41 @@
+---
+package: cibuild
+description: Package cibuild implements the ci.build native module. It runs a make
+  target and returns the artifact path + SHA-256 digest, so the result can be recorded
+  in the ProofTrace as a step output.
+tags:
+- core
+- executor
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Input
+  kind: struct
+  description: Input is the expected input structure for the ci.build module.
+  implements: []
+  references: []
+- name: Output
+  kind: struct
+  description: Output is the result returned by Execute.
+  implements: []
+  references: []
+- name: Execute
+  kind: func
+  description: 'Execute runs the build and returns an Output. Satisfies the cabinet
+    NativeFunc signature: func(context.Context, interface{}) (interface{}, error)'
+  references: []
+- name: fileDigest
+  kind: func
+  description: fileDigest returns the hex-encoded SHA-256 digest of a file.
+  references: []
+- name: parseInput
+  kind: func
+  description: parseInput extracts Input from the raw interface{} value passed by
+    the cabinet.
+  references: []
+- name: buildTimeout
+  kind: const
+  description: buildTimeout is the maximum time a single make invocation may run.
+  references: []

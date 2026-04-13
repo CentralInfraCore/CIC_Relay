@@ -1,0 +1,57 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: ipRateLimiter
+  kind: struct
+  description: ipRateLimiter maintains per-IP token bucket limiters.
+  implements: []
+  references:
+  - rate.Limiter
+  - rate.Limit
+- name: concurrentLimiter
+  kind: struct
+  description: concurrentLimiter enforces a cap on simultaneous in-flight requests.
+  implements: []
+  references: []
+- name: newIPRateLimiter
+  kind: func
+  description: ''
+  references:
+  - rate.Limiter
+  - rate.Limit
+- name: getLimiter
+  kind: method
+  receiver: ipRateLimiter
+  description: ''
+  references:
+  - rate.Limiter
+  - rate.NewLimiter
+- name: Middleware
+  kind: method
+  receiver: ipRateLimiter
+  description: Middleware returns an http.Handler that enforces the concurrent request
+    cap. When the cap is reached, 503 Service Unavailable is returned immediately.
+  references: []
+- name: newConcurrentLimiter
+  kind: func
+  description: ''
+  references: []
+- name: Middleware
+  kind: method
+  receiver: concurrentLimiter
+  description: Middleware returns an http.Handler that enforces the concurrent request
+    cap. When the cap is reached, 503 Service Unavailable is returned immediately.
+  references: []
+- name: buildHandler
+  kind: func
+  description: buildHandler wraps the mux with rate limiting and concurrent cap middleware.
+  references: []

@@ -1,0 +1,117 @@
+---
+package: schemapipeline
+description: 'Package schemapipeline implements the four-step CIC-Schemas build pipeline
+  as native relay modules. Workflow steps (in order): cic.pipeline.start@1.0    —
+  git clone + branch, record source_ref + tree_digest cic.pipeline.test@1.0     —
+  make test in the builder container cic.pipeline.validate@1.0 — make validate in
+  the builder container cic.pipeline.release@1.0  — make release, read signed artifact
+  from source/ The output of release feeds directly into cic.source.assert@1.0 as
+  source_assertion. Every step adds its own merkle leaf (step_hash) to the carry-over
+  map.'
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: OSCommandRunner
+  kind: struct
+  description: OSCommandRunner is the production CommandRunner using os/exec.
+  implements: []
+  references: []
+- name: PipelineConfig
+  kind: struct
+  description: PipelineConfig holds the wiring needed by all pipeline steps. Construct
+    once; each step function closes over it.
+  implements: []
+  references: []
+- name: CommandRunner
+  kind: interface
+  description: CommandRunner executes an external command and returns combined output,
+    the process exit code, and any execution-level error (not a non-zero exit). A
+    non-zero exit is reported via exitCode, not err.
+  references: []
+- name: Run
+  kind: method
+  receiver: OSCommandRunner
+  description: Run executes name with args in dir (empty = caller's cwd).
+  references: []
+- name: runner
+  kind: method
+  receiver: PipelineConfig
+  description: ''
+  references: []
+- name: NewStartFunc
+  kind: method
+  receiver: PipelineConfig
+  description: 'NewStartFunc returns the cic.pipeline.start@1.0 native function. It
+    git-clones the requested repo+branch into BuildDir and records source_ref, tree_digest,
+    and builder_image_digest as hash-chain leaves. Required input fields: repo_url,
+    branch, schema, version. Optional: build_dir (overrides PipelineConfig.BuildDir
+    per-request).'
+  references: []
+- name: NewTestFunc
+  kind: method
+  receiver: PipelineConfig
+  description: NewTestFunc returns the cic.pipeline.test@1.0 native function. Runs
+    `docker exec <builder_container> make test` and records stdout_digest + exit_code.
+  references: []
+- name: NewValidateFunc
+  kind: method
+  receiver: PipelineConfig
+  description: NewValidateFunc returns the cic.pipeline.validate@1.0 native function.
+    Runs `docker exec <builder_container> make validate` and records stdout_digest
+    + exit_code.
+  references: []
+- name: runMakeStep
+  kind: method
+  receiver: PipelineConfig
+  description: runMakeStep is the shared implementation for test and validate steps.
+    It runs `make <target>` inside the builder container and records the result.
+  references: []
+- name: NewReleaseFunc
+  kind: method
+  receiver: PipelineConfig
+  description: NewReleaseFunc returns the cic.pipeline.release@1.0 native function.
+    Runs `docker exec <builder_container> make release VERSION=<version>`, then reads
+    the signed artifact from <build_dir>/source/<schema>.yaml and returns it as source_assertion
+    for cic.source.assert.
+  references: []
+- name: computeStepHash
+  kind: func
+  description: computeStepHash returns a Merkle root over the step's named leaves.
+    keys is iterated in sorted order for determinism.
+  references:
+  - merkle.LeafHash
+  - merkle.HexMerkleRoot
+- name: computeTreeDigest
+  kind: func
+  description: 'computeTreeDigest returns a content-addressable digest of the source
+    tree at buildDir. Algorithm (normalization rules): - Traversal: filepath.WalkDir
+    in OS readdir order (UTF-8 byte order on Linux/ext4). - Scope: regular files only.
+    Directories, symlinks, and device files are skipped. The .git directory is excluded
+    entirely. - Path encoding: each file''s path is the slash-free relative path from
+    buildDir, using the OS-native path separator (always ''/'' on Linux). No normalization
+    of line endings, permissions, timestamps, or ownership is performed. - Per-file
+    hash: raw sha256 of file bytes (no length prefix, no mode bits). - Accumulator:
+    single SHA-256 updated with (rel_path_bytes || file_sha256_bytes) for each file
+    in WalkDir order. No delimiter between path and hash — the fixed 32-byte sha256
+    length makes the concatenation unambiguous. - Result format: "sha256:<lowercase-hex-of-accumulator>".
+    - Empty / missing directory: returns sha256("empty-tree") prefixed with "sha256:".
+    Limitation: this digest is NOT portable across OS/filesystem types that sort directory
+    entries differently from Linux ext4. It is suitable for Docker-based pipelines
+    where the build directory always lives on the same host filesystem.'
+  references: []
+- name: digestString
+  kind: func
+  description: digestString returns the lowercase hex SHA-256 of s.
+  references: []
+- name: copyMap
+  kind: func
+  description: copyMap shallow-copies a map[string]interface{}.
+  references: []
+- name: sortedKeys
+  kind: func
+  description: sortedKeys returns the keys of m in sorted order.
+  references: []

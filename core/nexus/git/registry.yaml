@@ -1,0 +1,34 @@
+---
+package: git
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: RepoRegistry
+  kind: struct
+  description: RepoRegistry maps symbolic repoIDs to local filesystem paths. WASM
+    modules address repositories by repoID only — they never receive arbitrary path
+    strings, enforcing the capability boundary.
+  implements: []
+  references: []
+- name: NewRepoRegistry
+  kind: func
+  description: NewRepoRegistry creates an empty RepoRegistry.
+  references: []
+- name: Register
+  kind: method
+  receiver: RepoRegistry
+  description: Register associates repoID with localPath. Subsequent calls with the
+    same repoID overwrite the previous mapping.
+  references: []
+- name: Resolve
+  kind: method
+  receiver: RepoRegistry
+  description: Resolve returns the local path for repoID, or an error if the repoID
+    is not registered. Unknown repoIDs are rejected so WASM modules cannot access
+    arbitrary filesystem paths.
+  references: []

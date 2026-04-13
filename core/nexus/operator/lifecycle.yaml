@@ -1,0 +1,71 @@
+---
+package: operator
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: HostState
+  kind: struct
+  description: HostState holds the lifecycle state of a registered host.
+  implements: []
+  references: []
+- name: HostRegistry
+  kind: struct
+  description: HostRegistry is a thread-safe in-memory store of host lifecycle states.
+    Production deployments should replace this with a persistent store.
+  implements: []
+  references: []
+- name: LifecycleManager
+  kind: struct
+  description: LifecycleManager handles host onboard and offboard operations.
+  implements: []
+  references:
+  - recorder.StateRecorder
+  - logrus.Logger
+- name: NewHostRegistry
+  kind: func
+  description: NewHostRegistry returns an empty HostRegistry.
+  references: []
+- name: get
+  kind: method
+  receiver: HostRegistry
+  description: ''
+  references: []
+- name: set
+  kind: method
+  receiver: HostRegistry
+  description: ''
+  references: []
+- name: NewLifecycleManager
+  kind: func
+  description: NewLifecycleManager creates a LifecycleManager. rec may be nil — recording
+    is non-fatal when absent.
+  references:
+  - recorder.StateRecorder
+  - logrus.Logger
+- name: OnboardHost
+  kind: method
+  receiver: LifecycleManager
+  description: OnboardHost validates the bootstrap token and marks the host as active.
+    Returns an error if the token is invalid or expired.
+  references:
+  - logrus.Fields
+- name: OffboardHost
+  kind: method
+  receiver: LifecycleManager
+  description: OffboardHost deactivates the host and commits the revocation to the
+    audit log. Returns an error if the host is not found.
+  references:
+  - logrus.Fields
+- name: record
+  kind: method
+  receiver: LifecycleManager
+  description: 'record commits a lifecycle event to the audit recorder. Non-fatal:
+    logs WARN on failure or absent recorder.'
+  references:
+  - types.ExpectedStateRunID
+  - recorder.RecordState

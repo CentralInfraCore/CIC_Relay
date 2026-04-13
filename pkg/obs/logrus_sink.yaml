@@ -1,0 +1,56 @@
+---
+package: obs
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: LogrusSink
+  kind: struct
+  description: 'LogrusSink bridges the obs layer into an existing logrus.Logger. It
+    satisfies TraceSink, LogSink, and MetricSink. Every obs emission becomes a structured
+    logrus entry so that the relay''s JSON log stream carries full observability data
+    without any additional infrastructure. Log levels: - TraceFrame  → Info  (warn
+    if Status is "error" or "timeout") - LogRecord   → mapped from LogRecord.Level
+    (info/warn/error; unknown → info) - CounterPoint / GaugePoint / HistogramPoint
+    → Debug ("relay.metric" event)'
+  implements: []
+  references:
+  - logrus.Logger
+- name: NewLogrusSink
+  kind: func
+  description: NewLogrusSink wraps logger in a LogrusSink. logger must not be nil.
+  references:
+  - logrus.Logger
+- name: RecordTrace
+  kind: method
+  receiver: LogrusSink
+  description: RecordTrace emits a logrus entry for a TraceFrame.
+  references:
+  - logrus.Fields
+- name: RecordLog
+  kind: method
+  receiver: LogrusSink
+  description: RecordLog emits a logrus entry for a LogRecord.
+  references:
+  - logrus.Fields
+- name: RecordCounter
+  kind: method
+  receiver: LogrusSink
+  description: RecordCounter emits a logrus Debug entry for a CounterPoint.
+  references:
+  - logrus.Fields
+- name: RecordGauge
+  kind: method
+  receiver: LogrusSink
+  description: RecordGauge emits a logrus Debug entry for a GaugePoint.
+  references:
+  - logrus.Fields
+- name: RecordHistogram
+  kind: method
+  receiver: LogrusSink
+  description: RecordHistogram emits a logrus Debug entry for a HistogramPoint.
+  references:
+  - logrus.Fields

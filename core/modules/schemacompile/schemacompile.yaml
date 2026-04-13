@@ -1,0 +1,83 @@
+---
+package: schemacompile
+description: 'Package schemacompile implements the native modules for the schema compilation
+  workflow. Three modules, three stubs — each will be filled in as the trust layers
+  land: cic.source.assert@1.0  — validates the source assertion (Layer 1) cic.schema.build@1.0   —
+  invokes the CIC-Schemas compiler (Layer 0.2) cic.artifact.sign@1.0  — computes buildHash,
+  attaches cicSign/cicSignedCA (Layer 2)'
+tags:
+- core
+- schema
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: cicSchemasArtifact
+  kind: struct
+  description: cicSchemasArtifact mirrors the structure produced by CIC-Schemas generate_signed_artifact.
+    Used for parsing the source_assertion YAML in AssertSource.
+  implements: []
+  references: []
+- name: ArtifactSigner
+  kind: interface
+  description: ArtifactSigner signs raw bytes and returns a signature string. Implementations
+    must be context-aware and respect cancellation. Pass nil to NewSignArtifactFunc
+    to run without signing (cic_sign will be "unavailable").
+  references: []
+- name: CertVerifyFunc
+  kind: type
+  description: CertVerifyFunc is called with the parsed developer certificate from
+    source_assertion. Return a non-nil error to reject the assertion. If nil is passed
+    as the verifier, certificate chain verification is skipped (stub mode).
+  references: []
+- name: NewAssertSourceFunc
+  kind: func
+  description: 'NewAssertSourceFunc returns a native function for cic.source.assert@1.0
+    wired with the provided certificate verifier. Pass nil to run in stub mode (no
+    chain verification). The returned function: - passes through inputs without source_assertion
+    (stub mode) - validates required metadata fields when source_assertion is present
+    - parses and verifies the PEM certificate in metadata.createdBy.certificate via
+    verify'
+  references: []
+- name: AssertSource
+  kind: func
+  description: AssertSource is the legacy no-verifier entry point (stub mode, Layer
+    1 not yet wired). Use NewAssertSourceFunc to inject a real PKI verifier.
+  references: []
+- name: assertSourceImpl
+  kind: func
+  description: ''
+  references: []
+- name: BuildSchema
+  kind: func
+  description: BuildSchema is the native function for cic.schema.build@1.0. If the
+    input contains a parsed artifact (from AssertSource), it returns it as the artifact
+    to be signed. Otherwise it generates a stub artifact for testing.
+  references: []
+- name: SignArtifact
+  kind: func
+  description: SignArtifact is the legacy no-signer entry point (stub mode, no Vault
+    signing). Use NewSignArtifactFunc to inject a real signer.
+  references: []
+- name: NewSignArtifactFunc
+  kind: func
+  description: 'NewSignArtifactFunc returns a cic.artifact.sign@1.0 native function
+    wired with build-time context and an optional signer. Despite the module name
+    "sign", this function performs two distinct roles: 1. Verification manifest assembly:
+    always computes verification_root — the Merkle-root hash of the full provenance
+    manifest — regardless of whether Vault signing is available. 2. Optional Vault
+    signing: if signer is non-nil, build_hash is signed and cic_sign is set to the
+    resulting signature. When signer is nil, cic_sign is "unavailable" (non-fatal:
+    the provenance record is still complete, just without a Vault signature). cic_signed_ca
+    is "stub:pending" until Layer 2 (CICSourceCA cert chain) is wired. The verification_root
+    hash is always valid regardless of signing availability.'
+  references:
+  - merkle.BuildContext
+- name: newSignArtifactResult
+  kind: func
+  description: newSignArtifactResult is the shared implementation for both SignArtifact
+    and NewSignArtifactFunc. It computes build_hash, calls signer if available, and
+    computes verification_root.
+  references:
+  - merkle.BuildContext
