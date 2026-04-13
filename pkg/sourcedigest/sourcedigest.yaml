@@ -1,0 +1,36 @@
+---
+package: sourcedigest
+description: 'Package sourcedigest provides a deterministic source tree hash suitable
+  for embedding into binaries as a ProofTrace build-input anchor. Algorithm: 1. WalkDir
+  the root path, collecting (relPath, SHA-256(content)) pairs. 2. Sort entries by
+  relPath (lexicographic, forward-slash normalised). 3. Aggregate: SHA-256 over "relPath\x00hexContent\n"
+  lines in sorted order. The result is a stable, 64-char lowercase hex string that
+  is sensitive to any change in file content, path, or set of tracked files.  It is
+  NOT sensitive to file mode or mtime — only to content and relative paths.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: entry
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: ComputeTreeHash
+  kind: func
+  description: ComputeTreeHash returns a deterministic SHA-256 digest of all regular
+    files under rootPath.  Top-level directories whose name matches an entry in excludes
+    (or DefaultExcludes if nil) are skipped entirely.
+  references: []
+- name: fileContentHash
+  kind: func
+  description: fileContentHash returns the hex-encoded SHA-256 of the file at path.
+  references: []
+- name: DefaultExcludes
+  kind: var
+  description: DefaultExcludes is the set of top-level directory names skipped by
+    default during tree traversal.  These are build artefact or cache directories
+    whose contents are not part of the source inputs.
+  references: []

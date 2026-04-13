@@ -1,0 +1,15 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: embeddedFS
+  kind: var
+  description: go:embed embedded
+  references: []

@@ -1,0 +1,34 @@
+---
+package: merkle
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: BuildContext
+  kind: struct
+  description: BuildContext carries build-time and runtime-discovered metadata that
+    populates the SOURCE, BUILDENV, VALIDATION, and AUDIT subtrees of a VerificationManifest.
+    Fields are typically sourced from ldflags variables (CommitHash, SourceTreeHash)
+    or discovered at startup (go.sum digest, CA fingerprint). Empty fields are replaced
+    with NullMarker ("∅") by LeafHash automatically.
+  implements: []
+  references: []
+- name: GoRuntimeDigest
+  kind: func
+  description: 'GoRuntimeDigest returns a "sha256:<hex>" digest of the Go toolchain
+    identity. Included fields (separated by \x00): - runtime.Version()  — e.g. "go1.22.2"
+    - runtime.GOOS       — e.g. "linux" - runtime.GOARCH     — e.g. "amd64" - CGO_ENABLED        —
+    "0" or "1" (from debug.ReadBuildInfo settings) - -tags              — build tags
+    at compile time, if any - GOEXPERIMENT       — active Go experiments, if any Using
+    only runtime.Version() would miss CGO mode and build-tag variation that can materially
+    change binary behavior while keeping the same version string.'
+  references: []
+- name: GoSumDigest
+  kind: func
+  description: GoSumDigest reads the go.sum file at path and returns its lowercase
+    SHA-256 hex digest prefixed with "sha256:". Returns NullMarker if path is empty
+    or the file cannot be read.
+  references: []

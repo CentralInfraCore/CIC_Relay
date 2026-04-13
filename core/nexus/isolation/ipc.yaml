@@ -1,0 +1,31 @@
+---
+package: isolation
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: IPCRequest
+  kind: struct
+  description: IPCRequest is the JSON message sent from the coordinator to the worker
+    via stdin. Payload is base64-encoded to allow arbitrary binary data over newline-delimited
+    JSON.
+  implements: []
+  references: []
+- name: IPCResponse
+  kind: struct
+  description: IPCResponse is the JSON message sent from the worker to the coordinator
+    via stdout.
+  implements: []
+  references: []
+- name: RunWorkerLoop
+  kind: func
+  description: 'RunWorkerLoop reads newline-delimited JSON IPCRequests from in, processes
+    each with worker, and writes IPCResponse lines to out. Runs until in is exhausted
+    or ctx is cancelled. If worker is nil the loop operates in echo mode: the payload
+    is returned unchanged. Echo mode is used for testing and for subprocess startup
+    before a crypto service is wired in.'
+  references: []

@@ -1,0 +1,21 @@
+---
+package: git
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: StatusEntry
+  kind: struct
+  description: StatusEntry represents a single file entry from git status --porcelain.
+  implements: []
+  references: []
+- name: GitOps
+  kind: interface
+  description: GitOps is the typed API that WASM modules can invoke for git operations.
+    All operations are scoped to registered repositories — arbitrary paths are not
+    accepted.
+  references: []

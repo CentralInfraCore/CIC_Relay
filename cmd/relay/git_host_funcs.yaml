@@ -1,0 +1,83 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: makeGitHostSetupFn
+  kind: func
+  description: makeGitHostSetupFn returns a WasmManagerConfig.HostSetupFn that registers
+    the typed git host module ("git") on the wazero runtime. WASM modules can import
+    these functions to perform git operations through the relay's capability boundary
+    — they never receive arbitrary exec access.
+  references:
+  - nexusgit.GitOps
+  - wazero.Runtime
+- name: registerGitHostFunctions
+  kind: func
+  description: 'registerGitHostFunctions instantiates the "git" host module on r.
+    Each function follows a uniform ABI: (reqPtr i32, reqLen i32, outPtr i32, outLen
+    i32) -> i32 The caller passes a JSON-encoded request in WASM linear memory at
+    (reqPtr, reqLen). The response JSON is written to (outPtr, outLen). The return
+    value is the number of bytes written, or -1 on error.'
+  references:
+  - wazero.Runtime
+  - nexusgit.GitOps
+- name: makeCloneFn
+  kind: func
+  description: ''
+  references:
+  - nexusgit.GitOps
+  - api.Module
+- name: makeFetchFn
+  kind: func
+  description: ''
+  references:
+  - nexusgit.GitOps
+  - api.Module
+- name: makeCheckoutFn
+  kind: func
+  description: ''
+  references:
+  - nexusgit.GitOps
+  - api.Module
+- name: makeCommitFn
+  kind: func
+  description: ''
+  references:
+  - nexusgit.GitOps
+  - api.Module
+- name: makePushFn
+  kind: func
+  description: ''
+  references:
+  - nexusgit.GitOps
+  - api.Module
+- name: makeStatusFn
+  kind: func
+  description: ''
+  references:
+  - nexusgit.GitOps
+  - api.Module
+- name: gitReadJSON
+  kind: func
+  description: gitReadJSON reads reqLen bytes from WASM memory at reqPtr and unmarshals
+    into v.
+  references:
+  - api.Module
+- name: gitWriteJSON
+  kind: func
+  description: gitWriteJSON marshals v as JSON and writes it into WASM memory at (outPtr,
+    outLen). Returns bytes written, or -1 if the buffer is too small.
+  references:
+  - api.Module
+- name: gitWriteError
+  kind: func
+  description: gitWriteError writes a JSON error response into WASM memory.
+  references:
+  - api.Module

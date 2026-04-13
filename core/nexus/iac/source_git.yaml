@@ -1,0 +1,42 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: GitSourceConfig
+  kind: struct
+  description: GitSourceConfig configures a GitSource.
+  implements: []
+  references: []
+- name: GitSource
+  kind: struct
+  description: 'GitSource implements IaCSource by cloning or fetching a git repository
+    and delegating to FileSource for file enumeration. All git commands run with a
+    hardened environment: - GIT_CONFIG_NOSYSTEM=1  (no /etc/gitconfig) - GIT_TERMINAL_PROMPT=0  (no
+    interactive prompts) - GIT_ASKPASS=/bin/false (credential prompts fail fast) -
+    -c core.hooksPath=/dev/null (no hooks)'
+  implements: []
+  references: []
+- name: NewGitSource
+  kind: func
+  description: NewGitSource creates a new GitSource. Branch defaults to "main" if
+    empty; Timeout defaults to 30s if zero.
+  references: []
+- name: FetchConfig
+  kind: method
+  receiver: GitSource
+  description: FetchConfig ensures the repository is present and up-to-date, then
+    returns all YAML/JSON files via FileSource.FetchConfig.
+  references: []
+- name: runGit
+  kind: method
+  receiver: GitSource
+  description: runGit executes a git command with a hardened environment and per-call
+    timeout. dir is the working directory; empty string means the process inherits
+    the caller's cwd.
+  references: []

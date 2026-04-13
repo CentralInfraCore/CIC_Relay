@@ -1,0 +1,27 @@
+---
+package: obs
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: RecordHash
+  kind: func
+  description: RecordHash returns the hex-encoded SHA-256 of the canonical JSON of
+    v. Use this to fill IntegrityEnvelope.RecordHash.
+  references:
+  - canonicaljson.ToJSON
+- name: GlobalChainHash
+  kind: func
+  description: GlobalChainHash returns a single SHA-256 over all records in emission
+    order. It concatenates individual RecordHashes with \x00 separators so that adjacent
+    record hashes cannot collide.
+  references: []
+- name: TypeChainHash
+  kind: func
+  description: TypeChainHash returns a SHA-256 scoped to a named record type. The
+    typeName is prepended (with a \x00 separator) before the record hashes, so chains
+    from different types cannot collide even if they contain identical records.
+  references: []

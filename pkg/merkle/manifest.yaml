@@ -1,0 +1,60 @@
+---
+package: merkle
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: VerificationManifest
+  kind: struct
+  description: 'VerificationManifest holds all provenance inputs for a CIC build artifact.
+    Empty string fields are automatically substituted with NullMarker ("∅") so the
+    tree structure remains stable across partial builds. Subtree order is fixed and
+    must never change: 0 = SOURCE 1 = BUILDENV 2 = INPUTS 3 = ARTIFACT 4 = VALIDATION
+    5 = AUDIT'
+  implements: []
+  references: []
+- name: SourceFields
+  kind: struct
+  description: SourceFields — subtree 0.
+  implements: []
+  references: []
+- name: BuildEnvFields
+  kind: struct
+  description: BuildEnvFields — subtree 1.
+  implements: []
+  references: []
+- name: InputsFields
+  kind: struct
+  description: InputsFields — subtree 2.
+  implements: []
+  references: []
+- name: ArtifactFields
+  kind: struct
+  description: 'ArtifactFields — subtree 3. For WASM artifacts, ArtifactDigest must
+    be: sha256(strip_custom_sections(wasm_bytes)) because the canonical checksum excludes
+    non-deterministic CustomSection data.'
+  implements: []
+  references: []
+- name: ValidationFields
+  kind: struct
+  description: ValidationFields — subtree 4. Quorum fields are absent in v0.1.
+  implements: []
+  references: []
+- name: AuditFields
+  kind: struct
+  description: AuditFields — subtree 5. SigningPolicyDigest is the digest of the policy
+    that governs who may sign and under what conditions. The actual signature lives
+    externally and references the final root hash — it is never included in the tree
+    itself (avoids circularity).
+  implements: []
+  references: []
+- name: BuildVerificationRoot
+  kind: func
+  description: 'BuildVerificationRoot computes the single final verification hash
+    for m. Returns a lowercase 64-char hex-encoded SHA-256 string. The signing workflow:
+    1. Call BuildVerificationRoot → root 2. Sign(root) externally → signature 3. Publish
+    { final_verification_hash: root, signature: ... } as separate object'
+  references: []
