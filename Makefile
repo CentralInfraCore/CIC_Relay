@@ -405,27 +405,27 @@ coverage-check-pkgs: ## Fail if per-package coverage < threshold
 		  GO111MODULE=on GOFLAGS="$(GOFLAGS)" go test $$p -coverprofile=/tmp/cover.out >/dev/null 2>&1; \
 		  pc=$$(go tool cover -func=/tmp/cover.out 2>/dev/null | awk '"'"'END{print $$3}'"'"' | tr -d "%"); \
 		  case "$$p" in \
-		    *"/cmd/relay")                   min=65  ;; \
+		    *"/cmd/relay")                   min=80  ;; \
 		    *"/core/cabinet")                min=93  ;; \
-		    *"/core/modules/certselfsigned") min=84  ;; \
+		    *"/core/modules/certselfsigned") min=99  ;; \
 		    *"/core/modules/cibuild")        min=94  ;; \
-		    *"/core/modules/schemacompile")  min=72  ;; \
-		    *"/core/modules/schemapipeline") min=72  ;; \
-		    *"/core/nexus/crypto")           min=83  ;; \
-		    *"/core/nexus/git")              min=70  ;; \
-		    *"/core/nexus/iac")              min=88  ;; \
-		    *"/core/nexus/isolation")        min=80  ;; \
-		    *"/core/nexus/operator")         min=87  ;; \
-		    *"/core/nexus/recorder")         min=82  ;; \
-		    *"/core/nexus/sync")             min=82  ;; \
+		    *"/core/modules/schemacompile")  min=90  ;; \
+		    *"/core/modules/schemapipeline") min=90  ;; \
+		    *"/core/nexus/crypto")           min=93  ;; \
+		    *"/core/nexus/git")              min=92  ;; \
+		    *"/core/nexus/iac")              min=90  ;; \
+		    *"/core/nexus/isolation")        min=90  ;; \
+		    *"/core/nexus/operator")         min=90  ;; \
+		    *"/core/nexus/recorder")         min=85  ;; \
+		    *"/core/nexus/sync")             min=88  ;; \
 		    *"/pkg/canonicaljson")           min=96  ;; \
 		    *"/pkg/merkle")                  min=97  ;; \
-		    *"/pkg/obs")                     min=87  ;; \
+		    *"/pkg/obs")                     min=97  ;; \
 		    *"/pkg/sourcedigest")            min=85  ;; \
-		    *"/tools/canonicalize")          min=88  ;; \
-		    *"/tools/certutils")             min=72  ;; \
-		    *"/tools/symbolsgen")            min=80  ;; \
-		    *) min=75 ;; \
+		    *"/tools/canonicalize")          min=99  ;; \
+		    *"/tools/certutils")             min=82  ;; \
+		    *"/tools/symbolsgen")            min=90  ;; \
+		    *) min=80 ;; \
 		  esac; \
 		  echo "$$p: $$pc% (min $$min%)"; \
 		  awk -v p=$$pc -v m=$$min '"'"'BEGIN{exit (p+0 < m+0)}'"'"'; \
