@@ -189,6 +189,7 @@ func main() {
 	if len(os.Args) != 3 {
 		log.Printf("Usage: %s <allowlist_file> <output_file>\n", os.Args[0]) // Changed to log.Printf for stderr
 		exit(1)
+		return
 	}
 
 	allowFilePath := os.Args[1]

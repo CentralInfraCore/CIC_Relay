@@ -2,8 +2,11 @@ package certselfsigned
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -80,4 +83,53 @@ func TestGenerate_SelfSigned(t *testing.T) {
 
 	// Self-signed: Issuer == Subject
 	assert.Equal(t, cert.Subject.String(), cert.Issuer.String())
+}
+
+func TestGenerate_MarshalError(t *testing.T) {
+	// Channels cannot be marshaled to JSON, triggering the json.Marshal error path.
+	_, err := Generate(context.Background(), make(chan int))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid input")
+}
+
+func TestGenerate_KeyGenError(t *testing.T) {
+	orig := generateKey
+	t.Cleanup(func() { generateKey = orig })
+	generateKey = func() (*ecdsa.PrivateKey, error) { return nil, fmt.Errorf("entropy exhausted") }
+
+	_, err := Generate(context.Background(), map[string]interface{}{"cn": "test.local"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "generate key")
+}
+
+func TestGenerate_SerialError(t *testing.T) {
+	orig := generateSerial
+	t.Cleanup(func() { generateSerial = orig })
+	generateSerial = func() (*big.Int, error) { return nil, fmt.Errorf("serial gen failed") }
+
+	_, err := Generate(context.Background(), map[string]interface{}{"cn": "test.local"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "generate serial")
+}
+
+func TestGenerate_CertCreateError(t *testing.T) {
+	orig := createCertificate
+	t.Cleanup(func() { createCertificate = orig })
+	createCertificate = func(_, _ *x509.Certificate, _, _ interface{}) ([]byte, error) {
+		return nil, fmt.Errorf("cert create failed")
+	}
+
+	_, err := Generate(context.Background(), map[string]interface{}{"cn": "test.local"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "create certificate")
+}
+
+func TestGenerate_MarshalKeyError(t *testing.T) {
+	orig := marshalECPrivateKey
+	t.Cleanup(func() { marshalECPrivateKey = orig })
+	marshalECPrivateKey = func(_ *ecdsa.PrivateKey) ([]byte, error) { return nil, fmt.Errorf("marshal failed") }
+
+	_, err := Generate(context.Background(), map[string]interface{}{"cn": "test.local"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "marshal key")
 }

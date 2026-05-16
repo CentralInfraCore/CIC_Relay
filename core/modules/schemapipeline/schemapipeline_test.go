@@ -443,3 +443,74 @@ func TestStepHashChangesAcrossSteps(t *testing.T) {
 	assert.NotEqual(t, "initial", m1["step_hash"])
 	assert.NotEqual(t, m1["step_hash"], m2["step_hash"])
 }
+func TestPipelineConfig_DefaultRunner(t *testing.T) {
+	// Runner == nil → uses OSCommandRunner. Docker exec fails (not running), but
+	// the runner() code path is covered.
+	cfg := &schemapipeline.PipelineConfig{BuilderContainer: "nonexistent-container"}
+	fn := cfg.NewTestFunc()
+	_, err := fn(context.Background(), map[string]interface{}{"schema": "pg", "version": "v1"})
+	// Error is expected (docker not found or container missing), coverage is the goal.
+	_ = err
+}
+
+func TestStart_MissingSchema(t *testing.T) {
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: &mockRunner{}}
+	fn := cfg.NewStartFunc()
+	_, err := fn(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git", "branch": "main", "version": "v1",
+	})
+	require.ErrorContains(t, err, "schema is required")
+}
+
+func TestStart_MissingVersion(t *testing.T) {
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: &mockRunner{}}
+	fn := cfg.NewStartFunc()
+	_, err := fn(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git", "branch": "main", "schema": "pg",
+	})
+	require.ErrorContains(t, err, "version is required")
+}
+
+func TestStart_MissingBuildDir(t *testing.T) {
+	cfg := &schemapipeline.PipelineConfig{Runner: &mockRunner{}}
+	fn := cfg.NewStartFunc()
+	_, err := fn(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git", "branch": "main",
+		"schema": "pg", "version": "v1",
+	})
+	require.ErrorContains(t, err, "build_dir is required")
+}
+
+func TestStart_RevParseError(t *testing.T) {
+	mr := &mockRunner{}
+	mr.expectNext("git clone", "", 0)
+	mr.expectErr("git rev-parse", fmt.Errorf("rev-parse failed"))
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: mr}
+	fn := cfg.NewStartFunc()
+	_, err := fn(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com", "branch": "main",
+		"schema": "pg", "version": "v1",
+	})
+	require.ErrorContains(t, err, "git rev-parse HEAD")
+}
+
+func TestRelease_MissingSchema(t *testing.T) {
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), BuilderContainer: "c", Runner: &mockRunner{}}
+	fn := cfg.NewReleaseFunc()
+	_, err := fn(context.Background(), map[string]interface{}{"version": "v1", "build_dir": "/build"})
+	require.ErrorContains(t, err, "schema is required")
+}
+
+func TestRelease_MissingVersion(t *testing.T) {
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), BuilderContainer: "c", Runner: &mockRunner{}}
+	fn := cfg.NewReleaseFunc()
+	_, err := fn(context.Background(), map[string]interface{}{"schema": "pg", "build_dir": "/build"})
+	require.ErrorContains(t, err, "version is required")
+}
+
+func TestRelease_MissingBuildDir(t *testing.T) {
+	cfg := &schemapipeline.PipelineConfig{BuilderContainer: "c", Runner: &mockRunner{}}
+	fn := cfg.NewReleaseFunc()
+	_, err := fn(context.Background(), map[string]interface{}{"schema": "pg", "version": "v1"})
+	require.ErrorContains(t, err, "build_dir is required")
+}

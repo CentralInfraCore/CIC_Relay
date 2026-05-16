@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -192,4 +193,26 @@ func TestGitStateRecorder_RecordState_Errors(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to marshal actual state")
 	})
+}
+
+func TestGitStateRecorder_GetHeadHash_NoCommits(t *testing.T) {
+	// Create a bare git repo with no commits → getHeadHash fails.
+	tmpDir := t.TempDir()
+	cmd := exec.Command("git", "init", tmpDir)
+	require.NoError(t, cmd.Run())
+
+	r := &GitStateRecorder{RepoPath: tmpDir}
+	_, err := r.getHeadHash()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get HEAD hash")
+}
+
+func TestGitStateRecorder_Init_AlreadyInitialized(t *testing.T) {
+	// Second call to init() when .git already exists → early return (no error).
+	tmpDir := t.TempDir()
+	r := &GitStateRecorder{RepoPath: tmpDir, CryptoService: &MockCryptoService{}}
+	// First call: creates .git, configures user, creates initial commit.
+	require.NoError(t, r.init())
+	// Second call: .git exists → skip initialization.
+	require.NoError(t, r.init())
 }

@@ -606,3 +606,16 @@ func TestMockCabinetService_Close_Error(t *testing.T) {
 	assert.Equal(t, expectedErr, err)
 	mockService.AssertExpectations(t)
 }
+
+func TestBuildOperatorIfConfigured_NilWhenEnvUnset(t *testing.T) {
+	t.Setenv("CIC_INFRA_REPO_PATH", "")
+	logger := logrus.New()
+	result := buildOperatorIfConfigured(context.Background(), nil, logger)
+	assert.Nil(t, result, "operator must be nil when CIC_INFRA_REPO_PATH is not set")
+}
+
+func TestBuildRecorderOption_NilSecrets(t *testing.T) {
+	logger := logrus.New()
+	opt := buildRecorderOption(logger, nil)
+	assert.NotNil(t, opt, "WithRecorder(nil) must return a non-nil option")
+}

@@ -166,3 +166,25 @@ type mockErrorSource struct{}
 func (m *mockErrorSource) FetchConfig(ctx context.Context) (map[string][]byte, error) {
 	return nil, assert.AnError
 }
+
+func TestFileSource_FetchConfig_BrokenSymlink(t *testing.T) {
+	dir := t.TempDir()
+	// Create a broken symlink with .yaml extension → os.ReadFile fails
+	target := filepath.Join(dir, "config.yaml")
+	err := os.Symlink("/nonexistent-target-path-xyz", target)
+	if err != nil {
+		t.Skip("symlink creation not supported")
+	}
+
+	fs := NewFileSource(dir)
+	_, err = fs.FetchConfig(context.Background())
+	assert.Error(t, err, "broken symlink should cause FetchConfig to fail")
+}
+
+func TestFileSource_FetchConfig_EmptyDir(t *testing.T) {
+	dir := t.TempDir()
+	fs := NewFileSource(dir)
+	cfg, err := fs.FetchConfig(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, cfg)
+}

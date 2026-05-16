@@ -13,10 +13,15 @@ import (
 // It can be reassigned for testing purposes.
 var RunFunc = Run
 
+// osExit is a variable that holds the os.Exit function.
+// It can be replaced in tests to prevent actual process exit.
+var osExit = os.Exit
+
 func main() {
 	if err := RunFunc(os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 }
 

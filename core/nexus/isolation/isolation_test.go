@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // MockWorker is a mock implementation of the Worker interface.
@@ -203,4 +204,39 @@ func TestLocalWorker_Decrypt(t *testing.T) {
 		assert.Error(t, resp.Error)
 		assert.Contains(t, resp.Error.Error(), "cryptoservice not configured")
 	})
+}
+
+func TestNewSubprocessWorker_Success(t *testing.T) {
+	w, err := NewSubprocessWorker()
+	require.NoError(t, err)
+	require.NotNil(t, w)
+}
+
+func TestSubprocessWorker_Decrypt_BadExecutable(t *testing.T) {
+	w := newSubprocessWorkerWithExe("/nonexistent-binary-xyz", nil, nil)
+	_, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
+	require.Error(t, err)
+}
+
+func TestSubprocessWorker_Decrypt_NoResponse(t *testing.T) {
+	w := newSubprocessWorkerWithExe("true", nil, nil)
+	_, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no response")
+}
+
+func TestSubprocessWorker_Decrypt_BadJSON(t *testing.T) {
+	w := newSubprocessWorkerWithExe("sh", []string{"-c", `echo "not-json"`}, nil)
+	_, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "parse subprocess response")
+}
+
+func TestSubprocessWorker_Decrypt_WorkerError(t *testing.T) {
+	script := `echo '{"error":"worker failed"}'`
+	w := newSubprocessWorkerWithExe("sh", []string{"-c", script}, nil)
+	resp, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
+	require.NoError(t, err)
+	require.NotNil(t, resp.Error)
+	assert.Contains(t, resp.Error.Error(), "worker failed")
 }
