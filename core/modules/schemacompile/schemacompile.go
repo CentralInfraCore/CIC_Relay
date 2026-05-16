@@ -20,6 +20,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ArtifactSigner signs raw bytes and returns a signature string.
+// Implementations must be context-aware and respect cancellation.
+// Pass nil to NewSignArtifactFunc to run without signing (cic_sign will be "unavailable").
+type ArtifactSigner interface {
+	Sign(ctx context.Context, data []byte) (string, error)
+}
+
 // CertVerifyFunc is called with the parsed developer certificate from source_assertion.
 // Return a non-nil error to reject the assertion.
 // If nil is passed as the verifier, certificate chain verification is skipped (stub mode).
@@ -188,27 +195,36 @@ func BuildSchema(_ context.Context, input interface{}) (interface{}, error) {
 	}, nil
 }
 
-// SignArtifact is the native function for cic.artifact.sign@1.0 without build context.
-// Use NewSignArtifactFunc to get a context-aware version that emits verification_root.
-//
-// Computes a real build_hash (SHA-256 of the raw artifact YAML bytes).
-// cicSign and cicSignedCA remain stubs until Layer 2 (CICSourceCA signing) lands.
+// SignArtifact is the legacy no-signer entry point (stub mode, no Vault signing).
+// Use NewSignArtifactFunc to inject a real signer.
 func SignArtifact(_ context.Context, input interface{}) (interface{}, error) {
-	return newSignArtifactResult(input, merkle.BuildContext{})
+	return newSignArtifactResult(context.Background(), input, merkle.BuildContext{}, nil)
 }
 
 // NewSignArtifactFunc returns a cic.artifact.sign@1.0 native function wired with
-// build-time context. The returned function emits a verification_root field in its
-// output — the Merkle-root hash of the full provenance manifest (M33).
-func NewSignArtifactFunc(bctx merkle.BuildContext) func(context.Context, interface{}) (interface{}, error) {
-	return func(_ context.Context, input interface{}) (interface{}, error) {
-		return newSignArtifactResult(input, bctx)
+// build-time context and an optional signer.
+//
+// Despite the module name "sign", this function performs two distinct roles:
+//  1. Verification manifest assembly: always computes verification_root — the
+//     Merkle-root hash of the full provenance manifest — regardless of whether
+//     Vault signing is available.
+//  2. Optional Vault signing: if signer is non-nil, build_hash is signed and
+//     cic_sign is set to the resulting signature.
+//
+// When signer is nil, cic_sign is "unavailable" (non-fatal: the provenance record
+// is still complete, just without a Vault signature).
+// cic_signed_ca is "stub:pending" until Layer 2 (CICSourceCA cert chain) is wired.
+// The verification_root hash is always valid regardless of signing availability.
+func NewSignArtifactFunc(bctx merkle.BuildContext, signer ArtifactSigner) func(context.Context, interface{}) (interface{}, error) {
+	return func(ctx context.Context, input interface{}) (interface{}, error) {
+		return newSignArtifactResult(ctx, input, bctx, signer)
 	}
 }
 
 // newSignArtifactResult is the shared implementation for both SignArtifact and
-// NewSignArtifactFunc. It computes build_hash and verification_root.
-func newSignArtifactResult(input interface{}, bctx merkle.BuildContext) (interface{}, error) {
+// NewSignArtifactFunc. It computes build_hash, calls signer if available, and
+// computes verification_root.
+func newSignArtifactResult(ctx context.Context, input interface{}, bctx merkle.BuildContext, signer ArtifactSigner) (interface{}, error) {
 	m, ok := input.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("cic.artifact.sign: expected map, got %T", input)
@@ -254,11 +270,20 @@ func newSignArtifactResult(input interface{}, bctx merkle.BuildContext) (interfa
 		},
 	}
 
+	cicSign := "unavailable"
+	if signer != nil {
+		sig, err := signer.Sign(ctx, []byte(buildHash))
+		if err != nil {
+			return nil, fmt.Errorf("cic.artifact.sign: vault signing failed: %w", err)
+		}
+		cicSign = sig
+	}
+
 	return map[string]interface{}{
 		"artifact":          rawArtifact,
 		"build_hash":        buildHash,
-		"cic_sign":          "stub:pending",
-		"cic_signed_ca":     "stub:pending",
+		"cic_sign":          cicSign,
+		"cic_signed_ca":     "stub:pending", // Layer 2: CICSourceCA cert chain — not yet wired
 		"verification_root": merkle.BuildVerificationRoot(manifest),
 	}, nil
 }
