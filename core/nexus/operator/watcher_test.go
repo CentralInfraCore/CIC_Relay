@@ -269,6 +269,13 @@ func TestPollingWatcher_StateDiff_Delete(t *testing.T) {
 	assert.Nil(t, got2[0].Content)
 }
 
+// mockValidator is a stub ResourceValidator for testing WithValidator.
+type mockValidator struct{ err error }
+
+func (m *mockValidator) ValidateResource(_ context.Context, _ types.ResourceSpec) error {
+	return m.err
+}
+
 // mockActivator records Activate calls for assertion in tests.
 type mockActivator struct {
 	calls []struct {
@@ -416,4 +423,37 @@ func TestPollingWatcher_EmptyDir_NoEvents(t *testing.T) {
 
 	got := collectEvents(t, events, 150*time.Millisecond)
 	assert.Empty(t, got, "empty dir should produce no events")
+}
+
+func TestWithValidator_SetsValidator(t *testing.T) {
+	op := NewOperator(nil)
+	v := &mockValidator{err: nil}
+	result := op.WithValidator(v)
+	assert.Same(t, op, result, "WithValidator must return the same operator")
+}
+
+func TestOnApplyService_ValidatorError_SkipsActivation(t *testing.T) {
+	act := &mockActivator{}
+	val := &mockValidator{err: errors.New("schema not found")}
+	op := NewOperator(nil).WithValidator(val).WithActivator(act)
+
+	err := op.handleEvent(context.Background(), Event{
+		Type:    EventCreate,
+		Content: makeServiceYAML("svc-v", "res-v01", "present", nil),
+	})
+	require.NoError(t, err)
+	assert.Empty(t, act.calls, "activation must be skipped when validator returns error")
+}
+
+func TestOnApplyService_ValidatorPass_Activated(t *testing.T) {
+	act := &mockActivator{}
+	val := &mockValidator{err: nil}
+	op := NewOperator(nil).WithValidator(val).WithActivator(act)
+
+	err := op.handleEvent(context.Background(), Event{
+		Type:    EventCreate,
+		Content: makeServiceYAML("svc-vp", "res-vp01", "present", nil),
+	})
+	require.NoError(t, err)
+	require.Len(t, act.calls, 1, "activation must proceed when validator passes")
 }

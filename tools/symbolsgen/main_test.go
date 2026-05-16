@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -394,4 +395,54 @@ func MyFunc() string {
 	if !strings.Contains(errorMsg, "mypackage_empty/empty.go") {
 		t.Errorf("expected error message to contain file name 'mypackage_empty/empty.go', got: %v", errorMsg)
 	}
+}
+
+func TestMain_WrongArgCount(t *testing.T) {
+	oldExit := exit
+	t.Cleanup(func() { exit = oldExit })
+
+	exitCode := 0
+	exit = func(code int) { exitCode = code }
+
+	oldArgs := os.Args
+	t.Cleanup(func() { os.Args = oldArgs })
+	os.Args = []string{"symbolsgen"} // only 1 arg, need 3
+
+	main()
+	assert.Equal(t, 1, exitCode)
+}
+
+func TestMain_RunError(t *testing.T) {
+	oldFatalf := fatalf
+	t.Cleanup(func() { fatalf = oldFatalf })
+
+	called := false
+	fatalf = func(format string, args ...interface{}) { called = true }
+
+	oldArgs := os.Args
+	t.Cleanup(func() { os.Args = oldArgs })
+	os.Args = []string{"symbolsgen", "/nonexistent-allowlist.txt", "/tmp/out.txt"}
+
+	main()
+	assert.True(t, called, "fatalf must be called when run() returns an error")
+}
+
+func TestRun_EmptyAllowlist(t *testing.T) {
+	allowlist := createTempFile(t, "")
+	defer os.Remove(allowlist)
+	output := createTempFile(t, "")
+	defer os.Remove(output)
+
+	// Empty allowlist → generateSymbols returns nil → no file write
+	err := run(allowlist, output)
+	assert.NoError(t, err)
+}
+
+func TestRun_WriteError(t *testing.T) {
+	allowlist := createTempFile(t, "centralrelay/pkg/obs\n")
+	defer os.Remove(allowlist)
+
+	err := run(allowlist, "/proc/invalid/readonly/path")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to write")
 }

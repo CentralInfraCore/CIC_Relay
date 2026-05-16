@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -90,4 +91,24 @@ func TestRun_CanonicalJsonError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create canonical json")
+}
+
+func TestMain_ErrorPath(t *testing.T) {
+	origRunFunc := RunFunc
+	origOsExit := osExit
+	t.Cleanup(func() { RunFunc = origRunFunc; osExit = origOsExit })
+
+	exitCode := 0
+	osExit = func(code int) { exitCode = code }
+	RunFunc = func(_ io.Reader, _ io.Writer) error { return errors.New("run failed") }
+
+	main()
+	assert.Equal(t, 1, exitCode)
+}
+
+func TestMain_SuccessPath(t *testing.T) {
+	origRunFunc := RunFunc
+	t.Cleanup(func() { RunFunc = origRunFunc })
+	RunFunc = func(_ io.Reader, _ io.Writer) error { return nil }
+	main() // must not panic or call exit
 }

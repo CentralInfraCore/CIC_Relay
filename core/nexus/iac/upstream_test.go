@@ -199,3 +199,8 @@ func TestNewUpstreamSourceFromEnv_InvalidTimeout(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "CIC_UPSTREAM_FETCH_TIMEOUT")
 }
+func TestNewUpstreamSource_ZeroTimeout(t *testing.T) {
+	// timeout <= 0 triggers the default fallback branch.
+	s := NewUpstreamSource("http://example.com", "token", 0, silentLogger())
+	assert.NotNil(t, s)
+}

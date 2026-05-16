@@ -109,3 +109,17 @@ func TestComputeTreeHash_SymlinksSkipped(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, h, 64)
 }
+
+func TestComputeTreeHash_UnreadableFile(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root bypasses file permissions")
+	}
+	dir := t.TempDir()
+	p := filepath.Join(dir, "secret.go")
+	require.NoError(t, os.WriteFile(p, []byte("package main"), 0o644))
+	require.NoError(t, os.Chmod(p, 0o000))
+	t.Cleanup(func() { os.Chmod(p, 0o644) })
+
+	_, err := sourcedigest.ComputeTreeHash(dir, nil)
+	assert.Error(t, err, "unreadable file should cause ComputeTreeHash to fail")
+}

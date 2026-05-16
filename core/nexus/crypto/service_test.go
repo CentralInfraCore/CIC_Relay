@@ -120,3 +120,49 @@ func TestVaultCryptoService_HealthCheck(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestVaultCryptoService_Sign_NilData(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{}) // no "data" key → nil data
+	})
+	_, svc := setupTestVault(t, handler)
+	_, err := svc.Sign(context.Background(), []byte("test"))
+	assert.Error(t, err)
+}
+
+func TestVaultCryptoService_Sign_MissingSignatureField(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"data": map[string]string{"other": "value"},
+		})
+	})
+	_, svc := setupTestVault(t, handler)
+	_, err := svc.Sign(context.Background(), []byte("test"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "signature")
+}
+
+func TestVaultCryptoService_Decrypt_NilData(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{})
+	})
+	_, svc := setupTestVault(t, handler)
+	_, err := svc.Decrypt(context.Background(), []byte("vault:v1:test"))
+	assert.Error(t, err)
+}
+
+func TestVaultCryptoService_Decrypt_MissingPlaintextField(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"data": map[string]string{"other": "value"},
+		})
+	})
+	_, svc := setupTestVault(t, handler)
+	_, err := svc.Decrypt(context.Background(), []byte("vault:v1:test"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "plaintext")
+}

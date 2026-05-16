@@ -33,6 +33,16 @@ type Output struct {
 	NotAfter   string `json:"not_after"`   // RFC3339
 }
 
+// Test-injectable function hooks for crypto operations.
+var (
+	generateKey         = func() (*ecdsa.PrivateKey, error) { return ecdsa.GenerateKey(elliptic.P256(), rand.Reader) }
+	generateSerial      = func() (*big.Int, error) { return rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128)) }
+	createCertificate   = func(template, parent *x509.Certificate, pub, priv interface{}) ([]byte, error) {
+		return x509.CreateCertificate(rand.Reader, template, parent, pub, priv)
+	}
+	marshalECPrivateKey = x509.MarshalECPrivateKey
+)
+
 // Generate creates a self-signed ECDSA P-256 certificate.
 // Satisfies the cabinet NativeFunc signature:
 //
@@ -43,7 +53,7 @@ func Generate(ctx context.Context, input interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("cert.selfsigned: invalid input: %w", err)
 	}
 
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	key, err := generateKey()
 	if err != nil {
 		return nil, fmt.Errorf("cert.selfsigned: generate key: %w", err)
 	}
@@ -56,7 +66,7 @@ func Generate(ctx context.Context, input interface{}) (interface{}, error) {
 	now := time.Now().UTC()
 	notAfter := now.Add(time.Duration(validityDays) * 24 * time.Hour)
 
-	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	serial, err := generateSerial()
 	if err != nil {
 		return nil, fmt.Errorf("cert.selfsigned: generate serial: %w", err)
 	}
@@ -72,14 +82,14 @@ func Generate(ctx context.Context, input interface{}) (interface{}, error) {
 		IsCA:         false,
 	}
 
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	certDER, err := createCertificate(template, template, &key.PublicKey, key)
 	if err != nil {
 		return nil, fmt.Errorf("cert.selfsigned: create certificate: %w", err)
 	}
 
 	certPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}))
 
-	keyDER, err := x509.MarshalECPrivateKey(key)
+	keyDER, err := marshalECPrivateKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("cert.selfsigned: marshal key: %w", err)
 	}

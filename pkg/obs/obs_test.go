@@ -6,6 +6,8 @@ import (
 
 	"centralrelay/pkg/obs"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newDiscardLogger() *logrus.Logger {
@@ -240,4 +242,76 @@ func TestCaptureSink_CollectsRecords(t *testing.T) {
 	if c.Counters[0].Value != 1 {
 		t.Errorf("counter value: got %d, want 1", c.Counters[0].Value)
 	}
+}
+
+func TestNoopSink_AllMethods(t *testing.T) {
+	var s obs.NoopSink
+	assert.NotPanics(t, func() {
+		s.RecordTrace(obs.TraceFrame{TraceID: "t1"})
+		s.RecordLog(obs.LogRecord{Level: "INFO", Message: "x"})
+		s.RecordCounter(obs.CounterPoint{Name: "relay.n", Value: 1})
+		s.RecordGauge(obs.GaugePoint{Name: "relay.g", Value: 2.0})
+		s.RecordHistogram(obs.HistogramPoint{Name: "relay.h", Count: 3})
+	})
+}
+
+func TestRegistry_Names(t *testing.T) {
+	r := obs.NewRegistry()
+	assert.Empty(t, r.Names())
+
+	require.NoError(t, r.Register(obs.MetricInstrument{Name: "relay.a", Description: "A"}))
+	require.NoError(t, r.Register(obs.MetricInstrument{Name: "relay.b", Description: "B"}))
+
+	names := r.Names()
+	assert.Len(t, names, 2)
+	assert.ElementsMatch(t, []string{"relay.a", "relay.b"}, names)
+}
+
+func TestRecordHash_Error(t *testing.T) {
+	_, err := obs.RecordHash(make(chan int))
+	assert.Error(t, err)
+}
+
+func TestGlobalChainHash_Error(t *testing.T) {
+	_, err := obs.GlobalChainHash([]any{make(chan int)})
+	assert.Error(t, err)
+}
+
+func TestTypeChainHash_Error(t *testing.T) {
+	_, err := obs.TypeChainHash("relay.x", []any{make(chan int)})
+	assert.Error(t, err)
+}
+
+func TestLogrusSink_RecordGauge_WithAttrs(t *testing.T) {
+	sink := obs.NewLogrusSink(newDiscardLogger())
+	assert.NotPanics(t, func() {
+		sink.RecordGauge(obs.GaugePoint{
+			Name:  "relay.queue.depth",
+			Value: 5.0,
+			Attrs: map[string]string{"region": "eu-west"},
+		})
+	})
+}
+
+func TestLogrusSink_RecordHistogram_WithAttrs(t *testing.T) {
+	sink := obs.NewLogrusSink(newDiscardLogger())
+	assert.NotPanics(t, func() {
+		sink.RecordHistogram(obs.HistogramPoint{
+			Name:  "relay.latency.ms",
+			Count: 10,
+			Sum:   1234.5,
+			Attrs: map[string]string{"handler": "set"},
+		})
+	})
+}
+
+func TestLogrusSink_RecordLog_WithAttrs(t *testing.T) {
+	sink := obs.NewLogrusSink(newDiscardLogger())
+	assert.NotPanics(t, func() {
+		sink.RecordLog(obs.LogRecord{
+			Level:   "WARN",
+			Message: "something slow",
+			Attrs:   map[string]string{"latency_ms": "500"},
+		})
+	})
 }
