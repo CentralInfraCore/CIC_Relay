@@ -107,8 +107,15 @@ func main() {
 	}
 
 	certMap := map[string]interface{}{
-		"certificate": cert,
-		"public_key":  keyInfo,
+		"certificate": map[string]interface{}{
+			"subject":    cert.Subject.CommonName,
+			"issuer":     cert.Issuer.CommonName,
+			"not_before": cert.NotBefore.Format("2006-01-02T15:04:05Z"),
+			"not_after":  cert.NotAfter.Format("2006-01-02T15:04:05Z"),
+			"serial":     cert.SerialNumber.String(),
+			"dns_names":  cert.DNSNames,
+		},
+		"public_key": keyInfo,
 	}
 
 	yamlData, err := yaml.Marshal(certMap)

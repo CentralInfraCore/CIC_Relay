@@ -365,7 +365,7 @@ func TestNewSignArtifactFunc_VerificationRoot_Present(t *testing.T) {
 		SourceRef:        "git:abc123",
 		SourceTreeDigest: "sha256:deadbeef",
 	}
-	fn := schemacompile.NewSignArtifactFunc(bctx)
+	fn := schemacompile.NewSignArtifactFunc(bctx, nil)
 
 	out, err := fn(context.Background(), map[string]interface{}{
 		"raw_artifact": "kind: SchemaArtifact\n",
@@ -384,7 +384,7 @@ func TestNewSignArtifactFunc_VerificationRoot_Present(t *testing.T) {
 
 func TestNewSignArtifactFunc_VerificationRoot_Determinism(t *testing.T) {
 	bctx := merkle.BuildContext{SourceRef: "git:abc123"}
-	fn := schemacompile.NewSignArtifactFunc(bctx)
+	fn := schemacompile.NewSignArtifactFunc(bctx, nil)
 	input := map[string]interface{}{
 		"raw_artifact": "kind: SchemaArtifact\n",
 		"schema":       "my.schema",
@@ -399,7 +399,7 @@ func TestNewSignArtifactFunc_VerificationRoot_Determinism(t *testing.T) {
 }
 
 func TestNewSignArtifactFunc_VerificationRoot_SensitiveToArtifact(t *testing.T) {
-	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{})
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, nil)
 	out1, _ := fn(context.Background(), map[string]interface{}{"raw_artifact": "version: 1\n"})
 	out2, _ := fn(context.Background(), map[string]interface{}{"raw_artifact": "version: 2\n"})
 	assert.NotEqual(t,
@@ -411,8 +411,8 @@ func TestNewSignArtifactFunc_VerificationRoot_SensitiveToArtifact(t *testing.T) 
 
 func TestNewSignArtifactFunc_VerificationRoot_SensitiveToBuildContext(t *testing.T) {
 	input := map[string]interface{}{"raw_artifact": "kind: SchemaArtifact\n"}
-	fn1 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:aaa"})
-	fn2 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:bbb"})
+	fn1 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:aaa"}, nil)
+	fn2 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:bbb"}, nil)
 	out1, _ := fn1(context.Background(), input)
 	out2, _ := fn2(context.Background(), input)
 	assert.NotEqual(t,
@@ -432,4 +432,114 @@ func TestSignArtifact_StillEmitsVerificationRoot(t *testing.T) {
 	root, ok := m["verification_root"].(string)
 	assert.True(t, ok, "verification_root must be present even without build context")
 	assert.Len(t, root, 64)
+}
+
+// --- ArtifactSigner wiring tests ---
+
+// mockSigner is a test double for ArtifactSigner.
+type mockSigner struct {
+	sig string
+	err error
+}
+
+func (m *mockSigner) Sign(_ context.Context, _ []byte) (string, error) {
+	return m.sig, m.err
+}
+
+func TestNewSignArtifactFunc_NilSigner_CicSignUnavailable(t *testing.T) {
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, "unavailable", m["cic_sign"], "nil signer must yield cic_sign=unavailable")
+}
+
+func TestNewSignArtifactFunc_WithSigner_CicSignSet(t *testing.T) {
+	signer := &mockSigner{sig: "vault:v1:abc123"}
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, signer)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, "vault:v1:abc123", m["cic_sign"])
+	assert.NotEmpty(t, m["build_hash"])
+	assert.NotEmpty(t, m["verification_root"])
+}
+
+func TestNewSignArtifactFunc_SignerError_ReturnsError(t *testing.T) {
+	signer := &mockSigner{err: fmt.Errorf("vault unreachable")}
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, signer)
+	_, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "vault signing failed")
+	assert.Contains(t, err.Error(), "vault unreachable")
+}
+
+// --- AssertSource (legacy entry point) ---
+
+func TestAssertSource_StubMode_NoInput(t *testing.T) {
+	result, err := schemacompile.AssertSource(context.Background(), map[string]interface{}{
+		"schema": "pg", "version": "v1",
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	assert.Equal(t, true, out["asserted"])
+	assert.Equal(t, "1.0", out["policy_version"])
+}
+
+func TestAssertSource_WrongInputType(t *testing.T) {
+	_, err := schemacompile.AssertSource(context.Background(), "not a map")
+	require.Error(t, err)
+}
+
+// --- BuildSchema ---
+
+func TestBuildSchema_StubMode(t *testing.T) {
+	result, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{
+		"schema": "pg", "version": "v1",
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	assert.Equal(t, "pg", out["schema"])
+	assert.Equal(t, "v1", out["version"])
+	assert.NotEmpty(t, out["raw_artifact"])
+}
+
+func TestBuildSchema_MissingSchema(t *testing.T) {
+	_, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{"version": "v1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "schema is required")
+}
+
+func TestBuildSchema_MissingVersion(t *testing.T) {
+	_, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{"schema": "pg"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "version is required")
+}
+
+func TestBuildSchema_WrongInputType(t *testing.T) {
+	_, err := schemacompile.BuildSchema(context.Background(), 42)
+	require.Error(t, err)
+}
+
+func TestBuildSchema_FromAssertedMetadata(t *testing.T) {
+	result, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{
+		"schema":  "pg",
+		"version": "v1",
+		"metadata": map[string]interface{}{
+			"name": "pg", "version": "v1",
+		},
+		"raw_yaml": "metadata:\n  name: pg\n",
+		"spec":     map[string]interface{}{},
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	assert.Equal(t, "pg", out["schema"])
+	assert.NotNil(t, out["metadata"])
+	assert.Equal(t, "metadata:\n  name: pg\n", out["raw_artifact"])
 }

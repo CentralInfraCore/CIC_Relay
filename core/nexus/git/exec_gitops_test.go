@@ -175,3 +175,93 @@ func TestExecGitOps_SetObsSinks_NilSafe(t *testing.T) {
 		_, _ = ops.Status(context.Background(), "nil-repo")
 	})
 }
+
+func TestExecGitOps_Fetch_UnknownRepo(t *testing.T) {
+	err := NewExecGitOps(NewRepoRegistry()).Fetch(context.Background(), "ghost", "origin")
+	require.Error(t, err)
+}
+
+func TestExecGitOps_Checkout_UnknownRepo(t *testing.T) {
+	err := NewExecGitOps(NewRepoRegistry()).Checkout(context.Background(), "ghost", "main")
+	require.Error(t, err)
+}
+
+func TestExecGitOps_Commit_UnknownRepo(t *testing.T) {
+	_, err := NewExecGitOps(NewRepoRegistry()).Commit(context.Background(), "ghost", "msg", nil)
+	require.Error(t, err)
+}
+
+func TestExecGitOps_Push_UnknownRepo(t *testing.T) {
+	err := NewExecGitOps(NewRepoRegistry()).Push(context.Background(), "ghost", "origin", "main")
+	require.Error(t, err)
+}
+
+func TestExecGitOps_Fetch_Success(t *testing.T) {
+	srcDir := initBareTestRepo(t)
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+	reg := NewRepoRegistry()
+	reg.Register("repo", cloneDir)
+	ops := NewExecGitOps(reg)
+	require.NoError(t, ops.Clone(context.Background(), "repo", srcDir, "main"))
+	require.NoError(t, ops.Fetch(context.Background(), "repo", "origin"))
+}
+
+func TestExecGitOps_Checkout_Success(t *testing.T) {
+	srcDir := initBareTestRepo(t)
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+	reg := NewRepoRegistry()
+	reg.Register("repo", cloneDir)
+	ops := NewExecGitOps(reg)
+	require.NoError(t, ops.Clone(context.Background(), "repo", srcDir, "main"))
+	require.NoError(t, ops.Checkout(context.Background(), "repo", "main"))
+}
+
+func TestExecGitOps_Commit_Success(t *testing.T) {
+	srcDir := initBareTestRepo(t)
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+	reg := NewRepoRegistry()
+	reg.Register("repo", cloneDir)
+	ops := NewExecGitOps(reg)
+	require.NoError(t, ops.Clone(context.Background(), "repo", srcDir, "main"))
+
+	require.NoError(t, os.WriteFile(filepath.Join(cloneDir, "new.txt"), []byte("hello"), 0644))
+	hash, err := ops.Commit(context.Background(), "repo", "add new.txt", []string{"new.txt"})
+	require.NoError(t, err)
+	assert.Len(t, hash, 40, "commit hash should be a 40-char SHA-1 hex")
+}
+
+func TestExecGitOps_Push_Success(t *testing.T) {
+	gitEnv := []string{
+		"GIT_CONFIG_NOSYSTEM=1", "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=/bin/false",
+		"GIT_AUTHOR_NAME=Test", "GIT_AUTHOR_EMAIL=test@test.local",
+		"GIT_COMMITTER_NAME=Test", "GIT_COMMITTER_EMAIL=test@test.local",
+	}
+	mustGit := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "core.hooksPath=/dev/null"}, args...)...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), gitEnv...)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, out)
+	}
+
+	// Remote: non-bare repo that allows pushes to its current branch.
+	remoteDir := t.TempDir()
+	mustGit(remoteDir, "init", "-b", "main", remoteDir)
+	require.NoError(t, os.WriteFile(filepath.Join(remoteDir, "f.txt"), []byte("init"), 0644))
+	mustGit(remoteDir, "add", ".")
+	mustGit(remoteDir, "commit", "-m", "init")
+	mustGit(remoteDir, "config", "receive.denyCurrentBranch", "warn")
+
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+	reg := NewRepoRegistry()
+	reg.Register("repo", cloneDir)
+	ops := NewExecGitOps(reg)
+	require.NoError(t, ops.Clone(context.Background(), "repo", remoteDir, "main"))
+
+	require.NoError(t, os.WriteFile(filepath.Join(cloneDir, "new.txt"), []byte("new"), 0644))
+	_, err := ops.Commit(context.Background(), "repo", "add new", []string{"new.txt"})
+	require.NoError(t, err)
+
+	require.NoError(t, ops.Push(context.Background(), "repo", "origin", "main"))
+}
