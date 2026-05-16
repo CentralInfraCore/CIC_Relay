@@ -16,6 +16,8 @@ import (
 	"centralrelay/pkg/sourcedigest"
 )
 
+var osExit = os.Exit
+
 func main() {
 	root := "."
 	if len(os.Args) > 1 {
@@ -24,7 +26,8 @@ func main() {
 	hash, err := sourcedigest.ComputeTreeHash(root, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "sourcehash: %v\n", err)
-		os.Exit(1)
+		osExit(1)
+		return
 	}
 	fmt.Print(hash)
 }

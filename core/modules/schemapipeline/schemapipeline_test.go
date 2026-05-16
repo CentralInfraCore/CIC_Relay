@@ -514,3 +514,85 @@ func TestRelease_MissingBuildDir(t *testing.T) {
 	_, err := fn(context.Background(), map[string]interface{}{"schema": "pg", "version": "v1"})
 	require.ErrorContains(t, err, "build_dir is required")
 }
+
+// --- computeTreeDigest edge cases ---
+
+// brokenSymlinkRunner creates a broken symlink in buildDir during clone.
+// filepath.WalkDir calls the function for the symlink (isDir=false),
+// then os.ReadFile fails on it — covering the line 394 error path.
+type brokenSymlinkRunner struct{ buildDir string }
+
+func (r *brokenSymlinkRunner) Run(_ context.Context, _ string, name string, args ...string) (string, int, error) {
+	if name == "git" && len(args) > 0 && args[0] == "clone" {
+		_ = os.MkdirAll(r.buildDir, 0o755)
+		_ = os.Symlink("/nonexistent-target-xyz", filepath.Join(r.buildDir, "broken.yaml"))
+		return "", 0, nil
+	}
+	if name == "git" {
+		return "abc123\n", 0, nil
+	}
+	return "sha256:imgabc\n", 0, nil
+}
+
+func TestStart_ComputesTreeDigest_UnreadableFile(t *testing.T) {
+	buildDir := t.TempDir()
+	cfg := &schemapipeline.PipelineConfig{
+		BuildDir:         buildDir,
+		BuilderContainer: "cic-builder",
+		Runner:           &brokenSymlinkRunner{buildDir: buildDir},
+	}
+	_, err := cfg.NewStartFunc()(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com", "branch": "main",
+		"schema": "pg", "version": "v1",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "tree digest")
+}
+
+// gitAndRealFileRunner creates schema.yaml AND a .git dir during clone.
+type gitAndRealFileRunner struct{ buildDir string }
+
+func (r *gitAndRealFileRunner) Run(_ context.Context, _ string, name string, args ...string) (string, int, error) {
+	if name == "git" && len(args) > 0 && args[0] == "clone" {
+		_ = os.MkdirAll(r.buildDir, 0o755)
+		_ = os.WriteFile(filepath.Join(r.buildDir, "schema.yaml"), []byte("kind: Schema\n"), 0o644)
+		_ = os.MkdirAll(filepath.Join(r.buildDir, ".git"), 0o755)
+		_ = os.WriteFile(filepath.Join(r.buildDir, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
+		return "", 0, nil
+	}
+	if name == "git" {
+		return "abc123\n", 0, nil
+	}
+	return "sha256:imgabc\n", 0, nil
+}
+
+// TestStart_ComputesTreeDigest_GitDirExcluded verifies that .git content is excluded
+// from the tree digest. The golden hash was computed from schema.yaml only.
+// Kills the CONDITIONALS_NEGATION mutant at schemapipeline.go:387 which would
+// stop skipping .git → different hash → test fails.
+func TestStart_ComputesTreeDigest_GitDirExcluded(t *testing.T) {
+	buildDir := t.TempDir()
+	cfg := &schemapipeline.PipelineConfig{
+		BuildDir:         buildDir,
+		BuilderContainer: "cic-builder",
+		Runner:           &gitAndRealFileRunner{buildDir: buildDir},
+	}
+	result, err := cfg.NewStartFunc()(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com", "branch": "main",
+		"schema": "pg", "version": "v1",
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	const wantDigest = "sha256:b3c2bdff36856b39752acd3293aee207b76caee40b2270bf031b5a6d92a2432a"
+	assert.Equal(t, wantDigest, out["source_tree_digest"],
+		".git directory must be excluded from tree digest")
+}
+
+func TestOSCommandRunner_Run_NonExistentBinary(t *testing.T) {
+	// Non-existent binary: CombinedOutput returns *exec.Error (not *exec.ExitError)
+	// → covers the return (out, -1, err) branch in OSCommandRunner.Run.
+	r := &schemapipeline.OSCommandRunner{}
+	_, code, err := r.Run(context.Background(), "", "nonexistent-binary-xyz-abc-def")
+	assert.Equal(t, -1, code)
+	assert.Error(t, err)
+}
