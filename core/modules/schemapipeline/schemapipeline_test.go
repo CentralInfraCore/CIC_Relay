@@ -2,9 +2,12 @@ package schemapipeline_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"centralrelay/core/modules/schemapipeline"
@@ -325,6 +328,99 @@ func TestValidateStepHash_GoldenValue(t *testing.T) {
 	const wantHash = "83c744aaf378012a947a3d69abd836591913a87028a5b4970f4f560aa7e69e3c"
 	assert.Equal(t, wantHash, out["step_hash"],
 		"step_hash golden mismatch — sortedKeys key order may have changed")
+}
+
+// --- OSCommandRunner ---
+
+func TestOSCommandRunner_Run_Success(t *testing.T) {
+	r := &schemapipeline.OSCommandRunner{}
+	out, code, err := r.Run(context.Background(), "", "echo", "hello")
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+	assert.Contains(t, out, "hello")
+}
+
+func TestOSCommandRunner_Run_NonZeroExit(t *testing.T) {
+	r := &schemapipeline.OSCommandRunner{}
+	_, code, err := r.Run(context.Background(), "", "sh", "-c", "exit 2")
+	require.NoError(t, err)
+	assert.Equal(t, 2, code)
+}
+
+func TestOSCommandRunner_Run_WithDir(t *testing.T) {
+	dir := t.TempDir()
+	r := &schemapipeline.OSCommandRunner{}
+	out, code, err := r.Run(context.Background(), dir, "sh", "-c", "echo $PWD")
+	require.NoError(t, err)
+	assert.Equal(t, 0, code)
+	assert.NotEmpty(t, out)
+}
+
+// --- computeTreeDigest via NewStartFunc ---
+
+// fileCreatingRunner simulates a git clone by writing a file to buildDir.
+type fileCreatingRunner struct{ buildDir string }
+
+func (r *fileCreatingRunner) Run(_ context.Context, _ string, name string, args ...string) (string, int, error) {
+	if name == "git" && len(args) > 0 && args[0] == "clone" {
+		_ = os.MkdirAll(r.buildDir, 0o755)
+		_ = os.WriteFile(filepath.Join(r.buildDir, "schema.yaml"), []byte("kind: Schema\n"), 0o644)
+		return "", 0, nil
+	}
+	if name == "git" {
+		return "abc123def456\n", 0, nil
+	}
+	if name == "docker" {
+		return "sha256:imageabc\n", 0, nil
+	}
+	return "", 0, nil
+}
+
+func TestStart_ComputesTreeDigest_NonEmpty(t *testing.T) {
+	buildDir := t.TempDir()
+	cfg := &schemapipeline.PipelineConfig{
+		BuildDir:         buildDir,
+		BuilderContainer: "cic-builder",
+		Runner:           &fileCreatingRunner{buildDir: buildDir},
+	}
+	result, err := cfg.NewStartFunc()(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git",
+		"branch":   "main",
+		"schema":   "postgresql",
+		"version":  "v1.0",
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	treeDigest, _ := out["source_tree_digest"].(string)
+	assert.True(t, strings.HasPrefix(treeDigest, "sha256:"), "tree digest should have sha256: prefix")
+	emptyTreeHash := "sha256:" + func() string {
+		sum := sha256.Sum256([]byte("empty-tree"))
+		return hex.EncodeToString(sum[:])
+	}()
+	assert.NotEqual(t, emptyTreeHash, treeDigest, "non-empty clone should differ from empty-tree hash")
+}
+
+func TestStart_ComputesTreeDigest_GitDirSkipped(t *testing.T) {
+	buildDir := t.TempDir()
+	runner := &fileCreatingRunner{buildDir: buildDir}
+	// Pre-create a .git dir — it should be excluded from the digest
+	_ = os.MkdirAll(filepath.Join(buildDir, ".git"), 0o755)
+	_ = os.WriteFile(filepath.Join(buildDir, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
+
+	cfg := &schemapipeline.PipelineConfig{
+		BuildDir:         buildDir,
+		BuilderContainer: "cic-builder",
+		Runner:           runner,
+	}
+	result, err := cfg.NewStartFunc()(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git",
+		"branch":   "main",
+		"schema":   "postgresql",
+		"version":  "v1.0",
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	assert.NotEmpty(t, out["source_tree_digest"])
 }
 
 func TestStepHashChangesAcrossSteps(t *testing.T) {
