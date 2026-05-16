@@ -764,21 +764,22 @@ func TestRegisterNativeComponents(t *testing.T) {
 	var registeredModules []*cabinet.ModuleDescriptor
 	mockCabinet.On("PutModule", mock.Anything).Run(func(args mock.Arguments) {
 		registeredModules = append(registeredModules, args.Get(0).(*cabinet.ModuleDescriptor))
-	}).Return(nil).Times(6) // core.test + ci.build + cic.source.assert + cic.schema.build + cic.artifact.sign + cert.selfsigned
+	}).Return(nil).Times(10) // core.test + ci.build + cic.source.assert + cic.schema.build + cic.artifact.sign + cert.selfsigned + 4 pipeline steps
 
 	var registeredWorkflows []*cabinet.Workflow
 	mockCabinet.On("PutWorkflow", mock.Anything).Run(func(args mock.Arguments) {
 		registeredWorkflows = append(registeredWorkflows, args.Get(0).(*cabinet.Workflow))
-	}).Return(nil).Times(2) // cic.schema.compile + cert.selfsigned
+	}).Return(nil).Times(3) // cic.schema.compile + cert.selfsigned + cic.schemas.pipeline
 
-	err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{}, merkle.BuildContext{})
+	err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{}, merkle.BuildContext{}, nil, &config{})
 	require.NoError(t, err, "registerNativeComponents should not return an error")
 	mockCabinet.AssertExpectations(t)
 
-	require.Len(t, registeredModules, 6, "expected six native modules to be registered")
-	require.Len(t, registeredWorkflows, 2, "expected two workflows to be registered")
+	require.Len(t, registeredModules, 10, "expected ten native modules to be registered")
+	require.Len(t, registeredWorkflows, 3, "expected three workflows to be registered")
 	assert.Equal(t, "cic.schema.compile@1.0", registeredWorkflows[0].ID())
 	assert.Equal(t, "cert.selfsigned@1.0", registeredWorkflows[1].ID())
+	assert.Equal(t, "cic.schemas.pipeline@1.0", registeredWorkflows[2].ID())
 
 	// First: core.test
 	coreTest := registeredModules[0]
@@ -821,6 +822,25 @@ func TestRegisterNativeComponents(t *testing.T) {
 	require.NotNil(t, certSelfSigned.NativeImpl)
 	_, ok = certSelfSigned.NativeImpl["generate"]
 	assert.True(t, ok, "cert.selfsigned should expose 'generate' function")
+
+	// Pipeline steps 7–10: start, test, validate, release
+	pipelineSteps := []struct {
+		idx  int
+		id   string
+		fn   string
+	}{
+		{6, "cic.pipeline.start@1.0", "start"},
+		{7, "cic.pipeline.test@1.0", "test"},
+		{8, "cic.pipeline.validate@1.0", "validate"},
+		{9, "cic.pipeline.release@1.0", "release"},
+	}
+	for _, ps := range pipelineSteps {
+		mod := registeredModules[ps.idx]
+		assert.Equal(t, ps.id, mod.ID())
+		require.NotNil(t, mod.NativeImpl)
+		_, ok = mod.NativeImpl[ps.fn]
+		assert.True(t, ok, "%s should expose %q function", ps.id, ps.fn)
+	}
 }
 
 func TestRegisterNativeComponents_Errors(t *testing.T) {
@@ -834,7 +854,7 @@ func TestRegisterNativeComponents_Errors(t *testing.T) {
 		})
 
 		mockCabinet := new(mockCabinetService)
-		err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{}, merkle.BuildContext{})
+		err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{}, merkle.BuildContext{}, nil, &config{})
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create core.test module descriptor")
@@ -847,7 +867,7 @@ func TestRegisterNativeComponents_Errors(t *testing.T) {
 		// Expect PutModule to be called and return an error
 		mockCabinet.On("PutModule", mock.Anything).Return(expectedErr).Once()
 
-		err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{}, merkle.BuildContext{})
+		err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{}, merkle.BuildContext{}, nil, &config{})
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, expectedErr)

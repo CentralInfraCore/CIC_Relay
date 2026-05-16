@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus" // Import logrus
 
 	"centralrelay/core/cabinet"
+	"centralrelay/core/modules/schemacompile"
 	"centralrelay/core/nexus/crypto"
 	"centralrelay/core/nexus/git"
 	"centralrelay/core/nexus/iac"
@@ -53,6 +53,10 @@ type config struct {
 	WasmExecTimeoutSeconds int
 	RateLimitRPS           int
 	MaxConcurrentRequests  int
+
+	// Schema pipeline: CIC-Schemas build env wiring.
+	SchemaBuildDir         string // shared volume path where schemas are cloned+built
+	SchemaBuilderContainer string // Docker container running the CIC-Schemas build env
 }
 
 // loadConfig loads configuration from environment variables.
@@ -123,6 +127,9 @@ func loadConfig() (*config, error) {
 		cfg.MaxConcurrentRequests = max
 	}
 
+	cfg.SchemaBuildDir = os.Getenv("CIC_SCHEMA_BUILD_DIR")         // e.g. /build
+	cfg.SchemaBuilderContainer = os.Getenv("CIC_SCHEMA_BUILDER_CONTAINER") // e.g. cic-schemas-builder
+
 	return cfg, nil
 }
 
@@ -173,6 +180,7 @@ func newMux(s *relayServer) *http.ServeMux {
 	mux.HandleFunc("/", s.rootHandler)
 	mux.HandleFunc("/set", s.setHandler)
 	mux.HandleFunc("/v1/schema/compile", s.compileHandler)
+	mux.HandleFunc("/v1/schemas/pipeline", s.pipelineHandler)
 	mux.HandleFunc("/healthz", s.healthzHandler)
 	mux.HandleFunc("/readyz", s.readyzHandler)
 	return mux
@@ -582,6 +590,17 @@ func main() {
 	secrets := loadSecretsFromVault(logger)
 	recorderOpt := buildRecorderOption(logger, secrets)
 
+	// Build artifact signer for cic.artifact.sign — uses the same Vault key as the recorder.
+	// Nil if Vault is not configured; cic_sign will be "unavailable" in that case (non-fatal).
+	var artifactSigner schemacompile.ArtifactSigner
+	if secrets != nil {
+		if cs, csErr := crypto.NewVaultCryptoService(secrets.MountPath, secrets.KeyName); csErr == nil {
+			artifactSigner = cs
+		} else {
+			logger.WithError(csErr).Warn("cic.artifact.sign: Vault init failed — cic_sign will be unavailable")
+		}
+	}
+
 	// Wire typed git host functions into the WASM runtime so WASM modules can
 	// perform git operations through a capability-bounded API.
 	gitRegistry := git.NewRepoRegistry()
@@ -636,7 +655,7 @@ func main() {
 	}
 
 	// Register built-in native modules first (core.test, ci.build, …).
-	if err := registerNativeComponents(loadCtx, cabinetSvc, pkiAssets, bctx); err != nil {
+	if err := registerNativeComponents(loadCtx, cabinetSvc, pkiAssets, bctx, artifactSigner, cfg); err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to register native components")
 	}
 	logger.Info("Native components registered.")

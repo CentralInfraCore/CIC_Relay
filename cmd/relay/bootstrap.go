@@ -17,6 +17,7 @@ import (
 	"centralrelay/core/modules/cibuild"
 	"centralrelay/core/modules/certselfsigned"
 	"centralrelay/core/modules/schemacompile"
+	"centralrelay/core/modules/schemapipeline"
 	"centralrelay/pkg/merkle"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -26,7 +27,9 @@ import (
 // pkiAssets must not be nil; pass the result of bootstrapPKI.
 // bctx carries build-time metadata for the Merkle-root verification hash (M33).
 // CAFingerprint from pkiAssets is merged into bctx if not already set.
-func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAssets *PKIAssets, bctx merkle.BuildContext) error {
+// signer is used to sign artifact build_hash in cic.artifact.sign; pass nil if Vault is unavailable.
+// cfg carries schema pipeline wiring (SchemaBuildDir, SchemaBuilderContainer).
+func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAssets *PKIAssets, bctx merkle.BuildContext, signer schemacompile.ArtifactSigner, cfg *config) error {
 	if bctx.CAFingerprint == "" {
 		bctx.CAFingerprint = pkiAssets.CAFingerprint
 	}
@@ -104,7 +107,7 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	if err != nil {
 		return fmt.Errorf("failed to create cic.artifact.sign module descriptor: %w", err)
 	}
-	signModule.NativeImpl = cabinet.NativeFunctions{"sign": schemacompile.NewSignArtifactFunc(bctx)}
+	signModule.NativeImpl = cabinet.NativeFunctions{"sign": schemacompile.NewSignArtifactFunc(bctx, signer)}
 	if err := svc.PutModule(signModule); err != nil {
 		return fmt.Errorf("failed to register cic.artifact.sign module: %w", err)
 	}
@@ -147,6 +150,74 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	}
 	if err := svc.PutWorkflow(certWorkflow); err != nil {
 		return fmt.Errorf("failed to register cert.selfsigned workflow: %w", err)
+	}
+
+	// --- Register schema pipeline modules ---
+	pipelineCfg := &schemapipeline.PipelineConfig{
+		BuildDir:         cfg.SchemaBuildDir,
+		BuilderContainer: cfg.SchemaBuilderContainer,
+	}
+
+	pipelineSteps := []struct {
+		name string
+		fn   func(context.Context, interface{}) (interface{}, error)
+		out  []string
+	}{
+		{
+			"cic.pipeline.start",
+			pipelineCfg.NewStartFunc(),
+			[]string{"source_ref", "source_tree_digest", "builder_image_digest", "step_hash", "build_dir", "builder_container"},
+		},
+		{
+			"cic.pipeline.test",
+			pipelineCfg.NewTestFunc(),
+			[]string{"test_exit_code", "test_stdout_digest", "step_hash"},
+		},
+		{
+			"cic.pipeline.validate",
+			pipelineCfg.NewValidateFunc(),
+			[]string{"validate_exit_code", "validate_stdout_digest", "step_hash"},
+		},
+		{
+			"cic.pipeline.release",
+			pipelineCfg.NewReleaseFunc(),
+			[]string{"artifact_digest", "artifact_size", "release_stdout_digest", "step_hash", "source_assertion"},
+		},
+	}
+
+	for _, step := range pipelineSteps {
+		meta := cabinet.BaseBlock{Name: step.name, Version: "1.0", Description: step.name + " pipeline step."}
+		mod, err := cabinet.NewModuleDescriptor(ctx, meta, "native/pipeline", nil, step.out, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create %s module: %w", step.name, err)
+		}
+		funcName := step.name[strings.LastIndex(step.name, ".")+1:] // "start", "test", "validate", "release"
+		mod.NativeImpl = cabinet.NativeFunctions{funcName: step.fn}
+		if err := svc.PutModule(mod); err != nil {
+			return fmt.Errorf("failed to register %s module: %w", step.name, err)
+		}
+	}
+
+	// --- Register cic.schemas.pipeline workflow ---
+	pipelineWorkflowMeta := cabinet.BaseBlock{
+		Name:        "cic.schemas.pipeline",
+		Version:     "1.0",
+		Description: "Full CIC-Schemas build pipeline: clone, test, validate, release, assert, build, sign.",
+	}
+	pipelineWorkflow, err := cabinet.NewWorkflow(ctx, pipelineWorkflowMeta, []string{
+		"cic.pipeline.start@1.0.start(input) -> start_result",
+		"cic.pipeline.test@1.0.test(start_result) -> test_result",
+		"cic.pipeline.validate@1.0.validate(test_result) -> validate_result",
+		"cic.pipeline.release@1.0.release(validate_result) -> release_result",
+		"cic.source.assert@1.0.assert(release_result) -> assert_result",
+		"cic.schema.build@1.0.build(assert_result) -> artifact",
+		"cic.artifact.sign@1.0.sign(artifact) -> signed_artifact",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create cic.schemas.pipeline workflow: %w", err)
+	}
+	if err := svc.PutWorkflow(pipelineWorkflow); err != nil {
+		return fmt.Errorf("failed to register cic.schemas.pipeline workflow: %w", err)
 	}
 
 	logrus.Info("Successfully registered all native components.")

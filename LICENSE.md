@@ -1,6 +1,28 @@
 # LICENSE
 
-This project is licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)** license.
+This project is licensed under the **● Minden működik. Összefoglaló a jelenlegi állapotról:
+                                                                                                                                                                                                                           
+---                                                                                                                                                                                                                      
+DEV migration — kész
+
+Új NLB IP: 158.179.57.146 (a régi 158.179.52.3 helyett, ami törlésre került)
+
+Mi működik:
+- Gateway API: 4 listener (HTTP, HTTPS k8spaynance.com, HTTPS paynance.hu, HTTPS solutron*)
+- 15 HTTPRoute — mind csatolva és programozva
+- HTTP routing: 301/404 (app-szintű válasz) ✓
+- HTTPS routing SNI-vel: 301/404 ✓
+- Service targetPort: javítva 443→80 azoknál amelyek mindkét portot exponálják
+
+Nyitott problémák:
+1. mssettings — CrashLoopBackOff, alkalmazásszintű crash
+2. https-solutron listener — lejárt cert (2025-04-30), de a route csatolva van
+3. 443NLB (158.179.59.21) — az NLB limit tele van (5/5), ha az old DEV kubespray cluster már nem kell, ezt lehetne törölni egy szabad slot-ért
+4. DNS rekordokat a 158.179.57.146 IP-re kell átírni (ha volt)
+
+*A solutron-tls-secret lejárt cert miatt a HTTPS solutron listener Invalid állapotban van — a cert megújítása szükséges.
+
+✻ Churned for 22m 55s                                                                                                       ** license.
 
 ## 📌 Summary (non-legally binding)
 

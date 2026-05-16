@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"os"
 	"runtime"
+	"runtime/debug"
+	"strings"
 )
 
 // BuildContext carries build-time and runtime-discovered metadata that populates
@@ -32,10 +34,38 @@ type BuildContext struct {
 	SigningPolicyDigest string // digest of the signing policy config
 }
 
-// GoRuntimeDigest returns sha256(runtime.Version()) as "sha256:<hex>".
-// This gives a stable, zero-dependency toolchain fingerprint.
+// GoRuntimeDigest returns a "sha256:<hex>" digest of the Go toolchain identity.
+//
+// Included fields (separated by \x00):
+//   - runtime.Version()  — e.g. "go1.22.2"
+//   - runtime.GOOS       — e.g. "linux"
+//   - runtime.GOARCH     — e.g. "amd64"
+//   - CGO_ENABLED        — "0" or "1" (from debug.ReadBuildInfo settings)
+//   - -tags              — build tags at compile time, if any
+//   - GOEXPERIMENT       — active Go experiments, if any
+//
+// Using only runtime.Version() would miss CGO mode and build-tag variation that
+// can materially change binary behavior while keeping the same version string.
 func GoRuntimeDigest() string {
-	sum := sha256.Sum256([]byte(runtime.Version()))
+	var sb strings.Builder
+	sb.WriteString(runtime.Version())
+	sb.WriteByte(0)
+	sb.WriteString(runtime.GOOS)
+	sb.WriteByte(0)
+	sb.WriteString(runtime.GOARCH)
+	sb.WriteByte(0)
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			switch s.Key {
+			case "CGO_ENABLED", "-tags", "GOEXPERIMENT":
+				sb.WriteString(s.Key)
+				sb.WriteByte(0x1f) // unit separator between key and value
+				sb.WriteString(s.Value)
+				sb.WriteByte(0)
+			}
+		}
+	}
+	sum := sha256.Sum256([]byte(sb.String()))
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
