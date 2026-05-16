@@ -88,6 +88,20 @@ func TestParseExecutionGraph(t *testing.T) {
 		}
 	})
 
+	t.Run("dot at position zero is an error", func(t *testing.T) {
+		_, err := cabinet.ParseExecutionGraph([]string{".Process(input)"})
+		if err == nil {
+			t.Fatal("expected error: component name is empty (dot at position 0)")
+		}
+	})
+
+	t.Run("empty function name (trailing dot) is an error", func(t *testing.T) {
+		_, err := cabinet.ParseExecutionGraph([]string{"deploy.(input)"})
+		if err == nil {
+			t.Fatal("expected error: function name is empty (dot at last position)")
+		}
+	})
+
 	t.Run("Raw field preserved", func(t *testing.T) {
 		raw := "deploy@1.0.Process(input) -> out"
 		g, err := cabinet.ParseExecutionGraph([]string{raw})

@@ -115,6 +115,18 @@ func TestValidateAndChecksum(t *testing.T) {
 		testify_assert.Contains(t, err.Error(), fmt.Sprintf("WASM module size exceeds limit of %d bytes", MaxWASMModuleSize))
 	})
 
+	t.Run("WASM exactly at size limit is allowed", func(t *testing.T) {
+		orig := stripWasmModuleFunc
+		t.Cleanup(func() { stripWasmModuleFunc = orig })
+		// Mock to avoid decoding 16 MB of synthetic bytes as real WASM
+		stripWasmModuleFunc = func(_ []byte) ([]byte, error) { return wasmBase, nil }
+
+		meta := &BaseBlock{Name: "exact-limit-wasm", Version: "1.0"}
+		data := make([]byte, MaxWASMModuleSize) // len == limit, not > limit
+		_, err := validateAndChecksum(context.Background(), meta, KindModule, data)
+		require.NoError(t, err)
+	})
+
 	t.Run("valid WASM module should pass", func(t *testing.T) {
 		meta := &BaseBlock{Name: "small-wasm", Version: "1.0"}
 		// Use a structurally valid, minimal WASM module.

@@ -109,6 +109,36 @@ func TestSetx_SchemaValidation_Integration(t *testing.T) {
 		}
 	})
 
+	t.Run("native function error is propagated through Setx", func(t *testing.T) {
+		svc := newSvc()
+
+		sentinel := errors.New("native function failed")
+		native := make(NativeFunctions)
+		native["fail"] = func(_ context.Context, _ interface{}) (interface{}, error) {
+			return nil, sentinel
+		}
+		mod, err := NewModuleDescriptor(ctx, BaseBlock{Name: "failing", Version: "1.0"}, "native", nil, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mod.NativeImpl = native
+		svc.modules.Put(mod)
+
+		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.failing", Version: "1.0"}, []string{"failing@1.0.fail(input)"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		svc.workflows.Put(wf)
+
+		_, err = svc.Setx(ctx, &SetPayload{
+			WorkflowID: wf.ID(),
+			Payload:    map[string]any{"input": map[string]any{"x": 1}},
+		})
+		if !errors.Is(err, sentinel) {
+			t.Fatalf("expected sentinel error to propagate, got %v", err)
+		}
+	})
+
 	t.Run("module with Accepts rejects non-matching $schema", func(t *testing.T) {
 		svc := newSvc()
 
