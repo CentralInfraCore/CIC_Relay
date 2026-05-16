@@ -240,3 +240,12 @@ func TestSubprocessWorker_Decrypt_WorkerError(t *testing.T) {
 	require.NotNil(t, resp.Error)
 	assert.Contains(t, resp.Error.Error(), "worker failed")
 }
+
+func TestSubprocessWorker_Decrypt_WithEnv(t *testing.T) {
+	// Covers the w.env != nil branch: the env slice is passed to the subprocess.
+	script := `echo '{"result":"dGVzdA=="}'`
+	w := newSubprocessWorkerWithExe("sh", []string{"-c", script}, []string{"PATH=/usr/bin:/bin"})
+	resp, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
+	require.NoError(t, err)
+	assert.Nil(t, resp.Error)
+}

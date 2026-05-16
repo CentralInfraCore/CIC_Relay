@@ -216,3 +216,16 @@ func TestGitStateRecorder_Init_AlreadyInitialized(t *testing.T) {
 	// Second call: .git exists → skip initialization.
 	require.NoError(t, r.init())
 }
+
+func TestGitStateRecorder_RecordState_WriteFileFails(t *testing.T) {
+	tmpDir := t.TempDir()
+	recorder, err := NewGitStateRecorder(tmpDir, &MockCryptoService{})
+	require.NoError(t, err)
+
+	// Create a DIRECTORY named "expected.json" so os.WriteFile into it fails.
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, "expected.json"), 0o755))
+
+	_, err = recorder.RecordState(context.Background(), types.ExpectedState{RunID: "r1"}, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to write")
+}

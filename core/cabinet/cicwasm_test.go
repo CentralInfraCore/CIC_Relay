@@ -2,6 +2,7 @@ package cabinet
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero"
 
 	"centralrelay/pkg/obs"
 )
@@ -717,4 +719,19 @@ func TestCicWasmHost_EmitDeallocWarn_RecordsLog(t *testing.T) {
 	assert.Equal(t, "wasm memory deallocation failed", sink.Logs[0].Message)
 	assert.Equal(t, "cicwasm", sink.Logs[0].Resource.Component)
 	assert.Equal(t, "result", sink.Logs[0].Attrs["ptr_type"])
+}
+
+func TestNewWasmManager_HostSetupFn_Error(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+	config := WasmManagerConfig{
+		LRUCacheSize:          10,
+		DefaultTimeoutSeconds: 5,
+		HostSetupFn: func(ctx context.Context, r wazero.Runtime) error {
+			return fmt.Errorf("host setup intentionally failed")
+		},
+	}
+	_, err := NewWasmManager(ctx, store, config)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "host module setup failed")
 }
