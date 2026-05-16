@@ -14,7 +14,8 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	dev-vault dev-vault-stop \
 	release release-relay release-verify sourcehash validate \
 	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki \
-	infra-down infra.help
+	infra-down infra.help \
+	mutate
 
 # Default to showing help
 all: help
@@ -149,6 +150,9 @@ help: ## Show available make targets
 	@echo "Coverage:"
 	@echo "  coverage            Run tests with coverage (profile + HTML)."
 	@echo "  coverage-threshold  Fail if coverage < COVERAGE_MIN%."
+	@echo ""
+	@echo "Mutation Testing:"
+	@echo "  mutate              Run gremlins mutation testing (MUTATE_PKG=./pkg, default: ./core/cabinet)."
 	@echo ""
 	@echo "Manifest:"
 	@echo "  manifest-verify     Verify the integrity of the repository."
@@ -323,6 +327,7 @@ coverage: coverage-profile coverage-html ## Run tests with coverage (profile + H
 coverage-profile: ## Run tests with coverage profile
 	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
 		set -euo pipefail; \
+		git config --global --add safe.directory /git-source 2>/dev/null || true; \
 		PKGS="$$(go list ./... | grep -v /vendor/)"; \
 		if [ -z "$$PKGS" ]; then \
 			echo "No Go packages to test."; \
@@ -337,6 +342,24 @@ coverage-html: ## Generate HTML coverage report
 		&& go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)) && cp $(BUILD_DIR)/* ./CurrentTest/
 
 COVERAGE_MIN ?= 85
+
+# =============================================================================
+# Mutation Testing (gremlins)
+# =============================================================================
+# MUTATE_PKG: target package for mutation testing (single package, gremlins limit)
+MUTATE_PKG ?= ./core/cabinet
+GREMLINS_VERSION ?= v0.5.1
+GREMLINS_WORKERS ?= 4
+
+mutate: ## Run mutation testing with gremlins (MUTATE_PKG=./pkg/..., default: ./core/cabinet)
+	$(call GO_EXEC, \
+		set -euo pipefail; \
+		git config --global --add safe.directory /git-source 2>/dev/null || true; \
+		rm -rf /tmp/gremlins-run && cp -r /git-source /tmp/gremlins-run; \
+		cd /tmp/gremlins-run && \
+		GOFLAGS="$(GOFLAGS)" gremlins unleash --workers $(GREMLINS_WORKERS) $(MUTATE_PKG); \
+		rm -rf /tmp/gremlins-run \
+	)
 
 coverage-threshold: coverage ## Fail if coverage < $(COVERAGE_MIN)%
 	mkdir -p $(BUILD_DIR) && docker compose exec -T builder sh -c 'cd /git-source && \
@@ -508,6 +531,7 @@ cache-populate: ## Pre-populate Go module and tool cache
 		&& echo ineffassign && go install github.com/gordonklaus/ineffassign@v0.1.0 \
 		&& echo reflex && go install github.com/cespare/reflex@v0.3.1 \
 		&& echo govulncheck && go install golang.org/x/vuln/cmd/govulncheck@v1.1.4 \
+		&& echo gremlins && go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.5.1 \
 		"
 
 # =============================================================================

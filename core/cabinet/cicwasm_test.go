@@ -660,6 +660,42 @@ func TestWasmManager_SetObsSinks_InstantiateMetric(t *testing.T) {
 	assert.Contains(t, names, "relay.wasm.instantiate_duration_ms")
 }
 
+// TestCicWasmHost_Process_NoSpuriousDeallocWarn verifies that no WARN log is emitted
+// when Process completes successfully (all four dealloc defers succeed).
+// Kills the err != nil → err == nil mutation in each defer closure.
+func TestCicWasmHost_Process_NoSpuriousDeallocWarn(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 5}
+
+	abiWasm := loadWasmFile(t, "abi_compatible.wasm")
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "no-warn-module", Version: "1.0"}, "wasm", nil, nil, abiWasm)
+	require.NoError(t, err)
+	store.Put(md)
+
+	m, err := NewWasmManager(ctx, store, config)
+	require.NoError(t, err)
+	defer m.Close(ctx)
+
+	sink := &obs.CaptureSink{}
+	m.SetObsSinks(sink, sink)
+
+	instance, err := m.NewHostInstance(ctx, md.ID())
+	require.NoError(t, err)
+	defer instance.Close(ctx)
+
+	// Clear any logs from setup (compile/instantiate metrics are histos, not logs)
+	sink.Logs = nil
+
+	instance.Process(ctx, "{}", "{}")
+
+	for _, log := range sink.Logs {
+		if log.Level == "WARN" {
+			t.Errorf("unexpected WARN log emitted during successful Process: message=%q", log.Message)
+		}
+	}
+}
+
 // TestCicWasmHost_EmitDeallocWarn_NilSafe verifies that emitDeallocWarn is a no-op
 // when logSink is nil — no panic. (M22.8)
 func TestCicWasmHost_EmitDeallocWarn_NilSafe(t *testing.T) {
