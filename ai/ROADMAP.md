@@ -84,6 +84,48 @@ Ez a fájl az AI-támogatott roadmap aktív állapota.
 
 ---
 
+## Sprint 14 — Quality Enforcement (aktív)
+
+### Kontextus
+
+A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
+- Coverage: 80.4% → **89.6%** összesített; 15 csomag 90% fölé emelve
+- Gremlins mutációs tesztek bevezetve: cabinet 95.9%, schemapipeline 95.4%, schemacompile 96.4%
+- `make mutate` / `make mutate-all` targetek + 90%-os efficacy threshold
+- Per-package `coverage-check-pkgs` küszöbök frissítve
+- Stop hook: automatikus teszt futtatás a változtatott csomagokon (asyncRewake)
+
+### Hiányok — amit CI nem kényszerít ki
+
+| Gap | Ahol kellene | Állapot |
+|-----|-------------|---------|
+| `mutate-all` nincs CI-ban | `verify.yml` | ❌ Lokális only |
+| `govulncheck` nincs CI-ban | `verify.yml` | ❌ Hiányzik |
+| CI coverage küszöbök elavultak | `verify.yml` L83–89 | ❌ Régi értékek |
+
+### Sprint 14 feladatok
+
+| Task | Milestone | Prioritás | Leírás |
+|------|-----------|-----------|--------|
+| p51  | M7.5      | ✅ Done   | CI coverage küszöbök szinkronizálása (`verify.yml` → Makefile értékek) |
+| p52  | M7.6      | ✅ Done   | `govulncheck` hozzáadása CI-hoz (advisory, Go 1.25+ után hard gate) |
+| p53  | M7.7      | ✅ Done   | Mutation CI gate: cabinet + schemapipeline + schemacompile, 90% threshold |
+| p54  | —         | 🟢 Todo   | `cmd/relay/main.go` 80%→90%: injectable hook `buildOperatorIfConfigured` + `buildRecorderOption` |
+
+---
+
+### M36 — Következő feature milestone (tervezett)
+
+**Layer 2: CICSourceCA signing wiring**
+- Állapot: scaffold → implementálandó
+- Előfeltétel: CICRootCA → Intermediate CA → leaf cert bootstrap (részben megvan `embedded/pki/`)
+- Fő cél: `cicSign` / `cicSignedCA` mezők valódi CA-aláírással; jelenleg `"stub:pending"`
+- Részt vevő fájlok: `core/modules/schemacompile/schemacompile.go`, `cmd/relay/bootstrap.go`, `embedded/pki/`
+
+**Elfogadási kritérium:** `make verify` zöld + `cic_sign` mező valódi Vault Transit aláírással tér vissza
+
+---
+
 ## Tervezett milestone-ok (részletes)
 
 ### M30 — GitRegistry auto-wiring
