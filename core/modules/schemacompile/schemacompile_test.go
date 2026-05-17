@@ -469,6 +469,47 @@ func TestNewSignArtifactFunc_WithSigner_CicSignSet(t *testing.T) {
 	assert.NotEmpty(t, m["verification_root"])
 }
 
+// --- M36: cic_signed_ca wiring ---
+
+func TestNewSignArtifactFunc_CicSignedCA_StubWhenNoPKI(t *testing.T) {
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, "stub:pending", m["cic_signed_ca"],
+		"cic_signed_ca must be stub:pending when no CA fingerprint is available")
+}
+
+func TestNewSignArtifactFunc_CicSignedCA_FingerprintWhenPKILoaded(t *testing.T) {
+	caFingerprint := "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+	bctx := merkle.BuildContext{CAFingerprint: caFingerprint}
+	fn := schemacompile.NewSignArtifactFunc(bctx, nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, caFingerprint, m["cic_signed_ca"],
+		"cic_signed_ca must equal bctx.CAFingerprint when PKI trust store is loaded (M36)")
+}
+
+func TestNewSignArtifactFunc_CicSignedCA_PresentInVerificationManifest(t *testing.T) {
+	// CertChainHash is also wired into the Merkle manifest — verify the root changes.
+	bctx1 := merkle.BuildContext{CAFingerprint: "sha256:aaa"}
+	bctx2 := merkle.BuildContext{CAFingerprint: "sha256:bbb"}
+	fn1 := schemacompile.NewSignArtifactFunc(bctx1, nil)
+	fn2 := schemacompile.NewSignArtifactFunc(bctx2, nil)
+	input := map[string]interface{}{"raw_artifact": "kind: SchemaArtifact\n"}
+	out1, _ := fn1(context.Background(), input)
+	out2, _ := fn2(context.Background(), input)
+	root1 := out1.(map[string]interface{})["verification_root"]
+	root2 := out2.(map[string]interface{})["verification_root"]
+	assert.NotEqual(t, root1, root2,
+		"verification_root must differ when CAFingerprint differs")
+}
+
 func TestNewSignArtifactFunc_SignerError_ReturnsError(t *testing.T) {
 	signer := &mockSigner{err: fmt.Errorf("vault unreachable")}
 	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, signer)

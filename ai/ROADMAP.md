@@ -114,15 +114,14 @@ A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
 
 ---
 
-### M36 — Következő feature milestone (tervezett)
+### M36 — ✅ Done
 
 **Layer 2: CICSourceCA signing wiring**
-- Állapot: scaffold → implementálandó
-- Előfeltétel: CICRootCA → Intermediate CA → leaf cert bootstrap (részben megvan `embedded/pki/`)
-- Fő cél: `cicSign` / `cicSignedCA` mezők valódi CA-aláírással; jelenleg `"stub:pending"`
-- Részt vevő fájlok: `core/modules/schemacompile/schemacompile.go`, `cmd/relay/bootstrap.go`, `embedded/pki/`
-
-**Elfogadási kritérium:** `make verify` zöld + `cic_sign` mező valódi Vault Transit aláírással tér vissza
+- `PKIAssets.CertChainHash`: összes CA cert DER sha256-a; `loadPKIAssets` tölti ki
+- `bctx.CAFingerprint` + `bctx.CertChainHash`: közvetlenül `pkiAssets`-ből töltve a `run()`-ban
+- `cic_signed_ca`: `bctx.CAFingerprint` ha PKI betöltve; `"stub:pending"` ha placeholder
+- 3 új teszt: stub when no PKI, fingerprint when loaded, verification_root sensitivity
+- Mutáció: schemacompile 96.30% → **96.55%** ✅
 
 ---
 

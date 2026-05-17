@@ -122,6 +122,11 @@ func TestLoadPKIAssets(t *testing.T) {
 		assert.NotEqual(t, x509.NewCertPool(), assets.Intermediates, "should load intermediate CAs")
 		assert.True(t, len(assets.CAFingerprint) > 7 && assets.CAFingerprint[:7] == "sha256:",
 			"CAFingerprint must be set after loading root CA")
+		// M36: CertChainHash must also be computed when trust store is loaded.
+		assert.True(t, len(assets.CertChainHash) > 7 && assets.CertChainHash[:7] == "sha256:",
+			"CertChainHash must be set after loading CA certs")
+		assert.NotEqual(t, assets.CAFingerprint, assets.CertChainHash,
+			"CertChainHash covers all certs; CAFingerprint covers only the first root")
 	})
 
 	t.Run("empty path", func(t *testing.T) {

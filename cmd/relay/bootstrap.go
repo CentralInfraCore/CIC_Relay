@@ -231,6 +231,7 @@ type PKIAssets struct {
 	CRLs             []*x509.RevocationList
 	TrustStoreLoaded bool   // true when at least one root CA was loaded
 	CAFingerprint    string // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
+	CertChainHash    string // sha256 of all loaded CA cert DER bytes concatenated, "sha256:<hex>"
 }
 
 // ComponentHeader defines the common fields for identifying a component type.
@@ -484,6 +485,8 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 		Intermediates: x509.NewCertPool(),
 		CRLs:          []*x509.RevocationList{},
 	}
+	// chainHasher accumulates all loaded CA cert DER bytes for CertChainHash.
+	chainHasher := sha256.New()
 
 	// If path is empty, there are no PKI assets to load from a directory.
 	// Return empty assets without trying to read a directory.
@@ -530,6 +533,7 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 					continue
 				}
 				if cert.IsCA {
+					chainHasher.Write(cert.Raw)
 					if cert.Subject.String() == cert.Issuer.String() { // Self-signed, so it's a root
 						assets.Roots.AddCert(cert)
 						assets.TrustStoreLoaded = true
@@ -553,6 +557,9 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 		if !anyBlock {
 			logger.WithField("path", file.Name()).Warn("No PEM data found in file")
 		}
+	}
+	if assets.TrustStoreLoaded {
+		assets.CertChainHash = "sha256:" + hex.EncodeToString(chainHasher.Sum(nil))
 	}
 	logger.Info("Successfully loaded PKI assets")
 	return assets, nil
