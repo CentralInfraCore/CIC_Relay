@@ -137,6 +137,85 @@ A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
 
 ---
 
+## Azonosított hibák — külső review (2026-05-17)
+
+Forrás: külső technikai review a `cic-relay-20260517.tar.gz` alapján.
+Minden hiba verifikálva a tényleges kóddal szemben.
+
+### B1 — ProofTrace hash algoritmus duplikáció (P0)
+
+**Fájlok:** `core/cabinet/proof_trace.go:59`, `cmd/relay/proof_verify.go:166`, `cmd/relay/proof_verify_test.go:14`
+
+**Probléma:** A `computeChainHash` (cabinet) a hash-t `"CICCHAINv1"\x00` domain prefixszel kezdi.
+A `recomputeChainHash` (verifier) ezt a prefixet kihagyja — ezért minden valódi `ProofTrace`
+artifact verifikációja `chain_hash mismatch` hibával bukna el.
+
+A teszt helper (`chainHashFor`) szintén a hibás algoritmust másolja, ezért CI zöld marad
+— a hiba csak cross-package integrációs szinten látható.
+
+**Státusz:** `bug / P0` — audit hitelességi hiba, CI-ban nem látható
+
+**Fix:** `computeChainHash` exportálása `ComputeChainHashV1`-ként; verifier és teszt ezt hívja.
+Task: `p57`
+
+---
+
+### B2 — Manifest timestamp: CI drift-check mindig bukik (P1)
+
+**Fájlok:** `scripts/gen_manifest.sh:16`, `.github/workflows/manifest-check.yml:22`
+
+**Probléma:** `gen_manifest.sh` a manifest fejlécébe beleírja az aktuális UTC időbélyeget:
+```bash
+echo "# generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+```
+A CI `diff -u MANIFEST.sha256 /tmp/MANIFEST.sha256`-ot futtat — a timestamp miatt
+a diff mindig eltér a commitolt fájltól. A manifest-check CI gate funkcionálisan törött.
+
+Külön probléma: `make manifest-update` (`git ls-files -z | xargs -0 sha256sum`) más scope-ot
+és más formátumot gyárt mint `gen_manifest.sh` (`find ai context GOLDEN`) — a két parancs
+inkompatibilis, a Makefile-lal frissített MANIFEST.sha256 a CI-on nem megy át.
+
+**Státusz:** `bug / P1` — provenance CI gate nem működik
+
+**Fix:** timestamp sor eltávolítása; `make manifest-update` a `gen_manifest.sh`-t hívja.
+Task: `p58`
+
+---
+
+### B3 — PKI prod mode fail-open (P1/P2)
+
+**Fájl:** `cmd/relay/pki_bootstrap.go:52–64`
+
+**Probléma:** `CIC_TRUST_MODE=prod` esetén `bootstrapPKI` üres cert poolt ad vissza
+és csak WARN-t logol — nem tér vissza hibával. Egy prod relay CA bundle nélkül is elindul,
+és a PKI ellenőrzés csendesen ki van kapcsolva.
+
+```go
+case TrustModeProd:
+    logger.Warn("PKI verification skipped in prod mode (scaffold)")
+    return &PKIAssets{Roots: x509.NewCertPool(), ...}, nil  // fail-open
+```
+
+Ez dokumentált scaffold — de a jelenlegi viselkedés nem jelzi vissza a hívónak,
+hogy a trust store üres. Prod deployban ez észrevétlenül kikapcsolt PKI ellenőrzést jelent.
+
+**Státusz:** `scaffold / P1` — dokumentált, de prod deployra blokkoló
+
+**Fix:** prod módban kötelező CA bundle path env; hiánya esetén `return nil, fmt.Errorf(...)`.
+Task: `p59`
+
+---
+
+### Nem blokkolt, külön sprint
+
+| # | Probléma | Megjegyzés |
+|---|----------|-----------|
+| B4 | HTTP API: nincs auth/mTLS boundary | Architektúra döntés, külön sprint |
+| B5 | `ipRateLimiter` map nem takarít (memória) | Nem internet-facing, alacsony prioritás |
+| B6 | Git host functions: nincs műveletszintű capability policy | M37+ scope |
+
+---
+
 ## Tervezett milestone-ok (részletes)
 
 ### M30–M31 — Done (archívum)

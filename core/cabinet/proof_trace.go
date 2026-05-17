@@ -41,7 +41,7 @@ func hashValue(v interface{}) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// computeChainHash returns SHA-256 over the full execution identity:
+// ComputeChainHashV1 returns SHA-256 over the full execution identity:
 //
 //	"CICCHAINv1" \x00 sourceDigest \x00 workflowID \x00 [per step: name \x00 module \x00 inputHash \x00 outputHash \x00]
 //
@@ -56,7 +56,7 @@ func hashValue(v interface{}) (string, error) {
 // workflowID binds the hash to the exact workflow definition that was executed.
 // InputHash and step Name are included so that two different workflows producing
 // the same outputs cannot share the same ChainHash.
-func computeChainHash(workflowID, sourceDigest string, steps []ProofTraceStep) string {
+func ComputeChainHashV1(workflowID, sourceDigest string, steps []ProofTraceStep) string {
 	var sb strings.Builder
 	sb.WriteString("CICCHAINv1") // domain prefix — see comment above
 	sb.WriteByte(0)

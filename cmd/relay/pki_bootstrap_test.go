@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"testing/fstest"
 
@@ -34,10 +36,31 @@ func TestBootstrapPKI_DevMode_TrustStoreLoaded(t *testing.T) {
 	assert.NotNil(t, assets.Intermediates)
 }
 
-func TestBootstrapPKI_ProdMode_Scaffold(t *testing.T) {
+func TestBootstrapPKI_ProdMode_NoBundleEnv_Error(t *testing.T) {
+	t.Setenv("CIC_PLATFORM_CA_BUNDLE", "")
+	_, err := bootstrapPKI(TrustModeProd, embeddedFS, newDiscardLogger())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CIC_PLATFORM_CA_BUNDLE")
+}
+
+func TestBootstrapPKI_ProdMode_WithBundle(t *testing.T) {
+	pemData, err := embeddedFS.ReadFile("embedded/pki/rootCA2026.pem")
+	require.NoError(t, err)
+	bundlePath := filepath.Join(t.TempDir(), "ca.pem")
+	require.NoError(t, os.WriteFile(bundlePath, pemData, 0600))
+
+	t.Setenv("CIC_PLATFORM_CA_BUNDLE", bundlePath)
 	assets, err := bootstrapPKI(TrustModeProd, embeddedFS, newDiscardLogger())
-	require.NoError(t, err, "prod scaffold must not return error")
-	assert.False(t, assets.TrustStoreLoaded, "prod scaffold must leave trust store empty")
+	require.NoError(t, err)
+	assert.True(t, assets.TrustStoreLoaded)
+	assert.NotNil(t, assets.Roots)
+}
+
+func TestBootstrapPKI_ProdMode_InvalidPath_Error(t *testing.T) {
+	t.Setenv("CIC_PLATFORM_CA_BUNDLE", "/nonexistent/path/ca.pem")
+	_, err := bootstrapPKI(TrustModeProd, embeddedFS, newDiscardLogger())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "pki bootstrap (prod)")
 }
 
 func TestBootstrapPKI_UnknownMode_Error(t *testing.T) {

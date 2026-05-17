@@ -464,7 +464,7 @@ func TestSetx_ProofTrace(t *testing.T) {
 	assert.NotEmpty(t, trace.ChainHash)
 
 	// ChainHash must be reproducible from workflowID + sourceDigest + steps.
-	assert.Equal(t, computeChainHash(trace.WorkflowID, "", trace.Steps), trace.ChainHash)
+	assert.Equal(t, ComputeChainHashV1(trace.WorkflowID, "", trace.Steps), trace.ChainHash)
 
 	// Determinism: same input → same hashes.
 	resp2, err := svc.Setx(ctx, payload)

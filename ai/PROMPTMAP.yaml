@@ -1278,3 +1278,83 @@ tasks:
     tests:
       - core/nexus/iac/upstream_test.go
     accept: make test && UpstreamSource FetchConfig HTTP hívást végez
+
+  # --- Bug fixes — külső review 2026-05-17 ---
+
+  - task: "fix-proof-chain-hash-export"
+    status: todo
+    priority: 58
+    milestone: ~
+    bug: B1
+    severity: P0
+    prompt: |
+      A `core/cabinet/proof_trace.go`-ban a `computeChainHash` privát függvény
+      `"CICCHAINv1"\x00` domain prefixszel számítja a chain hash-t.
+      A `cmd/relay/proof_verify.go` `recomputeChainHash` függvénye ezt a prefixet
+      kihagyja — ezért minden valódi ProofTrace artifact verifikációja chain_hash
+      mismatch hibával bukna el.
+      A teszt helper (`chainHashFor` a `proof_verify_test.go`-ban) szintén
+      a hibás algoritmust másolja, így CI zöld marad.
+
+      Teendők:
+      1. `computeChainHash` → `ComputeChainHashV1` (exportált) a `proof_trace.go`-ban.
+      2. `service.go:291` hívás frissítése az új névre.
+      3. `proof_verify.go`: `recomputeChainHash` törlése; helyette `cabinet.ComputeChainHashV1()` hívás.
+      4. `proof_verify_test.go`: `chainHashFor` helper törlése; tesztek `cabinet.ComputeChainHashV1`-et hívnak.
+      5. `proof_trace.yaml` szimbólum referencia frissítése ha szükséges.
+
+      Ne változtasd meg a hash algoritmust — csak az elérhetőséget és az egyetlen forrást.
+    tests:
+      - cmd/relay/proof_verify_test.go
+      - core/cabinet/proof_trace_test.go (ha van)
+    accept: make test && make verify
+
+  - task: "fix-manifest-timestamp"
+    status: todo
+    priority: 59
+    milestone: ~
+    bug: B2
+    severity: P1
+    prompt: |
+      A `scripts/gen_manifest.sh` a manifest fejlécébe beleírja az aktuális UTC
+      időbélyeget (`date -u`). A CI `diff`-alapú összehasonlítása ezért mindig eltér
+      a korábban commitolt MANIFEST.sha256-tól — a manifest-check gate funkcionálisan törött.
+
+      Külön probléma: `make manifest-update` (`git ls-files | xargs sha256sum`) más scope-ot
+      és más formátumot gyárt mint `gen_manifest.sh` (`find ai context GOLDEN`).
+      A kettő inkompatibilis — a Makefile-lal frissített MANIFEST.sha256 a CI-on nem megy át.
+
+      Teendők:
+      1. `scripts/gen_manifest.sh:16` — timestamp sor eltávolítása.
+      2. `Makefile manifest-update` target átírása: `gen_manifest.sh . MANIFEST.sha256` hívás
+         (ne legyen saját `git ls-files` logika).
+      3. `MANIFEST.sha256` újragenerálása és commitolása.
+      4. Ellenőrzés: `scripts/gen_manifest.sh . /tmp/check.sha256 && diff MANIFEST.sha256 /tmp/check.sha256`
+
+      Ne változtasd meg a CI workflow-t — az már helyesen hívja a scriptet.
+    tests:
+      - .github/workflows/manifest-check.yml (CI szintű ellenőrzés)
+    accept: scripts/gen_manifest.sh . /tmp/check.sha256 && diff MANIFEST.sha256 /tmp/check.sha256 — nulla diff
+
+  - task: "fix-pki-prod-fail-closed"
+    status: todo
+    priority: 60
+    milestone: ~
+    bug: B3
+    severity: P1
+    prompt: |
+      A `cmd/relay/pki_bootstrap.go` `bootstrapPKI` függvényében `CIC_TRUST_MODE=prod`
+      esetén üres cert pool kerül visszaadásra + WARN log — nem hiba. Egy prod relay
+      CA bundle nélkül is elindul, PKI ellenőrzés csendesen ki van kapcsolva.
+
+      Teendők:
+      1. `TrustModeProd` case: env var alapú CA bundle path olvasás
+         (pl. `CIC_PLATFORM_CA_BUNDLE` — PEM fájl elérési útja).
+      2. Ha a path hiányzik vagy a fájl nem olvasható: `return nil, fmt.Errorf(...)`.
+      3. Ha a bundle betölthető: `x509.CertPool` feltöltése, `TrustStoreLoaded: true`.
+      4. Teszt: prod mode CA bundle nélkül → error; CA bundle-lel → PKIAssets loaded.
+
+      A dev mode logikája és a default dev fallback ne változzon.
+    tests:
+      - cmd/relay/pki_bootstrap_test.go
+    accept: make test && CIC_TRUST_MODE=prod indítás CA nélkül hibával áll le
