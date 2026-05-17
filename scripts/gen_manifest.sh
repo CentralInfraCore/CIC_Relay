@@ -12,7 +12,6 @@ mapfile -t FILES < <(cd "$ROOT" &&   find ai context GOLDEN -type f -not -name "
 
 {
   echo "# MANIFEST of critical/golden files (sha256)"
-  echo "# generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   for f in "${FILES[@]}"; do
     sha256sum "$ROOT/$f" | awk '{print $1, " *" $2}'
   done

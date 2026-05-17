@@ -9,48 +9,48 @@ import (
 
 func TestComputeChainHash(t *testing.T) {
 	t.Run("all empty inputs produces deterministic hash", func(t *testing.T) {
-		h := computeChainHash("", "", nil)
+		h := ComputeChainHashV1("", "", nil)
 		assert.Len(t, h, 64)
 	})
 
 	t.Run("workflowID is included in hash", func(t *testing.T) {
-		h1 := computeChainHash("wf-a", "src", nil)
-		h2 := computeChainHash("wf-b", "src", nil)
+		h1 := ComputeChainHashV1("wf-a", "src", nil)
+		h2 := ComputeChainHashV1("wf-b", "src", nil)
 		assert.NotEqual(t, h1, h2)
 	})
 
 	t.Run("sourceDigest anchors the chain", func(t *testing.T) {
-		h1 := computeChainHash("wf", "rev1", nil)
-		h2 := computeChainHash("wf", "rev2", nil)
+		h1 := ComputeChainHashV1("wf", "rev1", nil)
+		h2 := ComputeChainHashV1("wf", "rev2", nil)
 		assert.NotEqual(t, h1, h2)
 	})
 
 	t.Run("step name is included in hash", func(t *testing.T) {
 		s1 := []ProofTraceStep{{Name: "step-a", Module: "m", InputHash: "i", OutputHash: "o"}}
 		s2 := []ProofTraceStep{{Name: "step-b", Module: "m", InputHash: "i", OutputHash: "o"}}
-		assert.NotEqual(t, computeChainHash("wf", "src", s1), computeChainHash("wf", "src", s2))
+		assert.NotEqual(t, ComputeChainHashV1("wf", "src", s1), ComputeChainHashV1("wf", "src", s2))
 	})
 
 	t.Run("inputHash is included in hash", func(t *testing.T) {
 		s1 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in1", OutputHash: "out"}}
 		s2 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in2", OutputHash: "out"}}
-		assert.NotEqual(t, computeChainHash("wf", "src", s1), computeChainHash("wf", "src", s2))
+		assert.NotEqual(t, ComputeChainHashV1("wf", "src", s1), ComputeChainHashV1("wf", "src", s2))
 	})
 
 	t.Run("outputHash is included in hash", func(t *testing.T) {
 		s1 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in", OutputHash: "out1"}}
 		s2 := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "in", OutputHash: "out2"}}
-		assert.NotEqual(t, computeChainHash("wf", "src", s1), computeChainHash("wf", "src", s2))
+		assert.NotEqual(t, ComputeChainHashV1("wf", "src", s1), ComputeChainHashV1("wf", "src", s2))
 	})
 
 	t.Run("same inputs produce same hash (determinism)", func(t *testing.T) {
 		steps := []ProofTraceStep{{Name: "s", Module: "m", InputHash: "i", OutputHash: "o"}}
-		assert.Equal(t, computeChainHash("wf", "src", steps), computeChainHash("wf", "src", steps))
+		assert.Equal(t, ComputeChainHashV1("wf", "src", steps), ComputeChainHashV1("wf", "src", steps))
 	})
 
 	t.Run("different sourceDigest produces different hash", func(t *testing.T) {
-		h1 := computeChainHash("wf", "rev1", nil)
-		h2 := computeChainHash("wf", "rev2", nil)
+		h1 := ComputeChainHashV1("wf", "rev1", nil)
+		h2 := ComputeChainHashV1("wf", "rev2", nil)
 		assert.NotEqual(t, h1, h2)
 	})
 }

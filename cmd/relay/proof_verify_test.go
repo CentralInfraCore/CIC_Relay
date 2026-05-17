@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"strings"
 	"testing"
 
@@ -10,27 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// chainHashFor computes the chain hash the same way recomputeChainHash does.
-func chainHashFor(workflowID, sourceDigest string, steps []cabinet.ProofTraceStep) string {
-	var sb strings.Builder
-	sb.WriteString(sourceDigest)
-	sb.WriteByte(0)
-	sb.WriteString(workflowID)
-	sb.WriteByte(0)
-	for _, s := range steps {
-		sb.WriteString(s.Name)
-		sb.WriteByte(0)
-		sb.WriteString(s.Module)
-		sb.WriteByte(0)
-		sb.WriteString(s.InputHash)
-		sb.WriteByte(0)
-		sb.WriteString(s.OutputHash)
-		sb.WriteByte(0)
-	}
-	sum := sha256.Sum256([]byte(sb.String()))
-	return hex.EncodeToString(sum[:])
-}
 
 var testSteps = []cabinet.ProofTraceStep{
 	{Name: "step1", Module: "mod@1.0", InputHash: "aaa", OutputHash: "bbb"},
@@ -40,7 +17,7 @@ func validProofArtifact() *ProofArtifact {
 	return &ProofArtifact{
 		WorkflowID:   "wf@1.0",
 		SourceDigest: "src123",
-		ChainHash:    chainHashFor("wf@1.0", "src123", testSteps),
+		ChainHash:    cabinet.ComputeChainHashV1("wf@1.0", "src123", testSteps),
 		Steps: []ProofArtifactStep{
 			{Name: "step1", Module: "mod@1.0", InputHash: "aaa", OutputHash: "bbb"},
 		},
@@ -81,7 +58,7 @@ func TestVerifyProofArtifact_MissingTimestamp(t *testing.T) {
 func TestVerifyProofArtifact_EmptySourceDigest_Warns(t *testing.T) {
 	a := validProofArtifact()
 	a.SourceDigest = ""
-	a.ChainHash = chainHashFor("wf@1.0", "", testSteps)
+	a.ChainHash = cabinet.ComputeChainHashV1("wf@1.0", "", testSteps)
 	r := VerifyProofArtifact(a)
 	assert.True(t, r.Valid)
 	require.NotEmpty(t, r.Warnings)
@@ -99,7 +76,7 @@ func TestVerifyProofArtifact_ChainHashMismatch(t *testing.T) {
 func TestVerifyProofArtifact_StepMissingFields(t *testing.T) {
 	a := validProofArtifact()
 	empty := cabinet.ProofTraceStep{}
-	a.ChainHash = chainHashFor("wf@1.0", "src123", []cabinet.ProofTraceStep{empty})
+	a.ChainHash = cabinet.ComputeChainHashV1("wf@1.0", "src123", []cabinet.ProofTraceStep{empty})
 	a.Steps = []ProofArtifactStep{{}}
 	r := VerifyProofArtifact(a)
 	assert.False(t, r.Valid)

@@ -288,7 +288,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		WorkflowID:   workflow.ID(),
 		SourceDigest: in.SourceDigest,
 		Steps:        traceSteps,
-		ChainHash:    computeChainHash(workflow.ID(), in.SourceDigest, traceSteps),
+		ChainHash:    ComputeChainHashV1(workflow.ID(), in.SourceDigest, traceSteps),
 		Timestamp:    clockFn(),
 	}
 

@@ -50,17 +50,28 @@ func bootstrapPKI(trustMode string, embeddedPKI fs.FS, logger *logrus.Logger) (*
 		return assets, nil
 
 	case TrustModeProd:
-		// scaffold: CICPlatformCA requires out-of-band provisioning (promotion from dev branch).
-		// The prod relay tree is a closed ecosystem — the CA is not embedded here.
+		bundlePath := strings.TrimSpace(os.Getenv("CIC_PLATFORM_CA_BUNDLE"))
+		if bundlePath == "" {
+			return nil, fmt.Errorf("CIC_TRUST_MODE=prod requires CIC_PLATFORM_CA_BUNDLE (path to CA PEM bundle)")
+		}
+		pemData, err := os.ReadFile(bundlePath)
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): read CA bundle %q: %w", bundlePath, err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(pemData) {
+			return nil, fmt.Errorf("pki bootstrap (prod): no valid certificates in %q", bundlePath)
+		}
 		logger.WithFields(logrus.Fields{
-			"trust_mode": trustMode,
-			"outcome":    "scaffold",
-			"reason":     "CICPlatformCA not embedded — prod PKI requires out-of-band cert provisioning",
-		}).Warn("PKI verification skipped in prod mode (scaffold)")
+			"trust_mode":         trustMode,
+			"trust_store_loaded": true,
+			"bundle_path":        bundlePath,
+		}).Info("PKI trust store bootstrapped (prod)")
 		return &PKIAssets{
-			Roots:         x509.NewCertPool(),
-			Intermediates: x509.NewCertPool(),
-			CRLs:          []*x509.RevocationList{},
+			Roots:            pool,
+			Intermediates:    x509.NewCertPool(),
+			CRLs:             []*x509.RevocationList{},
+			TrustStoreLoaded: true,
 		}, nil
 
 	default:

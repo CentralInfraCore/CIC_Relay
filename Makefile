@@ -545,8 +545,7 @@ manifest-verify: ## Verify repository manifest
 
 manifest-update: ## Re-generate MANIFEST.sha256
 	@echo "--- Updating repository manifest ---"
-	@docker compose exec builder sh -c 'git ls-files -z \
-		| xargs -0 sha256sum' | grep -v "MANIFEST.sha256" | LC_ALL=C sort > MANIFEST.sha256
+	@bash scripts/gen_manifest.sh . MANIFEST.sha256
 	@echo "MANIFEST.sha256 updated"
 
 # =============================================================================
@@ -576,7 +575,7 @@ cache-populate: ## Pre-populate Go module and tool cache
 		&& echo ineffassign && go install github.com/gordonklaus/ineffassign@v0.1.0 \
 		&& echo reflex && go install github.com/cespare/reflex@v0.3.1 \
 		&& echo govulncheck && go install golang.org/x/vuln/cmd/govulncheck@v1.1.4 \
-		&& echo gremlins && go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.5.1 \
+		&& echo gremlins && go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0 \
 		"
 
 # =============================================================================

@@ -1,11 +1,8 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"centralrelay/core/cabinet"
 )
@@ -81,7 +78,7 @@ func VerifyProofArtifact(a *ProofArtifact) VerifyResult {
 				OutputHash: s.OutputHash,
 			}
 		}
-		expected := recomputeChainHash(a.WorkflowID, a.SourceDigest, steps)
+		expected := cabinet.ComputeChainHashV1(a.WorkflowID, a.SourceDigest, steps)
 		if expected != a.ChainHash {
 			errs = append(errs, fmt.Sprintf(
 				"chain_hash mismatch: declared=%s recomputed=%s", a.ChainHash, expected,
@@ -162,23 +159,3 @@ func MarshalProofArtifact(a *ProofArtifact) ([]byte, error) {
 	return json.Marshal(a)
 }
 
-// recomputeChainHash mirrors cabinet.computeChainHash without importing the private function.
-func recomputeChainHash(workflowID, sourceDigest string, steps []cabinet.ProofTraceStep) string {
-	var sb strings.Builder
-	sb.WriteString(sourceDigest)
-	sb.WriteByte(0)
-	sb.WriteString(workflowID)
-	sb.WriteByte(0)
-	for _, s := range steps {
-		sb.WriteString(s.Name)
-		sb.WriteByte(0)
-		sb.WriteString(s.Module)
-		sb.WriteByte(0)
-		sb.WriteString(s.InputHash)
-		sb.WriteByte(0)
-		sb.WriteString(s.OutputHash)
-		sb.WriteByte(0)
-	}
-	sum := sha256.Sum256([]byte(sb.String()))
-	return hex.EncodeToString(sum[:])
-}
