@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -1052,4 +1053,251 @@ func TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips(t *testing.T) {
 	err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, emptyPKI, int64(16*1024*1024), logger)
 	require.NoError(t, err, "should load without error when trust store is not loaded")
 	assert.Contains(t, logBuf.String(), "skipped", "should log skipped outcome")
+}
+
+func TestLoadComponentsFromFS_UnknownKind(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	unknownFS := fstest.MapFS{
+		"thing.yaml": {Data: []byte("apiVersion: relay.cic.com/v1\nkind: SomethingUnknown\nmetadata:\n  name: test\n")},
+	}
+
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	err = loadComponentsFromFS(context.Background(), svc, unknownFS, ".", false, emptyPKIAssets(), 1024*1024, logger)
+	assert.NoError(t, err, "unknown kind must be warned but not cause an error")
+	assert.Contains(t, logBuf.String(), "Unknown component kind")
+}
+
+func TestRegisterNativeComponents_SequentialPutModuleFailures(t *testing.T) {
+	expectedErr := errors.New("storage full")
+	tests := []struct {
+		name         string
+		moduleOKs    int
+		workflowOKs  int
+		expectMsg    string
+	}{
+		{"ci.build PutModule", 1, 0, "ci.build"},
+		{"cic.source.assert PutModule", 2, 0, "cic.source.assert"},
+		{"cic.schema.build PutModule", 3, 0, "cic.schema.build"},
+		{"cic.artifact.sign PutModule", 4, 0, "cic.artifact.sign"},
+		{"cic.schema.compile PutWorkflow", 5, 0, "cic.schema.compile"},
+		{"cert.selfsigned PutModule", 5, 1, "cert.selfsigned"},
+		{"cert.selfsigned PutWorkflow", 6, 1, "cert.selfsigned"},
+		{"pipeline.start PutModule", 6, 2, "cic.pipeline.start"},
+		{"pipeline.test PutModule", 7, 2, "cic.pipeline.test"},
+		{"pipeline.validate PutModule", 8, 2, "cic.pipeline.validate"},
+		{"pipeline.release PutModule", 9, 2, "cic.pipeline.release"},
+		{"cic.schemas.pipeline PutWorkflow", 10, 2, "cic.schemas.pipeline"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc := new(mockCabinetService)
+			for i := 0; i < tt.moduleOKs; i++ {
+				mc.On("PutModule", mock.Anything).Return(nil).Once()
+			}
+			for i := 0; i < tt.workflowOKs; i++ {
+				mc.On("PutWorkflow", mock.Anything).Return(nil).Once()
+			}
+			if tt.moduleOKs == 5 && tt.workflowOKs == 0 {
+				// cic.schema.compile PutWorkflow fails
+				mc.On("PutWorkflow", mock.Anything).Return(expectedErr).Once()
+			} else if tt.moduleOKs == 6 && tt.workflowOKs == 1 {
+				// cert.selfsigned PutWorkflow fails
+				mc.On("PutWorkflow", mock.Anything).Return(expectedErr).Once()
+			} else if tt.moduleOKs == 10 && tt.workflowOKs == 2 {
+				// cic.schemas.pipeline PutWorkflow fails
+				mc.On("PutWorkflow", mock.Anything).Return(expectedErr).Once()
+			} else {
+				mc.On("PutModule", mock.Anything).Return(expectedErr).Once()
+			}
+			err := registerNativeComponents(context.Background(), mc, &PKIAssets{}, merkle.BuildContext{}, nil, &config{})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectMsg)
+		})
+	}
+}
+
+func TestLoadComponentsFromFS_NonYAMLSkipped(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	mixedFS := fstest.MapFS{
+		"readme.txt": {Data: []byte("just text")},
+		"script.sh":  {Data: []byte("#!/bin/sh")},
+	}
+
+	err = loadComponentsFromFS(context.Background(), svc, mixedFS, ".", false, emptyPKIAssets(), 1024*1024, newDiscardLogger())
+	assert.NoError(t, err, "non-YAML files must be silently skipped")
+}
+
+func TestLoadComponentsFromFS_BadYAMLHeader(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	// YAML that can't be unmarshaled into ComponentHeader
+	badFS := fstest.MapFS{
+		"bad.yaml": {Data: []byte(":\n  - not: valid: yaml: [")},
+	}
+
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	err = loadComponentsFromFS(context.Background(), svc, badFS, ".", false, emptyPKIAssets(), 1024*1024, logger)
+	assert.NoError(t, err, "bad YAML must be warned but not fail")
+	assert.Contains(t, logBuf.String(), "Could not unmarshal component header")
+}
+
+func TestLoadComponentsFromFS_LoadErrorContinue(t *testing.T) {
+	// A module YAML with no corresponding WASM file → loadModule fails
+	// → loadErr != nil, failOnError=false → log warning and continue
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	missingWasmFS := fstest.MapFS{
+		"mod.yaml": {Data: []byte("apiVersion: relay.cic.com/v1\nkind: Module\nmetadata:\n  name: x\n  version: \"1.0\"\nwasmDigest: \"sha256:deadbeef\"\nwasmSize: 8\n")},
+	}
+
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	// failOnError=false → should warn but not return error
+	err = loadComponentsFromFS(context.Background(), svc, missingWasmFS, ".", false, emptyPKIAssets(), 1024*1024, logger)
+	assert.NoError(t, err)
+	assert.Contains(t, logBuf.String(), "Error loading component")
+}
+
+func TestRegisterNativeComponents_SubsequentNewModuleDescriptorFailures(t *testing.T) {
+	// NewModuleDescriptor calls canonicaljson.ToJSON twice per invocation.
+	// succeedCnt = number of ToJSON calls that succeed; putModuleOKs = PutModule calls before failure.
+	tests := []struct {
+		name          string
+		succeedCnt    int // ToJSON calls that succeed (2 per module)
+		putModuleOKs  int // PutModule calls that must succeed before failure
+		expectMsg     string
+	}{
+		{"ci.build NewModuleDescriptor", 2, 1, "ci.build"},
+		{"cic.source.assert NewModuleDescriptor", 4, 2, "cic.source.assert"},
+		{"cic.schema.build NewModuleDescriptor", 6, 3, "cic.schema.build"},
+		{"cic.artifact.sign NewModuleDescriptor", 8, 4, "cic.artifact.sign"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount := 0
+			canonicaljson.SetToJSONMock(func(v any) ([]byte, error) {
+				callCount++
+				if callCount <= tt.succeedCnt {
+					return json.Marshal(v)
+				}
+				return nil, errors.New("json error")
+			})
+			t.Cleanup(func() { canonicaljson.SetToJSONMock(nil) })
+
+			mc := new(mockCabinetService)
+			for i := 0; i < tt.putModuleOKs; i++ {
+				mc.On("PutModule", mock.Anything).Return(nil).Once()
+			}
+
+			err := registerNativeComponents(context.Background(), mc, &PKIAssets{}, merkle.BuildContext{}, nil, &config{})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectMsg)
+		})
+	}
+}
+
+func TestLoadModule_ZeroWasmSize(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	// wasmSize=0 is explicitly forbidden
+	yamlContent := []byte("apiVersion: relay.cic.com/v1\nkind: Module\nmetadata:\n  name: bad\n  version: \"1.0\"\nwasmDigest: \"sha256:abc\"\nwasmSize: 0\n")
+	err = loadModule(context.Background(), svc, fstest.MapFS{}, "mod.yaml", yamlContent, emptyPKIAssets(), 1024*1024, newDiscardLogger())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "wasmSize")
+}
+
+func TestLoadComponentsFromFS_LoadErrorFailOnError(t *testing.T) {
+	// failOnError=true + loadErr → must return error (not just warn)
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	// Module with wasmSize=0 → loadModule returns error
+	badModFS := fstest.MapFS{
+		"mod.yaml": {Data: []byte("apiVersion: relay.cic.com/v1\nkind: Module\nmetadata:\n  name: x\n  version: \"1.0\"\nwasmDigest: \"sha256:abc\"\nwasmSize: 0\n")},
+	}
+
+	err = loadComponentsFromFS(context.Background(), svc, badModFS, ".", true, emptyPKIAssets(), 1024*1024, newDiscardLogger())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "error loading component")
+}
+
+func TestLoadPKIAssets_FileWithNoPEMData(t *testing.T) {
+	// A file with no PEM blocks logs a warning but succeeds
+	noPEMFS := fstest.MapFS{
+		"cert.pem": {Data: []byte("not a PEM block at all")},
+	}
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	assets, err := loadPKIAssets(noPEMFS, ".", logger)
+	require.NoError(t, err)
+	assert.False(t, assets.TrustStoreLoaded)
+	assert.Contains(t, logBuf.String(), "No PEM data found")
+}
+
+func TestLoadComponentsFromFS_ReadFileError(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	failingFS := &failingReadFileFS{
+		FS:         fstest.MapFS{"thing.yaml": {Data: []byte("kind: Schema")}},
+		failOnRead: map[string]bool{"thing.yaml": true},
+	}
+
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	err = loadComponentsFromFS(context.Background(), svc, failingFS, ".", false, emptyPKIAssets(), 1024*1024, logger)
+	assert.NoError(t, err)
+	assert.Contains(t, logBuf.String(), "Could not read file")
+}
+
+func TestLoadModule_InvalidPEMSignature(t *testing.T) {
+	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
+	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
+	require.NoError(t, err)
+
+	tempDir := t.TempDir()
+	wasmCode := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+	wasmDigest := "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "mod.wasm"), wasmCode, 0644))
+	// PEM with PRIVATE KEY block (not CERTIFICATE) → "Invalid PEM format" log
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "mod.pem"),
+		[]byte("-----BEGIN PRIVATE KEY-----\nYWJjZGVmZw==\n-----END PRIVATE KEY-----\n"), 0644))
+
+	yamlContent := fmt.Sprintf("apiVersion: relay.cic.com/v1\nkind: Module\nmetadata:\n  name: pki.invalid.pem\n  version: \"1.0\"\nwasmDigest: %q\nwasmSize: 8\n", wasmDigest)
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "mod.yaml"), []byte(yamlContent), 0644))
+
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+
+	err = loadModule(context.Background(), svc, os.DirFS(tempDir), "mod.yaml", []byte(yamlContent), emptyPKIAssets(), 1024*1024, logger)
+	assert.NoError(t, err)
+	assert.Contains(t, logBuf.String(), "Invalid PEM format")
 }

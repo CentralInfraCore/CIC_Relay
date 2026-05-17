@@ -11,9 +11,24 @@ import (
 	"time"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/recorder"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
+
+// mockCryptoService implements crypto.CryptoService for testing.
+type mockCryptoService struct{}
+
+func (m *mockCryptoService) Sign(_ context.Context, _ []byte) (string, error) {
+	return "mock-sig", nil
+}
+func (m *mockCryptoService) Decrypt(_ context.Context, _ []byte) ([]byte, error) {
+	return []byte("decrypted"), nil
+}
+func (m *mockCryptoService) HealthCheck(_ context.Context) error { return nil }
+
+var _ crypto.CryptoService = (*mockCryptoService)(nil)
 
 func TestMain(m *testing.M) {
 	// Disable log output for all tests in this package
@@ -145,6 +160,15 @@ func TestLoadConfig_RateLimitRPS_Invalid(t *testing.T) {
 	assert.Contains(t, err.Error(), "CIC_RATE_LIMIT_RPS")
 }
 
+func TestLoadConfig_RateLimitRPS_InvalidNotNumber(t *testing.T) {
+	t.Setenv("CIC_RATE_LIMIT_RPS", "notanumber")
+
+	cfg, err := loadConfig()
+	assert.Nil(t, cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CIC_RATE_LIMIT_RPS")
+}
+
 func TestLoadConfig_MaxConcurrent_Custom(t *testing.T) {
 	t.Setenv("CIC_MAX_CONCURRENT_REQUESTS", "10")
 
@@ -155,6 +179,15 @@ func TestLoadConfig_MaxConcurrent_Custom(t *testing.T) {
 
 func TestLoadConfig_MaxConcurrent_Invalid(t *testing.T) {
 	t.Setenv("CIC_MAX_CONCURRENT_REQUESTS", "0")
+
+	cfg, err := loadConfig()
+	assert.Nil(t, cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "CIC_MAX_CONCURRENT_REQUESTS")
+}
+
+func TestLoadConfig_MaxConcurrent_InvalidNotNumber(t *testing.T) {
+	t.Setenv("CIC_MAX_CONCURRENT_REQUESTS", "notanumber")
 
 	cfg, err := loadConfig()
 	assert.Nil(t, cfg)
@@ -618,4 +651,129 @@ func TestBuildRecorderOption_NilSecrets(t *testing.T) {
 	logger := logrus.New()
 	opt := buildRecorderOption(logger, nil)
 	assert.NotNil(t, opt, "WithRecorder(nil) must return a non-nil option")
+}
+
+func TestBuildRecorderOption_CryptoInitFails(t *testing.T) {
+	orig := newVaultCryptoSvc
+	newVaultCryptoSvc = func(_, _ string) (crypto.CryptoService, error) {
+		return nil, errors.New("vault unreachable")
+	}
+	defer func() { newVaultCryptoSvc = orig }()
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	opt := buildRecorderOption(logger, &VaultSecrets{
+		Token: "t", MountPath: "m", KeyName: "k", AuditRepoPath: t.TempDir(),
+	})
+	assert.NotNil(t, opt)
+}
+
+func TestBuildRecorderOption_FullSuccess(t *testing.T) {
+	origCrypto := newVaultCryptoSvc
+	origRec := newGitStateRecorder
+	stubRecorder := &recorder.GitStateRecorder{
+		RepoPath:      t.TempDir(),
+		CryptoService: &mockCryptoService{},
+	}
+	newVaultCryptoSvc = func(_, _ string) (crypto.CryptoService, error) {
+		return &mockCryptoService{}, nil
+	}
+	newGitStateRecorder = func(_ string, _ crypto.CryptoService) (*recorder.GitStateRecorder, error) {
+		return stubRecorder, nil
+	}
+	defer func() {
+		newVaultCryptoSvc = origCrypto
+		newGitStateRecorder = origRec
+	}()
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	opt := buildRecorderOption(logger, &VaultSecrets{
+		Token: "t", MountPath: "m", KeyName: "k", AuditRepoPath: t.TempDir(),
+	})
+	assert.NotNil(t, opt)
+}
+
+func TestBuildRecorderOption_RecorderInitFails(t *testing.T) {
+	origCrypto := newVaultCryptoSvc
+	origRec := newGitStateRecorder
+	newVaultCryptoSvc = func(_, _ string) (crypto.CryptoService, error) {
+		return &mockCryptoService{}, nil
+	}
+	newGitStateRecorder = func(_ string, _ crypto.CryptoService) (*recorder.GitStateRecorder, error) {
+		return nil, errors.New("git recorder init failed")
+	}
+	defer func() {
+		newVaultCryptoSvc = origCrypto
+		newGitStateRecorder = origRec
+	}()
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	opt := buildRecorderOption(logger, &VaultSecrets{
+		Token: "t", MountPath: "m", KeyName: "k", AuditRepoPath: "/nonexistent",
+	})
+	assert.NotNil(t, opt)
+}
+
+func TestBuildOperatorIfConfigured_MissingSecret(t *testing.T) {
+	t.Setenv("CIC_INFRA_REPO_PATH", t.TempDir())
+	t.Setenv("CIC_OPERATOR_SECRET", "")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	exitCalled := false
+	logger.ExitFunc = func(_ int) { exitCalled = true }
+
+	result := buildOperatorIfConfigured(context.Background(), new(mockCabinetService), logger)
+	assert.True(t, exitCalled, "logger.Fatal must be called when CIC_OPERATOR_SECRET is missing")
+	assert.Nil(t, result)
+}
+
+func TestBuildOperatorIfConfigured_WithFileSource(t *testing.T) {
+	t.Setenv("CIC_INFRA_REPO_PATH", t.TempDir())
+	t.Setenv("CIC_OPERATOR_SECRET", "test-secret")
+	t.Setenv("CIC_GIT_SOURCE_URL", "")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	op := buildOperatorIfConfigured(context.Background(), new(mockCabinetService), logger)
+	assert.NotNil(t, op)
+}
+
+func TestBuildOperatorIfConfigured_MissingGitLocalPath(t *testing.T) {
+	t.Setenv("CIC_INFRA_REPO_PATH", t.TempDir())
+	t.Setenv("CIC_OPERATOR_SECRET", "test-secret")
+	t.Setenv("CIC_GIT_SOURCE_URL", "https://example.com/repo.git")
+	t.Setenv("CIC_GIT_SOURCE_LOCAL_PATH", "")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	exitCalled := false
+	logger.ExitFunc = func(_ int) { exitCalled = true }
+
+	result := buildOperatorIfConfigured(context.Background(), new(mockCabinetService), logger)
+	assert.True(t, exitCalled, "logger.Fatal must be called when CIC_GIT_SOURCE_LOCAL_PATH is missing")
+	assert.Nil(t, result)
+}
+
+func TestBuildOperatorIfConfigured_WithGitSource(t *testing.T) {
+	t.Setenv("CIC_INFRA_REPO_PATH", t.TempDir())
+	t.Setenv("CIC_OPERATOR_SECRET", "test-secret")
+	t.Setenv("CIC_GIT_SOURCE_URL", "https://example.com/repo.git")
+	t.Setenv("CIC_GIT_SOURCE_LOCAL_PATH", t.TempDir())
+	t.Setenv("CIC_GIT_SOURCE_BRANCH", "") // default branch path
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	op := buildOperatorIfConfigured(ctx, new(mockCabinetService), logger)
+	assert.NotNil(t, op)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"testing/fstest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,4 +45,15 @@ func TestBootstrapPKI_UnknownMode_Error(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown CIC_TRUST_MODE")
 	assert.Contains(t, err.Error(), "staging")
+}
+
+func TestBootstrapPKI_DevMode_LoadError(t *testing.T) {
+	// A file (not directory) at "embedded/pki" → fs.ReadDir returns a non-ErrNotExist error
+	// → loadPKIAssets propagates it → bootstrapPKI wraps with "pki bootstrap (dev)"
+	badFS := fstest.MapFS{
+		"embedded/pki": {Mode: 0644, Data: []byte("not-a-dir")},
+	}
+	_, err := bootstrapPKI(TrustModeDev, badFS, newDiscardLogger())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "pki bootstrap (dev)")
 }

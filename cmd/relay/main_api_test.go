@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -538,4 +540,52 @@ func TestSimpleHandlers(t *testing.T) {
 			assert.JSONEq(t, tc.expected, w.Body.String())
 		})
 	}
+}
+
+type errorReader struct{}
+
+func (e *errorReader) Read(_ []byte) (int, error) {
+	return 0, errors.New("read error")
+}
+
+func TestSetHandler_ReadBodyError(t *testing.T) {
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{
+		api:    new(mockCabinetService),
+		config: &config{MaxJSONInputSize: 1024 * 1024},
+		logger: logger,
+	}
+	req := httptest.NewRequest(http.MethodPost, "/set", io.NopCloser(&errorReader{}))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assertErrorJSON(t, w, "read_error")
+}
+
+func TestSetHandler_SourceDigestFromTreeHash(t *testing.T) {
+	// SourceTreeHash != "unknown" → payload.SourceDigest = SourceTreeHash
+	orig := SourceTreeHash
+	SourceTreeHash = "sha256:knownhash"
+	defer func() { SourceTreeHash = orig }()
+
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.MatchedBy(func(sp *cabinet.SetPayload) bool {
+		return sp.SourceDigest == "sha256:knownhash"
+	})).Return(&cabinet.SetResponse{Results: map[string]any{}}, nil)
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{
+		api:    mockAPI,
+		config: &config{MaxJSONInputSize: 1024 * 1024},
+		logger: logger,
+	}
+
+	body, _ := json.Marshal(map[string]any{"workflow_id": "test@1.0"})
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+	mockAPI.AssertExpectations(t)
 }
