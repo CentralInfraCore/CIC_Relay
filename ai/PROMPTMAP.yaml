@@ -1199,3 +1199,82 @@ tasks:
     status: done
     priority: 49
     milestone: M31
+
+sprint: 14
+tasks:
+  - task: "ci-coverage-thresholds-sync"
+    status: done
+    priority: 51
+    milestone: M7.5
+    prompt: |
+      verify.yml per-package coverage küszöbök szinkronizálása a Makefile értékekkel.
+      21 explicit csomag-küszöb; skip lista: sourcehash, nexus/types, embedded/pki.
+      Default: min=80%.
+    accept: .github/workflows/verify.yml frissítve
+
+  - task: "ci-govulncheck"
+    status: done
+    priority: 52
+    milestone: M7.6
+    prompt: |
+      govulncheck@v1.1.4 hozzáadása a verify CI job-hoz.
+      continue-on-error: true (advisory) — Go 1.25+ után hard gate.
+    accept: .github/workflows/verify.yml govulncheck lépés
+
+  - task: "ci-mutation-gate"
+    status: done
+    priority: 53
+    milestone: M7.7
+    prompt: |
+      Mutation CI job: core/cabinet + schemapipeline + schemacompile gremlins v0.5.1,
+      --threshold-efficacy 90, parallel lépések.
+    accept: .github/workflows/verify.yml mutation job
+
+  - task: "layer2-cic-signed-ca"
+    status: done
+    priority: 54
+    milestone: M36
+    prompt: |
+      cic_signed_ca scaffold → implemented.
+      PKIAssets.CertChainHash kiszámítása; bctx.CAFingerprint + CertChainHash direct wiring main.go-ban;
+      cic_signed_ca = bctx.CAFingerprint ha PKI betöltve, egyébként "stub:pending".
+    tests:
+      - core/modules/schemacompile/schemacompile_test.go
+      - cmd/relay/bootstrap_test.go
+    accept: make test && mutate schemacompile efficacy >= 90%
+
+sprint: 15
+tasks:
+  - task: "cmd-relay-coverage-90"
+    status: todo
+    priority: 55
+    milestone: ~
+    prompt: |
+      cmd/relay/main.go 80% → 90%: injectable osExit-szerű hook
+      buildOperatorIfConfigured és buildRecorderOption error ágaihoz.
+      Minta: tools/canonicalize osExit pattern.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make coverage-check-pkgs (cmd/relay >= 90%)
+
+  - task: "go-125-upgrade"
+    status: todo
+    priority: 56
+    milestone: ~
+    prompt: |
+      Go 1.24.6 → 1.25.x toolchain upgrade.
+      docker-compose.yaml builder image digest frissítése.
+      govulncheck CI lépésből continue-on-error eltávolítása (hard gate).
+    accept: make test zöld + govulncheck CI nem ad hibát
+
+  - task: "upstream-source-http"
+    status: todo
+    priority: 57
+    milestone: M37
+    prompt: |
+      UpstreamSource HTTP implementáció: CIC_UPSTREAM_URL env alapján
+      fetch + retry/backoff + YAML/JSON response parse.
+      Scaffold → implemented. Relay federáció v2 előkészítés.
+    tests:
+      - core/nexus/iac/upstream_test.go
+    accept: make test && UpstreamSource FetchConfig HTTP hívást végez

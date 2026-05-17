@@ -139,15 +139,13 @@ Helyette:
 
 ---
 
-## Következő lépések (sprint 4, prioritás szerint)
+## Következő lépések (sprint 15, prioritás szerint)
 
-1. **ci-quality-gates** — lint/vet/coverage-threshold CI-ban (M7.2-M7.4)
-2. **limit-schema-config** — LIMITS schema-vezérelt, `CIC_WASM_EXEC_TIMEOUT_SECONDS` (M4.4)
-3. **circuit-breaker-rate-limit** — rate limiter + concurrent cap + slow-loris (M9)
-4. **operator-bootstrap-lifecycle** — HMAC token bootstrap + onboard/offboard (M16.2-3)
-5. **nexus-upstream-source** — UpstreamSource HTTP implementáció (M11)
+1. **cmd-relay-coverage** — `buildOperatorIfConfigured` + `buildRecorderOption` injectable hook, 80%→90% (p54)
+2. **go-125-upgrade** — Go 1.24.6 → 1.25.x; `govulncheck` hard gate feloldása CI-ban
+3. **upstream-source-http** — `UpstreamSource` HTTP implementáció relay federáció v2-höz (M37)
 
-Részletek és elfogadási kritériumok: `ai/PROMPTMAP.yaml`
+Sprint 4–14 összes task Done. Részletek: `ai/ROADMAP.md` Sprint 15 szekció.
 
 ---
 
