@@ -132,8 +132,11 @@ A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
 | Task | Milestone | Prioritás | Leírás |
 |------|-----------|-----------|--------|
 | p54  | —         | ✅ Done   | `cmd/relay/main.go` 80%→**90%**: injectable seams + 40+ célzott teszt |
-| p55  | —         | 🟡 1      | Go 1.24.6 → 1.25.x toolchain upgrade; govulncheck hard gate feloldása CI-ban |
-| p56  | M37       | 🟢 2      | `UpstreamSource` HTTP implementáció (relay federáció v2 előkészítés) |
+| p55  | —         | ✅ Done   | Go 1.24.6 → 1.25.10 toolchain upgrade; govulncheck hard gate feloldása CI-ban |
+| p56  | M37       | 🟢 1      | `UpstreamSource` HTTP implementáció (relay federáció v2 előkészítés) |
+| p57  | —         | ✅ Done   | fix(B1): `ComputeChainHashV1` export — verifier és teszt egységes forrást hív |
+| p58  | —         | ✅ Done   | fix(B2): manifest timestamp eltávolítva, `make manifest-update` unified |
+| p59  | —         | ✅ Done   | fix(B3): PKI prod fail-closed — `CIC_PLATFORM_CA_BUNDLE` kötelező, hiány = error |
 
 ---
 
@@ -153,9 +156,7 @@ artifact verifikációja `chain_hash mismatch` hibával bukna el.
 A teszt helper (`chainHashFor`) szintén a hibás algoritmust másolja, ezért CI zöld marad
 — a hiba csak cross-package integrációs szinten látható.
 
-**Státusz:** `bug / P0` — audit hitelességi hiba, CI-ban nem látható
-
-**Fix:** `computeChainHash` exportálása `ComputeChainHashV1`-ként; verifier és teszt ezt hívja.
+**Státusz:** ✅ **Done** (2026-05-17) — `ComputeChainHashV1` exportálva, verifier és tesztek egységes forrást hívnak.
 Task: `p57`
 
 ---
@@ -175,9 +176,7 @@ Külön probléma: `make manifest-update` (`git ls-files -z | xargs -0 sha256sum
 és más formátumot gyárt mint `gen_manifest.sh` (`find ai context GOLDEN`) — a két parancs
 inkompatibilis, a Makefile-lal frissített MANIFEST.sha256 a CI-on nem megy át.
 
-**Státusz:** `bug / P1` — provenance CI gate nem működik
-
-**Fix:** timestamp sor eltávolítása; `make manifest-update` a `gen_manifest.sh`-t hívja.
+**Státusz:** ✅ **Done** (2026-05-17) — timestamp eltávolítva, `make manifest-update` a `gen_manifest.sh`-t hívja, `MANIFEST.sha256` újragenerálva.
 Task: `p58`
 
 ---
@@ -199,9 +198,7 @@ case TrustModeProd:
 Ez dokumentált scaffold — de a jelenlegi viselkedés nem jelzi vissza a hívónak,
 hogy a trust store üres. Prod deployban ez észrevétlenül kikapcsolt PKI ellenőrzést jelent.
 
-**Státusz:** `scaffold / P1` — dokumentált, de prod deployra blokkoló
-
-**Fix:** prod módban kötelező CA bundle path env; hiánya esetén `return nil, fmt.Errorf(...)`.
+**Státusz:** ✅ **Done** (2026-05-17) — `CIC_PLATFORM_CA_BUNDLE` kötelező prod módban; hiány esetén error, 3 teszt fedezi.
 Task: `p59`
 
 ---

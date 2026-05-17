@@ -1258,7 +1258,7 @@ tasks:
     accept: make coverage-check-pkgs (cmd/relay >= 90%)
 
   - task: "go-125-upgrade"
-    status: todo
+    status: done
     priority: 56
     milestone: ~
     prompt: |
@@ -1282,7 +1282,7 @@ tasks:
   # --- Bug fixes — külső review 2026-05-17 ---
 
   - task: "fix-proof-chain-hash-export"
-    status: todo
+    status: done
     priority: 58
     milestone: ~
     bug: B1
@@ -1310,7 +1310,7 @@ tasks:
     accept: make test && make verify
 
   - task: "fix-manifest-timestamp"
-    status: todo
+    status: done
     priority: 59
     milestone: ~
     bug: B2
@@ -1337,7 +1337,7 @@ tasks:
     accept: scripts/gen_manifest.sh . /tmp/check.sha256 && diff MANIFEST.sha256 /tmp/check.sha256 — nulla diff
 
   - task: "fix-pki-prod-fail-closed"
-    status: todo
+    status: done
     priority: 60
     milestone: ~
     bug: B3
