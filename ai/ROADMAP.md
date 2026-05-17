@@ -50,6 +50,8 @@ Ez a fájl az AI-támogatott roadmap aktív állapota.
 | M33       | **Done**      | pkg/merkle: Merkle-root alapú build provenance hash (VerificationManifest, BuildVerificationRoot) |
 | M34       | **Done**      | Merkle integrációk: BuildContext ldflags, NewSignArtifactFunc → verification_root, bootstrap wiring |
 | M35       | **Done**      | BuildContext feltöltése: GoRuntimeDigest, BuilderImageDigest ldflags, CAFingerprint PKIAssets-ből |
+| M36       | **Done**      | Layer 2 CICSourceCA signing: PKIAssets.CertChainHash, bctx wiring, cic_signed_ca = CAFingerprint |
+| M7.5–7.7  | **Done**      | CI quality gate: per-package coverage küszöbök, govulncheck (advisory), mutation job |
 
 ---
 
@@ -59,7 +61,7 @@ Ez a fájl az AI-támogatott roadmap aktív állapota.
 |---|---|---|
 | `UpstreamSource` (HTTP IaC source) | scaffold | relay federáció v2 |
 | `LocalWorker` in-process | scaffold | 3-process isolation + Vault |
-| `cicSign` / `cicSignedCA` mezők | scaffold | Layer 2 — CICSourceCA signing |
+| `cicSign` / `cicSignedCA` mezők | **implemented** | M36 ✅ — CAFingerprint-alapú |
 | quorum döntési réteg | concept | nincs runtime megfelelő |
 | CICmeta protocol | concept | nincs élő bridge a Relay runtime-hoz |
 
@@ -84,7 +86,7 @@ Ez a fájl az AI-támogatott roadmap aktív állapota.
 
 ---
 
-## Sprint 14 — Quality Enforcement (aktív)
+## Sprint 14 — Quality Enforcement — Lezárva
 
 ### Kontextus
 
@@ -125,27 +127,20 @@ A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
 
 ---
 
+## Sprint 15 — aktív
+
+| Task | Milestone | Prioritás | Leírás |
+|------|-----------|-----------|--------|
+| p54  | —         | 🟡 1      | `cmd/relay/main.go` 80%→90%: injectable hook `buildOperatorIfConfigured` + `buildRecorderOption` |
+| p55  | —         | 🟡 2      | Go 1.24.6 → 1.25.x toolchain upgrade; govulncheck hard gate feloldása CI-ban |
+| p56  | M37       | 🟢 3      | `UpstreamSource` HTTP implementáció (relay federáció v2 előkészítés) |
+
+---
+
 ## Tervezett milestone-ok (részletes)
 
-### M30 — GitRegistry auto-wiring
-* **Állapot:** Tervezett
-* **Fő cél:** Az induláskor ismert git repók automatikus regisztrálása a `RepoRegistry`-ben, hogy WASM modulok azonnal hivatkozhassanak rájuk repoID alapján. Az üres registry funkcionálisan halott registry — ez zárja be a M28 hiányát.
-* **Architekturális elv:** A whitelist elvét megtartjuk — csak az operátor által explicit konfigurált repók kerülnek be. Az env var az operátor deklaráció.
-* **Részfeladatok:**
-    * `cmd/relay/main.go`: ha `CIC_INFRA_REPO_PATH` be van állítva → `gitRegistry.Register("infra", infraPath)`
-    * `cmd/relay/main.go`: ha `CIC_GIT_SOURCE_LOCAL_PATH` be van állítva → `gitRegistry.Register("iac-config", localPath)`
-    * `config/relay.config.schema.yaml`: dokumentálja a repoID-konvenciókat
-* **Előfeltétel:** M28 (RepoRegistry, megvan)
-
-### M31 — obs wiring for ExecGitOps
-* **Állapot:** Tervezett
-* **Fő cél:** Operatív láthatóság a git műveletek futási idejére és hibáira. Mintája: M22.8 (cicwasm obs wiring).
-* **Részfeladatok:**
-    * `core/nexus/git/exec_gitops.go`: `logSink obs.LogSink`, `metricSink obs.MetricSink` mezők; `SetObsSinks` metódus
-    * Per-operáció `relay.git.op_duration_ms` HistogramPoint (`op` attr: clone/fetch/checkout/commit/push/status)
-    * Hiba esetén WARN LogRecord (`relay.git.op_error`)
-    * `cmd/relay/main.go`: `gitOps.SetObsSinks(logrusSink, logrusSink)` wiring
-    * Tesztek: `CaptureSink`-kel ellenőrzi a metrika+log emissziókat
+### M30–M31 — Done (archívum)
+Részletek: `ROADMAP_archive.md`
 
 ---
 
