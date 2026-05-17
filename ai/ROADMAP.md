@@ -131,9 +131,9 @@ A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
 
 | Task | Milestone | Prioritás | Leírás |
 |------|-----------|-----------|--------|
-| p54  | —         | 🟡 1      | `cmd/relay/main.go` 80%→90%: injectable hook `buildOperatorIfConfigured` + `buildRecorderOption` |
-| p55  | —         | 🟡 2      | Go 1.24.6 → 1.25.x toolchain upgrade; govulncheck hard gate feloldása CI-ban |
-| p56  | M37       | 🟢 3      | `UpstreamSource` HTTP implementáció (relay federáció v2 előkészítés) |
+| p54  | —         | ✅ Done   | `cmd/relay/main.go` 80%→**90%**: injectable seams + 40+ célzott teszt |
+| p55  | —         | 🟡 1      | Go 1.24.6 → 1.25.x toolchain upgrade; govulncheck hard gate feloldása CI-ban |
+| p56  | M37       | 🟢 2      | `UpstreamSource` HTTP implementáció (relay federáció v2 előkészítés) |
 
 ---
 
