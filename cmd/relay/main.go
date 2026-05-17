@@ -643,15 +643,18 @@ func main() {
 		"trust_store_loaded": pkiAssets.TrustStoreLoaded,
 	}).Info("PKI trust store ready")
 
-	// M34: build context for Merkle-root verification hash.
+	// M34+M36: build context for Merkle-root verification hash.
 	// ToolchainDigest: sha256 of the Go runtime version string (stable, no external dep).
 	// DockerImageChecksum: injected via -X main.BuilderImageDigest at build time.
+	// CAFingerprint/CertChainHash: from loaded PKI trust store (Layer 2 wiring).
 	bctx := merkle.BuildContext{
 		SourceRef:            CommitHash,
 		SourceTreeDigest:     SourceTreeHash,
 		DependencyLockDigest: merkle.GoSumDigest("go.sum"),
 		ToolchainDigest:      merkle.GoRuntimeDigest(),
 		DockerImageChecksum:  BuilderImageDigest,
+		CAFingerprint:        pkiAssets.CAFingerprint,
+		CertChainHash:        pkiAssets.CertChainHash,
 	}
 
 	// Register built-in native modules first (core.test, ci.build, …).

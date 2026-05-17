@@ -213,7 +213,8 @@ func SignArtifact(_ context.Context, input interface{}) (interface{}, error) {
 //
 // When signer is nil, cic_sign is "unavailable" (non-fatal: the provenance record
 // is still complete, just without a Vault signature).
-// cic_signed_ca is "stub:pending" until Layer 2 (CICSourceCA cert chain) is wired.
+// cic_signed_ca is set to bctx.CAFingerprint when the PKI trust store is loaded (Layer 2).
+// Falls back to "stub:pending" in dev/test mode when no CA is available.
 // The verification_root hash is always valid regardless of signing availability.
 func NewSignArtifactFunc(bctx merkle.BuildContext, signer ArtifactSigner) func(context.Context, interface{}) (interface{}, error) {
 	return func(ctx context.Context, input interface{}) (interface{}, error) {
@@ -279,11 +280,18 @@ func newSignArtifactResult(ctx context.Context, input interface{}, bctx merkle.B
 		cicSign = sig
 	}
 
+	// Layer 2 (M36): use the loaded CA fingerprint when available; fall back to
+	// "stub:pending" in dev/test mode where the trust store is not bootstrapped.
+	cicSignedCA := "stub:pending"
+	if bctx.CAFingerprint != "" {
+		cicSignedCA = bctx.CAFingerprint
+	}
+
 	return map[string]interface{}{
 		"artifact":          rawArtifact,
 		"build_hash":        buildHash,
 		"cic_sign":          cicSign,
-		"cic_signed_ca":     "stub:pending", // Layer 2: CICSourceCA cert chain — not yet wired
+		"cic_signed_ca":     cicSignedCA,
 		"verification_root": merkle.BuildVerificationRoot(manifest),
 	}, nil
 }
