@@ -226,14 +226,16 @@ func TestSubprocessWorker_Decrypt_NoResponse(t *testing.T) {
 }
 
 func TestSubprocessWorker_Decrypt_BadJSON(t *testing.T) {
-	w := newSubprocessWorkerWithExe("sh", []string{"-c", `echo "not-json"`}, nil)
+	// read drains the JSON request from stdin before responding, avoiding broken-pipe race.
+	w := newSubprocessWorkerWithExe("sh", []string{"-c", `read line; echo "not-json"`}, nil)
 	_, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parse subprocess response")
 }
 
 func TestSubprocessWorker_Decrypt_WorkerError(t *testing.T) {
-	script := `echo '{"error":"worker failed"}'`
+	// read drains the JSON request from stdin before responding, avoiding broken-pipe race.
+	script := `read line; echo '{"error":"worker failed"}'`
 	w := newSubprocessWorkerWithExe("sh", []string{"-c", script}, nil)
 	resp, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
 	require.NoError(t, err)
@@ -243,7 +245,8 @@ func TestSubprocessWorker_Decrypt_WorkerError(t *testing.T) {
 
 func TestSubprocessWorker_Decrypt_WithEnv(t *testing.T) {
 	// Covers the w.env != nil branch: the env slice is passed to the subprocess.
-	script := `echo '{"result":"dGVzdA=="}'`
+	// read drains stdin before responding to avoid broken-pipe race under -race.
+	script := `read line; echo '{"result":"dGVzdA=="}'`
 	w := newSubprocessWorkerWithExe("sh", []string{"-c", script}, []string{"PATH=/usr/bin:/bin"})
 	resp, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
 	require.NoError(t, err)
