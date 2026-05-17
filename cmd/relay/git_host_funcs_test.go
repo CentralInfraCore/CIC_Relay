@@ -268,3 +268,60 @@ func TestMakeStatusFn_Error(t *testing.T) {
 	out, _ := mod.mem.Read(128, uint32(n))
 	assert.Contains(t, string(out), "error")
 }
+
+// bad request JSON path for each make*Fn (reqPtr+reqLen > memory → gitReadJSON returns false)
+
+func TestMakeCloneFn_BadRequest(t *testing.T) {
+	fn := makeCloneFn(&stubGitOps{})
+	mod := newMod(64)
+	n := fn(context.Background(), mod, 50, 100, 0, 64)
+	out, _ := mod.mem.Read(0, uint32(n))
+	assert.Contains(t, string(out), "bad request JSON")
+}
+
+func TestMakeFetchFn_BadRequest(t *testing.T) {
+	fn := makeFetchFn(&stubGitOps{})
+	mod := newMod(64)
+	n := fn(context.Background(), mod, 50, 100, 0, 64)
+	out, _ := mod.mem.Read(0, uint32(n))
+	assert.Contains(t, string(out), "bad request JSON")
+}
+
+func TestMakeCheckoutFn_BadRequest(t *testing.T) {
+	fn := makeCheckoutFn(&stubGitOps{})
+	mod := newMod(64)
+	n := fn(context.Background(), mod, 50, 100, 0, 64)
+	out, _ := mod.mem.Read(0, uint32(n))
+	assert.Contains(t, string(out), "bad request JSON")
+}
+
+func TestMakeCommitFn_BadRequest(t *testing.T) {
+	fn := makeCommitFn(&stubGitOps{})
+	mod := newMod(64)
+	n := fn(context.Background(), mod, 50, 100, 0, 64)
+	out, _ := mod.mem.Read(0, uint32(n))
+	assert.Contains(t, string(out), "bad request JSON")
+}
+
+func TestMakePushFn_BadRequest(t *testing.T) {
+	fn := makePushFn(&stubGitOps{})
+	mod := newMod(64)
+	n := fn(context.Background(), mod, 50, 100, 0, 64)
+	out, _ := mod.mem.Read(0, uint32(n))
+	assert.Contains(t, string(out), "bad request JSON")
+}
+
+func TestMakeStatusFn_BadRequest(t *testing.T) {
+	fn := makeStatusFn(&stubGitOps{})
+	mod := newMod(64)
+	n := fn(context.Background(), mod, 50, 100, 0, 64)
+	out, _ := mod.mem.Read(0, uint32(n))
+	assert.Contains(t, string(out), "bad request JSON")
+}
+
+func TestGitWriteJSON_MarshalError(t *testing.T) {
+	mod := newMod(64)
+	ch := make(chan int) // json.Marshal fails on channels
+	n := gitWriteJSON(mod, 0, 64, ch)
+	assert.Equal(t, int32(-1), n)
+}

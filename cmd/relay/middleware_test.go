@@ -112,6 +112,19 @@ func TestConcurrentLimiter_BlocksWhenFull(t *testing.T) {
 	wg.Wait()
 }
 
+func TestIPRateLimiter_InvalidRemoteAddr(t *testing.T) {
+	// RemoteAddr without port → net.SplitHostPort fails → fallback ip = RemoteAddr
+	rl := newIPRateLimiter(100)
+	handler := rl.Middleware(okHandler)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "127.0.0.1" // no port
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
 func TestConcurrentLimiter_ReleasesSlotAfterRequest(t *testing.T) {
 	cl := newConcurrentLimiter(1)
 	handler := cl.Middleware(okHandler)

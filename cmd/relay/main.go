@@ -45,6 +45,14 @@ var listenAndServe = func(srv *http.Server) error {
 	return srv.ListenAndServe()
 }
 
+// newVaultCryptoSvc és newGitStateRecorder injectable seam-ek tesztelhetőséghez.
+var newVaultCryptoSvc = func(mount, key string) (crypto.CryptoService, error) {
+	return crypto.NewVaultCryptoService(mount, key)
+}
+var newGitStateRecorder = func(path string, svc crypto.CryptoService) (*recorder.GitStateRecorder, error) {
+	return recorder.NewGitStateRecorder(path, svc)
+}
+
 // config holds the application's configuration.
 type config struct {
 	MaxJSONInputSize       int64
@@ -436,13 +444,13 @@ func buildRecorderOption(logger *logrus.Logger, secrets *VaultSecrets) cabinet.C
 		return cabinet.WithRecorder(nil)
 	}
 
-	cryptoSvc, err := crypto.NewVaultCryptoService(secrets.MountPath, secrets.KeyName)
+	cryptoSvc, err := newVaultCryptoSvc(secrets.MountPath, secrets.KeyName)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to init Vault crypto service — ProofTrace recording disabled")
 		return cabinet.WithRecorder(nil)
 	}
 
-	gitRecorder, err := recorder.NewGitStateRecorder(secrets.AuditRepoPath, cryptoSvc)
+	gitRecorder, err := newGitStateRecorder(secrets.AuditRepoPath, cryptoSvc)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to init audit git recorder — ProofTrace recording disabled")
 		return cabinet.WithRecorder(nil)
@@ -475,6 +483,7 @@ func buildOperatorIfConfigured(ctx context.Context, cabinetSvc cabinet.Cabinet, 
 	secret := os.Getenv("CIC_OPERATOR_SECRET")
 	if secret == "" {
 		logger.Fatal("FATAL: CIC_INFRA_REPO_PATH is set but CIC_OPERATOR_SECRET is missing — cannot generate bootstrap tokens")
+		return nil // unreachable in production (Fatal calls os.Exit); enables testing via logger.ExitFunc
 	}
 
 	// Select IaC source: GitSource if CIC_GIT_SOURCE_URL is set, else FileSource.
@@ -483,6 +492,7 @@ func buildOperatorIfConfigured(ctx context.Context, cabinetSvc cabinet.Cabinet, 
 		localPath := os.Getenv("CIC_GIT_SOURCE_LOCAL_PATH")
 		if localPath == "" {
 			logger.Fatal("FATAL: CIC_GIT_SOURCE_URL is set but CIC_GIT_SOURCE_LOCAL_PATH is missing")
+			return nil // unreachable in production; enables testing via logger.ExitFunc
 		}
 		branch := os.Getenv("CIC_GIT_SOURCE_BRANCH")
 		if branch == "" {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -178,4 +179,13 @@ func TestCompileHandler_InternalError(t *testing.T) {
 	server.compileHandler(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assertErrorJSON(t, w, "internal_error")
+}
+
+func TestCompileHandler_ReadBodyError(t *testing.T) {
+	server := newTestCompileServer(t, new(mockCabinetService))
+	req := httptest.NewRequest(http.MethodPost, "/v1/schema/compile", io.NopCloser(&errorReader{}))
+	w := httptest.NewRecorder()
+	server.compileHandler(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assertErrorJSON(t, w, "read_error")
 }

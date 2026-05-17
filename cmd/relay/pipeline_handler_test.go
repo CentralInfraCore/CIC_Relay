@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -207,4 +208,13 @@ func TestPipelineHandler_InternalError(t *testing.T) {
 	server.pipelineHandler(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assertErrorJSON(t, w, "internal_error")
+}
+
+func TestPipelineHandler_ReadBodyError(t *testing.T) {
+	server := newTestPipelineServer(t, new(mockCabinetService))
+	req := httptest.NewRequest(http.MethodPost, "/v1/schemas/pipeline", io.NopCloser(&errorReader{}))
+	w := httptest.NewRecorder()
+	server.pipelineHandler(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assertErrorJSON(t, w, "read_error")
 }
