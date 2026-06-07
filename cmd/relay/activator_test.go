@@ -91,7 +91,5 @@ func TestCabinetActivator_Activate_PayloadMapping(t *testing.T) {
 
 	require.NotNil(t, capturedPayload)
 	assert.Equal(t, "postgres.instance@v2", capturedPayload.WorkflowID)
-	input, ok := capturedPayload.Payload["input"]
-	require.True(t, ok)
-	assert.Equal(t, spec, input)
+	assert.Equal(t, spec, capturedPayload.Payload)
 }
