@@ -1,0 +1,32 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: CompileRequest
+  kind: struct
+  description: CompileRequest is the request body for POST /v1/schema/compile.
+  implements: []
+  references: []
+- name: CompileResponse
+  kind: struct
+  description: CompileResponse is the response body for POST /v1/schema/compile.
+  implements: []
+  references:
+  - cabinet.ProofTrace
+- name: compileHandler
+  kind: method
+  receiver: relayServer
+  description: ''
+  references:
+  - uuid.New
+  - logrus.Fields
+  - cabinet.SetPayload
+  - cabinet.IsTimeout

@@ -1,0 +1,17 @@
+tags:
+  - relay
+  - executor
+  - component
+category:
+  - execution
+  - architecture
+related_nodes:
+  - concept/graf_vegrehajtas
+  - concept/plugin_interface
+  - concept/schema_kezeles
+used_in:
+  - runtime
+  - architecture
+description: >
+  Defines the role and behavior of the relay component.
+  Emphasizes stateless, deterministic execution and when to use relays across environments.

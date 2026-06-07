@@ -1,0 +1,9 @@
+apiVersion: relay.cic.com/v1
+kind: Workflow
+metadata:
+  name: core.ping.flow
+  version: "1.0.0"
+  description: "A simple workflow to execute a ping check."
+spec:
+  steps:
+    - "core.ping@1.0.0"

@@ -20,3 +20,23 @@ This document contains a list of all the features that are either planned, under
     - **Description**: This feature is focused on creating and managing the version control rules and the git workflow.
     - **Spec Document**: [spec.md](features/feature-002/spec.md)
     - **Completion Date**: 2025-03-05
+
+- **Feature-003**: Specification: CIC Relay
+    - **Status**: Completed 
+    - **Branch**: `d/feature-003`
+    - **Description**: This document outlines the specifications and expectations for the CIC Relay, to be merged under the feature-003 branch.
+    - **Spec Document**: [spec.md](features/feature-003/spec.md)
+    - **Completion Date**: 2025-03-21
+
+- **Feature-005**: Build Environment Initialization (Go-based CIC Relay)
+    - **Status**: In Progress
+    - **Branch**: `d/feature-005`
+    - **Description**: Defines and initializes the modular build and development environment for the CIC Relay component using Go. Supports containerized development, Makefile-driven workflows, and optional event propagation via MQ.
+    - **Spec Document**: [spec.md](features/feature-005/spec.md)
+    - **Completion Date**: *(TBD)*
+- **Feature-006**: Introduction of the Cabinet Object
+    -  **Status**: Active
+    -  **Branch**: `d/feature-006`
+    -  **Description**: Implements the Cabinet object as the central static knowledge registry for schemas, plugins, and execution graphs.
+    - **Spec Document**: [spec.md](features/feature-006/spec.md)
+    - **Completion Date**: *(TBD)*

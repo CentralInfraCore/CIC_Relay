@@ -1,0 +1,1360 @@
+version: 2
+entries:
+  # --- Megvalósított / referencia ---
+  - task: "cabinet-canonicalize"
+    status: done
+    prompt: |
+      Készíts determinisztikus, rendezett (canonical) JSON kimenetet a cabinet grafból a CONTRACT szerint.
+      Ne legyen idő/locale/RNG mellékhatás. A GOLDEN inputokkal ellenőrizd.
+    tests:
+      - GOLDEN/cabinet_case01.in
+      - GOLDEN/cabinet_case02.in
+    accept: make verify
+
+  # --- Következő lépések (prioritás szerint) ---
+
+  - task: "fix-audit-placeholder-log"
+    status: done
+    priority: 1
+    prompt: |
+      A `cmd/relay/bootstrap.go` `loadModule` függvényében a PEM aláírás ellenőrzés
+      placeholder ágán `"outcome": "success"` log jelenik meg, holott semmi nem lett ellenőrizve.
+      Javítsd `"outcome": "skipped"`-re és adj hozzá `"reason": "trust ecosystem not bootstrapped"` mezőt.
+      Ez nem feature — ez egy hazugság az audit trailben.
+    tests:
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  - task: "schema-validation-setx"
+    status: done
+    priority: 2
+    prompt: |
+      A `core/cabinet/service.go` `Setx` függvényében van egy TODO:
+      "Implement schema validation here using moduleDesc.Accepts and inputData's schema ID."
+      Implementáld: minden lépésnél ellenőrizd az inputData schema-megfelelőségét
+      a moduleDesc.Accepts lista alapján. ErrInvalid-dal térj vissza ha nem egyezik.
+      Ne változtasd meg a Cabinet interfészt.
+    tests:
+      - core/cabinet/service_unit_test.go
+      - core/cabinet/service_integration_test.go
+    accept: make test
+
+  - task: "proof-trace-type"
+    status: done
+    priority: 3
+    prompt: |
+      Vezess be egy `ProofTrace` típust a `core/cabinet` csomagban.
+      A ProofTrace rögzíti egy workflow végrehajtás teljes lenyomatát:
+      workflow_id, lépésenkénti input_hash + output_hash, chain_hash (lépések hash-einek SHA256-a),
+      timestamp (injektált, nem clock). Minden mező determinisztikus és kanonizálható.
+      A `Setx` térjen vissza ProofTrace-szel is a SetResponse-ban.
+      Nem kell Vault aláírás ebben a lépésben — csak a típus és a chain_hash számítás.
+    tests:
+      - core/cabinet/service_unit_test.go (új teszteset)
+    accept: make test
+
+  - task: "setx-recorder-wire"
+    status: done
+    priority: 4
+    prompt: |
+      Kösd össze a `Setx` végrehajtást a `core/nexus/recorder`-rel:
+      minden sikeres workflow végrehajtás után a ProofTrace kerüljön be a recorder-be
+      (expected state = workflow input, actual state = ProofTrace).
+      A recorder Vault aláírást igényel — ha Vault nem elérhető, logolj WARN-t és folytasd.
+      Failure ne legyen fatal a végrehajtásra nézve ebben a lépésben.
+    tests:
+      - core/nexus/recorder/recorder_test.go
+    accept: make test
+
+  - task: "execution-graph-linear"
+    status: done
+    priority: 5
+    prompt: |
+      Implementáld a `core/cabinet/graph.go`-t lineáris ExecutionGraph-ként.
+      Egy ExecutionGraph lépések rendezett listája ahol minden lépés kimenetének
+      saját neve van a kontextusban (nem mindent felülíró "result" kulcs).
+      A lépés formátuma: `"component@version.function(inputKey) -> outputKey"`.
+      A Setx parser ezt az új formátumot értelmezze.
+      Visszafelé kompatibilis: a régi `"component.function(data)"` formátum is működjön.
+    tests:
+      - core/cabinet/graph_test.go
+      - core/cabinet/service_unit_test.go
+    accept: make test
+
+  - task: "dev-vault-bootstrap"
+    status: done
+    priority: 6
+    prompt: |
+      Készíts egy `make dev-vault` Makefile targetet és egy hozzá tartozó szkriptet,
+      ami a `tools/vault-sign-agent.sh` alapján elindít egy lokális, in-memory Vault-ot
+      a fejlesztői környezethez. A target után `make verify` futtatható legyen
+      Vault-függő tesztek nélkül is. Dokumentáld a `ai/SYSTEM_CONTEXT.md`-ben.
+    tests:
+      - scripts/
+    accept: make dev-vault && make verify
+
+  # --- Sprint 2 (done) ---
+
+  - task: "prod-recorder-wiring"
+    status: done
+    priority: 7
+    prompt: |
+      Kösd be a `cabinetService.recorder`-t produkciós szinten a `cmd/relay/main.go`-ban.
+      Adj hozzá `WithRecorder(r ExecutionRecorder) CabinetOption` funkcionális opciót
+      a `core/cabinet/service.go`-ba (variadic, backward-compatible).
+      A `main()` env változókból olvassa be a Vault konfigurációt
+      (`VAULT_ADDR`, `VAULT_TOKEN`, `CIC_VAULT_MOUNT` default "transit",
+      `CIC_VAULT_KEY` default "cic-dev-sign-key", `CIC_AUDIT_REPO_PATH` default "/var/lib/cic-relay/audit").
+      Ha Vault nem konfigurált (VAULT_TOKEN hiányzik): WARN log + nil recorder (nem fatal).
+      Ha Vault konfigurált: `VaultCryptoService` + `GitStateRecorder` + `WorkflowRecorder` összerakva,
+      `NewCabinetService` hívása `cabinet.WithRecorder(wr)` opcióval.
+      Ne változtasd meg a `Cabinet` interfészt.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make test
+
+  # --- Sprint 3 (következő) ---
+
+  - task: "env-cic-prefix"
+    status: done
+    priority: 8
+    milestone: M8.1
+    prompt: |
+      A `cmd/relay/main.go` `loadConfig` és `buildRecorderOption` függvényekben
+      minden env változót láss el `CIC_` prefixszel:
+        MAX_JSON_INPUT_SIZE    → CIC_MAX_JSON_INPUT_SIZE
+        MAX_WASM_MODULE_SIZE   → CIC_MAX_WASM_MODULE_SIZE
+        HASHING_TIMEOUT        → CIC_HASHING_TIMEOUT
+        CIC_VAULT_MOUNT, CIC_VAULT_KEY, CIC_AUDIT_REPO_PATH — már jók
+        VAULT_ADDR, VAULT_TOKEN — Vault SDK saját változói, ezeket NE nevezd át
+          (a Vault Go SDK VAULT_ADDR és VAULT_TOKEN változókat vár, ezek nem CIC névterűek)
+      Frissítsd a teszteket is. Ne változtass más logikán.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make test
+
+  - task: "uniform-error-json"
+    status: done
+    priority: 9
+    milestone: M5.2
+    prompt: |
+      Minden HTTP hibaválasz egységes JSON struktúrával térjen vissza:
+        {"error": "<message>", "code": "<snake_case_code>"}
+      Jelenleg a handlerek `http.Error`-t használnak, ami plain text választ ad.
+      Vezess be egy `writeError(w, code int, errCode, msg string)` segédfüggvényt
+      a `cmd/relay/main.go`-ban, és cseréld ki az összes `http.Error` hívást rá.
+      A Content-Type legyen `application/json` minden hibánál.
+      Frissítsd a handler teszteket: ellenőrizzék a JSON body tartalmát is.
+    tests:
+      - cmd/relay/main_api_test.go
+      - cmd/relay/main_test.go
+    accept: make test
+
+  - task: "dogfooding-config-schema"
+    status: done
+    priority: 10
+    milestone: M8.2 / M-Konfig
+    prompt: |
+      A Relay induláskor validálja a saját konfigurációját a cabinet schema engine-nel.
+      1. Hozz létre `config/relay.config.schema.yaml` fájlt (Kind: Schema), amely leírja
+         az összes CIC_ prefixű config paramétert: típus, kötelező/opcionális, leírás.
+      2. A `loadConfig` után (main.go) töltsd be ezt a sémát és validáld a betöltött
+         konfigurációt mint map[string]interface{} a schema `$schema` kulcsával.
+         Érvénytelen konfig esetén Fatal + egyértelmű hibaüzenet.
+      3. A validációhoz a `cabinet` csomag `validateInputSchema` logikáját használd
+         (nem kell új engine — a meglévő Accepts-alapú validáció elég első lépésként).
+      4. Frissítsd az `ai/SYSTEM_CONTEXT.md`-t a dogfooding mechanizmus leírásával.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make test
+
+  - task: "wasm-exec-timeout"
+    status: done
+    priority: 11
+    milestone: M4.3
+    prompt: |
+      Vezess be per-step CPU/idő korlátot a `Setx` WASM végrehajtásban.
+      A `WasmManagerConfig`-ban már van `DefaultTimeoutSeconds int` mező — ezt
+      használd: minden WASM dispatch előtt hozz létre `context.WithTimeout`-ot.
+      Native Go moduloknál NEM kell timeout (bízunk bennük).
+      Ha a context lejár: `ErrTimeout` sentinel hiba (új, a `cabinet` csomagban),
+      HTTP 504-re map-elve a handler szinten.
+      Adj hozzá teszteket: timeout lejár → ErrTimeout, normál futás → ok.
+    tests:
+      - core/cabinet/service_unit_test.go
+      - cmd/relay/main_api_test.go
+    accept: make test
+
+  - task: "symbols-ci-check"
+    status: done
+    priority: 12
+    milestone: M7.1
+    prompt: |
+      A `make check-symbols` target már létezik (symbolsgen futtatás + git diff).
+      Kösd be a CI pipeline-ba: hozz létre `.github/workflows/symbols.yml`-t
+      (vagy bővítsd a meglévő workflow-t), amely `make check-symbols`-t futtat
+      minden PR-on és minden main push-on.
+      Ha a SYMBOLS.md drift > 0: a CI fail-el.
+      Dokumentáld a `context/SYMBOLS.md` tetején egy rövid megjegyzéssel
+      hogy ez auto-generált, kézzel ne módosítsd.
+    tests:
+      - .github/workflows/
+    accept: make check-symbols
+
+  - task: "e2e-smoke-tests"
+    status: done
+    priority: 13
+    milestone: M6.5
+    prompt: |
+      Hozz létre `api_tests/smoke.sh` bash szkriptet, amely `docker compose up`
+      után curl-lel teszteli a fő útvonalakat:
+        GET  /         → 200, {"status":"ok",...}
+        GET  /healthz  → 200, {"status":"ok"}
+        GET  /readyz   → 200, {"status":"ok"}
+        POST /set      → 400 (üres body), valid JSON hibapayload
+      A szkript exit 0 ha minden pass, exit 1 ha bármely assertion fail.
+      Frissítsd a Makefile `test-api` targetét hogy ezt futtassa.
+      Dokumentáld a `ai/SYSTEM_CONTEXT.md`-ben az E2E futtatás módját.
+    tests:
+      - api_tests/smoke.sh
+    accept: bash api_tests/smoke.sh
+
+  - task: "secrets-separation"
+    status: done
+    priority: 14
+    milestone: M8.3
+    prompt: |
+      Válaszd szét a titokkezelést a komponens-betöltéstől a `cmd/relay/main.go`-ban.
+      A `buildRecorderOption` már külön van — ez a minta.
+      Hozz létre `loadSecretsFromVault(ctx, logger) (*VaultSecrets, error)` függvényt,
+      amely kizárólag Vault-tal kommunikál (token, PKI certs ha szükséges).
+      A `loadInstalledComponents` NE tartalmazzon hálózati/titok logikát.
+      Ez refaktor: a viselkedés nem változik, csak a felelősségek szétválnak.
+      Frissítsd a teszteket hogy az új struktúrát tükrözzék.
+    tests:
+      - cmd/relay/main_test.go
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  # --- Sprint 4 — Tech Debt (külső audit alapján) ---
+
+  - task: "debug-cleanup"
+    status: done
+    priority: 15
+    milestone: hygiene
+    prompt: |
+      Távolítsd el az összes debug print és kommentezett debug kód maradványt:
+        1. `core/cabinet/mock_wasm_manager.go:19` — aktív `fmt.Printf("DEBUG: ...")` sor
+        2. `core/cabinet/cicwasm.go:292` — kommentezett `// fmt.Printf("DEBUG: ...")` sor
+      Ellenőrizd az összes többi .go fájlt is `fmt.Printf.*DEBUG` mintára — ha van más, azt is.
+      Ez nem feature, nem refaktor — csak takarítás. Ne változtass logikán.
+    tests:
+      - (grep: nincs fmt.Printf.*DEBUG maradék)
+    accept: make test
+
+  - task: "ci-toolchain-sync"
+    status: done
+    priority: 16
+    milestone: hygiene
+    prompt: |
+      A `go.mod` `go 1.24.0` / `toolchain go1.24.6`-ot deklarál, de a CI pipeline
+      (`.github/workflows/verify.yml`) `go-version: "1.21.x"`-et használ.
+      Ez silent build drift kockázatot jelent.
+      Javítás:
+        - Frissítsd a verify.yml összes `go-version` entry-jét `"1.24.x"`-re.
+        - Ellenőrizd, hogy van-e más workflow fájl (pl. symbols.yml) ahol szintén javítani kell.
+        - `make test` zöld marad a frissített verzióval.
+      Ne változtass go.mod-on — az a forrás igazság.
+    tests:
+      - .github/workflows/verify.yml
+      - .github/workflows/symbols.yml
+    accept: make test
+
+  - task: "makefile-ldflags-vars"
+    status: done
+    priority: 17
+    milestone: hygiene
+    prompt: |
+      A `Makefile` a bináris build során ezeket injektálja ldflags-szal:
+        `-X main.BuildID=$(VERSION)-$(COMMIT)`
+        `-X main.CommitHash=$(COMMIT)`
+        `-X main.Timestamp=$(shell date -u +...)`
+      De a `cmd/relay/main.go`-ban ezek a változók (`BuildID`, `CommitHash`, `Timestamp`)
+      nincsenek deklarálva, ezért a linker injekció néma sikertelenséggel elvész.
+      Javítás: add hozzá a `cmd/relay/main.go`-hoz (package szinten):
+        var (
+            BuildID    = "dev"
+            CommitHash = "unknown"
+            Timestamp  = "unknown"
+        )
+      És loggold ki induláskor (INFO szint, `build_id`, `commit`, `timestamp` mezőkkel).
+      Ne változtass Makefile-on.
+    tests:
+      - cmd/relay/main_test.go (build metadata log megjelenik)
+    accept: make test
+
+  - task: "wasm-size-limit-single-source"
+    status: done
+    priority: 18
+    milestone: M4.4
+    prompt: |
+      A WASM méretlimit két helyen él egymástól függetlenül:
+        1. `core/cabinet/validate.go:22` — `const MaxWASMModuleSize = 16 * 1024 * 1024` (hardcoded)
+        2. `cmd/relay/main.go` config — `MaxWASMModuleSize` env-ből, default `16 * 1024 * 1024`
+      Ezek egymástól függetlenül érvényesülnek — a config módosítása nem hat a validate.go logikára.
+      Javítás:
+        - Töröld a `validate.go`-beli `MaxWASMModuleSize` konstanst.
+        - A `NewModuleDescriptor` (vagy ahol a konstans használva van) kapja meg a limitet
+          paraméterként, vagy a cabinet service injektálja a konfiguráció alapján.
+        - Egyetlen forrás a limit értékére: a `config.MaxWASMModuleSize`.
+      Frissítsd az érintett teszteket.
+    tests:
+      - core/cabinet/service_unit_test.go
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  - task: "embedded-pki-key-audit"
+    status: done
+    priority: 19
+    milestone: hygiene
+    prompt: |
+      Az `embedded/pki/` könyvtárban privát kulcsok találhatók (`root_ca.key`, `intermediate_ca.key`).
+      Ezek valószínűleg fejlesztői teszt kulcsok, de egy trust/PKI fókuszú projektben ez rossz optika
+      és biztonsági kockázat.
+      Feladatok:
+        1. Ellenőrizd: az `embedded/pki/*.key` fájlok tényleg csak teszt/dev kulcsok-e
+           (ne legyenek azonosak semmilyen éles infrastruktúrával).
+        2. Adj hozzá `embedded/pki/README.md`-t: "DEVELOPMENT ONLY — generated test keys,
+           never use in production" figyelmeztetéssel.
+        3. Adj hozzá `.gitignore` szabályt az `embedded/pki/*.key` fájlokhoz — ezentúl ne
+           kerüljenek commitba; a meglévőket hagyd (generáltak, nem változnak).
+        4. Dokumentáld `ai/SYSTEM_CONTEXT.md`-ben hogy a `cmd/relay/testdata/pki/` generált
+           kulcsok (`bootstrap_testdata.sh`), de az `embedded/pki/` kulcsok manuálisan commitáltak.
+      Ne töröld a meglévő kulcsokat — a tesztek függhetnek rájuk.
+    tests:
+      - embedded/pki/README.md létezik
+      - .gitignore tartalmaz embedded/pki/*.key szabályt
+    accept: make test
+
+  # --- Sprint 4 — Features ---
+
+  - task: "ci-quality-gates"
+    status: done
+    priority: 20
+    milestone: M7.2-M7.4
+    prompt: |
+      Bővítsd a `.github/workflows/verify.yml` CI pipeline-t a hiányzó quality gate lépésekkel:
+        1. `make lint` (staticcheck) — minden PR-on és main push-on.
+        2. `make vet` (go vet) — minden PR-on és main push-on.
+        3. Per-package coverage threshold (`make coverage-check-pkgs`) — minden PR-on.
+           Küszöbök: cabinet ≥ 95%, canonicalize ≥ 85%, certutils ≥ 70%, cmd/relay ≥ 80%, többi ≥ 75%.
+        4. Coverage HTML artifact feltöltése (`actions/upload-artifact`) a coverage-profile lépés után.
+      A meglévő lépések sorrendjét ne változtasd — csak add hozzá az újakat a megfelelő helyre.
+      Ha valamelyik lépés már létezik (pl. vet), csak ellenőrizd, ne duplázd.
+    tests:
+      - .github/workflows/verify.yml
+    accept: make vet && make lint
+
+  - task: "limit-schema-config"
+    status: done
+    priority: 21
+    milestone: M4.4
+    prompt: |
+      Egészítsd ki a `config/relay.config.schema.yaml` sémát és a `validateConfig` logikát úgy,
+      hogy az összes LIMITS-korlát is schema-vezérelt legyen:
+        - `CIC_MAX_JSON_INPUT_SIZE` (bytes, default 1MB) — már env változó, de nincs range-check a sémában
+        - `CIC_MAX_WASM_MODULE_SIZE` (bytes, default 10MB) — ugyanez
+        - `CIC_HASHING_TIMEOUT` (duration string, pl. "5s") — formátum + minimum "1s" ellenőrzés
+        - `CIC_WASM_EXEC_TIMEOUT_SECONDS` (integer, ≥ 1) — ez jelenleg a WasmManagerConfig-ból jön,
+          de nincs env-ből konfigurálva; vezess be `CIC_WASM_EXEC_TIMEOUT_SECONDS` env változót,
+          default 30, minimum 1.
+      A `relay.config.schema.yaml`-ban minden mezőhöz add hozzá a `minimum`/`pattern` constraint-et
+      ha releváns. `validateConfig` szintén ellenőrizze a range-eket (Fatal ha sértett).
+      Frissítsd a teszteket és a `ai/SYSTEM_CONTEXT.md` Dogfooding szekcióját.
+    tests:
+      - cmd/relay/main_test.go
+      - config/relay.config.schema.yaml
+    accept: make test
+
+  - task: "circuit-breaker-rate-limit"
+    status: done
+    priority: 22
+    milestone: M9
+    prompt: |
+      Vezess be alapszintű Operations Safety védelmet a `cmd/relay/main.go` HTTP szerverbe:
+        1. **Rate limiter**: Per-IP token bucket, max 100 req/s, burst 20.
+           Implementálás: `golang.org/x/time/rate` (már elérhető a Go std-n keresztül, ill. vendor-be).
+           429 Too Many Requests → `writeError(w, 429, "rate_limited", "too many requests")`.
+        2. **Concurrent request cap**: Max 50 párhuzamos request (semaphore pattern).
+           503 Service Unavailable → `writeError(w, 503, "overloaded", "server busy")`.
+        3. **Slow-loris védelem**: `http.Server.ReadHeaderTimeout = 5s`, `ReadTimeout = 30s`,
+           `WriteTimeout = 60s`, `IdleTimeout = 120s`.
+      Konfigurálható env változókon keresztül (`CIC_RATE_LIMIT_RPS`, `CIC_MAX_CONCURRENT_REQUESTS`).
+      Ne vezess be külső függőséget ha elkerülhető — standard lib + x/time/rate.
+      Add hozzá a limiteket a `config/relay.config.schema.yaml`-hoz és `validateConfig`-hoz.
+      Tesztek: middleware unit tesztek a rate limiterhez és a concurrent cap-hez.
+    tests:
+      - cmd/relay/main_test.go
+      - cmd/relay/main_api_test.go
+    accept: make test
+
+  - task: "operator-bootstrap-lifecycle"
+    status: done
+    priority: 23
+    milestone: M16.2-M16.3
+    prompt: |
+      Implementáld a Nexus Operator hiányzó Bootstrap és Lifecycle logikáját:
+        **M16.2 — Bootstrap**: `core/nexus/operator/bootstrap.go`
+          - `BootstrapHost(ctx, hostDef HostDefinition) (*BootstrapToken, error)` függvény
+          - Token = HMAC-SHA256(hostID + timestamp, operatorSecret), time-limited (24h)
+          - A token a Git állapot repóba kerül commit-tal (recorder-en keresztül)
+          - Ha a recorder nil: WARN + folytatás (non-fatal, mint a többi helyen)
+        **M16.3 — Lifecycle**: `core/nexus/operator/lifecycle.go`
+          - `OnboardHost(ctx, token *BootstrapToken) error` — validálja a tokent, aktiválja a hostot
+          - `OffboardHost(ctx, hostID string) error` — deaktiválja, revoke token, commit
+          - Mindkét művelet audit logot generál (structured logrus)
+        Az operatorSecret-et env változóból olvasd (`CIC_OPERATOR_SECRET`), hiánya Fatal.
+        Ne kösd be a PKI-ba (M3 előfeltétel) — csak HMAC alapú, dokumentáld mint "pre-PKI scaffold".
+    tests:
+      - core/nexus/operator/bootstrap_test.go
+      - core/nexus/operator/lifecycle_test.go
+    accept: make test
+
+  - task: "nexus-upstream-source"
+    status: done
+    priority: 24
+    milestone: M11
+    prompt: |
+      Implementáld az `UpstreamSource` IaC forrást a `core/nexus/iac/upstream.go`-ban.
+      Az `IaCSource` interfész (`FetchConfig`) már definiált — a `FileSource` a referencia implementáció.
+      Az `UpstreamSource`:
+        - HTTP GET kérést küld a konfigurált `upstream_url`-re
+        - Vár JSON vagy YAML választ (Content-Type alapján auto-detect)
+        - Timeout: 10s (context-alapú, `CIC_UPSTREAM_FETCH_TIMEOUT` env változóból)
+        - Hiba esetén: részletes wrapped error + logrus WARN (nem Fatal — degraded mode)
+        - Retry: maximum 3 kísérlet, exponenciális backoff (1s, 2s, 4s)
+      A forrás konfigurálható: `upstream_url` + opcionális `bearer_token` (env: `CIC_UPSTREAM_TOKEN`).
+      Ha `CIC_UPSTREAM_URL` nincs beállítva: FileSource marad az alapértelmezett (backward-compatible).
+      Tesztek: mock HTTP server-rel, timeout és retry szcenáriókkal.
+    tests:
+      - core/nexus/iac/upstream_test.go
+    accept: make test
+
+  # --- Sprint 5 ---
+
+  - task: "sbom-release-artifact"
+    status: done
+    priority: 25
+    milestone: M9
+    prompt: |
+      Zárjuk le az M9 mérföldkövet: reprodukálható release artifact lánc.
+      A `-trimpath` flag már megvan a Makefile-ban.
+      Feladatok:
+        1. `make release` target:
+           - Cross-compile linux/amd64 statikus binárist
+             (`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w"`)
+           - Kimenet: `dist/relay`
+        2. `dist/relay.sha256` — `sha256sum dist/relay > dist/relay.sha256`
+        3. SBOM generálás: `go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
+           mod -output dist/sbom.json -json` (CycloneDX JSON formátum)
+        4. `make release-verify` — ellenőrzi hogy `dist/relay.sha256` egyezik a binárissal
+        5. `dist/` kerüljön be `.gitignore`-ba (generált artefaktok, ne commitáljuk)
+        6. Dokumentáld `ai/SYSTEM_CONTEXT.md`-ben a release folyamatot (1 bekezdés)
+      DoD: `make release && make release-verify` hibátlan a docker builder container-ben.
+    tests:
+      - Makefile (release + release-verify target)
+      - .gitignore (dist/ bejegyzés)
+    accept: make release && make release-verify
+
+  - task: "audit-sync-integration"
+    status: done
+    priority: 26
+    milestone: M14
+    prompt: |
+      Az M14 squash/push/prune logika (`core/nexus/sync`) implementálva van, de nincs
+      integrációs teszt és a coverage alacsony. Zárjuk le a mérföldkövet:
+        1. Integrációs teszt 2 ephemeral git repo-val (t.TempDir()):
+           - "local" repo: RecordState N commit-tal feltöltve
+           - "remote" repo: bare repo (`git init --bare`)
+           - Sync futtatás → ellenőrizd hogy a squash commit megjelent a remote-on
+           - Prune: régi branch törlődik a localból a push után
+        2. A teszt ne igényeljen hálózatot — csak lokális fájlrendszer
+        3. `core/nexus/sync` package coverage ≥ 70%
+      Ne változtass az M14 implementáción — csak tesztek.
+      Ha a jelenlegi sync implementáció nem teszt-barát (pl. hardcoded path),
+      minimálisan refaktoráld hogy injektálható legyen a repo path.
+    tests:
+      - core/nexus/sync/sync_integration_test.go
+    accept: make test
+
+  - task: "isolation-subprocess-ipc"
+    status: done
+    priority: 27
+    milestone: M15
+    prompt: |
+      Az M15 isolation coordinator jelenleg in-process — a Zero Trust cél
+      ("plaintext adat soha nem jelenik meg a koordinátor processz memóriájában")
+      nem teljesül. Implementáld a 3-process szétválasztást:
+        1. Coordinator (jelenlegi main relay): Unix socket listener (`/tmp/cic-relay-ipc.sock`)
+        2. Worker subprocess: `exec.Command(os.Executable(), "--mode=module-worker")`
+           - stdin/stdout: newline-delimited JSON (kérés + válasz, 1 request egyszerre)
+           - IPC protokoll: `{"op":"decrypt","payload":"..."}` / `{"result":"...","error":"..."}`
+        3. `--mode=module-worker` flag: ha jelen van, a relay worker módban fut
+           (nincs HTTP listener, csak IPC loop)
+        4. Coordinator ↔ worker round-trip integrációs teszt (subprocess spawn + echo)
+      Backward compat: ha `CIC_ISOLATION_MODE=subprocess` nincs beállítva,
+      az in-process mód marad aktív (nem breaking change).
+      DoD: `make test` zöld + subprocess round-trip teszt átmegy.
+    tests:
+      - core/nexus/isolation/coordinator_test.go
+      - core/nexus/isolation/ipc_test.go
+    accept: make test
+
+  - task: "m16-operator-watcher-wiring"
+    status: done
+    priority: 28
+    milestone: M16.4
+    prompt: |
+      Az M16 Watcher + Bootstrap + Lifecycle implementálva van, de a Operator nincs
+      bekötve a `cmd/relay/main.go` indítási folyamatába. Kösd be:
+        1. `main.go` `run()`: ha `CIC_INFRA_REPO_PATH` be van állítva, indítson el
+           egy `PollingWatcher`-t (`NewPollingWatcher(path, 30s)`) és
+           egy `OperatorWithLifecycle`-t goroutine-ban (`go op.Run(ctx)`)
+        2. `CIC_OPERATOR_SECRET` env változó: ha hiányzik és `CIC_INFRA_REPO_PATH` be van állítva,
+           Fatal — bootstrap token nem generálható titkos kulcs nélkül
+        3. Ha `CIC_INFRA_REPO_PATH` nincs beállítva: Operator nem indul, csak WARN log
+           (backward-compatible — nem kötelező az operátor)
+        4. `config/relay.config.schema.yaml` frissítése: `CIC_INFRA_REPO_PATH`,
+           `CIC_OPERATOR_SECRET` dokumentálása
+        5. Integrációs teszt: tmpdir + 1 Host YAML → Operator kezeli → registry bejegyzés
+      DoD: `make test` zöld, az Operator életciklus a relay indításával automatikus.
+    tests:
+      - cmd/relay/main_test.go
+      - config/relay.config.schema.yaml
+    accept: make test
+
+  # --- Sprint 6 ---
+
+  - task: "source-pinned-chain-hash"
+    status: done
+    priority: 29
+    milestone: M17
+    prompt: |
+      A `ProofTrace` `chain_hash` jelenleg csak a step output hash-eket láncolja.
+      A CI use-case-hez szükséges, hogy a chain_hash első összetevője a forrás digest legyen,
+      biztosítva a forrástól az output-ig folytonos kriptográfiai láncot.
+      Feladatok:
+        1. `ProofTrace` struktúra: adj hozzá `SourceDigest string` mezőt (json:"source_digest")
+        2. `computeChainHash(sourceDigest string, steps []ProofTraceStep) string`:
+           a hash input = sourceDigest + step output hash-ek konkatenációja
+        3. `SetPayload`: adj hozzá opcionális `SourceDigest string` mezőt
+           (caller injektálja — git HEAD hash, BuildID, vagy üres string ha nem ismert)
+        4. `Setx`: adja át a SetPayload.SourceDigest-et a computeChainHash-nek
+        5. `cmd/relay/main.go`: adja át a `CommitHash` build variablet mint SourceDigest
+           a SetPayload-be (HTTP handler szinten)
+        6. Golden tesztek frissítése ha szükséges (`make verify`)
+      DoD: `make test` zöld + `make verify` zöld; a ProofTrace JSON tartalmaz `source_digest` mezőt.
+    tests:
+      - core/cabinet/proof_trace_test.go
+      - core/cabinet/service_unit_test.go
+    accept: make test && make verify
+
+  - task: "polling-watcher-state-diff"
+    status: done
+    priority: 30
+    milestone: M18
+    prompt: |
+      A `core/nexus/operator/watcher.go` `PollingWatcher.Watch()` metódusa jelenleg
+      skeleton — a TODO komment szerint nincs state tracking, nem detektál változást.
+      Implementáld a state diff logikát:
+        1. Fájl snapshot struktúra: `map[string]string` (path → SHA256 content hash)
+        2. `scanDir(rootPath string) (map[string]string, error)`: rekurzív directory scan,
+           minden fájl content hash-e SHA256-tal számolva (a content-ből, nem a path-ból)
+        3. Diff logika:
+           - Első tick: minden fájl → CREATE esemény
+           - Következő tickek: előző snapshot vs. aktuális →
+             * Új fájl: CREATE
+             * Megváltozott hash: UPDATE (content is bekerül az Event-be)
+             * Eltűnt fájl: DELETE (Content = nil)
+        4. `Event.Content`: fájl tartalma ([]byte) CREATE/UPDATE esetén; nil DELETE esetén
+        5. A snapshot az előző tickről megmarad a goroutine-ban (state a goroutine-ban él)
+      Ne változtass a `Watcher` interfészen és az `Event` struktúrán (backward-compatible).
+      Tesztek: tmpdir + fájl create/update/delete → elvárt event szekvencia.
+    tests:
+      - core/nexus/operator/watcher_test.go
+    accept: make test
+
+  - task: "pki-verified-path-e2e"
+    status: done
+    priority: 32
+    milestone: M3
+    prompt: |
+      A `bootstrap.go` PKI wiring kész (`VerifyCertificateChain` hívva ha `TrustStoreLoaded`),
+      de nincs teszt ami a teljes verified path-on halad végig (jelenleg csak a `skipped` ág van tesztelve).
+      A testdata PKI infrastruktúra megvan (`testdata/pki/`). Feladatok:
+        1. `cmd/relay/bootstrap_test.go`: adj hozzá tesztet `TestLoadModule_PKIVerified` névvel
+           - Betölti a `testdata/pki/trust/root-ca.pem` root CA-t
+           - Betölti az intermediate CA-t (ha van)
+           - Egy érvényes EKU=CodeSigning leaf cert-tel aláírt modult tölt be
+           - Elvárt: outcome="verified" log + modul betöltve (nem rejected)
+        2. `TestLoadModule_PKIRejected_WrongEKU`: wrong EKU cert → `PKI verification failed` error
+        3. `TestLoadModule_PKIRejected_WrongChain`: idegen root CA → rejected
+        4. Ha a meglévő testdata cert-ek nem alkalmasak (pl. lejárt), regeneráld a
+           releváns cert-eket `crypto/x509`-cel in-process (ne shell script).
+      Ne változtass a `pki_verify.go` vagy `bootstrap.go` logikán — csak tesztek.
+      DoD: `make test` zöld; a verified path lefedett; coverage a `cmd/relay` package-ben nő.
+    tests:
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  - task: "ci-build-module-schema"
+    status: done
+    priority: 31
+    milestone: M19
+    prompt: |
+      Hozz létre egy `ci.build` native Go modult a CI use-case első lépéseként.
+      Ez a modul egy build parancsot futtat (make target) és visszaadja az artifact digestjét.
+        1. Schema: `config/schemas/ci.build.schema.yaml` (Kind: Schema)
+           Mezők: `build_target` (string, required), `docker_image` (string, optional),
+           `make_target` (string, default "build"), `artifact_output` (string, required)
+        2. Native Go modul: `core/modules/cibuild/cibuild.go`
+           - `Execute(ctx, input interface{}) (interface{}, error)` — a cabinet NativeFunc signature-nek megfelelő
+           - Futtat: `exec.CommandContext(ctx, "make", input.make_target)`
+           - Output: `{"artifact_path": "...", "artifact_digest": "<sha256>", "exit_code": 0}`
+           - Timeout: 5 perc (context-alapú)
+           - A parancs stdout/stderr logolva (logrus INFO/WARN)
+        3. Regisztráció: `cmd/relay/bootstrap.go` `registerNativeComponents()`-ben
+           registrálja a `ci.build@1.0` modult a `build` function névvel
+        4. Unit tesztek: mock exec (testable command injection), artifact digest számítás
+      Ne indíts valódi Docker-t — a modul csak make-t hív, a Docker a make target dolga.
+      DoD: `make test` zöld; a modul regisztrálva és elérhető a relay-en keresztül.
+    tests:
+      - core/modules/cibuild/cibuild_test.go
+      - config/schemas/ci.build.schema.yaml
+
+  # --- Sprint 7 — Reproducibility & Bootstrap hardening ---
+
+  - task: "reproducible-release-ldflags"
+    status: done
+    priority: 33
+    milestone: M9
+    prompt: |
+      A `make release` target `$(LD_FLAGS)`-ot használ, ami tartalmaz
+      `Timestamp=$(shell date -u +...)` injektálást.
+      Ez megakadályozza, hogy ugyanabból a forrásból két különböző időpontban
+      byte-azonos bináris keletkezzen — a "reproducible build" állítás így nem teljes.
+      Javítás:
+        1. Definiálj `RELEASE_LD_FLAGS`-t a Makefile-ban — csak `BuildID` és `CommitHash`,
+           timestamp NÉLKÜL.
+        2. A `release` target használja `$(RELEASE_LD_FLAGS) -s -w`-t `$(LD_FLAGS)` helyett.
+        3. A dev/test build (`build`, `build-canonicalize`) maradjon `$(LD_FLAGS)`-szel
+           (timestamp megtartható debugginghoz).
+      DoD: `make release` kétszer futtatva azonos sha256-ot ad ugyanabból a forrásból.
+    tests:
+      - Makefile (release target)
+    accept: make release && make release-verify
+
+  - task: "pin-sbom-tool-version"
+    status: done
+    priority: 34
+    milestone: M9
+    prompt: |
+      A `make release` target `cyclonedx-gomod@latest`-et futtat, ami:
+        - reprodukálhatóságot tör (időben változó tool),
+        - hálózati függést visz a release folyamatba,
+        - különböző buildeknél különböző SBOM-ot generálhat.
+      Javítás:
+        1. Definiálj `CYCLONEDX_GOMOD_VERSION ?= v1.8.0`-t a Makefile-ban.
+        2. A `release` target `@latest` helyett `@$(CYCLONEDX_GOMOD_VERSION)`-t használjon.
+        3. A `go.mod`-ba add hozzá tool dependency-ként:
+           `require github.com/CycloneDX/cyclonedx-gomod v1.8.0`
+           és futtasd `go mod tidy`-t hogy a go.sum frissüljön.
+      DoD: `make release` offline (cache-ből) is ugyanazt a SBOM generálót használja.
+    tests:
+      - Makefile (release target)
+      - go.mod
+    accept: make release && make release-verify
+
+  - task: "register-native-components-main"
+    status: done
+    priority: 35
+    milestone: M2
+    prompt: |
+      A `registerNativeComponents()` függvény létezik `cmd/relay/bootstrap.go`-ban,
+      de nincs meghívva a `main()` runtime útvonalán — csak tesztben érhető el.
+      Ez azt jelenti, hogy a `core.test@1.0` és `ci.build@1.0` modulok
+      élő relay indításakor nem elérhetők.
+      Javítás:
+        1. `main()`: a `loadInstalledComponents` hívása ELŐTT hívd meg:
+           `if err := registerNativeComponents(loadCtx, cabinetSvc); err != nil { Fatal }`
+        2. A hívás sorrendje: registerNative → loadInstalled (a native-ek mindig elérhetők)
+        3. Frissítsd a `main_test.go`-ban a vonatkozó teszt elvárásokat ha szükséges.
+      DoD: `make test` zöld; `GET /` válasz tartalmazza a registrált native modulokat
+      (vagy legalább a relay elindul hibamentesen).
+    tests:
+      - cmd/relay/main.go
+      - cmd/relay/main_test.go
+    accept: make test
+
+  # --- Sprint 9 ---
+
+  - task: "obs-common-schema"
+    status: done
+    priority: 38
+    milestone: M22.1-M22.5
+    prompt: |
+      Hozz létre egy `pkg/obs/` csomagot a CIC Relay operatív observability rétegének
+      alaptípusaival. Ez az OTel-szemléletű, de OTel SDK-mentes belső modell első fázisa.
+      A ProofTrace (core/cabinet/proof_trace.go) megmarad — ez mellé épül, nem helyette.
+
+      Referencia-doc: `docs/hu/concept/obs_modell.md`
+
+      **M22.1 — pkg/obs/types.go**
+      Alaptípusok (nincs OTel import):
+
+        type Resource struct {
+            ServiceName       string
+            ServiceVersion    string
+            ServiceInstanceID string
+            Environment       string
+            RelayRole         string
+        }
+
+        type ExecutionContext struct {
+            ExecutionID       string
+            RequestID         string
+            CorrelationID     string
+            ProofTraceID      string
+            WorkflowID        string
+            WorkflowStep      string
+            ParentExecutionID string
+            StartKind         string // http | timer | internal | callback | replay
+        }
+
+        type LogRecord struct {
+            TimestampUnixNs int64
+            SeverityNumber  int
+            SeverityText    string
+            EventName       string   // pl. "relay.validation.failed"
+            Category        string   // lifecycle|transport|workflow|validation|proof|security|config|performance
+            Message         string
+            ExecutionRef    ExecutionContext
+            TraceRef        TraceRef
+            ProofRef        ProofRef
+            Attributes      map[string]string
+            Error           *ObsError
+        }
+
+        type TraceRef struct { TraceID, FrameID string }
+        type ProofRef struct { ProofTraceID, StepHash string; StepIndex int }
+
+        type TraceFrame struct {
+            FrameID       string
+            TraceID       string
+            ParentFrameID string
+            Name          string   // pl. "relay.workflow.step.validate"
+            Kind          string   // server|client|internal|validation|proof|storage|transport|adapter
+            Status        string   // ok|error|timeout|rejected|cancelled|partial
+            StartedAtUnixNs int64
+            EndedAtUnixNs   int64
+            DurationNs      int64
+            Attributes    map[string]string
+            Events        []FrameEvent
+            Error         *ObsError
+        }
+
+        type FrameEvent struct { Name string; UnixNs int64; Attributes map[string]string }
+
+        type ObsError struct { Type, Code, Message string; Retryable bool }
+
+        type CounterPoint   struct { Name string; Value int64;   TimestampUnixNs int64; Attributes map[string]string }
+        type GaugePoint     struct { Name string; Value float64; TimestampUnixNs int64; Attributes map[string]string }
+        type HistogramPoint struct {
+            Name string; Count uint64; Sum, Min, Max float64
+            Buckets []Bucket; TimestampUnixNs int64; Attributes map[string]string
+        }
+        type Bucket struct { UpperBound float64; Count uint64 }
+
+        type IntegrityEnvelope struct {
+            RecordHash      string
+            GlobalChainHash string
+            TypeChainHash   string
+            SequenceNo      uint64
+            TypeSequenceNo  uint64
+            SignerID        string
+            KeyID           string
+            Signature       string
+        }
+
+      **M22.2 — pkg/obs/chain.go**
+      Hash-lánc számítás a `pkg/canonicaljson` alapján:
+        - `RecordHash(v interface{}) (string, error)` — canonical JSON SHA256 hex
+        - `NextGlobalChain(prevGlobalHash, recordHash string) string` — SHA256(prev||record)
+        - `NextTypeChain(prevTypeHash, recordHash string) string` — SHA256(prev||record)
+      Az üres prevHash esetén az üres string a kiindulópont (konzisztens a ProofTrace-szel).
+
+      **M22.3 — pkg/obs/sink.go**
+      Interfészek és NoopSink:
+        type TraceSink  interface { EmitFrame(TraceFrame) error }
+        type LogSink    interface { EmitLog(LogRecord) error }
+        type MetricSink interface {
+            EmitCounter(CounterPoint) error
+            EmitGauge(GaugePoint) error
+            EmitHistogram(HistogramPoint) error
+        }
+        // NoopSink: minden interfészt implementál, minden művelet nil-t ad vissza.
+
+      **M22.4 — pkg/obs/registry.go**
+      MetricInstrument regiszter:
+        type MetricInstrument struct {
+            Name          string
+            Kind          string // counter|gauge|histogram
+            Unit          string
+            Description   string
+            AttributeKeys []string
+            Stability     string // experimental|stable|internal
+        }
+        type MetricRegistry struct { ... }
+        func (r *MetricRegistry) Register(i MetricInstrument) error
+        func (r *MetricRegistry) Lookup(name string) (MetricInstrument, bool)
+      Névtér-validáció: a `name`-nek `relay.` prefixszel kell kezdődnie, különben error.
+
+      **M22.5 — pkg/obs/obs_test.go**
+      Unit tesztek:
+        - RecordHash determinisztikus (azonos input → azonos hash)
+        - GlobalChainHash lánc konzisztens (3 lépés sorban, változás detektálható)
+        - TypeChainHash két különböző típusra független lánc
+        - MetricRegistry: valid és invalid névtér regisztráció
+        - NoopSink: minden emit nil-t ad
+
+      Fontos megszorítások:
+        - Nincs `go.opentelemetry.io` import
+        - Nincs `context.Context` baggage dependency
+        - Nincs wall-clock a types.go-ban (a caller adja a TimestampUnixNs értéket)
+        - `pkg/canonicaljson` használata a kanonizáláshoz
+        - A signing (IntegrityEnvelope.Signature) scaffold: mező megvan, kitöltés a signing
+          service feladata (M22 scope-on kívül, de a struct helye itt van)
+    tests:
+      - pkg/obs/obs_test.go
+    accept: make test
+
+  # --- Sprint 8 ---
+
+
+  - task: "source-tree-hash-digest"
+    status: done
+    priority: 36
+    milestone: M20
+    prompt: |
+      A `SourceDigest` default értéke `CommitHash` volt — ez csak a commit objektumot
+      azonosítja, nem a teljes build-input határt. A ProofTrace valódi source-anchoring-ja
+      megköveteli a teljes source tree determinisztikus hash-ét.
+
+      Feladatok:
+        1. `pkg/sourcedigest/sourcedigest.go` — `ComputeTreeHash(rootPath string, excludes []string) (string, error)`:
+           - WalkDir, sorted by relPath (filepath.ToSlash normalizálás)
+           - SHA-256 per fájl content, aggregált hash: "relPath\x00hexContent\n" sorok
+           - DefaultExcludes: .git, output, dist, tmp, CurrentTest
+        2. `tools/sourcehash/main.go` — CLI: `go run ./tools/sourcehash [rootPath]`
+           kimenet: 64-char hex, trailing newline nélkül
+        3. `cmd/relay/main.go`:
+           - `SourceTreeHash = "unknown"` ldflags var
+           - setHandler: `SourceTreeHash != "unknown"` → tree hash; fallback CommitHash
+        4. `Makefile`:
+           - `release` + `build` target: `SOURCE_HASH=$$(go run ./tools/sourcehash .)` inline
+             és `-X main.SourceTreeHash=$$SOURCE_HASH` a ldflags-ben
+           - `sourcehash` phony target: `make sourcehash` kinyomtatja a tree hash-t
+        5. 7 unit teszt: Determinism, ContentSensitivity, AddedFile, PathSensitivity,
+           ExcludesDir, EmptyDir, SymlinksSkipped
+      DoD: `make test` zöld; ProofTrace `source_digest` mező a tree hash-t tartalmazza
+      release buildben; CommitHash csak dev fallback.
+    tests:
+      - pkg/sourcedigest/sourcedigest.go
+      - pkg/sourcedigest/sourcedigest_test.go
+      - tools/sourcehash/main.go
+      - cmd/relay/main.go
+    accept: make test
+
+  - task: "hermetic-build-boundary"
+    status: done
+    priority: 37
+    milestone: M21
+    prompt: |
+      A builder environment nem hermetikus: docker-compose.yaml image-ek tag-gel hivatkozottak
+      (nem digest), a CI Go verzió `1.24.x` (floated), a staticcheck `@latest` (floated).
+      Ezek különböző időpontban lefuttatott build-eket különböző binaryhoz vezethetnek,
+      ami megkérdőjelezi a reprodukálható build állítást.
+
+      Feladatok:
+        1. `docker-compose.yaml`:
+           - Minden image-et frissíts `tag@sha256:digest` formátumra (linux/amd64 manifest digest).
+           - Kommentben dokumentáld a re-pin parancsot.
+           - Digests (2026-03-18):
+             * golang:1.24.6       sha256:d6d07e5326853f71a30decb4d777467428e85c087433b3d76c8b74933abd48b1
+             * nats:2.10.12        sha256:dbab4c53c0de6b089ceb67849d41bdf54a0ad29e50f1105048fc5f19508db803
+             * natsio/nats-box:0.12.0 sha256:1a2c9c9281add7b81ccc886f92d2bc7a247c3ddfd99ecfab51f86a883b38cf7d
+        2. `.github/workflows/verify.yml`:
+           - Go verzió "1.24.x" → "1.24.6" (exact, mindkét job)
+           - staticcheck@latest → staticcheck@v0.6.1 (Makefile cache-populate-tal szinkronban)
+        3. `ai/SYSTEM_CONTEXT.md`:
+           - "Build-input boundary" szekció: tábla az összes rétegről státusszal
+           - Digests + re-pin parancs dokumentálva
+      DoD: docker-compose.yaml és verify.yml digest/verzió-pinelt;
+           SYSTEM_CONTEXT.md dokumentálja a teljes hermetic build boundary-t.
+    tests:
+      - docker-compose.yaml
+      - .github/workflows/verify.yml
+      - ai/SYSTEM_CONTEXT.md
+    accept: grep -q "sha256:" docker-compose.yaml
+
+  # --- Sprint 9 ---
+
+  - task: "iac-resource-schema"
+    status: done
+    priority: 38
+    milestone: M23
+    prompt: |
+      A Service IaC modell kiterjesztése `ResourceSpec`-alapú schema-vezérelt erőforrás-kezelésre.
+
+      Elvégzett feladatok:
+        1. `core/nexus/types/types.go` — új típusok: `ResourceSpec`, `SchemaRef`,
+           `ResourceState`, `ResourceMeta`; `ServiceSpec.Resources []ResourceSpec` mező
+        2. `core/nexus/iac/validator.go` (ÚJ) — `IaCValidator`:
+           - `Validate(ctx, graph)`: minden Service minden resource-án iterál
+           - `ValidateResource(ctx, res)`: schemaRef → `Cabinet.GetSchema("name@version")`
+           - Hibajelzés: `"service/X resource/Y: schemaRef not found: name@version"`
+        3. `core/nexus/iac/testdata/services/service-a.yaml` — frissítve resources[] modellre
+        4. `core/nexus/iac/loader_test.go` — resource unmarshal assertiók
+        5. `core/nexus/operator/watcher.go` — `ResourceValidator` interfész,
+           `WithValidator()`, `onApplyService()` — per-resource validáció + activation log
+    tests:
+      - core/nexus/iac/loader_test.go
+      - core/nexus/operator/watcher.go
+    accept: make test
+
+  - task: "state-desired-execution"
+    status: done
+    priority: 39
+    milestone: M24
+    prompt: |
+      Kösd be a `state.desired == "present"` feltételt a tényleges Cabinet lifecycle-ba.
+
+      Feladatok:
+        1. `core/nexus/operator/watcher.go` — `onApplyService`:
+           - `state.desired == "present"` → `lifecycle.OnboardResource(ctx, svc, res)` hívás
+           - dependency gating: `res.Dependencies` minden elemét ellenőrizd (létezik-e
+             `graph.Services[dep]` és `state.desired == "present"`)
+           - logolás: unresolved dep → Warn + skip; resolved → Info "resource activated"
+        2. `core/nexus/operator/lifecycle.go` (vagy meglévő) —
+           `OnboardResource(ctx, svc Service, res ResourceSpec) error`
+           - Hívja a `Cabinet.Setx()` megfelelő workflow-val (mock vagy stub elfogadható PoC-ban)
+        3. `core/nexus/operator/watcher_test.go` — unit tesztek:
+           - desired=present + dep kész → activation hívódik
+           - desired=absent → skip
+           - desired=present + dep hiányzik → skip + warn
+      DoD: `go test ./core/nexus/operator/...` zöld; activation csak ha desired=present és
+           minden dependency resolved.
+    tests:
+      - core/nexus/operator/watcher_test.go
+    accept: go test ./core/nexus/operator/...
+
+  - task: "pki-eec-trust-bootstrap"
+    status: done
+    priority: 40
+    milestone: M25
+    prompt: |
+      Wire az EEC tanúsítványok beágyazása és a `pki_verify.go` aktiválása.
+
+      Kontextus: Az EEC könyvtárban léteznek (`CICPlatformCA2026.pem`, `CICSourceCA2026.pem`,
+      stb.) — a PKI nem fog kell létrehozni, csak bekötni.
+
+      Feladatok:
+        1. `cmd/relay/embedded/` könyvtár:
+           - `CICDeveloperCA.pem` és `CICPlatformCA.pem` beágyazva `//go:embed` direktívával
+        2. `cmd/relay/pki_bootstrap.go` (ÚJ):
+           - `CIC_TRUST_MODE` env var: `"dev"` | `"prod"` (default: `"dev"`)
+           - `"dev"` → `CICDeveloperCA.pem` betöltése
+           - `"prod"` → `CICPlatformCA.pem` betöltése
+           - Visszaadja a megfelelő `*x509.CertPool`-t
+        3. `core/cabinet/pki_verify.go` bekötése:
+           - `NewPKIVerifier(pool *x509.CertPool)` → `bootstrap.go`-ban inicializálva
+           - `loadModule`: placeholder helyett valódi PEM chain verify
+        4. `cmd/relay/bootstrap_test.go` — tesztek:
+           - `CIC_TRUST_MODE=dev` → DeveloperCA pool
+           - `CIC_TRUST_MODE=prod` → PlatformCA pool
+           - ismeretlen mód → error
+      DoD: `pki_verify.go` aktívan fut `loadModule`-ban; `CIC_TRUST_MODE` env var vezérli
+           a trust anchor-t; `make test` zöld.
+    tests:
+      - cmd/relay/bootstrap_test.go
+      - cmd/relay/pki_bootstrap.go
+    accept: make test
+
+  - task: "relay-trust-branch-config"
+    status: done
+    priority: 41
+    milestone: M25
+    prompt: |
+      A relay induláskor egyetlen CA gyökeret tölt be (`CIC_TRUST_MODE`), és ezt auditálja.
+
+      Feladatok:
+        1. `cmd/relay/bootstrap.go`:
+           - Induláskor logolj `"trust_mode"` és `"ca_anchor"` mezőket (audit trail)
+           - Ha `CIC_TRUST_MODE` nincs beállítva → default `"dev"` + WARN log
+        2. `cmd/relay/main.go`:
+           - Startup banner tartalmazza: `trust_mode`, `ca_anchor` digest (SHA256 első 8 byte)
+        3. Dokumentáció: `docs/en/reality/relay.md` és `docs/hu/reality/relay.md` már
+           tartalmazza a trust branch izolációt (done) — ellenőrizd hogy a kódban szereplő
+           `CIC_TRUST_MODE` env var neve egyezik a doksi példáival
+        4. `cmd/relay/bootstrap_test.go`:
+           - Startup audit log tartalmaz-e `trust_mode` mezőt
+      DoD: `CIC_TRUST_MODE` env var a teljes trust branch konfigurációt vezérli;
+           minden relay startup audit log-olható trust anchor-ral indul.
+    tests:
+      - cmd/relay/bootstrap_test.go
+    accept: make test
+
+  # --- Sprint 11 ---
+
+  - task: "obs-relay-wiring"
+    status: done
+    priority: 43
+    milestone: M22.6
+    # Implementálva: pkg/obs/capture.go + cmd/relay/main.go setHandler wiring
+
+  - task: "obs-logrus-sink"
+    status: done
+    priority: 44
+    milestone: M22.7
+
+  - task: "l04-spec-checksum-validation"
+    status: done
+    priority: 45
+    milestone: M27
+    prompt: |
+      L0.4: a `metadata.checksum` tényleges tartalom-validációja `assertSourceImpl`-ben.
+      Jelenleg csak a mező jelenléte ellenőrzött (nem üres string), az értéke nem.
+
+      Definíció (CIC-Schemas artifact.py:compute_spec_checksum):
+        metadata.checksum = sha256(canonical_json(spec))  — 64 char lowercase hex, nincs prefix
+
+      Feladatok:
+        1. `core/modules/schemacompile/schemacompile.go`:
+           - L0.4 blokk az L0.3 (cert verify) előtt:
+             `if artifact.Spec != nil` → `canonicaljson.ToJSON(spec)` → sha256 → hex
+             → compare `declared == computed`, ha nem: "metadata.checksum mismatch" error
+        2. `core/modules/schemacompile/schemacompile_test.go`:
+           - `specChecksumHex(spec)` helper + pre-computed `emptySpecChecksum`, `fieldsSpecChecksum`
+           - Meglévő stub checksumok ("abc", "abc123") → valódi értékek
+           - Új tesztek: L04_ChecksumMismatch, L04_ChecksumValid_EmptySpec,
+             L04_ChecksumValid_NonEmptySpec, L04_NilSpec_SkipsChecksumCheck
+      DoD: `make test` zöld; helytelen checksum → error; helyes checksum → átmegy.
+    tests:
+      - core/modules/schemacompile/schemacompile.go
+      - core/modules/schemacompile/schemacompile_test.go
+    accept: make test
+    prompt: |
+      Az M22.6-ban az obs sinkek `NoopSink{}`-be mentek — minden emittált adat elveszett.
+      Kösd be a meglévő logrus loggert obs backendként, hogy minden TraceFrame, LogRecord
+      és metrika a relay JSON log streamjébe kerüljön, új infrastruktúra nélkül.
+
+      Feladatok:
+        1. `pkg/obs/logrus_sink.go` (új): `LogrusSink` struct, `NewLogrusSink(logger)`.
+           - `RecordTrace`: logrus fields: obs.type=trace, obs.name, obs.trace_id, obs.attr.*,
+             obs.workflow_id ha ExecCtx != nil; status=error/timeout → Warn, egyébként Info.
+           - `RecordLog`: level mapping (info/warn/warning/error → logrus szint).
+           - `RecordCounter`, `RecordGauge`, `RecordHistogram` → logrus Debug.
+        2. `cmd/relay/main.go`: `NoopSink{}` → `obs.NewLogrusSink(logger)` mindhárom sinkbe.
+        3. Tesztek (`pkg/obs/obs_test.go`):
+           - LogrusSink implementálja mindhárom interfészt (compile check)
+           - RecordTrace minden status értékre nem panikol
+           - RecordLog level mapping nem panikol
+           - Metrika emitterek nem panikol
+           - CaptureSink: compile check + records gyűjtése
+      DoD: `make test` zöld; minden /set hívás TraceFrame + LogRecord + CounterPoint
+           megjelenik a relay JSON log outputjában.
+    tests:
+      - pkg/obs/logrus_sink.go
+      - pkg/obs/obs_test.go
+    accept: make test
+  # --- Sprint 12 ---
+
+  - task: "git-source-iac"
+    status: done
+    priority: 46
+    milestone: M29
+    prompt: |
+      Implementáld a `GitSource`-t mint IaC konfiguráció forrást git repóból.
+      Az `IaCSource` interfész (`FetchConfig`) már definiált — a `FileSource` a referencia implementáció.
+
+      Architekturális döntés: `os/exec("git", ...)` alapú, go-git library NEM kerül be.
+      CGO_ENABLED=0 megmarad. A minta: `recorder.go` `runGit` helper.
+
+      **M29.1 — core/nexus/iac/source_git.go**
+        type GitSourceConfig struct {
+            URL        string        // CIC_GIT_SOURCE_URL
+            Branch     string        // CIC_GIT_SOURCE_BRANCH, default: "main"
+            LocalPath  string        // CIC_GIT_SOURCE_LOCAL_PATH, kötelező ha URL be van állítva
+            SSHKeyPath string        // opcionális
+            Timeout    time.Duration // default: 30s
+        }
+        type GitSource struct { cfg GitSourceConfig }
+        func NewGitSource(cfg GitSourceConfig) *GitSource
+        func (s *GitSource) FetchConfig(ctx context.Context) (map[string][]byte, error)
+          - ha LocalPath nem létezik: git clone --branch <branch> --depth 1 <url> <localpath>
+          - ha létezik: git fetch origin + git checkout <branch>
+          - utána: FileSource{RootPath: LocalPath}.FetchConfig(ctx)
+
+      **M29.2 — Hardened git env** (minden exec.CommandContext hívásra):
+        cmd.Env = append(os.Environ(),
+            "GIT_CONFIG_NOSYSTEM=1",
+            "GIT_TERMINAL_PROMPT=0",
+            "GIT_ASKPASS=/bin/false",
+        )
+        + args-ban: -c core.hooksPath=/dev/null
+
+      **M29.3 — cmd/relay/main.go wiring**
+        Ha CIC_GIT_SOURCE_URL be van állítva → GitSource, különben FileSource (backward-compatible).
+        CIC_GIT_SOURCE_LOCAL_PATH hiánya CIC_GIT_SOURCE_URL esetén → Fatal.
+
+      **M29.4 — config/relay.config.schema.yaml**
+        CIC_GIT_SOURCE_URL, CIC_GIT_SOURCE_BRANCH, CIC_GIT_SOURCE_LOCAL_PATH dokumentálva.
+
+      **M29.5 — Tesztek (core/nexus/iac/source_git_test.go)**
+        - TestGitSource_CloneFresh: tmpdir bare repo → GitSource.FetchConfig() → YAML-ok visszajönnek
+        - TestGitSource_FetchExisting: már klónozott repo → fetch round-trip
+        - TestGitSource_InvalidURL: érvénytelen URL → wrapped error (nem Fatal)
+        - TestGitSource_Timeout: 1ms timeout → context deadline exceeded
+      DoD: make test zöld; CIC_GIT_SOURCE_URL → GitSource aktív.
+    tests:
+      - core/nexus/iac/source_git.go
+      - core/nexus/iac/source_git_test.go
+      - cmd/relay/main.go
+    accept: make test
+
+  - task: "git-host-functions-wazero"
+    status: done
+    priority: 47
+    milestone: M28
+    prompt: |
+      Implementáld a git primitíveket wazero host functionként, hogy WASM modulok
+      typed API-n keresztül végezhessenek git műveleteket tetszőleges parancs kiadása nélkül.
+
+      Architekturális elv:
+        wasm -> typed host API -> os/exec git (hardened env)
+        WASM nem kap általános exec-et — csak: clone, fetch, commit, push, status
+        Repo whitelist: WASM csak regisztrált repoID-val hivatkozhat repóra
+
+      **M28.1 — core/nexus/git/gitops.go**
+        type StatusEntry struct { Path, State string }
+        type GitOps interface {
+            Clone(ctx context.Context, repoID, url, branch string) error
+            Fetch(ctx context.Context, repoID, remote string) error
+            Checkout(ctx context.Context, repoID, ref string) error
+            Commit(ctx context.Context, repoID, message string, paths []string) (string, error)
+            Push(ctx context.Context, repoID, remote, refspec string) error
+            Status(ctx context.Context, repoID string) ([]StatusEntry, error)
+        }
+
+      **M28.2 — core/nexus/git/exec_gitops.go**
+        type ExecGitOps struct { registry *RepoRegistry }
+        runGit(ctx, repoPath, args...): exec.CommandContext + hardened env
+          (GIT_CONFIG_NOSYSTEM=1, GIT_TERMINAL_PROMPT=0, GIT_ASKPASS=/bin/false,
+           -c core.hooksPath=/dev/null), stdout/stderr méretlimit 1MB
+
+      **M28.3 — core/nexus/git/registry.go**
+        type RepoRegistry struct { mu sync.RWMutex; repos map[string]string }
+        func (r *RepoRegistry) Register(repoID, localPath string)
+        func (r *RepoRegistry) Resolve(repoID string) (string, error)
+        Ismeretlen repoID -> fmt.Errorf("unknown repoID: %q") — WASM nem kaphat tetszőleges path-t
+
+      **M28.4 — wazero host function regisztráció**
+        cmd/relay/bootstrap.go registerGitHostFunctions(runtime, gitOps GitOps):
+        Minden host function: JSON kérés/válasz az ABI határon ([]byte oda, []byte vissza)
+        Regisztrált nevek: "git.clone", "git.fetch", "git.checkout", "git.commit",
+                          "git.push", "git.status"
+
+      **M28.5 — Tesztek (core/nexus/git/)**
+        - TestExecGitOps_CloneAndStatus: tmpdir bare repo, clone + status round-trip
+        - TestRepoRegistry_WhitelistEnforce: ismeretlen repoID → error
+        - TestRepoRegistry_KnownRepo: regisztrált repoID → helyes path
+        - TestHardenedEnv: a futtatott git process env-jében GIT_CONFIG_NOSYSTEM=1 jelen van
+      DoD: make test zöld; WASM modul hívhat git.clone-t; ismeretlen repoID rejected.
+    tests:
+      - core/nexus/git/gitops.go
+      - core/nexus/git/exec_gitops.go
+      - core/nexus/git/registry.go
+      - core/nexus/git/exec_gitops_test.go
+      - core/nexus/git/registry_test.go
+    accept: make test
+
+sprint: 13
+tasks:
+  - task: "git-registry-auto-wiring"
+    status: done
+    priority: 48
+    milestone: M30
+
+  - task: "obs-exec-gitops"
+    status: done
+    priority: 49
+    milestone: M31
+
+sprint: 14
+tasks:
+  - task: "ci-coverage-thresholds-sync"
+    status: done
+    priority: 51
+    milestone: M7.5
+    prompt: |
+      verify.yml per-package coverage küszöbök szinkronizálása a Makefile értékekkel.
+      21 explicit csomag-küszöb; skip lista: sourcehash, nexus/types, embedded/pki.
+      Default: min=80%.
+    accept: .github/workflows/verify.yml frissítve
+
+  - task: "ci-govulncheck"
+    status: done
+    priority: 52
+    milestone: M7.6
+    prompt: |
+      govulncheck@v1.1.4 hozzáadása a verify CI job-hoz.
+      continue-on-error: true (advisory) — Go 1.25+ után hard gate.
+    accept: .github/workflows/verify.yml govulncheck lépés
+
+  - task: "ci-mutation-gate"
+    status: done
+    priority: 53
+    milestone: M7.7
+    prompt: |
+      Mutation CI job: core/cabinet + schemapipeline + schemacompile gremlins v0.5.1,
+      --threshold-efficacy 90, parallel lépések.
+    accept: .github/workflows/verify.yml mutation job
+
+  - task: "layer2-cic-signed-ca"
+    status: done
+    priority: 54
+    milestone: M36
+    prompt: |
+      cic_signed_ca scaffold → implemented.
+      PKIAssets.CertChainHash kiszámítása; bctx.CAFingerprint + CertChainHash direct wiring main.go-ban;
+      cic_signed_ca = bctx.CAFingerprint ha PKI betöltve, egyébként "stub:pending".
+    tests:
+      - core/modules/schemacompile/schemacompile_test.go
+      - cmd/relay/bootstrap_test.go
+    accept: make test && mutate schemacompile efficacy >= 90%
+
+sprint: 15
+tasks:
+  - task: "cmd-relay-coverage-90"
+    status: todo
+    priority: 55
+    milestone: ~
+    prompt: |
+      cmd/relay/main.go 80% → 90%: injectable osExit-szerű hook
+      buildOperatorIfConfigured és buildRecorderOption error ágaihoz.
+      Minta: tools/canonicalize osExit pattern.
+    tests:
+      - cmd/relay/main_test.go
+    accept: make coverage-check-pkgs (cmd/relay >= 90%)
+
+  - task: "go-125-upgrade"
+    status: done
+    priority: 56
+    milestone: ~
+    prompt: |
+      Go 1.24.6 → 1.25.x toolchain upgrade.
+      docker-compose.yaml builder image digest frissítése.
+      govulncheck CI lépésből continue-on-error eltávolítása (hard gate).
+    accept: make test zöld + govulncheck CI nem ad hibát
+
+  - task: "upstream-source-http"
+    status: todo
+    priority: 57
+    milestone: M37
+    prompt: |
+      UpstreamSource HTTP implementáció: CIC_UPSTREAM_URL env alapján
+      fetch + retry/backoff + YAML/JSON response parse.
+      Scaffold → implemented. Relay federáció v2 előkészítés.
+    tests:
+      - core/nexus/iac/upstream_test.go
+    accept: make test && UpstreamSource FetchConfig HTTP hívást végez
+
+  # --- Bug fixes — külső review 2026-05-17 ---
+
+  - task: "fix-proof-chain-hash-export"
+    status: done
+    priority: 58
+    milestone: ~
+    bug: B1
+    severity: P0
+    prompt: |
+      A `core/cabinet/proof_trace.go`-ban a `computeChainHash` privát függvény
+      `"CICCHAINv1"\x00` domain prefixszel számítja a chain hash-t.
+      A `cmd/relay/proof_verify.go` `recomputeChainHash` függvénye ezt a prefixet
+      kihagyja — ezért minden valódi ProofTrace artifact verifikációja chain_hash
+      mismatch hibával bukna el.
+      A teszt helper (`chainHashFor` a `proof_verify_test.go`-ban) szintén
+      a hibás algoritmust másolja, így CI zöld marad.
+
+      Teendők:
+      1. `computeChainHash` → `ComputeChainHashV1` (exportált) a `proof_trace.go`-ban.
+      2. `service.go:291` hívás frissítése az új névre.
+      3. `proof_verify.go`: `recomputeChainHash` törlése; helyette `cabinet.ComputeChainHashV1()` hívás.
+      4. `proof_verify_test.go`: `chainHashFor` helper törlése; tesztek `cabinet.ComputeChainHashV1`-et hívnak.
+      5. `proof_trace.yaml` szimbólum referencia frissítése ha szükséges.
+
+      Ne változtasd meg a hash algoritmust — csak az elérhetőséget és az egyetlen forrást.
+    tests:
+      - cmd/relay/proof_verify_test.go
+      - core/cabinet/proof_trace_test.go (ha van)
+    accept: make test && make verify
+
+  - task: "fix-manifest-timestamp"
+    status: done
+    priority: 59
+    milestone: ~
+    bug: B2
+    severity: P1
+    prompt: |
+      A `scripts/gen_manifest.sh` a manifest fejlécébe beleírja az aktuális UTC
+      időbélyeget (`date -u`). A CI `diff`-alapú összehasonlítása ezért mindig eltér
+      a korábban commitolt MANIFEST.sha256-tól — a manifest-check gate funkcionálisan törött.
+
+      Külön probléma: `make manifest-update` (`git ls-files | xargs sha256sum`) más scope-ot
+      és más formátumot gyárt mint `gen_manifest.sh` (`find ai context GOLDEN`).
+      A kettő inkompatibilis — a Makefile-lal frissített MANIFEST.sha256 a CI-on nem megy át.
+
+      Teendők:
+      1. `scripts/gen_manifest.sh:16` — timestamp sor eltávolítása.
+      2. `Makefile manifest-update` target átírása: `gen_manifest.sh . MANIFEST.sha256` hívás
+         (ne legyen saját `git ls-files` logika).
+      3. `MANIFEST.sha256` újragenerálása és commitolása.
+      4. Ellenőrzés: `scripts/gen_manifest.sh . /tmp/check.sha256 && diff MANIFEST.sha256 /tmp/check.sha256`
+
+      Ne változtasd meg a CI workflow-t — az már helyesen hívja a scriptet.
+    tests:
+      - .github/workflows/manifest-check.yml (CI szintű ellenőrzés)
+    accept: scripts/gen_manifest.sh . /tmp/check.sha256 && diff MANIFEST.sha256 /tmp/check.sha256 — nulla diff
+
+  - task: "fix-pki-prod-fail-closed"
+    status: done
+    priority: 60
+    milestone: ~
+    bug: B3
+    severity: P1
+    prompt: |
+      A `cmd/relay/pki_bootstrap.go` `bootstrapPKI` függvényében `CIC_TRUST_MODE=prod`
+      esetén üres cert pool kerül visszaadásra + WARN log — nem hiba. Egy prod relay
+      CA bundle nélkül is elindul, PKI ellenőrzés csendesen ki van kapcsolva.
+
+      Teendők:
+      1. `TrustModeProd` case: env var alapú CA bundle path olvasás
+         (pl. `CIC_PLATFORM_CA_BUNDLE` — PEM fájl elérési útja).
+      2. Ha a path hiányzik vagy a fájl nem olvasható: `return nil, fmt.Errorf(...)`.
+      3. Ha a bundle betölthető: `x509.CertPool` feltöltése, `TrustStoreLoaded: true`.
+      4. Teszt: prod mode CA bundle nélkül → error; CA bundle-lel → PKIAssets loaded.
+
+      A dev mode logikája és a default dev fallback ne változzon.
+    tests:
+      - cmd/relay/pki_bootstrap_test.go
+    accept: make test && CIC_TRUST_MODE=prod indítás CA nélkül hibával áll le

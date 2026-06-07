@@ -1,0 +1,40 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: CabinetActivator
+  kind: struct
+  description: 'CabinetActivator implements operator.ResourceActivator by bridging
+    IaC resource declarations to Cabinet.Setx() workflow execution. WorkflowID convention:
+    "<schemaRef.Name>@<schemaRef.Version>" This matches the schemaRef already validated
+    by IaCValidator — if the schema exists, the same ID is used to look up the workflow
+    and module.'
+  implements: []
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+- name: NewCabinetActivator
+  kind: func
+  description: NewCabinetActivator creates an activator backed by the given Cabinet.
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+- name: Activate
+  kind: method
+  receiver: CabinetActivator
+  description: Activate executes the workflow for a validated, desired-present resource.
+    It maps res.SchemaRef → WorkflowID, wraps res.Spec as the payload, and calls Cabinet.Setx().
+  references:
+  - types.ResourceSpec
+  - cabinet.SetPayload
+  - cabinet.ModuleIDcabinet
+  - cabinet.CanonicalizeSetPayload
+  - cabinet.Setx
+  - logrus.Fields

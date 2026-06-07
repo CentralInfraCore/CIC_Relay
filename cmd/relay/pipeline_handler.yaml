@@ -1,0 +1,32 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: PipelineRequest
+  kind: struct
+  description: PipelineRequest is the request body for POST /v1/schemas/pipeline.
+  implements: []
+  references: []
+- name: PipelineResponse
+  kind: struct
+  description: PipelineResponse is the response body for POST /v1/schemas/pipeline.
+  implements: []
+  references:
+  - cabinet.ProofTrace
+- name: pipelineHandler
+  kind: method
+  receiver: relayServer
+  description: ''
+  references:
+  - uuid.New
+  - logrus.Fields
+  - cabinet.SetPayload
+  - cabinet.IsTimeout

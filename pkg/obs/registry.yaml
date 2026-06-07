@@ -1,0 +1,46 @@
+---
+package: obs
+description: ''
+tags:
+- metrics
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MetricInstrument
+  kind: struct
+  description: MetricInstrument describes a named metric that a component may emit.
+  implements: []
+  references: []
+- name: Registry
+  kind: struct
+  description: Registry holds the set of declared MetricInstruments. All instrument
+    names must start with the "relay." prefix.
+  implements: []
+  references: []
+- name: NewRegistry
+  kind: func
+  description: NewRegistry returns an empty Registry.
+  references: []
+- name: Register
+  kind: method
+  receiver: Registry
+  description: Register adds inst to the registry. Returns an error if the name does
+    not carry the required "relay." prefix or if a different instrument with the same
+    name is already registered.
+  references: []
+- name: Get
+  kind: method
+  receiver: Registry
+  description: Get returns the instrument registered under name, if any.
+  references: []
+- name: Names
+  kind: method
+  receiver: Registry
+  description: Names returns all registered instrument names in undefined order.
+  references: []
+- name: requiredPrefix
+  kind: const
+  description: ''
+  references: []

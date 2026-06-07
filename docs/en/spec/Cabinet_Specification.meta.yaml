@@ -1,0 +1,16 @@
+title: Cabinet Module Specification
+category:
+  - specification
+tags:
+  - cabinet
+  - module
+  - structure
+  - relay
+description: >
+  Architecture, components, and internal operation of the Cabinet modul.
+related_nodes:
+  - CIC_Relay_Specification
+  - Cabinet_Api_definition
+used_in:
+  - poc_validation
+  - future_modular_extensions

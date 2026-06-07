@@ -1,0 +1,66 @@
+---
+package: operator
+description: ''
+tags:
+- core
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: HostDefinition
+  kind: struct
+  description: HostDefinition describes a host to be bootstrapped.
+  implements: []
+  references: []
+- name: BootstrapToken
+  kind: struct
+  description: BootstrapToken is a time-limited HMAC-SHA256 signed token for host
+    registration.
+  implements: []
+  references: []
+- name: Bootstrapper
+  kind: struct
+  description: 'Bootstrapper handles HMAC-based host token generation and validation.
+    It is a pre-PKI scaffold: PKI wiring awaits M3 (CICRootCA bootstrap).'
+  implements: []
+  references:
+  - recorder.StateRecorder
+  - logrus.Logger
+- name: NewBootstrapper
+  kind: func
+  description: NewBootstrapper creates a Bootstrapper with the given HMAC secret.
+    rec may be nil — recording is non-fatal when absent.
+  references:
+  - recorder.StateRecorder
+  - logrus.Logger
+- name: BootstrapHost
+  kind: method
+  receiver: Bootstrapper
+  description: BootstrapHost generates a time-limited HMAC token for the given host
+    and records the issuance event via the StateRecorder (if configured).
+  references:
+  - logrus.Fields
+- name: ValidateToken
+  kind: method
+  receiver: Bootstrapper
+  description: ValidateToken verifies that the token has not expired and the HMAC
+    is correct.
+  references: []
+- name: computeHMAC
+  kind: func
+  description: computeHMAC returns hex(HMAC-SHA256(secret, hostID|issuedAt)).
+  references: []
+- name: recordIssuance
+  kind: method
+  receiver: Bootstrapper
+  description: 'recordIssuance writes the token issuance to the audit recorder. Non-fatal:
+    logs WARN if recorder is absent or fails.'
+  references:
+  - types.ExpectedState
+  - recorder.RecordState
+- name: bootstrapTokenTTL
+  kind: const
+  description: ''
+  references: []

@@ -1,0 +1,32 @@
+apiVersion: cic.io/v1
+kind: Schema
+metadata:
+  name: relay.config
+  version: "1.0"
+  description: >
+    CIC Relay startup configuration schema.
+    Used for dogfooding: the relay validates its own config using the cabinet
+    schema engine at startup. All fields correspond to CIC_* environment variables.
+spec:
+  stateRequirement:
+    # Core limits (all integer/duration values must satisfy minimum constraints)
+    CIC_MAX_JSON_INPUT_SIZE: "integer, bytes, min 1, default 4194304 (4 MB)"
+    CIC_MAX_WASM_MODULE_SIZE: "integer, bytes, min 1, default 16777216 (16 MB)"
+    CIC_HASHING_TIMEOUT: "duration string, min 1s, default 5s"
+    CIC_WASM_EXEC_TIMEOUT_SECONDS: "integer, seconds, min 1, default 30"
+    # Operations safety
+    CIC_RATE_LIMIT_RPS: "integer, requests/sec per IP, min 1, default 100"
+    CIC_MAX_CONCURRENT_REQUESTS: "integer, max in-flight requests, min 1, default 50"
+    # Vault integration (optional — recording disabled if absent)
+    VAULT_ADDR: "string, Vault server address (Vault SDK env)"
+    VAULT_TOKEN: "string, Vault token (Vault SDK env, optional)"
+    CIC_VAULT_MOUNT: "string, Transit engine mount path, default transit"
+    CIC_VAULT_KEY: "string, Transit signing key name, default cic-dev-sign-key"
+    CIC_AUDIT_REPO_PATH: "string, local git audit repo path, default /var/lib/cic-relay/audit"
+    # Operator (optional — not started if CIC_INFRA_REPO_PATH is absent)
+    CIC_INFRA_REPO_PATH: "string, path to infra state repo watched by the Operator (optional)"
+    CIC_OPERATOR_SECRET: "string, HMAC-SHA256 secret for bootstrap token generation (required if CIC_INFRA_REPO_PATH is set)"
+    # IaC git source (optional — FileSource used if CIC_GIT_SOURCE_URL is absent)
+    CIC_GIT_SOURCE_URL: "string, git remote URL for IaC config (optional; activates GitSource)"
+    CIC_GIT_SOURCE_BRANCH: "string, git branch to track, default main (used if CIC_GIT_SOURCE_URL is set)"
+    CIC_GIT_SOURCE_LOCAL_PATH: "string, local clone destination path (required if CIC_GIT_SOURCE_URL is set)"

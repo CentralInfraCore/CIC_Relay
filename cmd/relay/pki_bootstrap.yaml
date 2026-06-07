@@ -1,0 +1,27 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: resolveTrustMode
+  kind: func
+  description: resolveTrustMode reads CIC_TRUST_MODE env var, defaults to "dev". Missing
+    or empty value is treated as dev with a WARN log.
+  references:
+  - logrus.Logger
+  - logrus.Fields
+- name: bootstrapPKI
+  kind: func
+  description: 'bootstrapPKI loads the CA trust store based on trustMode. dev  → loads
+    CICDeveloperCA + rootCA from embeddedPKI; TrustStoreLoaded=true prod → scaffold:
+    CICPlatformCA not embedded; returns empty pool with WARN Any other value returns
+    an error.'
+  references:
+  - logrus.Logger
+  - logrus.Fields

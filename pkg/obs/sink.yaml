@@ -1,0 +1,28 @@
+---
+package: obs
+description: ''
+tags:
+- metrics
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: NoopSink
+  kind: struct
+  description: NoopSink silently discards all records. It satisfies TraceSink, LogSink,
+    and MetricSink.
+  implements: []
+  references: []
+- name: TraceSink
+  kind: interface
+  description: TraceSink receives TraceFrame records.
+  references: []
+- name: LogSink
+  kind: interface
+  description: LogSink receives LogRecord entries.
+  references: []
+- name: MetricSink
+  kind: interface
+  description: MetricSink receives metric data points.
+  references: []

@@ -1,0 +1,16 @@
+tags:
+  - plugin
+  - interface
+  - .so
+category:
+  - interface
+  - execution_module
+related_nodes:
+  - concept/schema_kezeles
+  - implementation/plugin_loader
+used_in:
+  - plugin_dev
+  - dynamic_execution
+description: >
+  Defines the minimal exported functions a plugin must implement to operate within the CIC system.
+  Enforces isolation, statelessness, and compatibility through strict interfaces.

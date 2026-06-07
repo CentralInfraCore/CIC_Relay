@@ -1,0 +1,3 @@
+kind: Workflow
+metadata: "not an object" # This will cause unmarshal error
+spec: {}

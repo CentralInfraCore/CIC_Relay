@@ -1,0 +1,21 @@
+tags:
+  - doc
+  - concept
+  - overview
+category:
+  - entrypoint
+  - strategic
+related_nodes:
+  - concept/relay_pozicionalas
+  - concept/schema_kezeles
+  - concept/plugin_interface
+  - concept/dependency_modell
+entrypoint: true
+used_in:
+  - onboarding
+  - ai_summary
+  - cic_design
+description: >
+  High-level introduction to the Central Infrastructure Core (CIC) system.
+  It outlines the layered structure, declarative operation model, and core execution logic.
+  Serves as the entrypoint to all conceptual documents in the system.

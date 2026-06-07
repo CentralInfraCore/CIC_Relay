@@ -1,0 +1,14 @@
+title: Cabinet API tesztspecifikáció
+category:
+  - test-spec
+tags:
+  - cabinet
+  - test
+  - validation
+description: >
+  A Cabinet API viselkedésének egység- és integrációs szintű teszteléséhez készült specifikáció.
+related_nodes:
+  - Cabinet_Api_definition
+  - Cabinet_Specification
+used_in:
+  - poc_validation

@@ -1,3 +1,4 @@
+---
 package: canonicaljson
 description: ''
 tags: []
@@ -26,21 +27,19 @@ objects:
   references: []
 - name: writeCanonicalJSON
   kind: func
-  description: Recursively writes a Go value as canonical JSON to an io.Writer.
+  description: ''
   references: []
 - name: writeJSONString
   kind: func
-  description: Writes a string or float value as a JSON-encoded string to an io.Writer.
+  description: ''
   references: []
 - name: writeJSONArray
   kind: func
-  description: Writes a []any slice as a JSON array, recursively canonicalising each
-    element.
+  description: ''
   references: []
 - name: writeJSONMap
   kind: func
-  description: Writes a map[string]any as a JSON object with alphabetically sorted
-    keys.
+  description: ''
   references: []
 - name: ToJSONImpl
   kind: var

@@ -1,0 +1,17 @@
+entrypoint: false
+tags:
+  - state
+  - observation
+  - runtime
+category:
+  - behavior
+  - validation
+related_nodes:
+  - concept/plugin_interface
+  - concept/dependency_modell
+used_in:
+  - snapshot_logic
+  - runtime_eval
+description: >
+  Clarifies the meaning of expected and observed states in the CIC model.
+  Emphasizes snapshot-based stateless evaluation and how state affects execution decisions.

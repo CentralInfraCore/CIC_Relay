@@ -1,0 +1,74 @@
+type: object
+title: CIC Relay System Descriptor
+description: |
+  CIC Relay is an ultra-minimalist, declarative, plugin-based execution engine for decentralized communication, configuration, and state management.
+  Integrates tightly with the Schema Registry to provide a unified, schema-driven approach to handling service-specific logic and workflows.
+properties:
+  tags:
+    type: array
+    description: Thematic tags for module discovery and AI integration.
+    items:
+      type: string
+      enum:
+        - relay
+        - compliance
+        - workflow
+        - cictor
+        - schema
+        - parser
+        - guard
+        - core
+        - doc
+        - interface
+        - gateway
+        - builder
+        - test
+        - meta
+        - orchestrator
+        - decision
+        - reflector
+        - context
+        - validator
+        - executor
+        - hook
+        - template
+        - fallback
+        - session
+        - metrics
+        - storage
+        - loader
+        - renderer
+  related_nodes:
+    type: array
+    description: References to related modules, concepts, or specs.
+    items:
+      type: string
+  category:
+    type: array
+    description: Functional roles or high-level categories.
+    items:
+      type: string
+      enum:
+        - module
+        - decision
+        - moral
+        - entry
+        - meta
+        - analysis
+  entrypoint:
+    type: boolean
+    description: Whether this module/document is an entry point.
+  used_in:
+    type: array
+    description: Where is this module used? (workflows/processes)
+    items:
+      type: string
+      enum:
+        - decision_flow
+        - validation
+        - generation
+        - onboarding
+        - fallback_process
+  description:
+    type: string
+    description: Human-readable summary of the document/module.

@@ -1,3 +1,4 @@
+---
 package: cabinet
 description: ''
 tags:
@@ -28,11 +29,11 @@ objects:
   references: []
 - name: IsConflict
   kind: func
-  description: Returns true if the error chain contains ErrConflict.
+  description: ''
   references: []
 - name: IsNotFound
   kind: func
-  description: Returns true if the error chain contains ErrNotFound.
+  description: ''
   references: []
 - name: Error
   kind: method

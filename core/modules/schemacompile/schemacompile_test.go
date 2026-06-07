@@ -1,0 +1,586 @@
+package schemacompile_test
+
+import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/hex"
+	"encoding/pem"
+	"fmt"
+	"math/big"
+	"testing"
+	"time"
+
+	"centralrelay/core/modules/schemacompile"
+	"centralrelay/pkg/canonicaljson"
+	"centralrelay/pkg/merkle"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// specChecksumHex computes sha256(canonical_json(spec)) as a lowercase hex string.
+// This mirrors CIC-Schemas artifact.py:compute_spec_checksum.
+func specChecksumHex(spec interface{}) string {
+	b, err := canonicaljson.ToJSON(spec)
+	if err != nil {
+		panic("specChecksumHex: " + err.Error())
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
+// Pre-computed checksums for common spec shapes used across tests.
+var (
+	// emptySpecChecksum = sha256(canonical_json({}))
+	emptySpecChecksum = specChecksumHex(map[string]interface{}{})
+	// fieldsSpecChecksum = sha256(canonical_json({"fields":[]}))
+	fieldsSpecChecksum = specChecksumHex(map[string]interface{}{"fields": []interface{}{}})
+)
+
+// --- PKI helpers ---
+
+func makeCACert(t *testing.T, cn string, parent *x509.Certificate, parentKey any) (*x509.Certificate, *ecdsa.PrivateKey) {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: cn},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	if parent == nil {
+		// self-signed
+		parent = tmpl
+		parentKey = priv
+	}
+	certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, parent, &priv.PublicKey, parentKey)
+	require.NoError(t, err)
+	cert, err := x509.ParseCertificate(certBytes)
+	require.NoError(t, err)
+	return cert, priv
+}
+
+func makeLeafCert(t *testing.T, issuer *x509.Certificate, issuerKey any) (*x509.Certificate, string) {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(42),
+		Subject:      pkix.Name{CommonName: "developer@cic"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+	}
+	certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, issuer, &priv.PublicKey, issuerKey)
+	require.NoError(t, err)
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	cert, err := x509.ParseCertificate(certBytes)
+	require.NoError(t, err)
+	_ = cert
+	return cert, string(pemBytes)
+}
+
+func makeVerifier(roots, intermediates *x509.CertPool) schemacompile.CertVerifyFunc {
+	return func(cert *x509.Certificate) error {
+		opts := x509.VerifyOptions{
+			Roots:         roots,
+			Intermediates: intermediates,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		}
+		_, err := cert.Verify(opts)
+		return err
+	}
+}
+
+func assertionYAML(certPEM string) string {
+	return fmt.Sprintf(`metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: |
+%s
+spec:
+  fields: []
+`, fieldsSpecChecksum, indentCert(certPEM))
+}
+
+func indentCert(certPEM string) string {
+	result := ""
+	for _, line := range splitLines(certPEM) {
+		result += "      " + line + "\n"
+	}
+	return result
+}
+
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}
+
+// --- tests ---
+
+func TestAssertSource_StubMode_NoAssertion(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"schema":  "some.schema",
+		"version": "1.0",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, true, m["asserted"])
+	assert.Equal(t, "1.0", m["policy_version"])
+}
+
+func TestAssertSource_WithVerifier_ValidChain(t *testing.T) {
+	rootCA, rootKey := makeCACert(t, "CICRootCA", nil, nil)
+	intermediateCA, intermediateKey := makeCACert(t, "CICDeveloperCA2026", rootCA, rootKey)
+	_, leafPEM := makeLeafCert(t, intermediateCA, intermediateKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCA)
+	intermediatePool := x509.NewCertPool()
+	intermediatePool.AddCert(intermediateCA)
+
+	fn := schemacompile.NewAssertSourceFunc(makeVerifier(rootPool, intermediatePool))
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": assertionYAML(leafPEM),
+		"schema":           "test.schema",
+		"version":          "1.0",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, true, m["asserted"])
+	assert.Equal(t, "test.schema", m["schema"])
+}
+
+func TestAssertSource_WithVerifier_UntrustedCA(t *testing.T) {
+	rootCA, rootKey := makeCACert(t, "CICRootCA", nil, nil)
+	intermediateCA, intermediateKey := makeCACert(t, "CICDeveloperCA2026", rootCA, rootKey)
+	_, leafPEM := makeLeafCert(t, intermediateCA, intermediateKey)
+
+	// Use a different root — cert should be rejected
+	untrustedRoot, _ := makeCACert(t, "UntrustedRoot", nil, nil)
+	untrustedPool := x509.NewCertPool()
+	untrustedPool.AddCert(untrustedRoot)
+
+	fn := schemacompile.NewAssertSourceFunc(makeVerifier(untrustedPool, nil))
+	_, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": assertionYAML(leafPEM),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "certificate verification failed")
+}
+
+func TestAssertSource_WithVerifier_InvalidPEM(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(func(cert *x509.Certificate) error { return nil })
+	yamlStr := fmt.Sprintf(`metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: "not-a-pem"
+spec: {}
+`, emptySpecChecksum)
+	_, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not a valid PEM CERTIFICATE block")
+}
+
+func TestAssertSource_MissingRequiredField(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	yaml := `metadata:
+  name: test.schema
+  version: "1.0"
+  createdBy:
+    certificate: "stub"
+spec: {}
+`
+	_, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yaml,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "metadata.checksum is required")
+}
+
+func TestAssertSource_SchemaMismatch(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	_, err := fn(context.Background(), map[string]interface{}{
+		"schema":           "other.schema",
+		"version":          "1.0",
+		"source_assertion": minimalAssertion("test.schema", "1.0"),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "schema mismatch")
+}
+
+func TestAssertSource_VersionMismatch(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	_, err := fn(context.Background(), map[string]interface{}{
+		"schema":           "test.schema",
+		"version":          "2.0",
+		"source_assertion": minimalAssertion("test.schema", "1.0"),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "version mismatch")
+}
+
+func TestAssertSource_NilVerifier_SkipsCertCheck(t *testing.T) {
+	// With nil verifier, even an invalid cert PEM should not fail cert check
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	yamlStr := fmt.Sprintf(`metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: "not-a-pem"
+spec: {}
+`, emptySpecChecksum)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
+}
+
+func minimalAssertion(name, version string) string {
+	return fmt.Sprintf(`metadata:
+  name: %s
+  version: "%s"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+spec: {}
+`, name, version, emptySpecChecksum)
+}
+
+// --- L0.4: metadata.checksum cross-validation tests ---
+
+func TestAssertSource_L04_ChecksumMismatch(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// Provide a wrong checksum — should be rejected.
+	yamlStr := `metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "deadbeef"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+spec: {}
+`
+	_, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "metadata.checksum mismatch")
+	assert.Contains(t, err.Error(), "deadbeef")
+}
+
+func TestAssertSource_L04_ChecksumValid_EmptySpec(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// emptySpecChecksum matches sha256(canonical_json({})).
+	yamlStr := fmt.Sprintf(`metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+spec: {}
+`, emptySpecChecksum)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
+}
+
+func TestAssertSource_L04_ChecksumValid_NonEmptySpec(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// fieldsSpecChecksum matches sha256(canonical_json({"fields":[]})).
+	yamlStr := fmt.Sprintf(`metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "%s"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+spec:
+  fields: []
+`, fieldsSpecChecksum)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
+}
+
+func TestAssertSource_L04_NilSpec_SkipsChecksumCheck(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	// spec absent (nil after unmarshal) — checksum check is skipped.
+	yamlStr := `metadata:
+  name: test.schema
+  version: "1.0"
+  checksum: "wrong-but-skipped"
+  sign: "sig"
+  createdBy:
+    certificate: "stub"
+`
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion": yamlStr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, true, out.(map[string]interface{})["asserted"])
+}
+
+// --- M33: NewSignArtifactFunc + verification_root ---
+
+func TestNewSignArtifactFunc_VerificationRoot_Present(t *testing.T) {
+	bctx := merkle.BuildContext{
+		SourceRef:        "git:abc123",
+		SourceTreeDigest: "sha256:deadbeef",
+	}
+	fn := schemacompile.NewSignArtifactFunc(bctx, nil)
+
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+		"schema":       "my.schema",
+		"version":      "1.0",
+	})
+	require.NoError(t, err)
+
+	m := out.(map[string]interface{})
+	root, ok := m["verification_root"].(string)
+	require.True(t, ok, "verification_root must be a string")
+	assert.Len(t, root, 64, "verification_root must be 64-char hex SHA-256")
+	_, decErr := hex.DecodeString(root)
+	assert.NoError(t, decErr, "verification_root must be valid hex")
+}
+
+func TestNewSignArtifactFunc_VerificationRoot_Determinism(t *testing.T) {
+	bctx := merkle.BuildContext{SourceRef: "git:abc123"}
+	fn := schemacompile.NewSignArtifactFunc(bctx, nil)
+	input := map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+		"schema":       "my.schema",
+		"version":      "1.0",
+	}
+	out1, _ := fn(context.Background(), input)
+	out2, _ := fn(context.Background(), input)
+	assert.Equal(t,
+		out1.(map[string]interface{})["verification_root"],
+		out2.(map[string]interface{})["verification_root"],
+	)
+}
+
+func TestNewSignArtifactFunc_VerificationRoot_SensitiveToArtifact(t *testing.T) {
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, nil)
+	out1, _ := fn(context.Background(), map[string]interface{}{"raw_artifact": "version: 1\n"})
+	out2, _ := fn(context.Background(), map[string]interface{}{"raw_artifact": "version: 2\n"})
+	assert.NotEqual(t,
+		out1.(map[string]interface{})["verification_root"],
+		out2.(map[string]interface{})["verification_root"],
+		"different artifacts must yield different roots",
+	)
+}
+
+func TestNewSignArtifactFunc_VerificationRoot_SensitiveToBuildContext(t *testing.T) {
+	input := map[string]interface{}{"raw_artifact": "kind: SchemaArtifact\n"}
+	fn1 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:aaa"}, nil)
+	fn2 := schemacompile.NewSignArtifactFunc(merkle.BuildContext{SourceRef: "git:bbb"}, nil)
+	out1, _ := fn1(context.Background(), input)
+	out2, _ := fn2(context.Background(), input)
+	assert.NotEqual(t,
+		out1.(map[string]interface{})["verification_root"],
+		out2.(map[string]interface{})["verification_root"],
+		"different build contexts must yield different roots",
+	)
+}
+
+func TestSignArtifact_StillEmitsVerificationRoot(t *testing.T) {
+	// Zero-context SignArtifact still emits verification_root (NullMarker fields).
+	out, err := schemacompile.SignArtifact(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	root, ok := m["verification_root"].(string)
+	assert.True(t, ok, "verification_root must be present even without build context")
+	assert.Len(t, root, 64)
+}
+
+// --- ArtifactSigner wiring tests ---
+
+// mockSigner is a test double for ArtifactSigner.
+type mockSigner struct {
+	sig string
+	err error
+}
+
+func (m *mockSigner) Sign(_ context.Context, _ []byte) (string, error) {
+	return m.sig, m.err
+}
+
+func TestNewSignArtifactFunc_NilSigner_CicSignUnavailable(t *testing.T) {
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, "unavailable", m["cic_sign"], "nil signer must yield cic_sign=unavailable")
+}
+
+func TestNewSignArtifactFunc_WithSigner_CicSignSet(t *testing.T) {
+	signer := &mockSigner{sig: "vault:v1:abc123"}
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, signer)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, "vault:v1:abc123", m["cic_sign"])
+	assert.NotEmpty(t, m["build_hash"])
+	assert.NotEmpty(t, m["verification_root"])
+}
+
+// --- M36: cic_signed_ca wiring ---
+
+func TestNewSignArtifactFunc_CicSignedCA_StubWhenNoPKI(t *testing.T) {
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, "stub:pending", m["cic_signed_ca"],
+		"cic_signed_ca must be stub:pending when no CA fingerprint is available")
+}
+
+func TestNewSignArtifactFunc_CicSignedCA_FingerprintWhenPKILoaded(t *testing.T) {
+	caFingerprint := "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+	bctx := merkle.BuildContext{CAFingerprint: caFingerprint}
+	fn := schemacompile.NewSignArtifactFunc(bctx, nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, caFingerprint, m["cic_signed_ca"],
+		"cic_signed_ca must equal bctx.CAFingerprint when PKI trust store is loaded (M36)")
+}
+
+func TestNewSignArtifactFunc_CicSignedCA_PresentInVerificationManifest(t *testing.T) {
+	// CertChainHash is also wired into the Merkle manifest — verify the root changes.
+	bctx1 := merkle.BuildContext{CAFingerprint: "sha256:aaa"}
+	bctx2 := merkle.BuildContext{CAFingerprint: "sha256:bbb"}
+	fn1 := schemacompile.NewSignArtifactFunc(bctx1, nil)
+	fn2 := schemacompile.NewSignArtifactFunc(bctx2, nil)
+	input := map[string]interface{}{"raw_artifact": "kind: SchemaArtifact\n"}
+	out1, _ := fn1(context.Background(), input)
+	out2, _ := fn2(context.Background(), input)
+	root1 := out1.(map[string]interface{})["verification_root"]
+	root2 := out2.(map[string]interface{})["verification_root"]
+	assert.NotEqual(t, root1, root2,
+		"verification_root must differ when CAFingerprint differs")
+}
+
+func TestNewSignArtifactFunc_SignerError_ReturnsError(t *testing.T) {
+	signer := &mockSigner{err: fmt.Errorf("vault unreachable")}
+	fn := schemacompile.NewSignArtifactFunc(merkle.BuildContext{}, signer)
+	_, err := fn(context.Background(), map[string]interface{}{
+		"raw_artifact": "kind: SchemaArtifact\n",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "vault signing failed")
+	assert.Contains(t, err.Error(), "vault unreachable")
+}
+
+// --- AssertSource (legacy entry point) ---
+
+func TestAssertSource_StubMode_NoInput(t *testing.T) {
+	result, err := schemacompile.AssertSource(context.Background(), map[string]interface{}{
+		"schema": "pg", "version": "v1",
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	assert.Equal(t, true, out["asserted"])
+	assert.Equal(t, "1.0", out["policy_version"])
+}
+
+func TestAssertSource_WrongInputType(t *testing.T) {
+	_, err := schemacompile.AssertSource(context.Background(), "not a map")
+	require.Error(t, err)
+}
+
+// --- BuildSchema ---
+
+func TestBuildSchema_StubMode(t *testing.T) {
+	result, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{
+		"schema": "pg", "version": "v1",
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	assert.Equal(t, "pg", out["schema"])
+	assert.Equal(t, "v1", out["version"])
+	assert.NotEmpty(t, out["raw_artifact"])
+}
+
+func TestBuildSchema_MissingSchema(t *testing.T) {
+	_, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{"version": "v1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "schema is required")
+}
+
+func TestBuildSchema_MissingVersion(t *testing.T) {
+	_, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{"schema": "pg"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "version is required")
+}
+
+func TestBuildSchema_WrongInputType(t *testing.T) {
+	_, err := schemacompile.BuildSchema(context.Background(), 42)
+	require.Error(t, err)
+}
+
+func TestBuildSchema_FromAssertedMetadata(t *testing.T) {
+	result, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{
+		"schema":  "pg",
+		"version": "v1",
+		"metadata": map[string]interface{}{
+			"name": "pg", "version": "v1",
+		},
+		"raw_yaml": "metadata:\n  name: pg\n",
+		"spec":     map[string]interface{}{},
+	})
+	require.NoError(t, err)
+	out := result.(map[string]interface{})
+	assert.Equal(t, "pg", out["schema"])
+	assert.NotNil(t, out["metadata"])
+	assert.Equal(t, "metadata:\n  name: pg\n", out["raw_artifact"])
+}

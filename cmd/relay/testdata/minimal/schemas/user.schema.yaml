@@ -1,0 +1,12 @@
+apiVersion: relay.cic.com/v1
+kind: Schema
+metadata:
+  name: user.schema
+  version: "1.0"
+spec:
+  type: object
+  properties:
+    id:
+      type: string
+    email:
+      type: string

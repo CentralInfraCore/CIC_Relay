@@ -1,0 +1,54 @@
+---
+package: obs
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Resource
+  kind: struct
+  description: Resource identifies the origin of an observation — which relay component
+    emitted it.
+  implements: []
+  references: []
+- name: ExecutionContext
+  kind: struct
+  description: ExecutionContext ties an observation to a specific workflow execution
+    step.
+  implements: []
+  references: []
+- name: LogRecord
+  kind: struct
+  description: LogRecord is a structured log entry emitted by the relay.
+  implements: []
+  references: []
+- name: TraceFrame
+  kind: struct
+  description: TraceFrame is a lightweight execution span — not OTel-compatible, but
+    structurally similar for operational visibility.
+  implements: []
+  references: []
+- name: CounterPoint
+  kind: struct
+  description: CounterPoint is a monotonically increasing metric.
+  implements: []
+  references: []
+- name: GaugePoint
+  kind: struct
+  description: GaugePoint is an instantaneous numeric reading.
+  implements: []
+  references: []
+- name: HistogramPoint
+  kind: struct
+  description: HistogramPoint summarises a distribution of values.
+  implements: []
+  references: []
+- name: IntegrityEnvelope
+  kind: struct
+  description: IntegrityEnvelope links an observation record to the ProofTrace audit
+    chain. RecordHash is the canonical SHA-256 of the record itself. ChainAnchor is
+    the ProofTrace.ChainHash of the execution that emitted it — optional.
+  implements: []
+  references: []
