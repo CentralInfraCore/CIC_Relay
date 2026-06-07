@@ -246,6 +246,7 @@ fmt-check: ## Fail if Go formatting differs
 lint-go: ## Run Go static linters (staticcheck, ineffassign)
 	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
 		set -euo pipefail; \
+		command -v staticcheck >/dev/null 2>&1 || GOFLAGS="" go install honnef.co/go/tools/cmd/staticcheck@v0.6.1; \
 		PKGS="$$(go list ./... | grep -v /vendor/)"; \
 		if [ -z "$$PKGS" ]; then \
 			echo "No Go packages to lint."; \
