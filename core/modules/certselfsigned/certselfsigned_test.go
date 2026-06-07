@@ -15,8 +15,8 @@ import (
 
 func TestGenerate_Success(t *testing.T) {
 	input := map[string]interface{}{
-		"cn":           "test.local",
-		"dns_sans":     []interface{}{"test.local", "www.test.local"},
+		"cn":            "test.local",
+		"dns_sans":      []interface{}{"test.local", "www.test.local"},
 		"validity_days": 30,
 	}
 

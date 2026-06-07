@@ -25,11 +25,11 @@ func (s *stubCabinet) GetSchema(id string) (*cabinet.Schema, error) {
 	return nil, errors.New("not found: " + id)
 }
 
-func (s *stubCabinet) PutSchema(_ *cabinet.Schema) error                              { return nil }
-func (s *stubCabinet) PutModule(_ *cabinet.ModuleDescriptor) error                    { return nil }
-func (s *stubCabinet) GetModule(_ string) (*cabinet.ModuleDescriptor, error)          { return nil, nil }
-func (s *stubCabinet) PutWorkflow(_ *cabinet.Workflow) error                          { return nil }
-func (s *stubCabinet) GetWorkflow(_ string) (*cabinet.Workflow, error)                { return nil, nil }
+func (s *stubCabinet) PutSchema(_ *cabinet.Schema) error                     { return nil }
+func (s *stubCabinet) PutModule(_ *cabinet.ModuleDescriptor) error           { return nil }
+func (s *stubCabinet) GetModule(_ string) (*cabinet.ModuleDescriptor, error) { return nil, nil }
+func (s *stubCabinet) PutWorkflow(_ *cabinet.Workflow) error                 { return nil }
+func (s *stubCabinet) GetWorkflow(_ string) (*cabinet.Workflow, error)       { return nil, nil }
 func (s *stubCabinet) Setx(_ context.Context, _ *cabinet.SetPayload) (*cabinet.SetResponse, error) {
 	return nil, nil
 }

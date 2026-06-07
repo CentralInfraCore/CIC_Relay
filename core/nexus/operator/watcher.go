@@ -54,9 +54,9 @@ type Operator struct {
 	Watcher      Watcher
 	bootstrapper *Bootstrapper
 	lifecycle    *LifecycleManager
-	validator    ResourceValidator  // nil = schema validation skipped
-	activator    ResourceActivator  // nil = activation logged but not executed
-	graph        *types.Graph       // nil = dependency gating skipped (lenient)
+	validator    ResourceValidator // nil = schema validation skipped
+	activator    ResourceActivator // nil = activation logged but not executed
+	graph        *types.Graph      // nil = dependency gating skipped (lenient)
 	logger       *logrus.Logger
 	// hostFiles caches filePath → metadata.name mappings seen during CREATE/UPDATE events.
 	// Used by onDelete to resolve the correct hostID when the file is already gone.

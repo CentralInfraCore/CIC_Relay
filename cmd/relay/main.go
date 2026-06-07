@@ -70,7 +70,7 @@ type config struct {
 // loadConfig loads configuration from environment variables.
 func loadConfig() (*config, error) {
 	cfg := &config{
-		MaxJSONInputSize:       4 * 1024 * 1024,          // Default to 4 MB
+		MaxJSONInputSize:       4 * 1024 * 1024,           // Default to 4 MB
 		MaxWASMModuleSize:      cabinet.MaxWASMModuleSize, // Single source: cabinet package constant
 		HashingTimeout:         5 * time.Second,           // Default to 5 seconds
 		WasmExecTimeoutSeconds: 30,                        // Default WASM execution timeout
@@ -135,7 +135,7 @@ func loadConfig() (*config, error) {
 		cfg.MaxConcurrentRequests = max
 	}
 
-	cfg.SchemaBuildDir = os.Getenv("CIC_SCHEMA_BUILD_DIR")         // e.g. /build
+	cfg.SchemaBuildDir = os.Getenv("CIC_SCHEMA_BUILD_DIR")                 // e.g. /build
 	cfg.SchemaBuilderContainer = os.Getenv("CIC_SCHEMA_BUILDER_CONTAINER") // e.g. cic-schemas-builder
 
 	return cfg, nil

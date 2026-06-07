@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"centralrelay/core/cabinet"
-	"centralrelay/core/modules/cibuild"
 	"centralrelay/core/modules/certselfsigned"
+	"centralrelay/core/modules/cibuild"
 	"centralrelay/core/modules/schemacompile"
 	"centralrelay/core/modules/schemapipeline"
 	"centralrelay/pkg/merkle"

@@ -106,9 +106,9 @@ func (lm *LifecycleManager) OffboardHost(ctx context.Context, hostID string) err
 	lm.registry.set(h)
 
 	lm.logger.WithFields(logrus.Fields{
-		"host_id":      hostID,
-		"outcome":      "offboarded",
-		"offboard_at":  now,
+		"host_id":     hostID,
+		"outcome":     "offboarded",
+		"offboard_at": now,
 	}).Info("host offboarded")
 
 	lm.record(ctx, "offboard-"+hostID, now, map[string]interface{}{
