@@ -27,14 +27,14 @@ func NewCabinetActivator(c cabinet.Cabinet, logger *logrus.Logger) *CabinetActiv
 }
 
 // Activate executes the workflow for a validated, desired-present resource.
-// It maps res.SchemaRef → WorkflowID, wraps res.Spec as the payload, and calls Cabinet.Setx().
+// It maps res.SchemaRef → WorkflowID, passes res.Spec directly as the payload, and calls Cabinet.Setx().
 func (a *CabinetActivator) Activate(ctx context.Context, svcName string, res types.ResourceSpec) error {
 	schemaID := res.SchemaRef.Name + "@" + res.SchemaRef.Version
 
 	payload := &cabinet.SetPayload{
 		WorkflowID: schemaID,
 		Modules:    []cabinet.ModuleID{cabinet.ModuleID(schemaID)},
-		Payload:    map[string]any{"input": res.Spec},
+		Payload:    res.Spec,
 	}
 	cabinet.CanonicalizeSetPayload(payload)
 
