@@ -1,0 +1,17 @@
+tags:
+  - execution
+  - graph
+  - async
+category:
+  - execution
+  - graph_structure
+related_nodes:
+  - concept/relay_pozicionalas
+  - concept/dependency_modell
+  - concept/schema_kezeles
+used_in:
+  - workflow_engine
+  - state_transition
+description: >
+  Describes how the relay traverses the execution graph and evaluates conditions.
+  Includes support for NextHops, async execution, and controlled flow via schema declarations.

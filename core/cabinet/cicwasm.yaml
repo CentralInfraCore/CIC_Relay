@@ -1,3 +1,4 @@
+---
 package: cabinet
 description: ''
 tags:
@@ -23,16 +24,14 @@ objects:
   - singleflight.Group
 - name: CicWasmHost
   kind: struct
-  description: Live WASM host instance wrapping a wazero module; implements cicWasmHost
-    interface.
+  description: ''
   implements: []
   references:
   - api.Module
   - api.Function
 - name: GuestResult
   kind: struct
-  description: 'Parsed response struct from a WASM guest call: output JSON and error
-    JSON.'
+  description: ''
   implements: []
   references: []
 - name: NewWasmManager
@@ -69,8 +68,7 @@ objects:
   references: []
 - name: newCicWasmHost
   kind: func
-  description: Creates a new CicWasmHost by instantiating a compiled WASM module in
-    the given runtime.
+  description: ''
   references:
   - api.Module
 - name: Close
@@ -81,40 +79,34 @@ objects:
 - name: Process
   kind: method
   receiver: CicWasmHost
-  description: Calls the guest's process export with auth context and input JSON,
-    returns (outputJson, errJson).
+  description: ''
   references: []
 - name: Get
   kind: method
   receiver: CicWasmHost
-  description: Calls the guest's get export with auth context and query JSON, returns
-    (resultJson, errJson).
+  description: ''
   references: []
 - name: Init
   kind: method
   receiver: CicWasmHost
-  description: Calls the guest's init export with auth context and config JSON, returns
-    (resultJson, errJson).
+  description: ''
   references: []
 - name: Notify
   kind: method
   receiver: CicWasmHost
-  description: Calls the guest's notify export with auth context and event JSON, returns
-    (resultJson, errJson).
+  description: ''
   references: []
 - name: callGuest
   kind: method
   receiver: CicWasmHost
-  description: 'Low-level helper: writes args into WASM memory, calls named export,
-    reads back result.'
+  description: ''
   references: []
 - name: writeStringToWasm
   kind: method
   receiver: CicWasmHost
-  description: Allocates a string in WASM linear memory and returns pointer+length.
+  description: ''
   references: []
 - name: formatErrorJson
   kind: func
-  description: Formats a Go error as a JSON error string suitable for returning to
-    the WASM guest.
+  description: ''
   references: []

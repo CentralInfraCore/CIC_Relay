@@ -1,0 +1,11 @@
+bb35fca8e772091b5070d2fdb4d57cc33a1902da8a4b13edc291ceea73443dff  ./golden/json/order.workflow.canon.json
+ff9229035ce59a5abdf3a007623149fed9c01cfd30ab7b1a0a55d277da9c1888  ./golden/wasm/add.canonical.hex
+e151fb8995fb560b2b531469592b1af99b56eefb3143fe26284cbbf0dedc0808  ./manifest/FILELIST.csv
+e6a2fe1c4c66aabc56e664b03ffa3d65a01431d5b4dcbc51eb5d6983397d0fd9  ./modules/user.module.yaml
+b476d35786cff1664d430582a932fdb069dfe4c40e20defa9e6fde5f1a07cdb0  ./modules/user.module.yaml.sig
+716d9eea6f387ec0410c486f0b0101391ab80800362bb8cb7def476a9c2ceee5  ./schemas/user.schema.yaml
+e7e5900bbc2fc0289ca63d4996c8bc3b2d73d6a561e9f948777ba06763248a80  ./schemas/user.schema.yaml.sig
+93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476  ./wasm/add.wasm
+83eb2cf2d67629b7894c39ee927a3746d29598c783c823aa5dffae3c83b10fc5  ./wasm/add.wasm.sig
+f43ef00d4100071b4b22e658dba14007fb39dbd212acf2ee7d8054d83f88eed8  ./workflows/order.workflow.yaml
+1c21e16715b35b48089309b0978eeb38162780b6b85ec4db21777ec7ff7ca6b6  ./workflows/order.workflow.yaml.sig

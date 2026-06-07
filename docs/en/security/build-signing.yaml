@@ -1,0 +1,25 @@
+tags:
+  - doc
+  - security
+  - signing
+related_nodes:
+  - docs/hu/meta/philosophy
+  - docs/hu/concept/cic_egyszeruen
+  - docs/hu/concept/cic_onvedelem_es_nyilt_kod
+category:
+  - principle
+  - security
+entrypoint: false
+used_in:
+  - build
+  - validation
+description: |
+  This document describes the build signing process for the Relay project and its integration with RootCA validation. It explains how build metadata is embedded, signed, and verified to ensure source authenticity and build integrity.
+
+build_meta:
+  build_id: relay-<version>-<commit>
+  commit: <commit_hash>
+  timestamp: <build_timestamp>
+  commit_signature: <gpg_signature>
+  ca_fingerprint: <ca_fingerprint>
+  binary_sha256: <binary_hash>

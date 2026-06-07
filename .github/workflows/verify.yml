@@ -1,0 +1,157 @@
+name: verify
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.10"
+
+      - name: Go mod download (best-effort)
+        run: |
+          go mod download || true
+
+      - name: Go Vet
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@v0.6.1
+
+      - name: Staticcheck
+        run: staticcheck ./...
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: Vulnerability scan
+        run: govulncheck ./...
+
+      - name: Check for symbol drift
+        run: |
+          go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md
+          git diff --exit-code context/SYMBOLS.md
+
+      - name: Build canonicalize (local, no Docker)
+        run: |
+          mkdir -p output/dev
+          go build -trimpath -o output/dev/canonicalize ./tools/canonicalize
+
+      - name: Golden verify
+        run: |
+          BINARY=./output/dev/canonicalize make verify
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.10"
+
+      - name: Go mod download (best-effort)
+        run: |
+          go mod download || true
+
+      - name: Generate coverage report
+        run: |
+          go test -race -covermode=atomic -coverprofile=coverage.out ./...
+          go tool cover -html=coverage.out -o coverage.html
+
+      - name: Per-package coverage thresholds
+        run: |
+          set -euo pipefail
+          FAIL=0
+          for p in $(go list ./... | grep -v /vendor/); do
+            # Packages with no testable code
+            case "$p" in
+              */core/nexus/types) echo "$p: skip (types-only)"; continue ;;
+              */embedded/pki)     echo "$p: skip (no test files)"; continue ;;
+              */tools/sourcehash) echo "$p: skip (main entry only)"; continue ;;
+            esac
+            go test -coverprofile=/tmp/pkg_cover.out "$p" > /dev/null 2>&1 || continue
+            pc=$(go tool cover -func=/tmp/pkg_cover.out | awk 'END{gsub(/%/,""); print $3+0}')
+            case "$p" in
+              */cmd/relay)                   min=80  ;;
+              */core/cabinet)                min=93  ;;
+              */core/modules/certselfsigned) min=99  ;;
+              */core/modules/cibuild)        min=94  ;;
+              */core/modules/schemacompile)  min=90  ;;
+              */core/modules/schemapipeline) min=90  ;;
+              */core/nexus/crypto)           min=93  ;;
+              */core/nexus/git)              min=92  ;;
+              */core/nexus/iac)              min=90  ;;
+              */core/nexus/isolation)        min=90  ;;
+              */core/nexus/operator)         min=90  ;;
+              */core/nexus/recorder)         min=85  ;;
+              */core/nexus/sync)             min=88  ;;
+              */pkg/canonicaljson)           min=96  ;;
+              */pkg/merkle)                  min=97  ;;
+              */pkg/obs)                     min=97  ;;
+              */pkg/sourcedigest)            min=85  ;;
+              */tools/canonicalize)          min=99  ;;
+              */tools/certutils)             min=82  ;;
+              */tools/symbolsgen)            min=90  ;;
+              *)                             min=80  ;;
+            esac
+            echo "$p: ${pc}% (min ${min}%)"
+            awk -v p="$pc" -v m="$min" 'BEGIN{ if (p+0 < m+0) { print "FAIL: coverage below threshold"; exit 1 } }' || FAIL=1
+          done
+          exit $FAIL
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.html
+
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.10"
+
+      - name: Go mod download
+        run: go mod download || true
+
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+
+      - name: Mutation — core/cabinet (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/cabinet
+
+      - name: Mutation — core/modules/schemapipeline (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/modules/schemapipeline
+
+      - name: Mutation — core/modules/schemacompile (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/modules/schemacompile

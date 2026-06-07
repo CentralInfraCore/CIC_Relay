@@ -1,0 +1,18 @@
+entrypoint: true
+tags:
+  - doc
+  - overview
+  - relay
+  - core
+category:
+  - overview
+  - documentation
+related_nodes:
+  - concept/cic_attekintes
+  - concept/relay_pozicionalas
+used_in:
+  - onboarding
+  - overview
+description: >
+  A CIC Relay dokumentációjának bevezetője, amely áttekintést nyújt a rendszer
+  főbb funkcióiról, céljairól és architektúrájáról.

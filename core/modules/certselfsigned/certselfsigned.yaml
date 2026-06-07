@@ -1,0 +1,32 @@
+---
+package: certselfsigned
+description: Package certselfsigned implements the cert.selfsigned native module.
+  It generates a self-signed X.509 certificate and returns the PEM-encoded certificate
+  and private key, so the result can be recorded in the ProofTrace.
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Input
+  kind: struct
+  description: Input is the expected input structure for the cert.selfsigned module.
+  implements: []
+  references: []
+- name: Output
+  kind: struct
+  description: Output is the result returned by Generate.
+  implements: []
+  references: []
+- name: Generate
+  kind: func
+  description: 'Generate creates a self-signed ECDSA P-256 certificate. Satisfies
+    the cabinet NativeFunc signature: func(context.Context, interface{}) (interface{},
+    error)'
+  references: []
+- name: parseInput
+  kind: func
+  description: ''
+  references: []

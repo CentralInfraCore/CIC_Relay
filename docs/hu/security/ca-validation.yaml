@@ -1,0 +1,24 @@
+tags:
+  - doc
+  - security
+  - validation
+related_nodes:
+  - docs/hu/meta/philosophy
+  - docs/hu/concept/cic_egyszeruen
+  - docs/hu/concept/cic_onvedelem_es_nyilt_kod
+category:
+  - principle
+  - security
+entrypoint: false
+used_in:
+  - validation
+description: |
+  This document describes the RootCA validation process for the Relay project. It covers CA fingerprint storage, CRT validation, CRL verification, and optional OCSP checks to ensure certificate validity and trust.
+
+ca_validation:
+  ca_fingerprint: <ca_fingerprint>
+  crt_status: valid
+  crt_serial: <crt_serial_number>
+  crl_check: passed
+  crl_last_update: <timestamp>
+  ocsp_status: good

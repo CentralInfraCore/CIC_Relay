@@ -2,8 +2,11 @@ tags:
   - doc
   - relay
   - core
+  - platform-engineering
 related_nodes:
   - docs/git-management
+  - docs/en/concept/declarative_ecosystem_integration
+  - docs/hu/concept/declarative_ecosystem_integration
   - feature-list
 category:
   - concept

@@ -1,0 +1,17 @@
+tags:
+  - schema
+  - declarative
+  - execution
+category:
+  - definition
+  - control
+related_nodes:
+  - concept/plugin_interface
+  - concept/dependency_modell
+  - concept/graf_vegrehajtas
+used_in:
+  - validation
+  - relay_control
+description: >
+  Describes schema structure and behavior. Explains how plugins, state, and dependencies
+  are declared and executed as part of a unified declarative execution unit.

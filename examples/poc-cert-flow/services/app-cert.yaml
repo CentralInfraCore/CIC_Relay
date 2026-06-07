@@ -1,0 +1,21 @@
+apiVersion: cic/v1
+kind: Service
+metadata:
+  name: app-cert-service
+spec:
+  module: cert.selfsigned
+  resources:
+    - meta:
+        name: app-tls-cert
+        kind: selfsigned-certificate
+      schemaRef:
+        name: cert.selfsigned
+        version: "1.0"
+      spec:
+        cn: "app.local"
+        dns_sans:
+          - "app.local"
+          - "www.app.local"
+        validity_days: 90
+      state:
+        desired: present

@@ -1,0 +1,11 @@
+apiVersion: relay.cic.com/v1
+kind: Workflow
+metadata:
+  name: cic.schema.compile
+  version: "1.0"
+  description: "Schema compilation workflow: assert source, build, sign artifact."
+spec:
+  steps:
+    - "cic.source.assert@1.0.assert(input) -> assert_result"
+    - "cic.schema.build@1.0.build(assert_result) -> artifact"
+    - "cic.artifact.sign@1.0.sign(artifact) -> signed_artifact"

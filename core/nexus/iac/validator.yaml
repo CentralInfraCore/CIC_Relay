@@ -1,0 +1,46 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- schema
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: IaCValidator
+  kind: struct
+  description: IaCValidator resolves schemaRefs in a Graph against the Cabinet schema
+    registry and performs structural validation on each resource.
+  implements: []
+  references:
+  - cabinet.Cabinet
+- name: NewIaCValidator
+  kind: func
+  description: NewIaCValidator creates a new IaCValidator backed by the given Cabinet.
+  references:
+  - cabinet.Cabinet
+- name: Validate
+  kind: method
+  receiver: IaCValidator
+  description: Validate iterates over all services and their resources in the graph.
+    It returns a joined error listing every schemaRef that could not be resolved.
+  references:
+  - types.Graph
+- name: ValidateResource
+  kind: method
+  receiver: IaCValidator
+  description: ValidateResource validates a single ResourceSpec against the Cabinet
+    schema registry. Suitable for per-event validation in the Operator.
+  references:
+  - types.ResourceSpec
+- name: resolveSchema
+  kind: method
+  receiver: IaCValidator
+  description: resolveSchema looks up the schemaRef in the Cabinet and returns a descriptive
+    error on failure.
+  references:
+  - types.ResourceSpec
+  - cabinet.GetSchema

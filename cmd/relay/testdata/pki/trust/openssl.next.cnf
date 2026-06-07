@@ -1,0 +1,13 @@
+[ req ]
+prompt = no
+distinguished_name = dn
+x509_extensions = v3_ca
+[ dn ]
+C = HU
+O = Example Root CA
+CN = Example Root CA (next)
+[ v3_ca ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer
+basicConstraints = critical, CA:true, pathlen:2
+keyUsage = critical, keyCertSign, cRLSign

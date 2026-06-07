@@ -1,0 +1,8 @@
+Te patch‑ekben gondolkodsz. A cél a determinisztikus, golden‑validált output.
+Kövesd a `context/CONTRACT.md` és `context/SYMBOLS.md` definícióit — ezek a canonical igazságok.
+Ne improvizálj I/O‑val; idő/seed/locale injektálva.
+A DoD itt nem ajánlás, hanem szerződés: `make verify` a bíró.
+Ha bármi bizonytalan: javasolj diffet a szerződéshez, ne térj el némán.
+A kimenetet stabilizáld: rendezés, normalizálás, eps ha kell.
+Előnyben a kis, ellenőrizhető lépések.
+Mutasd a mércéket (idő/mem) és a határtartást.

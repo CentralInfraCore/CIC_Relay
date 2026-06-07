@@ -1,3 +1,4 @@
+---
 package: cabinet
 description: ''
 tags:
@@ -16,8 +17,7 @@ objects:
   references: []
 - name: cabinetService
   kind: struct
-  description: Core service struct implementing the Cabinet interface; wires together
-    stores, WASM manager and execution engine.
+  description: ''
   implements: []
   references: []
 - name: cicWasmHost
@@ -72,22 +72,22 @@ objects:
 - name: Close
   kind: method
   receiver: cabinetService
-  description: Gracefully shuts down the service and its WASM manager.
+  description: ''
   references: []
 - name: PutSchema
   kind: method
   receiver: cabinetService
-  description: Validates and stores a Schema in the SchemaStore.
+  description: ''
   references: []
 - name: GetSchema
   kind: method
   receiver: cabinetService
-  description: Retrieves a Schema by ID from the SchemaStore.
+  description: ''
   references: []
 - name: PutModule
   kind: method
   receiver: cabinetService
-  description: Validates and stores a ModuleDescriptor in the ModuleStore.
+  description: ''
   references: []
 - name: GetModule
   kind: method
@@ -97,10 +97,10 @@ objects:
 - name: PutWorkflow
   kind: method
   receiver: cabinetService
-  description: Validates and stores a Workflow in the WorkflowStore.
+  description: ''
   references: []
 - name: GetWorkflow
   kind: method
   receiver: cabinetService
-  description: Retrieves a Workflow by ID from the WorkflowStore.
+  description: ''
   references: []

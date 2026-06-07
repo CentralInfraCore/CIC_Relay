@@ -1,0 +1,4 @@
+version: 14
+canonical_definitions: true
+last_changed: 2026-04-11T00:00:00Z
+note: "Sprint 14: M33-M35 (pkg/merkle + BuildContext teljes feltöltés: GoRuntimeDigest, BuilderImageDigest, CAFingerprint)"

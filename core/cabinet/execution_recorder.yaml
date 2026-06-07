@@ -1,0 +1,16 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ExecutionRecorder
+  kind: interface
+  description: 'ExecutionRecorder is an optional sink for ProofTrace results produced
+    by Setx. If nil, recording is silently skipped. Errors from recording are non-fatal:
+    the caller logs a WARN and continues.'
+  references: []

@@ -1,0 +1,17 @@
+tags:
+  - dependency
+  - logic
+  - state
+category:
+  - condition
+  - relation_model
+related_nodes:
+  - concept/schema_kezeles
+  - concept/allapotmodell
+  - concept/graf_vegrehajtas
+used_in:
+  - execution_block
+  - condition_evaluation
+description: >
+  Explains how schema-to-schema dependencies are declared and evaluated.
+  Covers readiness conditions and how dependency fulfillment controls execution flow.

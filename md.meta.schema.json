@@ -1,0 +1,94 @@
+{
+  "type": "object",
+  "required": [
+    "tags",
+    "related_nodes",
+    "category",
+    "entrypoint",
+    "used_in",
+    "description"
+  ],
+  "properties": {
+    "tags": {
+      "type": "array",
+      "description": "Thematic tags for the module, helping AI integration into context. The following values are allowed:",
+      "items": {
+        "type": "string",
+        "enum": [
+          "relay",
+          "compliance",
+          "workflow",
+          "cictor",
+          "schema",
+          "parser",
+          "guard",
+          "core",
+          "doc",
+          "interface",
+          "gateway",
+          "builder",
+          "test",
+          "meta",
+          "orchestrator",
+          "decision",
+          "reflector",
+          "context",
+          "validator",
+          "executor",
+          "hook",
+          "template",
+          "fallback",
+          "session",
+          "metrics",
+          "storage",
+          "loader",
+          "renderer"
+        ]
+      }
+    },
+    "related_nodes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "References to other concepts or modules (e.g., 'concept/relay_flow')."
+    },
+    "category": {
+      "type": "array",
+      "description": "The functional role(s) of the document. The following values are allowed:",
+      "items": {
+        "type": "string",
+        "enum": [
+          "modul",
+          "decision",
+          "morális",
+          "belépési",
+          "meta",
+          "elemző"
+        ]
+      }
+    },
+    "entrypoint": {
+      "type": "boolean",
+      "description": "Indicates whether this document can act as an entry point."
+    },
+    "used_in": {
+      "type": "array",
+      "description": "Workflows or processes where this module is used. Choose from the following values:",
+      "items": {
+        "type": "string",
+        "enum": [
+          "decision_flow",
+          "validation",
+          "generation",
+          "onboarding",
+          "fallback_process"
+        ]
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable summary of the document purpose (can be in Hungarian or English)."
+    }
+  }
+}

@@ -1,0 +1,23 @@
+tags:
+  - relay
+  - execution_graph
+  - concept
+  - trusted_supply_chain
+related_nodes:
+  - release_workflow
+  - auditlog_engine
+  - CA_chain
+  - config_store
+  - ci_cd_pipeline
+category: supply_chain
+entrypoint: relay
+used_in:
+  - release
+  - audit
+  - compliance
+  - build
+description: >
+  This metadata file belongs to the CIC Relay Trusted Supply Chain concept as described in the canvas.
+  Its goal is to ensure that every critical point of the release workflow (signature, audit, CA-chain)
+  is managed in a documented, traceable, and uncompromising way. The system guarantees the origin and status
+  of every component (module, configuration, workflow, release) are provable, digitally signed, and auditable at all times.

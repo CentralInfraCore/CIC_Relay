@@ -1,0 +1,58 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: ProofArtifact
+  kind: struct
+  description: ProofArtifact is the unified proof record produced by every CIC-Relay
+    execution. It implements the proof_artifact@1.0 schema contract.
+  implements: []
+  references: []
+- name: ProofArtifactStep
+  kind: struct
+  description: ProofArtifactStep mirrors cabinet.ProofTraceStep for the verifier.
+  implements: []
+  references: []
+- name: ProofArtifactCommit
+  kind: struct
+  description: ProofArtifactCommit holds the state commit record appended after PoSE
+    verification.
+  implements: []
+  references: []
+- name: VerifyResult
+  kind: struct
+  description: VerifyResult is the output of VerifyProofArtifact.
+  implements: []
+  references: []
+- name: VerifyProofArtifact
+  kind: func
+  description: 'VerifyProofArtifact validates a ProofArtifact against the proof_artifact@1.0
+    schema contract. Checks performed: 1. Required fields present (workflow_id, source_digest,
+    chain_hash, steps, timestamp). 2. chain_hash recomputed and verified against the
+    artifact''s declared value. 3. Per-step: name, module, input_hash, output_hash
+    all non-empty. 4. pose_result value is one of: VERIFIED | DRIFT | SKIPPED (when
+    present). 5. commit_record.id == chain_hash when commit_record is present.'
+  references:
+  - cabinet.ProofTraceStep
+- name: ProofArtifactFromTrace
+  kind: func
+  description: ProofArtifactFromTrace converts a cabinet.ProofTrace to a ProofArtifact.
+  references:
+  - cabinet.ProofTrace
+- name: MarshalProofArtifact
+  kind: func
+  description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON.
+  references: []
+- name: recomputeChainHash
+  kind: func
+  description: recomputeChainHash mirrors cabinet.computeChainHash without importing
+    the private function.
+  references:
+  - cabinet.ProofTraceStep

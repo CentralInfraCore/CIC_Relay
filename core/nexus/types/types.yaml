@@ -1,3 +1,4 @@
+---
 package: types
 description: ''
 tags:
@@ -42,8 +43,7 @@ objects:
   references: []
 - name: RelaySpec
   kind: struct
-  description: 'Spec block for a Relay node: list of references to Host definition
-    files or embedded Host objects.'
+  description: ''
   implements: []
   references: []
 - name: Host
@@ -53,7 +53,7 @@ objects:
   references: []
 - name: HostSpec
   kind: struct
-  description: 'Spec block for a Host node: OS identifier and list of Service references.'
+  description: ''
   implements: []
   references: []
 - name: Service
@@ -63,8 +63,7 @@ objects:
   references: []
 - name: ServiceSpec
   kind: struct
-  description: 'Spec block for a Service node: module name reference and arbitrary
-    config payload map.'
+  description: ''
   implements: []
   references: []
 - name: Graph

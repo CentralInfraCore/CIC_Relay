@@ -1,0 +1,13 @@
+apiVersion: relay.cic.com/v1
+kind: Module
+metadata:
+  name: test.module
+  version: "1.0"
+  description: "A test WASM module."
+type: executor
+accepts:
+  - "test.schema@1.0"
+outputKeys:
+  - "result"
+wasmDigest: "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+wasmSize: 8

@@ -1,0 +1,20 @@
+tags:
+  - doc
+  - concept
+  - security
+  - signing
+related_nodes:
+  - docs/hu/meta/philosophy
+  - docs/hu/concept/cic_egyszeruen
+  - docs/hu/concept/cic_onvedelem_es_nyilt_kod
+category:
+  - principle
+  - security
+entrypoint: false
+used_in:
+  - education
+  - validation
+description: |
+  This document describes the commit signing process for the Relay project and its GPG configuration.
+  It covers developer key setup, agent cache usage, branch-based automatic signing, and pipeline verification steps.
+  The goal is to ensure the authenticity of the source code and the integrity of the build process.
