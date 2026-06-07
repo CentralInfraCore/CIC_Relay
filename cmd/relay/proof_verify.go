@@ -10,13 +10,13 @@ import (
 // ProofArtifact is the unified proof record produced by every CIC-Relay execution.
 // It implements the proof_artifact@1.0 schema contract.
 type ProofArtifact struct {
-	WorkflowID   string                   `json:"workflow_id"`
-	SourceDigest string                   `json:"source_digest"`
-	ChainHash    string                   `json:"chain_hash"`
-	Steps        []ProofArtifactStep      `json:"steps"`
-	Timestamp    string                   `json:"timestamp"`
-	PoSEResult   string                   `json:"pose_result,omitempty"`
-	CommitRecord *ProofArtifactCommit     `json:"commit_record,omitempty"`
+	WorkflowID   string               `json:"workflow_id"`
+	SourceDigest string               `json:"source_digest"`
+	ChainHash    string               `json:"chain_hash"`
+	Steps        []ProofArtifactStep  `json:"steps"`
+	Timestamp    string               `json:"timestamp"`
+	PoSEResult   string               `json:"pose_result,omitempty"`
+	CommitRecord *ProofArtifactCommit `json:"commit_record,omitempty"`
 }
 
 // ProofArtifactStep mirrors cabinet.ProofTraceStep for the verifier.
@@ -38,7 +38,7 @@ type ProofArtifactCommit struct {
 // VerifyResult is the output of VerifyProofArtifact.
 type VerifyResult struct {
 	Valid    bool     `json:"valid"`
-	Errors  []string `json:"errors,omitempty"`
+	Errors   []string `json:"errors,omitempty"`
 	Warnings []string `json:"warnings,omitempty"`
 }
 
@@ -129,7 +129,7 @@ func VerifyProofArtifact(a *ProofArtifact) VerifyResult {
 
 	return VerifyResult{
 		Valid:    len(errs) == 0,
-		Errors:  errs,
+		Errors:   errs,
 		Warnings: warns,
 	}
 }
@@ -158,4 +158,3 @@ func ProofArtifactFromTrace(t *cabinet.ProofTrace) *ProofArtifact {
 func MarshalProofArtifact(a *ProofArtifact) ([]byte, error) {
 	return json.Marshal(a)
 }
-

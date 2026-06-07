@@ -22,7 +22,7 @@ type MetricSink interface {
 type NoopSink struct{}
 
 func (NoopSink) RecordTrace(TraceFrame)         {}
-func (NoopSink) RecordLog(LogRecord)             {}
-func (NoopSink) RecordCounter(CounterPoint)      {}
-func (NoopSink) RecordGauge(GaugePoint)          {}
-func (NoopSink) RecordHistogram(HistogramPoint)  {}
+func (NoopSink) RecordLog(LogRecord)            {}
+func (NoopSink) RecordCounter(CounterPoint)     {}
+func (NoopSink) RecordGauge(GaugePoint)         {}
+func (NoopSink) RecordHistogram(HistogramPoint) {}

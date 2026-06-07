@@ -43,9 +43,9 @@ func bootstrapPKI(trustMode string, embeddedPKI fs.FS, logger *logrus.Logger) (*
 			return nil, fmt.Errorf("pki bootstrap (dev): %w", err)
 		}
 		logger.WithFields(logrus.Fields{
-			"trust_mode":          trustMode,
-			"trust_store_loaded":  assets.TrustStoreLoaded,
-			"ca_anchor":           "CICDeveloperCA2026 / CICRootCA2026",
+			"trust_mode":         trustMode,
+			"trust_store_loaded": assets.TrustStoreLoaded,
+			"ca_anchor":          "CICDeveloperCA2026 / CICRootCA2026",
 		}).Info("PKI trust store bootstrapped")
 		return assets, nil
 

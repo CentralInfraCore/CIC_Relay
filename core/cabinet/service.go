@@ -93,7 +93,7 @@ type cabinetService struct {
 	modules     ModuleStore
 	workflows   WorkflowStore
 	wasmManager wasmManager
-	clock       func() string    // injected; returns UTC timestamp for ProofTrace
+	clock       func() string     // injected; returns UTC timestamp for ProofTrace
 	recorder    ExecutionRecorder // optional; nil = skip recording
 }
 

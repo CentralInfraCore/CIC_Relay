@@ -831,9 +831,9 @@ func TestRegisterNativeComponents(t *testing.T) {
 
 	// Pipeline steps 7–10: start, test, validate, release
 	pipelineSteps := []struct {
-		idx  int
-		id   string
-		fn   string
+		idx int
+		id  string
+		fn  string
 	}{
 		{6, "cic.pipeline.start@1.0", "start"},
 		{7, "cic.pipeline.test@1.0", "test"},
@@ -995,12 +995,12 @@ func generateForeignLeafPEM(t *testing.T) []byte {
 	require.NoError(t, err)
 
 	leafTmpl := &x509.Certificate{
-		SerialNumber:    big.NewInt(2),
-		Subject:         pkix.Name{CommonName: "Foreign Signer"},
-		NotBefore:       time.Now().Add(-time.Hour),
-		NotAfter:        time.Now().Add(24 * time.Hour),
-		ExtKeyUsage:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
-		KeyUsage:        x509.KeyUsageDigitalSignature,
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "Foreign Signer"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
 	leafDER, err := x509.CreateCertificate(rand.Reader, leafTmpl, foreignRoot, &leafKey.PublicKey, foreignKey)
 	require.NoError(t, err)
@@ -1076,10 +1076,10 @@ func TestLoadComponentsFromFS_UnknownKind(t *testing.T) {
 func TestRegisterNativeComponents_SequentialPutModuleFailures(t *testing.T) {
 	expectedErr := errors.New("storage full")
 	tests := []struct {
-		name         string
-		moduleOKs    int
-		workflowOKs  int
-		expectMsg    string
+		name        string
+		moduleOKs   int
+		workflowOKs int
+		expectMsg   string
 	}{
 		{"ci.build PutModule", 1, 0, "ci.build"},
 		{"cic.source.assert PutModule", 2, 0, "cic.source.assert"},
@@ -1180,10 +1180,10 @@ func TestRegisterNativeComponents_SubsequentNewModuleDescriptorFailures(t *testi
 	// NewModuleDescriptor calls canonicaljson.ToJSON twice per invocation.
 	// succeedCnt = number of ToJSON calls that succeed; putModuleOKs = PutModule calls before failure.
 	tests := []struct {
-		name          string
-		succeedCnt    int // ToJSON calls that succeed (2 per module)
-		putModuleOKs  int // PutModule calls that must succeed before failure
-		expectMsg     string
+		name         string
+		succeedCnt   int // ToJSON calls that succeed (2 per module)
+		putModuleOKs int // PutModule calls that must succeed before failure
+		expectMsg    string
 	}{
 		{"ci.build NewModuleDescriptor", 2, 1, "ci.build"},
 		{"cic.source.assert NewModuleDescriptor", 4, 2, "cic.source.assert"},

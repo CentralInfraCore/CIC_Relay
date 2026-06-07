@@ -29,14 +29,14 @@ func NewLogrusSink(logger *logrus.Logger) *LogrusSink {
 // RecordTrace emits a logrus entry for a TraceFrame.
 func (s *LogrusSink) RecordTrace(f TraceFrame) {
 	fields := logrus.Fields{
-		"obs.type":        "trace",
-		"obs.trace_id":    f.TraceID,
-		"obs.span_id":     f.SpanID,
-		"obs.name":        f.Name,
-		"obs.start_time":  f.StartTime,
-		"obs.end_time":    f.EndTime,
-		"obs.component":   f.Resource.Component,
-		"obs.relay_id":    f.Resource.RelayID,
+		"obs.type":       "trace",
+		"obs.trace_id":   f.TraceID,
+		"obs.span_id":    f.SpanID,
+		"obs.name":       f.Name,
+		"obs.start_time": f.StartTime,
+		"obs.end_time":   f.EndTime,
+		"obs.component":  f.Resource.Component,
+		"obs.relay_id":   f.Resource.RelayID,
 	}
 	for k, v := range f.Attrs {
 		fields["obs.attr."+k] = v

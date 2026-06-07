@@ -77,8 +77,8 @@ type Service struct {
 }
 
 type ServiceSpec struct {
-	Module    string                 `json:"module" yaml:"module"`               // Reference to the schema/module name (e.g., "postgresql")
-	Config    map[string]interface{} `json:"config,omitempty" yaml:"config,omitempty"` // Legacy configuration payload
+	Module    string                 `json:"module" yaml:"module"`                           // Reference to the schema/module name (e.g., "postgresql")
+	Config    map[string]interface{} `json:"config,omitempty" yaml:"config,omitempty"`       // Legacy configuration payload
 	Resources []ResourceSpec         `json:"resources,omitempty" yaml:"resources,omitempty"` // Schema-driven resource declarations
 }
 

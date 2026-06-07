@@ -35,9 +35,9 @@ type Output struct {
 
 // Test-injectable function hooks for crypto operations.
 var (
-	generateKey         = func() (*ecdsa.PrivateKey, error) { return ecdsa.GenerateKey(elliptic.P256(), rand.Reader) }
-	generateSerial      = func() (*big.Int, error) { return rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128)) }
-	createCertificate   = func(template, parent *x509.Certificate, pub, priv interface{}) ([]byte, error) {
+	generateKey       = func() (*ecdsa.PrivateKey, error) { return ecdsa.GenerateKey(elliptic.P256(), rand.Reader) }
+	generateSerial    = func() (*big.Int, error) { return rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128)) }
+	createCertificate = func(template, parent *x509.Certificate, pub, priv interface{}) ([]byte, error) {
 		return x509.CreateCertificate(rand.Reader, template, parent, pub, priv)
 	}
 	marshalECPrivateKey = x509.MarshalECPrivateKey

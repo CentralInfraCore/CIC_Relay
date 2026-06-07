@@ -57,7 +57,7 @@ func TestSetHandler_Success(t *testing.T) {
 	// Create the HTTP request body.
 	payload := map[string]any{
 		"workflow_id": "test.workflow@1.0",
-		"modules":    []string{"test.module@1.0"},
+		"modules":     []string{"test.module@1.0"},
 	}
 	body, _ := json.Marshal(payload)
 

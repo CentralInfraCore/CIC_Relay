@@ -71,7 +71,7 @@ type stubGitOps struct {
 
 func (s *stubGitOps) Clone(_ context.Context, _, _, _ string) error { return s.cloneErr }
 func (s *stubGitOps) Fetch(_ context.Context, _, _ string) error    { return s.fetchErr }
-func (s *stubGitOps) Checkout(_ context.Context, _, _ string) error  { return s.checkoutErr }
+func (s *stubGitOps) Checkout(_ context.Context, _, _ string) error { return s.checkoutErr }
 func (s *stubGitOps) Commit(_ context.Context, _, _ string, _ []string) (string, error) {
 	return s.commitHash, s.commitErr
 }

@@ -165,10 +165,10 @@ func (c *PipelineConfig) NewStartFunc() func(context.Context, interface{}) (inte
 		}
 
 		stepHash := computeStepHash("start", map[string]string{
-			"source_ref":            sourceRef,
-			"source_tree_digest":    treeDigest,
-			"builder_image_digest":  builderImageDigest,
-			"branch":                branch,
+			"source_ref":           sourceRef,
+			"source_tree_digest":   treeDigest,
+			"builder_image_digest": builderImageDigest,
+			"branch":               branch,
 		})
 
 		out2 := copyMap(m)

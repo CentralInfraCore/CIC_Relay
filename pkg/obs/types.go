@@ -20,8 +20,8 @@ type LogRecord struct {
 	Level     string            `json:"level"`
 	Message   string            `json:"message"`
 	Resource  Resource          `json:"resource"`
-	ExecCtx   *ExecutionContext  `json:"exec_ctx,omitempty"`
-	Attrs     map[string]string  `json:"attrs,omitempty"`
+	ExecCtx   *ExecutionContext `json:"exec_ctx,omitempty"`
+	Attrs     map[string]string `json:"attrs,omitempty"`
 }
 
 // TraceFrame is a lightweight execution span — not OTel-compatible,
@@ -33,8 +33,8 @@ type TraceFrame struct {
 	StartTime string            `json:"start_time"`
 	EndTime   string            `json:"end_time"`
 	Resource  Resource          `json:"resource"`
-	ExecCtx   *ExecutionContext  `json:"exec_ctx,omitempty"`
-	Attrs     map[string]string  `json:"attrs,omitempty"`
+	ExecCtx   *ExecutionContext `json:"exec_ctx,omitempty"`
+	Attrs     map[string]string `json:"attrs,omitempty"`
 }
 
 // CounterPoint is a monotonically increasing metric.
@@ -43,7 +43,7 @@ type CounterPoint struct {
 	Value     int64             `json:"value"`
 	Timestamp string            `json:"timestamp"`
 	Resource  Resource          `json:"resource"`
-	Attrs     map[string]string  `json:"attrs,omitempty"`
+	Attrs     map[string]string `json:"attrs,omitempty"`
 }
 
 // GaugePoint is an instantaneous numeric reading.
@@ -52,7 +52,7 @@ type GaugePoint struct {
 	Value     float64           `json:"value"`
 	Timestamp string            `json:"timestamp"`
 	Resource  Resource          `json:"resource"`
-	Attrs     map[string]string  `json:"attrs,omitempty"`
+	Attrs     map[string]string `json:"attrs,omitempty"`
 }
 
 // HistogramPoint summarises a distribution of values.
@@ -63,7 +63,7 @@ type HistogramPoint struct {
 	Buckets   []float64         `json:"buckets,omitempty"`
 	Timestamp string            `json:"timestamp"`
 	Resource  Resource          `json:"resource"`
-	Attrs     map[string]string  `json:"attrs,omitempty"`
+	Attrs     map[string]string `json:"attrs,omitempty"`
 }
 
 // IntegrityEnvelope links an observation record to the ProofTrace audit chain.
