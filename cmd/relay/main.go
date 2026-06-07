@@ -189,6 +189,7 @@ func newMux(s *relayServer) *http.ServeMux {
 	mux.HandleFunc("/set", s.setHandler)
 	mux.HandleFunc("/v1/schema/compile", s.compileHandler)
 	mux.HandleFunc("/v1/schemas/pipeline", s.pipelineHandler)
+	mux.HandleFunc("/v1/proof/verify", s.proofVerifyHandler)
 	mux.HandleFunc("/healthz", s.healthzHandler)
 	mux.HandleFunc("/readyz", s.readyzHandler)
 	return mux
