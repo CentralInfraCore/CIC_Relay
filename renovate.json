@@ -1,8 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base"
-  ],
+  "extends": ["config:base"],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
   "pip-compile": {
     "enabled": true
   },
@@ -10,6 +12,24 @@
     {
       "matchManagers": ["pip-compile"],
       "groupName": "python dependencies"
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["direct"],
+      "groupName": "Go direct dependencies"
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "groupName": "Go indirect dependencies"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "groupName": "Docker images"
     }
   ]
 }
