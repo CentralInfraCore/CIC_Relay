@@ -64,9 +64,5 @@ func (s *relayServer) proofVerifyHandler(w http.ResponseWriter, r *http.Request)
 	logEntry.WithField("outcome", "success").WithField("valid", result.Valid).Info("Proof verify completed")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(ProofVerifyResponse{
-		Valid:    result.Valid,
-		Errors:   result.Errors,
-		Warnings: result.Warnings,
-	})
+	json.NewEncoder(w).Encode(ProofVerifyResponse(result))
 }
