@@ -1,6 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:base"],
+  "extends": ["config:recommended"],
+  "repositories": ["CentralInfraCore/CIC_Relay"],
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"]
