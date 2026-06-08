@@ -71,7 +71,7 @@ pygments==2.19.2
     #   rich
 pyopenssl==25.3.0
     # via -r requirements.in
-pytest==8.4.2
+pytest==9.0.3
     # via
     #   -r requirements.in
     #   pytest-cov
