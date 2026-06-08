@@ -487,7 +487,7 @@ func buildOperatorIfConfigured(ctx context.Context, cabinetSvc cabinet.Cabinet, 
 		return nil // unreachable in production (Fatal calls os.Exit); enables testing via logger.ExitFunc
 	}
 
-	// Select IaC source: GitSource if CIC_GIT_SOURCE_URL is set, else FileSource.
+	// Select IaC source: GitSource → UpstreamSource → FileSource (priority order).
 	var iacSource iac.IaCSource
 	if gitURL := os.Getenv("CIC_GIT_SOURCE_URL"); gitURL != "" {
 		localPath := os.Getenv("CIC_GIT_SOURCE_LOCAL_PATH")
@@ -504,6 +504,11 @@ func buildOperatorIfConfigured(ctx context.Context, cabinetSvc cabinet.Cabinet, 
 			Branch:    branch,
 			LocalPath: localPath,
 		})
+	} else if upstream, err := iac.NewUpstreamSourceFromEnv(logger); err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid CIC_UPSTREAM_FETCH_TIMEOUT")
+		return nil // unreachable in production; enables testing via logger.ExitFunc
+	} else if upstream != nil {
+		iacSource = upstream
 	} else {
 		iacSource = iac.NewFileSource(infraPath)
 	}

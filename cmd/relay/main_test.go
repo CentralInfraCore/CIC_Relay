@@ -795,3 +795,35 @@ func TestBuildOperatorIfConfigured_WithGitSource(t *testing.T) {
 	op := buildOperatorIfConfigured(ctx, new(mockCabinetService), logger)
 	assert.NotNil(t, op)
 }
+
+func TestBuildOperatorIfConfigured_WithUpstreamSource(t *testing.T) {
+	t.Setenv("CIC_INFRA_REPO_PATH", t.TempDir())
+	t.Setenv("CIC_OPERATOR_SECRET", "test-secret")
+	t.Setenv("CIC_GIT_SOURCE_URL", "")
+	t.Setenv("CIC_UPSTREAM_URL", "http://relay.example.com/config")
+	t.Setenv("CIC_UPSTREAM_TOKEN", "")
+	t.Setenv("CIC_UPSTREAM_FETCH_TIMEOUT", "")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+
+	op := buildOperatorIfConfigured(context.Background(), new(mockCabinetService), logger)
+	assert.NotNil(t, op)
+}
+
+func TestBuildOperatorIfConfigured_InvalidUpstreamTimeout(t *testing.T) {
+	t.Setenv("CIC_INFRA_REPO_PATH", t.TempDir())
+	t.Setenv("CIC_OPERATOR_SECRET", "test-secret")
+	t.Setenv("CIC_GIT_SOURCE_URL", "")
+	t.Setenv("CIC_UPSTREAM_URL", "http://relay.example.com/config")
+	t.Setenv("CIC_UPSTREAM_FETCH_TIMEOUT", "notaduration")
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	exitCalled := false
+	logger.ExitFunc = func(_ int) { exitCalled = true }
+
+	result := buildOperatorIfConfigured(context.Background(), new(mockCabinetService), logger)
+	assert.True(t, exitCalled, "logger.Fatal must be called on invalid CIC_UPSTREAM_FETCH_TIMEOUT")
+	assert.Nil(t, result)
+}
