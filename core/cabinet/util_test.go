@@ -27,13 +27,13 @@ func TestDomainConstructors_GoldenChecksums(t *testing.T) {
 	})
 
 	t.Run("Workflow_GoldenChecksum", func(t *testing.T) {
-		meta := BaseBlock{Name: "golden-wf", Version: "1.0"}
-		steps := []string{"step1", "step2"}
+		identity := WorkflowIdentity{Version: "1.0"}
+		config := WorkflowConfig{Name: "golden-wf", Steps: []string{"step1", "step2"}}
 
-		// This checksum is updated based on the actual output from the corrected computeChecksum logic.
-		const goldenWorkflowChecksum = "ae4f2fa9f7df1b506177b1475979f7366285c3386dde7766a53e38e2aa135efb"
+		// Checksum covers: KindWf prefix + canonical_json(metaForChecksum) + canonical_json(WorkflowConfig).
+		const goldenWorkflowChecksum = "4721d29a743f3a18ef57455f9aa5c692468f68afe96cdef11387587a365bfb20"
 
-		wf, err := NewWorkflow(context.Background(), meta, steps)
+		wf, err := NewWorkflow(context.Background(), identity, config, WorkflowSigning{})
 		if err != nil {
 			t.Fatalf("NewWorkflow() failed: %v", err)
 		}

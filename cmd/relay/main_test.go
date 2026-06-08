@@ -535,7 +535,10 @@ func TestMockCabinetService_GetModule_Error(t *testing.T) {
 
 func TestMockCabinetService_PutWorkflow(t *testing.T) {
 	mockService := new(mockCabinetService)
-	workflow := &cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "test-workflow", Version: "1.0"}}
+	workflow := &cabinet.Workflow{
+		Config:   cabinet.WorkflowConfig{Name: "test-workflow"},
+		Identity: cabinet.WorkflowIdentity{Version: "1.0"},
+	}
 
 	mockService.On("PutWorkflow", workflow).Return(nil).Once()
 
@@ -546,7 +549,10 @@ func TestMockCabinetService_PutWorkflow(t *testing.T) {
 
 func TestMockCabinetService_PutWorkflow_Error(t *testing.T) {
 	mockService := new(mockCabinetService)
-	workflow := &cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "test-workflow", Version: "1.0"}}
+	workflow := &cabinet.Workflow{
+		Config:   cabinet.WorkflowConfig{Name: "test-workflow"},
+		Identity: cabinet.WorkflowIdentity{Version: "1.0"},
+	}
 	expectedErr := errors.New("failed to put workflow")
 
 	mockService.On("PutWorkflow", workflow).Return(expectedErr).Once()
@@ -560,7 +566,10 @@ func TestMockCabinetService_PutWorkflow_Error(t *testing.T) {
 func TestMockCabinetService_GetWorkflow(t *testing.T) {
 	mockService := new(mockCabinetService)
 	id := "test-workflow-id"
-	expectedWorkflow := &cabinet.Workflow{Meta: cabinet.BaseBlock{Name: id, Version: "1.0"}}
+	expectedWorkflow := &cabinet.Workflow{
+		Config:   cabinet.WorkflowConfig{Name: id},
+		Identity: cabinet.WorkflowIdentity{Version: "1.0"},
+	}
 
 	mockService.On("GetWorkflow", id).Return(expectedWorkflow, nil).Once()
 

@@ -38,7 +38,7 @@ func TestMemStores_Basic(t *testing.T) {
 
 	// Workflow store
 	ws := NewMemWorkflowStore()
-	wf := &Workflow{Meta: BaseBlock{Name: "w", Version: "1"}, Steps: []string{"s"}}
+	wf := &Workflow{Config: WorkflowConfig{Name: "w", Steps: []string{"s"}}, Identity: WorkflowIdentity{Version: "1"}}
 	wid := wf.ID()
 	if ws.Exists(wid) {
 		t.Fatal("workflow should not exist initially")
