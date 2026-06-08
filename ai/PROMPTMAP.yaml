@@ -1246,7 +1246,7 @@ tasks:
 sprint: 15
 tasks:
   - task: "cmd-relay-coverage-90"
-    status: todo
+    status: done
     priority: 55
     milestone: ~
     prompt: |

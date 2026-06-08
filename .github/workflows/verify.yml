@@ -94,7 +94,7 @@ jobs:
             go test -coverprofile=/tmp/pkg_cover.out "$p" > /dev/null 2>&1 || continue
             pc=$(go tool cover -func=/tmp/pkg_cover.out | awk 'END{gsub(/%/,""); print $3+0}')
             case "$p" in
-              */cmd/relay)                   min=80  ;;
+              */cmd/relay)                   min=90  ;;
               */core/cabinet)                min=93  ;;
               */core/modules/certselfsigned) min=99  ;;
               */core/modules/cibuild)        min=94  ;;
