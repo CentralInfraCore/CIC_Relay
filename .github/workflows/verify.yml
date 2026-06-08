@@ -40,6 +40,12 @@ jobs:
       - name: Vulnerability scan
         run: govulncheck ./...
 
+      - name: Install deadcode
+        run: go install golang.org/x/tools/cmd/deadcode@latest
+
+      - name: Dead code scan
+        run: deadcode ./...
+
       - name: Check for symbol drift
         run: |
           go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md
