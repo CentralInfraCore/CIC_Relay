@@ -24,3 +24,4 @@ jobs:
           # Create a PAT with repo scope and add as repo secret RENOVATE_TOKEN
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
+          LOG_LEVEL: debug
