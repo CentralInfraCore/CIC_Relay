@@ -24,7 +24,6 @@ type mockRunner struct {
 
 type mockCall struct {
 	name     string
-	args     []string
 	output   string
 	exitCode int
 	err      error
