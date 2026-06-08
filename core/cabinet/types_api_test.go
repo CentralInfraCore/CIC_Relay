@@ -40,7 +40,22 @@ func TestModuleDescriptor_API_Shape(t *testing.T) {
 	assert.Equal(t, 6, typeOf.NumField(), "ModuleDescriptor field count")
 }
 
+func TestWorkflowIdentity_API_Shape(t *testing.T) {
+	typeOf := reflect.TypeOf(cabinet.WorkflowIdentity{})
+	assert.Equal(t, 3, typeOf.NumField(), "WorkflowIdentity field count")
+}
+
+func TestWorkflowConfig_API_Shape(t *testing.T) {
+	typeOf := reflect.TypeOf(cabinet.WorkflowConfig{})
+	assert.Equal(t, 5, typeOf.NumField(), "WorkflowConfig field count")
+}
+
+func TestWorkflowSigning_API_Shape(t *testing.T) {
+	typeOf := reflect.TypeOf(cabinet.WorkflowSigning{})
+	assert.Equal(t, 4, typeOf.NumField(), "WorkflowSigning field count")
+}
+
 func TestWorkflow_API_Shape(t *testing.T) {
 	typeOf := reflect.TypeOf(cabinet.Workflow{})
-	assert.Equal(t, 2, typeOf.NumField(), "Workflow field count")
+	assert.Equal(t, 4, typeOf.NumField(), "Workflow field count")
 }

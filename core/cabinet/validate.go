@@ -158,6 +158,57 @@ func validateAndChecksumSchema(ctx context.Context, id SchemaIdentity, cfg Schem
 	return expectedSum, nil
 }
 
+// validateAndChecksumWorkflow validates Workflow-specific invariants and computes the canonical checksum.
+func validateAndChecksumWorkflow(ctx context.Context, id WorkflowIdentity, cfg WorkflowConfig, sig WorkflowSigning) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if cfg.Name == "" || id.Version == "" {
+		return "", fmt.Errorf("%w: name and version are required", ErrInvalid)
+	}
+
+	metaForHash := metaForChecksum{
+		Name:        cfg.Name,
+		Version:     id.Version,
+		Description: cfg.Description,
+		CreatedBy:   cfg.CreatedBy,
+		Timestamp:   cfg.Timestamp,
+	}
+
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	metaBytes, err := canonicaljson.ToJSON(metaForHash)
+	if err != nil {
+		return "", fmt.Errorf("failed to canonicalize meta: %w", err)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	dataBytes, err := canonicaljson.ToJSON(cfg)
+	if err != nil {
+		return "", fmt.Errorf("failed to canonicalize data: %w", err)
+	}
+
+	hasher := sha256.New()
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	hasher.Write([]byte(KindWf))
+	hasher.Write(metaBytes)
+	hasher.Write(dataBytes)
+	expectedSum := hex.EncodeToString(hasher.Sum(nil))
+
+	if sig.Checksum != "" {
+		if sig.Checksum != expectedSum {
+			return "", fmt.Errorf("%w: checksum mismatch (existing: %s, calculated: %s)", ErrInvalid, sig.Checksum, expectedSum)
+		}
+		return sig.Checksum, nil
+	}
+	return expectedSum, nil
+}
+
 // validateAndChecksum is the single central entry point for validation and checksum calculation.
 // It now accepts a context to handle timeouts.
 func validateAndChecksum(ctx context.Context, meta *BaseBlock, kind string, data any) (string, error) {

@@ -58,7 +58,7 @@ func ExampleAPI_Set_minimal() {
 	modStore.Put(coreTestModule)
 
 	// Create a workflow that uses the core.test.echo function with the full module ID
-	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf.echo", Version: "1.0"}, []string{"core.test@1.0.echo(input)"})
+	wf, err := NewWorkflow(context.Background(), WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.echo", Steps: []string{"core.test@1.0.echo(input)"}}, WorkflowSigning{})
 	if err != nil {
 		fmt.Println("setup error (workflow):", err)
 		return

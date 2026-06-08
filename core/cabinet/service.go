@@ -147,7 +147,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	}
 
 	// 2. Parse workflow steps into an ExecutionGraph.
-	graph, err := ParseExecutionGraph(workflow.Steps)
+	graph, err := ParseExecutionGraph(workflow.Config.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("workflow %q: %w", workflow.ID(), err)
 	}

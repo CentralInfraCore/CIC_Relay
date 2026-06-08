@@ -280,7 +280,7 @@ func TestLoadWorkflow(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unmarshal error", func(t *testing.T) {
-		content := []byte("kind: Workflow\nspec: \"not an object\"")
+		content := []byte("kind: Workflow\nidentity: \"not an object\"")
 		err := loadWorkflow(context.Background(), svc, content)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal workflow file")
@@ -290,10 +290,10 @@ func TestLoadWorkflow(t *testing.T) {
 		// cabinet.NewWorkflow requires at least one step
 		content := []byte(`
 kind: Workflow
-metadata:
-  name: test.flow
+identity:
   version: "1.0"
-spec:
+config:
+  name: test.flow
   steps: []
 `)
 		err := loadWorkflow(context.Background(), svc, content)
@@ -304,10 +304,10 @@ spec:
 	t.Run("overwrite existing workflow", func(t *testing.T) {
 		content := []byte(`
 kind: Workflow
-metadata:
-  name: test.flow
+identity:
   version: "1.0"
-spec:
+config:
+  name: test.flow
   steps: ["step1"]
 `)
 		// Load once

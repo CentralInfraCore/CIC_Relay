@@ -38,7 +38,7 @@ func TestSetx_SchemaValidation_Integration(t *testing.T) {
 		mod.NativeImpl = native
 		svc.modules.Put(mod)
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.noschema", Version: "1.0"}, []string{"echo@1.0.echo(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.noschema", Steps: []string{"echo@1.0.echo(input)"}}, WorkflowSigning{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -65,7 +65,7 @@ func TestSetx_SchemaValidation_Integration(t *testing.T) {
 		mod.NativeImpl = native
 		svc.modules.Put(mod)
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.typed", Version: "1.0"}, []string{"typed@1.0.echo(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.typed", Steps: []string{"typed@1.0.echo(input)"}}, WorkflowSigning{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -92,7 +92,7 @@ func TestSetx_SchemaValidation_Integration(t *testing.T) {
 		mod.NativeImpl = native
 		svc.modules.Put(mod)
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.typed2", Version: "1.0"}, []string{"typed2@1.0.echo(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.typed2", Steps: []string{"typed2@1.0.echo(input)"}}, WorkflowSigning{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -124,7 +124,7 @@ func TestSetx_SchemaValidation_Integration(t *testing.T) {
 		mod.NativeImpl = native
 		svc.modules.Put(mod)
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.failing", Version: "1.0"}, []string{"failing@1.0.fail(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.failing", Steps: []string{"failing@1.0.fail(input)"}}, WorkflowSigning{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -151,7 +151,7 @@ func TestSetx_SchemaValidation_Integration(t *testing.T) {
 		mod.NativeImpl = native
 		svc.modules.Put(mod)
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.typed3", Version: "1.0"}, []string{"typed3@1.0.echo(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.typed3", Steps: []string{"typed3@1.0.echo(input)"}}, WorkflowSigning{})
 		if err != nil {
 			t.Fatal(err)
 		}

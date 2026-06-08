@@ -297,7 +297,7 @@ func TestNewWorkflow_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel the context immediately
 
-	_, err := NewWorkflow(ctx, BaseBlock{Name: "test-wf", Version: "1.0"}, []string{"step1"})
+	_, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "test-wf", Steps: []string{"step1"}}, WorkflowSigning{})
 	require.Error(t, err)
 	testify_assert.ErrorIs(t, err, context.Canceled)
 }

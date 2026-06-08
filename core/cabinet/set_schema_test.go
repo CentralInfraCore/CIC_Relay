@@ -65,7 +65,7 @@ func TestValidateSet_Required(t *testing.T) {
 func TestValidateSet_NotFound(t *testing.T) {
 	// Setup: create stores and populate them with valid objects.
 	wfStore := NewMemWorkflowStore()
-	wf, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf-exists", Version: "v1"}, []string{"step1"})
+	wf, err := NewWorkflow(context.Background(), WorkflowIdentity{Version: "v1"}, WorkflowConfig{Name: "wf-exists", Steps: []string{"step1"}}, WorkflowSigning{})
 	require.NoError(t, err)
 	wfStore.Put(wf)
 
