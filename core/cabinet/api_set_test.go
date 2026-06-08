@@ -42,7 +42,7 @@ func (m *mockCabinet) GetSchema(id string) (*Schema, error) {
 	if m.getSchemaErr != nil {
 		return nil, m.getSchemaErr
 	}
-	return &Schema{Meta: BaseBlock{Name: "dummy-schema", Version: "1.0"}}, nil
+	return &Schema{Config: SchemaConfig{Name: "dummy-schema"}, Identity: SchemaIdentity{Version: "1.0"}}, nil
 }
 
 func (m *mockCabinet) PutWorkflow(wf *Workflow) error {

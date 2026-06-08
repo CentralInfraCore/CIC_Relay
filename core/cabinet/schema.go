@@ -2,34 +2,33 @@ package cabinet
 
 import "context"
 
-// NewSchema constructs a Schema by calling the single central entry point for validation and checksum calculation.
-func NewSchema(ctx context.Context, meta BaseBlock, spec SchemaDef) (*Schema, error) {
-	// Call the single central entry point to validate and compute the checksum.
-	sum, err := validateAndChecksum(ctx, &meta, KindSpec, spec)
+// NewSchema constructs a ManagedEntity-conformant Schema with validated checksum.
+func NewSchema(ctx context.Context, identity SchemaIdentity, config SchemaConfig, signing SchemaSigning) (*Schema, error) {
+	sum, err := validateAndChecksumSchema(ctx, identity, config, signing)
 	if err != nil {
 		return nil, err
 	}
-	meta.Checksum = sum
-	meta.Valid = true
+	signing.Checksum = sum
 
 	return &Schema{
-		Meta: meta,
-		Spec: spec,
+		Identity: identity,
+		Config:   config,
+		Signing:  signing,
+		State:    SchemaState{Valid: true},
 	}, nil
 }
 
 // ID returns the unique schema identifier in the form "name@version".
 func (s *Schema) ID() string {
-	return s.Meta.Name + "@" + s.Meta.Version
+	return s.Config.Name + "@" + s.Identity.Version
 }
 
-// GetData returns the schema's specification for checksum purposes.
+// GetData returns the schema's config surface for checksum purposes.
 func (s *Schema) GetData() any {
-	return s.Spec
+	return s.Config
 }
 
-// Checksum returns the pre-computed checksum from the Meta block.
-// It does not recalculate the hash, adhering to the "No shortcut" rule.
+// Checksum returns the pre-computed checksum from the Signing block.
 func (s *Schema) Checksum() string {
-	return s.Meta.Checksum
+	return s.Signing.Checksum
 }

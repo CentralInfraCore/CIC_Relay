@@ -306,7 +306,7 @@ func TestNewSchema_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel the context immediately
 
-	_, err := NewSchema(ctx, BaseBlock{Name: "test-schema", Version: "1.0"}, SchemaDef{})
+	_, err := NewSchema(ctx, SchemaIdentity{Version: "1.0"}, SchemaConfig{Name: "test-schema"}, SchemaSigning{})
 	require.Error(t, err)
 	testify_assert.ErrorIs(t, err, context.Canceled)
 }

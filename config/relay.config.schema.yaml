@@ -1,13 +1,15 @@
 apiVersion: cic.io/v1
 kind: Schema
-metadata:
-  name: relay.config
+identity:
+  kind: Schema
+  namespace: cic.io
   version: "1.0"
+config:
+  name: relay.config
   description: >
     CIC Relay startup configuration schema.
     Used for dogfooding: the relay validates its own config using the cabinet
     schema engine at startup. All fields correspond to CIC_* environment variables.
-spec:
   stateRequirement:
     # Core limits (all integer/duration values must satisfy minimum constraints)
     CIC_MAX_JSON_INPUT_SIZE: "integer, bytes, min 1, default 4194304 (4 MB)"

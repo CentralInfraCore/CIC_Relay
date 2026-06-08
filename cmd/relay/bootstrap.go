@@ -242,8 +242,9 @@ type ComponentHeader struct {
 
 // SchemaFile defines the structure of a Schema YAML file.
 type SchemaFile struct {
-	Metadata cabinet.BaseBlock `yaml:"metadata"`
-	Spec     cabinet.SchemaDef `yaml:"spec"`
+	Identity cabinet.SchemaIdentity `yaml:"identity"`
+	Config   cabinet.SchemaConfig   `yaml:"config"`
+	Signing  cabinet.SchemaSigning  `yaml:"signing"`
 }
 
 // WorkflowFile defines the structure of a Workflow YAML file.
@@ -362,7 +363,7 @@ func loadSchema(ctx context.Context, svc cabinet.Cabinet, content []byte) error 
 	if err := yaml.Unmarshal(content, &file); err != nil {
 		return fmt.Errorf("unmarshal schema file: %w", err)
 	}
-	schema, err := cabinet.NewSchema(ctx, file.Metadata, file.Spec)
+	schema, err := cabinet.NewSchema(ctx, file.Identity, file.Config, file.Signing)
 	if err != nil {
 		return fmt.Errorf("schema validation: %w", err)
 	}

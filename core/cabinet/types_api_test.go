@@ -14,14 +14,24 @@ func TestBaseBlock_API_Shape(t *testing.T) {
 	assert.Equal(t, 10, typeOf.NumField(), "BaseBlock field count")
 }
 
-func TestSchemaDef_API_ShapeAndZeroValue(t *testing.T) {
-	typeOf := reflect.TypeOf(cabinet.SchemaDef{})
-	assert.Equal(t, 3, typeOf.NumField(), "SchemaDef field count")
+func TestSchemaIdentity_API_Shape(t *testing.T) {
+	typeOf := reflect.TypeOf(cabinet.SchemaIdentity{})
+	assert.Equal(t, 3, typeOf.NumField(), "SchemaIdentity field count")
+}
+
+func TestSchemaConfig_API_Shape(t *testing.T) {
+	typeOf := reflect.TypeOf(cabinet.SchemaConfig{})
+	assert.Equal(t, 7, typeOf.NumField(), "SchemaConfig field count")
+}
+
+func TestSchemaSigning_API_Shape(t *testing.T) {
+	typeOf := reflect.TypeOf(cabinet.SchemaSigning{})
+	assert.Equal(t, 4, typeOf.NumField(), "SchemaSigning field count")
 }
 
 func TestSchema_API_Shape(t *testing.T) {
 	typeOf := reflect.TypeOf(cabinet.Schema{})
-	assert.Equal(t, 2, typeOf.NumField(), "Schema field count")
+	assert.Equal(t, 4, typeOf.NumField(), "Schema field count")
 }
 
 func TestModuleDescriptor_API_Shape(t *testing.T) {
