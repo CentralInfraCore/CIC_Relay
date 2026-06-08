@@ -1268,7 +1268,7 @@ tasks:
     accept: make test zöld + govulncheck CI nem ad hibát
 
   - task: "upstream-source-http"
-    status: todo
+    status: done
     priority: 57
     milestone: M37
     prompt: |
