@@ -17,17 +17,43 @@ type BaseBlock struct {
 	Valid       bool   `json:"-" yaml:"-"` // A Valid mezőt soha ne olvassuk be, mindig futásidőben állítjuk be.
 }
 
-// SchemaDef: egy séma működési specifikációja – állapotfeltételek, függőségek, következő lépések.
-type SchemaDef struct {
+// SchemaIdentity: stabil azonosítás — kind, namespace, version.
+type SchemaIdentity struct {
+	Kind      string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Version   string `json:"version" yaml:"version"`
+}
+
+// SchemaConfig: desired-state surface — a séma által előírt konfiguráció és működési feltételek.
+type SchemaConfig struct {
+	Name             string            `json:"name" yaml:"name"`
+	Description      string            `json:"description,omitempty" yaml:"description,omitempty"`
+	CreatedBy        string            `json:"createdBy,omitempty" yaml:"createdBy,omitempty"`
+	Timestamp        string            `json:"timestamp,omitempty" yaml:"timestamp,omitempty"`
 	StateRequirement map[string]string `json:"stateRequirement,omitempty" yaml:"stateRequirement,omitempty"`
 	Dependencies     []string          `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	NextHops         []string          `json:"nextHops,omitempty" yaml:"nextHops,omitempty"`
 }
 
-// Schema: teljes séma objektum, meta + működési leírás.
+// SchemaSigning: kriptográfiai bizonyíték mezők — checksum, aláírás, tanúsítvány.
+type SchemaSigning struct {
+	Checksum    string `json:"checksum,omitempty" yaml:"checksum,omitempty"`
+	Signature   string `json:"signature,omitempty" yaml:"signature,omitempty"`
+	Certificate string `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	CRLRef      string `json:"crlRef,omitempty" yaml:"crlRef,omitempty"`
+}
+
+// SchemaState: observed/runtime state — betöltéskor állítja be a rendszer, soha nem szerializálják.
+type SchemaState struct {
+	Valid bool `json:"-" yaml:"-"`
+}
+
+// Schema: ManagedEntity-konform séma objektum — Identity + Config + Signing + State.
 type Schema struct {
-	Meta BaseBlock `json:"metadata" yaml:"metadata"`
-	Spec SchemaDef `json:"spec" yaml:"spec"`
+	Identity SchemaIdentity `json:"identity" yaml:"identity"`
+	Config   SchemaConfig   `json:"config" yaml:"config"`
+	Signing  SchemaSigning  `json:"signing,omitempty" yaml:"signing,omitempty"`
+	State    SchemaState    `json:"-" yaml:"-"`
 }
 
 // NativeFunctions a natív, Go-ban implementált függvények tárolója.
@@ -46,8 +72,39 @@ type ModuleDescriptor struct {
 	NativeImpl NativeFunctions `json:"-" yaml:"-"` // A natív Go implementációkat tartalmazó tároló.
 }
 
-// Workflow: végrehajtási lépések listája, gráf formában – sémákra hivatkozva.
+// WorkflowIdentity: stabil azonosítás — kind, namespace, version.
+type WorkflowIdentity struct {
+	Kind      string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Version   string `json:"version" yaml:"version"`
+}
+
+// WorkflowConfig: desired-state surface — a workflow által végrehajtott lépések.
+type WorkflowConfig struct {
+	Name        string   `json:"name" yaml:"name"`
+	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
+	CreatedBy   string   `json:"createdBy,omitempty" yaml:"createdBy,omitempty"`
+	Timestamp   string   `json:"timestamp,omitempty" yaml:"timestamp,omitempty"`
+	Steps       []string `json:"steps" yaml:"steps"`
+}
+
+// WorkflowSigning: kriptográfiai bizonyíték mezők.
+type WorkflowSigning struct {
+	Checksum    string `json:"checksum,omitempty" yaml:"checksum,omitempty"`
+	Signature   string `json:"signature,omitempty" yaml:"signature,omitempty"`
+	Certificate string `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	CRLRef      string `json:"crlRef,omitempty" yaml:"crlRef,omitempty"`
+}
+
+// WorkflowState: observed/runtime state — betöltéskor állítja be a rendszer, soha nem szerializálják.
+type WorkflowState struct {
+	Valid bool `json:"-" yaml:"-"`
+}
+
+// Workflow: ManagedEntity-konform workflow objektum — Identity + Config + Signing + State.
 type Workflow struct {
-	Meta  BaseBlock `json:"metadata" yaml:"metadata"`
-	Steps []string  `json:"steps" yaml:"steps"`
+	Identity WorkflowIdentity `json:"identity" yaml:"identity"`
+	Config   WorkflowConfig   `json:"config" yaml:"config"`
+	Signing  WorkflowSigning  `json:"signing,omitempty" yaml:"signing,omitempty"`
+	State    WorkflowState    `json:"-" yaml:"-"`
 }

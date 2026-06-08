@@ -1,26 +1,12 @@
 apiVersion: cic/v1
 kind: Schema
-metadata:
-  name: cert.selfsigned
+identity:
+  kind: Schema
+  namespace: cic
   version: "1.0"
+config:
+  name: cert.selfsigned
   description: |
     Input schema for the cert.selfsigned native module.
     Generates a self-signed ECDSA P-256 X.509 certificate.
-spec:
-  type: object
-  required:
-    - cn
-  properties:
-    cn:
-      type: string
-      description: "Certificate Common Name (required)"
-    dns_sans:
-      type: array
-      items:
-        type: string
-      description: "DNS Subject Alternative Names (optional)"
-    validity_days:
-      type: integer
-      description: "Certificate validity in days (default: 365)"
-      default: 365
-  additionalProperties: false
+    Required input: cn (string). Optional: dns_sans ([]string), validity_days (int, default 365).
