@@ -223,11 +223,11 @@ endif
 # =============================================================================
 symbols: ## Generate symbols documentation
 	@echo "Generating symbols..."
-	@$(call GO_FIXER, go run ./tools/symbolsgen)
+	@$(call GO_FIXER, go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md)
 
 check-symbols: ## Check if symbols documentation is up-to-date
 	@echo "Checking for symbol drift..."
-	@$(call GO_FIXER, go run ./tools/symbolsgen && (git diff --exit-code context/SYMBOLS.md))
+	@$(call GO_FIXER, go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md && (git diff --exit-code context/SYMBOLS.md))
 
 # =============================================================================
 # Code Quality — Go

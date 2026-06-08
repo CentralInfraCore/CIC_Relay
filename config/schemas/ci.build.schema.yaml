@@ -1,24 +1,12 @@
 apiVersion: cic/v1
 kind: Schema
-metadata:
-  name: ci.build
+identity:
+  kind: Schema
+  namespace: cic
   version: "1.0"
+config:
+  name: ci.build
   description: |
     Input schema for the ci.build native module.
     Describes a make-based build invocation and the expected artifact path.
-spec:
-  type: object
-  required:
-    - artifact_output
-  properties:
-    build_target:
-      type: string
-      description: "Working directory for make (optional, defaults to current dir)"
-    make_target:
-      type: string
-      description: "Make target to run (default: build)"
-      default: "build"
-    artifact_output:
-      type: string
-      description: "Path to the produced artifact file (required); its SHA-256 digest becomes the step output hash"
-  additionalProperties: false
+    Required: artifact_output (string). Optional: build_target, make_target (default: build).

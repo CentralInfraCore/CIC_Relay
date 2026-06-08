@@ -10,11 +10,10 @@ import (
 
 func TestNewWorkflow_Error(t *testing.T) {
 	t.Run("validation fails for empty name", func(t *testing.T) {
-		// Create a BaseBlock with a missing Name to trigger the validation error
-		meta := BaseBlock{Version: "1.0"}
-		steps := []string{"step1"}
+		identity := WorkflowIdentity{Version: "1.0"}
+		config := WorkflowConfig{Steps: []string{"step1"}} // Name is empty
 
-		workflow, err := NewWorkflow(context.Background(), meta, steps)
+		workflow, err := NewWorkflow(context.Background(), identity, config, WorkflowSigning{})
 
 		assert.Error(t, err, "NewWorkflow should return an error for invalid metadata")
 		assert.Nil(t, workflow, "Workflow should be nil on error")
@@ -22,7 +21,10 @@ func TestNewWorkflow_Error(t *testing.T) {
 	})
 
 	t.Run("empty steps should fail", func(t *testing.T) {
-		_, err := NewWorkflow(context.Background(), BaseBlock{Name: "test-wf", Version: "1.0"}, []string{})
+		_, err := NewWorkflow(context.Background(),
+			WorkflowIdentity{Version: "1.0"},
+			WorkflowConfig{Name: "test-wf"},
+			WorkflowSigning{})
 		require.Error(t, err)
 		assert.EqualError(t, err, "workflow must have at least one step")
 	})

@@ -5,37 +5,37 @@ import (
 	"fmt"
 )
 
-// NewWorkflow constructs a Workflow by calling the single central entry point for validation and checksum calculation.
-func NewWorkflow(ctx context.Context, meta BaseBlock, steps []string) (*Workflow, error) {
-	if len(steps) == 0 {
+// NewWorkflow constructs a ManagedEntity-conformant Workflow with validated checksum.
+func NewWorkflow(ctx context.Context, identity WorkflowIdentity, config WorkflowConfig, signing WorkflowSigning) (*Workflow, error) {
+	if len(config.Steps) == 0 {
 		return nil, fmt.Errorf("workflow must have at least one step")
 	}
 
-	// Call the single central entry point to validate and compute the checksum.
-	sum, err := validateAndChecksum(ctx, &meta, KindWf, steps)
+	sum, err := validateAndChecksumWorkflow(ctx, identity, config, signing)
 	if err != nil {
 		return nil, err
 	}
-	meta.Checksum = sum
-	meta.Valid = true
+	signing.Checksum = sum
 
 	return &Workflow{
-		Meta:  meta,
-		Steps: steps,
+		Identity: identity,
+		Config:   config,
+		Signing:  signing,
+		State:    WorkflowState{Valid: true},
 	}, nil
 }
 
 // ID returns the unique workflow identifier in the form "name@version".
 func (w *Workflow) ID() string {
-	return w.Meta.Name + "@" + w.Meta.Version
+	return w.Config.Name + "@" + w.Identity.Version
 }
 
-// GetData returns the workflow's steps for checksum purposes.
+// GetData returns the workflow's config surface for checksum purposes.
 func (w *Workflow) GetData() any {
-	return w.Steps
+	return w.Config
 }
 
-// Checksum returns the pre-computed checksum from the Meta block.
+// Checksum returns the pre-computed checksum from the Signing block.
 func (w *Workflow) Checksum() string {
-	return w.Meta.Checksum
+	return w.Signing.Checksum
 }
