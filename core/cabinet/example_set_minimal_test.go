@@ -37,7 +37,7 @@ func ExampleAPI_Set_minimal() {
 
 	// To make the example pass, we must use the constructors to create valid objects with checksums.
 	// Register a dummy schema, though not directly used by core.test.echo
-	schema, err := NewSchema(context.Background(), BaseBlock{Name: "dummy.schema", Version: "1.0"}, SchemaDef{})
+	schema, err := NewSchema(context.Background(), SchemaIdentity{Version: "1.0"}, SchemaConfig{Name: "dummy.schema"}, SchemaSigning{})
 	if err != nil {
 		fmt.Println("setup error (schema):", err)
 		return

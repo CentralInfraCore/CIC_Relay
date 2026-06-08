@@ -1,12 +1,8 @@
 apiVersion: relay.cic.com/v1
 kind: Schema
-metadata:
-  name: user.schema
+identity:
+  kind: Schema
+  namespace: relay.cic.com
   version: "1.0"
-spec:
-  type: object
-  properties:
-    id:
-      type: string
-    email:
-      type: string
+config:
+  name: user.schema

@@ -361,7 +361,7 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Schema Put/Get", func(t *testing.T) {
-		schema, err := NewSchema(context.Background(), BaseBlock{Name: "s1", Version: "v1"}, SchemaDef{})
+		schema, err := NewSchema(context.Background(), SchemaIdentity{Version: "v1"}, SchemaConfig{Name: "s1"}, SchemaSigning{})
 		require.NoError(t, err, "NewSchema should succeed for valid input")
 
 		err = svc.PutSchema(schema)

@@ -11,8 +11,7 @@ import (
 func TestMemStores_Basic(t *testing.T) {
 	// Schema store
 	ss := NewMemSchemaStore()
-	meta := BaseBlock{Name: "s", Version: "1"}
-	sc, err := NewSchema(context.Background(), meta, SchemaDef{})
+	sc, err := NewSchema(context.Background(), SchemaIdentity{Version: "1"}, SchemaConfig{Name: "s"}, SchemaSigning{})
 	if err != nil {
 		t.Fatalf("NewSchema err: %v", err)
 	}

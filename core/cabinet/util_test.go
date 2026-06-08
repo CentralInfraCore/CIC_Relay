@@ -10,13 +10,13 @@ import (
 // based on the central validateAndChecksum function.
 func TestDomainConstructors_GoldenChecksums(t *testing.T) {
 	t.Run("Schema_GoldenChecksum", func(t *testing.T) {
-		meta := BaseBlock{Name: "golden-schema", Version: "1.0"}
-		spec := SchemaDef{Dependencies: []string{"dep1"}}
+		identity := SchemaIdentity{Version: "1.0"}
+		config := SchemaConfig{Name: "golden-schema", Dependencies: []string{"dep1"}}
 
-		// This checksum is updated based on the actual output from the corrected computeChecksum logic.
-		const goldenSchemaChecksum = "9a3c6f45df100e63e0d9b692f9df871de3749e5b940f4074ee51c4f22be5f611"
+		// Checksum covers: KindSpec prefix + canonical_json(metaForChecksum) + canonical_json(SchemaConfig).
+		const goldenSchemaChecksum = "7ce0e3ec09d09d9cb71ce4bbd0a2954dd4c9eb5faf48e3c739fd2a8dc565aaa5"
 
-		schema, err := NewSchema(context.Background(), meta, spec)
+		schema, err := NewSchema(context.Background(), identity, config, SchemaSigning{})
 		if err != nil {
 			t.Fatalf("NewSchema() failed: %v", err)
 		}

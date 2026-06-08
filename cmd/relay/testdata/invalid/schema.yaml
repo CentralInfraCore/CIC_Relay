@@ -1,4 +1,5 @@
 kind: Schema
-metadata:
-  # Name is missing, this will cause a validation error
+identity:
   version: "1.0"
+config:
+  # name is missing, this will cause a validation error
