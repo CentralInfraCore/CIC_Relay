@@ -310,3 +310,59 @@ func TestNewSchema_ContextCancelled(t *testing.T) {
 	require.Error(t, err)
 	testify_assert.ErrorIs(t, err, context.Canceled)
 }
+
+func TestValidateAndChecksumSchema_Validation(t *testing.T) {
+	t.Run("missing name should fail", func(t *testing.T) {
+		_, err := NewSchema(context.Background(), SchemaIdentity{Version: "1.0"}, SchemaConfig{}, SchemaSigning{})
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "name and version are required")
+	})
+
+	t.Run("missing version should fail", func(t *testing.T) {
+		_, err := NewSchema(context.Background(), SchemaIdentity{}, SchemaConfig{Name: "test"}, SchemaSigning{})
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "name and version are required")
+	})
+
+	t.Run("checksum mismatch should fail", func(t *testing.T) {
+		_, err := NewSchema(context.Background(),
+			SchemaIdentity{Version: "1.0"},
+			SchemaConfig{Name: "test-schema"},
+			SchemaSigning{Checksum: "bad-checksum"},
+		)
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "checksum mismatch")
+	})
+}
+
+func TestValidateAndChecksumWorkflow_Validation(t *testing.T) {
+	step := []string{"some.module@1.0"}
+
+	t.Run("missing name should fail", func(t *testing.T) {
+		_, err := NewWorkflow(context.Background(), WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Steps: step}, WorkflowSigning{})
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "name and version are required")
+	})
+
+	t.Run("missing version should fail", func(t *testing.T) {
+		_, err := NewWorkflow(context.Background(), WorkflowIdentity{}, WorkflowConfig{Name: "test-wf", Steps: step}, WorkflowSigning{})
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "name and version are required")
+	})
+
+	t.Run("checksum mismatch should fail", func(t *testing.T) {
+		_, err := NewWorkflow(context.Background(),
+			WorkflowIdentity{Version: "1.0"},
+			WorkflowConfig{Name: "test-wf", Steps: step},
+			WorkflowSigning{Checksum: "bad-checksum"},
+		)
+		testify_assert.Error(t, err)
+		testify_assert.ErrorIs(t, err, ErrInvalid)
+		testify_assert.Contains(t, err.Error(), "checksum mismatch")
+	})
+}
