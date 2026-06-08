@@ -114,7 +114,7 @@ typing-extensions==4.15.0
     #   mypy
     #   pyopenssl
     #   referencing
-urllib3==2.5.0
+urllib3==2.7.0
     # via
     #   requests
     #   types-requests
