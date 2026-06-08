@@ -22,6 +22,6 @@ jobs:
         env:
           # PAT required: GITHUB_TOKEN cannot trigger CI on created PRs (GitHub security limit)
           # Create a PAT with repo scope and add as repo secret RENOVATE_TOKEN
-          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN2 }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           LOG_LEVEL: debug
