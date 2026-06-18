@@ -240,11 +240,11 @@ path módosítása. Az M0–M36 által lefektetett determinisztikus alap érinte
 ```text
 Relay-ben nincs OCI SDK.
 WASM-ban nincs Vault API.
-WASM-ban nincs private key.
+WASM-ban nincs provider signing private key (OCI/signing kulcs Vault-ban marad).
 Relay generic capability kernelt ad.
 Vault = key custody / signing backend.
 Provider logika WASM-ban marad.
-Vault sign request: Relay token ÉS modul PKI-cert — mindkettő kötelező.
+Relay nem látja a secret plaintextjét — csak a modul tudja dekriptálni (envelope encryption).
 ```
 
 **B6 feloldás:** ez a roadmap oldja fel a `B6` azonosítójú nyitott hibát
@@ -275,12 +275,13 @@ Ezek megválaszolása nélkül a capability spec nem írható meg:
 11. (architekturális invariáns, nem nyitott kérdés — lásd lent)
 ```
 
-**11. pont — kétkulcsos Vault auth (sarokpont, nem opció):**
-A Vault sign request engedélyezéséhez **mind** a Relay token, **mind** a WASM modul
-PKI-identitása szükséges. Ez az architektúra sarokpontja; nem Q&A, hanem rögzített
-döntés. Következménye: az M39 manifest schema-nak tartalmaznia kell a modul cert
-fingerprint mezőt, az M41.2 (Spec E2) az M41 logikai párja.
-Előfeltétel: `pki_verify.go` scaffold + CICRootCA bootstrap.
+**11. pont — kétkulcsos envelope encryption (sarokpont, nem opció):**
+Ha a WASM modulnak plaintext secretre van szüksége, azt kizárólag ő dekriptálhatja —
+a Relay soha nem látja a plaintextet (envelope encryption: `secret.envelope_read`
++ modul key pair). Ez architekturális invariáns, nem Q&A.
+Következménye: M39 manifest schema tartalmazza a `recipientPublicKey` mezőt,
+M41.2 (Spec E2) az M41 logikai párja. OCI signing flow ezen **nem megy át** —
+ott `crypto.sign` az út, `secret.envelope_read` csak valódi plaintext credential esetén.
 
 **9. kérdés kockázatjelölés:** a `relay.secret.envelope_read` capability — ha valaha
 megvalósul — közvetlenül érinti a döntési szabályt ("WASM-ban nincs secret"). Ez a
@@ -302,7 +303,7 @@ majd rendes issue-k, PR-sorrend és DoD.
 | C | Hostcall ABI | M40 |
 | D | `crypto.sign` Spec | M41 |
 | E | Key Custody / Vault Adapter Spec | M41 |
-| E2 | WASM modul identitás + Vault kétkulcsos auth | M41.2 |
+| E2 | WASM modul key pair + `secret.envelope_read` envelope encryption | M41.2 |
 | F | `http.request` Broker Spec | M43 |
 | G | Error + Audit Spec | M44 + M45 |
 | H | OCI Reference Provider Spec | M46 |
@@ -317,7 +318,7 @@ majd rendes issue-k, PR-sorrend és DoD.
 | M39 | Capability manifest schema | concept | Spec B szükséges |
 | M40 | Generic hostcall ABI | concept | Spec C; M28 git host functions mintájára |
 | M41 | `crypto.sign` capability | concept | Spec D+E; Vault Transit (M13 minta) |
-| M41.2 | WASM modul identitás + kétkulcsos Vault auth | concept | Spec E2; pki_verify.go + CA bootstrap előfeltétel |
+| M41.2 | WASM modul key pair + envelope encryption (`secret.envelope_read`) | concept | Spec E2; modul saját kulcspár, Relay csak ciphertextet lát |
 | M42 | Egységes error model | concept | Spec G (hiba rész) |
 | M43 | `http.request` broker | concept | Spec F; M37-től független vonal |
 | M44 | Limits / budget | concept | Spec G (limit rész) |
@@ -408,9 +409,17 @@ logging:
 ```
 
 **Tiltott a manifest schema-ban (első verzió):**
-- `secret.envelope_read` — concept, policy design nélkül nem deklarálható
 - `relay.kv.*` — concept
 - wildcard host (`*`) — alapból tiltott
+
+**`secret.envelope_read` a manifestben (M41.2 után engedett):**
+```yaml
+capabilities:
+  secret:
+    envelope_read:
+      - secretHandle: oci-api-key-config
+        recipientPublicKey: base64:...   # modul key pair public kulcsa
+```
 
 **DoD:**
 - Hibás manifest fail-fast
@@ -454,10 +463,17 @@ relay.clock.now
 relay.trace.emit
 ```
 
-**Később (concept, nem implementálandó első körben):**
+**Tervezett (M41.2 előfeltétellel, de nem v1):**
 ```text
-relay.secret.envelope_read  ← külön policy design szprintet igényel
+relay.secret.envelope_read(secretHandle, recipientPublicKey) -> ciphertext
+  ← csak akkor, ha a modulnak tényleg plaintext credential kell
+  ← modul key pair szükséges (M41.2)
+  ← Relay nem látja a plaintextet, csak titkosítva adja át
 relay.random.bytes
+```
+
+**Concept (külön sprint):**
+```text
 relay.kv.get / relay.kv.put
 ```
 
@@ -510,51 +526,67 @@ Audit események: `crypto.sign.requested`, `crypto.sign.allowed`, `crypto.sign.d
 
 ---
 
-#### M41.2 — WASM modul identitás + kétkulcsos Vault auth
+#### M41.2 — WASM modul key pair + `secret.envelope_read` envelope encryption
 
-**Cél:** Vault csak akkor engedélyezi az aláírást, ha **mind** a Relay auth, **mind**
-a WASM modul PKI-identitása igazolt. Ez az architektúra sarokpontja: a jelenlegi
-`crypto.sign` flow egy trust boundary-t (Relay token) használ; M41.2 egy másodikat
-(modul cert) tesz mellé.
+**Cél:** ha a WASM modulnak tényleg plaintext credentialra van szüksége, azt **csak
+ő tudja dekriptálni** — a Relay soha nem látja a plaintextet. Ez az architektúra
+kétkulcsos titkosítási sarokpontja.
 
-**Jelenlegi flow (M41):**
+**Mechanizmus (envelope encryption):**
+
 ```text
-WASM → hostcall → Relay → Vault Transit (Relay token)
+1. WASM modulnak saját kulcspárja van (privát kulcs WASM-ban marad)
+2. A modul public key-je a manifest-ben van regisztrálva
+3. Hostcall:
+   secret.envelope_read(secretHandle, recipientPublicKey) -> ciphertext
+4. Relay lekéri a secretet Vault-ból, AZONNAL enkriptálja a modul public key-jével
+5. Relay visszaadja a ciphertextet — plaintext soha nem kerül Relay memóriájába
+6. Csak a modul tudja dekriptálni a saját private key-jével
 ```
 
-**Kétkulcsos flow (M41.2):**
+**Flow:**
 ```text
-WASM → hostcall (+ modul cert fingerprint) → Relay → Vault Transit
-                                                        ↑ Relay token
-                                                        ↑ modul cert CN/fingerprint (PKI-ellenőrzött)
+WASM → hostcall(secretHandle, myPublicKey) → Relay
+                                               ↓ Vault: secret lekérés
+                                               ↓ encrypt(secret, recipientPublicKey)
+                                             ciphertext ← Relay ← Vault
+WASM ← ciphertext
+WASM: decrypt(ciphertext, myPrivateKey) → plaintext
 ```
 
-**Előfeltételek:**
-- `pki_verify.go` scaffold bekötése: CICRootCA → Intermediate CA → leaf cert bootstrap
-- WASM modul kap PKI-alapú leaf cert-et a CA lánctól
-- Vault policy: `bound_subject_alt_names` vagy fingerprint alapú engedélyezés
+**Fontos különbség:** ez nem ugyanaz a private key, ami az OCI signing-hoz kell.
+- OCI signing private key: **Vault-ban marad**, WASM soha nem kapja meg
+- Modul envelope private key: **WASM-ban van**, csak saját secretjeinek dekriptálásához
 
-**Relay felelőssége M41.2-ben:**
-- Modul cert fingerprint kinyerése és ellenőrzése induláskor
-- Vault sign request-be cert azonosító belerakása
-- Vault visszautasít, ha a cert nem egyezik a policy-ban engedélyezettel
+**Mikor kell:** csak akkor, ha a modul tényleg plaintext credentialra szorul
+(pl. OCI instance principal config, amely nem aláírandó payload, hanem runtime adat).
+Az OCI API signing flow `crypto.sign`-on megy — ott `secret.envelope_read` nem kell.
 
-**Manifest kiegészítés (M39 után):**
+**Implementációs fájlok:**
+```text
+WASM-ban:   secret_envelope_client.go  — envelope decrypt, key pair kezelés
+Relay-ban:  cmd/relay/secret_host_funcs.go  — hostcall handler, Vault wrapping
+```
+
+**Manifest:**
 ```yaml
-identity:
-  certFingerprint: sha256:abc123...   # PKI bootstrap tölti ki
-  boundKeyHandles:
-    - oci-prod-api-key
+capabilities:
+  secret:
+    envelope_read:
+      - secretHandle: oci-api-key-config
+        recipientPublicKey: base64:...   # modul key pair public kulcsa
 ```
 
-**Scaffold állapot:** ez a milestone a `pki_verify.go` bekötésétől függ, ami jelenleg
-**scaffold** (előfeltétel: CICRootCA bootstrap). Addig M41.2 concept marad.
+**Scaffold állapot:** concept — implementálható M41 (Vault Transit adapter) után,
+nem blokkol más capability-t.
 
 **DoD:**
-- Modul cert hiánya vagy lejárta: `ErrCapabilityDenied` (nem silent allow)
-- Vault policy: cert fingerprint kötelező mező a keyHandle mellé
-- Cert fingerprint az audit eventbe kerül
-- `MemoryTestSigner` analóg mock cert-tel unit tesztelhető
+- Relay nem logol plaintext secretet
+- Relay memóriájában csak ciphertext él
+- secretHandle nem egyező → `ErrCapabilityKeyDenied`
+- recipientPublicKey formátum validált
+- Mock Vault-tal unit tesztelhető (`secret_envelope_client.go` + test transport)
+- Audit event: `secret.envelope_read.allowed` / `secret.envelope_read.denied` — plaintext nélkül
 
 ---
 
