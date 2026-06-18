@@ -229,7 +229,8 @@ capability-secured relay runtime irányba, ahol:
 
 ```text
 WASM modul: provider-aware, de nem secret-aware
-Relay:       secret/capability-aware, de nem provider-specific
+Relay:       key-custody-aware és capability-policy-aware,
+             de nem provider-specific és nem plaintext-secret broker
 ```
 
 **A v1 contract nem sérül.** A capability runtime külön execution profile, nem a canonical
@@ -264,7 +265,7 @@ Ha később szükséges secret.envelope_read, annak külön design spike kell:
 
 ---
 
-### 10 döntési kérdés — spec előtt kötelező
+### Spec előtti döntések és invariánsok
 
 Ezek megválaszolása nélkül a capability spec nem írható meg:
 
@@ -320,13 +321,15 @@ majd rendes issue-k, PR-sorrend és DoD.
 | M38 | Execution profile split | concept | Spec A szükséges |
 | M39 | Capability manifest schema | concept | Spec B szükséges |
 | M40 | Generic hostcall ABI | concept | Spec C; M28 git host functions mintájára |
+| M40.5 | Git host functions policy-migration | concept | M28 git hostcall policy engine alá vonása; bypass-útvonal megszüntetése |
 | M41 | `crypto.sign` capability | concept | Spec D+E; Vault Transit (M13 minta) |
 | M41.2 | Secret Envelope Design Spike | concept | Spec E2; A vs. B verzió eldöntése; v1-et nem blokkolja |
 | M42 | Egységes error model | concept | Spec G (hiba rész) |
 | M43 | `http.request` broker | concept | Spec F; M37-től független vonal |
 | M44 | Limits / budget | concept | Spec G (limit rész) |
 | M45 | Audit / ProofTrace integráció | concept | Spec G (audit rész); M17/M22/M32 bővítés |
-| M46 | OCI reference provider | concept | Spec H; `examples/providers/oci/` |
+| M45.5 | Echo reference provider | concept | cloud-független ABI/limit/audit bizonyítás OCI előtt |
+| M46 | OCI reference provider | concept | Spec H; `examples/providers/oci/`; M45.5 után |
 | M47 | Policy test matrix | concept | Spec-ek negatív tesztjei |
 | M48 | CI / release gate | concept | capability schema drift + golden drift |
 | M49 | Production hardening | concept | mTLS, per-tenant policy, circuit breaker |
@@ -414,18 +417,11 @@ logging:
     - x-vault-token
 ```
 
-**Tiltott a manifest schema-ban (első verzió):**
+**Tiltott a manifest schema-ban (v1 — parse error, nem silent ignore):**
+- `secret.envelope_read` — **nem valid mező v1-ben**; nem forward-compatible placeholder;
+  csak M41.2 design spike lezárása után kerülhet vissza
 - `relay.kv.*` — concept
 - wildcard host (`*`) — alapból tiltott
-
-**`secret.envelope_read` a manifestben (M41.2 után engedett):**
-```yaml
-capabilities:
-  secret:
-    envelope_read:
-      - secretHandle: oci-api-key-config
-        recipientPublicKey: base64:...   # modul key pair public kulcsa
-```
 
 **DoD:**
 - Hibás manifest fail-fast
@@ -452,7 +448,7 @@ Envelope:
 }
 ```
 
-Válasz:
+Válasz (siker):
 ```json
 {
   "status": 0,
@@ -461,20 +457,32 @@ Válasz:
 }
 ```
 
+Válasz (hiba) — már az ABI szintjén kötelező forma:
+```json
+{
+  "status": 1,
+  "traceId": "...",
+  "error": {
+    "code": "CAPABILITY_DENIED",
+    "message": "...",
+    "capability": "relay.crypto.sign"
+  }
+}
+```
+
 **Capability-k v1:**
 ```text
 relay.http.request
 relay.crypto.sign
-relay.clock.now
+relay.clock.now   ← csak capability profile-ban; minden hívás ProofTrace-be kerül;
+                     replay/verify módban nem hívható újra, csak recorded value
 relay.trace.emit
+relay.git.*       ← meglévő M28 git host functions; M40.5-ben policy alá vonva
 ```
 
-**Tervezett (M41.2 előfeltétellel, de nem v1):**
+**Tervezett (M41.2 design spike után):**
 ```text
-relay.secret.envelope_read(secretHandle, recipientPublicKey) -> ciphertext
-  ← csak akkor, ha a modulnak tényleg plaintext credential kell
-  ← modul key pair szükséges (M41.2)
-  ← Relay nem látja a plaintextet, csak titkosítva adja át
+relay.secret.envelope_read  ← v1-ben nem valid manifest mező
 relay.random.bytes
 ```
 
@@ -485,7 +493,8 @@ relay.kv.get / relay.kv.put
 
 **DoD:**
 - Minden hostcall ugyanazt az envelope formátumot használja
-- Minden válasz tartalmaz `status`, `error`, `trace_id`
+- Minden válasz tartalmaz `status`, `traceId`; hiba esetén `error.code` + `error.capability`
+- canonical profile alatt bármely hostcall → `CAPABILITY_DENIED` (az ABI szintjén)
 - ABI fuzz / boundary tesztek
 
 ---
@@ -523,12 +532,29 @@ Válasz:
 - Vault hiba: `ErrCapabilityBackendUnavailable`, **nincs silent allow**
 - Signature cache: első körben nem
 
+**Signer metadata döntés:** a WASM-nak OCI Authorization headerhez nem-secret azonosítókra
+is szüksége van (tenancy OCID, user OCID, fingerprint, region). Ezek nem titkok, de
+valahonnan jönniük kell.
+
+```text
+A) Manifest/config tartalmazza: tenancy_ocid, user_ocid, fingerprint, region
+B) Relay ad nem-secret metadata-t: relay.crypto.signer.describe(keyHandle) read-only hívás
+```
+
+A `crypto.sign` csak aláír — signer metadata külön forrásból jön (A vagy B).
+A `crypto.sign` válasza **nem** tartalmaz private key-t vagy Vault path-ot.
+
 Audit események: `crypto.sign.requested`, `crypto.sign.allowed`, `crypto.sign.denied`
 
 **DoD:**
 - `secret.read` nincs
 - Csak engedélyezett keyHandle + algorithm
 - Aláírás auditálva payload hash-sel (nem nyers payload dump)
+- unknown keyHandle → `ErrCapabilityKeyDenied`
+- wrong algorithm → `ErrCapabilityAlgorithmDenied`
+- payload too large → `ErrCapabilityLimitExceeded`
+- Vault unavailable → `ErrCapabilityBackendUnavailable`
+- canonical profile alatt crypto.sign → `ErrCapabilityDenied`
 
 ---
 
@@ -642,17 +668,28 @@ provider endpoint mapping, request body, provider-specific headers,
 response parsing, retry policy (ha explicit engedett)
 ```
 
-**Egress policy döntések:**
-- Redirect: alapból tiltott
-- Wildcard host: alapból tiltott
-- Request/response body log: alapból false
-- Authorization header: mindig redact
+**Egress policy v1 — kötelező szabályok:**
+```text
+scheme:        csak https (http → deny)
+host:          exact match, canonical lowercase; trailing dot normalizálva
+port:          default 443 vagy explicit allowlist
+wildcard host: tiltott
+IP literal:    tiltott (alapból; explicit allowlist esetén engedett)
+redirect:      tiltott (Location header figyelmen kívül hagyva)
+proxy env:     ignorálva (HTTP_PROXY / HTTPS_PROXY nem érvényes)
+DNS rebinding: resolved IP auditálva; private range deny opcionális
+request headers: kötelező redaction lista (authorization, x-vault-token)
+```
 
 **DoD:**
-- Nem engedélyezett host/method: deny
-- Response body limit működik
-- Authorization header nem logolódik
-- Request/response trace keletkezik
+- Nem engedélyezett host → `ErrCapabilityHostDenied`
+- Nem engedélyezett method → `ErrCapabilityDenied`
+- http scheme → `ErrCapabilityDenied`
+- redirect attempt → `ErrCapabilityDenied`
+- IP literal → `ErrCapabilityHostDenied`
+- body too large → `ErrCapabilityLimitExceeded`
+- Authorization header nem jelenik meg logban (redaction teszt)
+- Request/response trace keletkezik trace_id-val
 
 ---
 
@@ -771,6 +808,65 @@ capability schema hash.
 
 ---
 
+#### M40.5 — Git host functions policy-migration
+
+**Cél:** a meglévő M28 git host functions ugyanazon capability policy engine alatt
+fussanak, mint az új http/crypto capability-k. Különben bypass-útvonal marad.
+
+**Scope:**
+```text
+relay.git.status
+relay.git.diff
+relay.git.log
+relay.git.commit   ← magasabb kockázati osztály (write)
+relay.git.push     ← magasabb kockázati osztály (write)
+relay.git.fetch / pull
+```
+
+**Policy szabályok:**
+```text
+canonical profile alatt relay.git.* → ErrCapabilityDenied
+capability profile alatt: csak explicit manifest engedéllyel
+read-only műveletek (status/diff/log) → külön allowlist
+write műveletek (commit/push) → magasabb kockázati osztály, külön engedély
+```
+
+**DoD:**
+- canonical profile alatt git hostcall → `ErrCapabilityDenied`
+- capability profile alatt manifest nélküli git hívás → `ErrCapabilityDenied`
+- read vs. write műveletek policy-szinten szétválasztva
+- meglévő M28 golden tesztek nem törnek (backward compat)
+
+---
+
+#### M45.5 — Echo reference provider
+
+**Cél:** cloud-független, determinisztikus WASM modul, amely bizonyítja a capability
+ABI-t, a limiteket, az auditot és a redaction-t OCI/Vault függőség nélkül.
+Ez az igazi "hello world" a capability runtime-nak — OCI előtt kötelező.
+
+**Modul felelőssége:**
+```text
+relay.clock.now → timestamp visszaadás
+relay.crypto.sign mock → signing string + signature visszaadás
+relay.http.request mock echo endpoint → request visszatükrözés
+relay.trace.emit → audit event küldés
+```
+
+**Mit bizonyít:**
+- Hostcall ABI működik end-to-end
+- Limits érvényesülnek (request count, body size, timeout)
+- Redaction működik (Authorization header nem jelenik meg logban)
+- Audit event keletkezik minden capability hívásra
+- canonical profile alatt minden hívás deny
+
+**DoD:**
+- Csak mock signer és mock transport — nincs Vault, nincs hálózat
+- Minden capability-t tesztel legalább egy positive és egy negative esettel
+- OCI reference provider (M46) erre az alapra épül
+
+---
+
 #### M49 — Production hardening
 
 mTLS / internal service auth, per-module concurrency limit, global rate limit,
@@ -784,14 +880,29 @@ metrics dashboard.
 ### Javasolt verziósorrend
 
 ```text
-v1.0  = canonical only (jelenlegi állapot)
+v1.0  = canonical-only baseline (a hivatalos milestone doksi és CI állapot szerint)
 v1.1  = capability schema + disabled runtime (M38–M39)
-v1.2  = crypto.sign mock + tesztek (M40–M41)
+v1.2  = crypto.sign mock + tesztek + git policy migration (M40–M41 + M40.5)
 v1.3  = http.request broker mock + tesztek (M43)
 v1.4  = Vault Transit adapter + audit (M41 éles + M45)
-v1.5  = OCI reference provider (M46)
+v1.5  = Echo reference provider (M45.5)
+v1.6  = OCI reference provider (M46)
 v2.0  = production capability runtime (M49)
 ```
+
+---
+
+## Appendix: non-v1 candidate capabilities
+
+Ezek a capability-k **nem részei az M38–M48 v1 scope-nak**. Manifest schema-ban
+nem valid mezők, amíg a megfelelő design spike le nem zárul.
+
+| Capability | Állapot | Feltétel |
+|-----------|---------|---------|
+| `secret.envelope_read` | concept | M41.2 design spike (A vs. B döntés) |
+| `relay.random.bytes` | tervezett | M41.2 után, ha szükséges |
+| `relay.kv.get` / `relay.kv.put` | concept | külön sprint, KV store design |
+| `relay.crypto.signer.describe` | tervezett | M41 signer metadata döntéstől függ |
 
 ---
 
