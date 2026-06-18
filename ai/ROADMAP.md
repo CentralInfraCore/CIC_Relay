@@ -244,6 +244,7 @@ WASM-ban nincs private key.
 Relay generic capability kernelt ad.
 Vault = key custody / signing backend.
 Provider logika WASM-ban marad.
+Vault sign request: Relay token ÉS modul PKI-cert — mindkettő kötelező.
 ```
 
 **B6 feloldás:** ez a roadmap oldja fel a `B6` azonosítójú nyitott hibát
@@ -271,7 +272,15 @@ Ezek megválaszolása nélkül a capability spec nem írható meg:
 8.  A WASM modul írhat-e bármilyen logot, vagy csak trace.emit-en át?
 9.  Engedünk-e secret.envelope_read capability-t, vagy első körben csak crypto.sign?
 10. Production cél, vagy először PoC/reference runtime?
+11. (architekturális invariáns, nem nyitott kérdés — lásd lent)
 ```
+
+**11. pont — kétkulcsos Vault auth (sarokpont, nem opció):**
+A Vault sign request engedélyezéséhez **mind** a Relay token, **mind** a WASM modul
+PKI-identitása szükséges. Ez az architektúra sarokpontja; nem Q&A, hanem rögzített
+döntés. Következménye: az M39 manifest schema-nak tartalmaznia kell a modul cert
+fingerprint mezőt, az M41.2 (Spec E2) az M41 logikai párja.
+Előfeltétel: `pki_verify.go` scaffold + CICRootCA bootstrap.
 
 **9. kérdés kockázatjelölés:** a `relay.secret.envelope_read` capability — ha valaha
 megvalósul — közvetlenül érinti a döntési szabályt ("WASM-ban nincs secret"). Ez a
@@ -293,6 +302,7 @@ majd rendes issue-k, PR-sorrend és DoD.
 | C | Hostcall ABI | M40 |
 | D | `crypto.sign` Spec | M41 |
 | E | Key Custody / Vault Adapter Spec | M41 |
+| E2 | WASM modul identitás + Vault kétkulcsos auth | M41.2 |
 | F | `http.request` Broker Spec | M43 |
 | G | Error + Audit Spec | M44 + M45 |
 | H | OCI Reference Provider Spec | M46 |
@@ -307,6 +317,7 @@ majd rendes issue-k, PR-sorrend és DoD.
 | M39 | Capability manifest schema | concept | Spec B szükséges |
 | M40 | Generic hostcall ABI | concept | Spec C; M28 git host functions mintájára |
 | M41 | `crypto.sign` capability | concept | Spec D+E; Vault Transit (M13 minta) |
+| M41.2 | WASM modul identitás + kétkulcsos Vault auth | concept | Spec E2; pki_verify.go + CA bootstrap előfeltétel |
 | M42 | Egységes error model | concept | Spec G (hiba rész) |
 | M43 | `http.request` broker | concept | Spec F; M37-től független vonal |
 | M44 | Limits / budget | concept | Spec G (limit rész) |
@@ -496,6 +507,54 @@ Audit események: `crypto.sign.requested`, `crypto.sign.allowed`, `crypto.sign.d
 - `secret.read` nincs
 - Csak engedélyezett keyHandle + algorithm
 - Aláírás auditálva payload hash-sel (nem nyers payload dump)
+
+---
+
+#### M41.2 — WASM modul identitás + kétkulcsos Vault auth
+
+**Cél:** Vault csak akkor engedélyezi az aláírást, ha **mind** a Relay auth, **mind**
+a WASM modul PKI-identitása igazolt. Ez az architektúra sarokpontja: a jelenlegi
+`crypto.sign` flow egy trust boundary-t (Relay token) használ; M41.2 egy másodikat
+(modul cert) tesz mellé.
+
+**Jelenlegi flow (M41):**
+```text
+WASM → hostcall → Relay → Vault Transit (Relay token)
+```
+
+**Kétkulcsos flow (M41.2):**
+```text
+WASM → hostcall (+ modul cert fingerprint) → Relay → Vault Transit
+                                                        ↑ Relay token
+                                                        ↑ modul cert CN/fingerprint (PKI-ellenőrzött)
+```
+
+**Előfeltételek:**
+- `pki_verify.go` scaffold bekötése: CICRootCA → Intermediate CA → leaf cert bootstrap
+- WASM modul kap PKI-alapú leaf cert-et a CA lánctól
+- Vault policy: `bound_subject_alt_names` vagy fingerprint alapú engedélyezés
+
+**Relay felelőssége M41.2-ben:**
+- Modul cert fingerprint kinyerése és ellenőrzése induláskor
+- Vault sign request-be cert azonosító belerakása
+- Vault visszautasít, ha a cert nem egyezik a policy-ban engedélyezettel
+
+**Manifest kiegészítés (M39 után):**
+```yaml
+identity:
+  certFingerprint: sha256:abc123...   # PKI bootstrap tölti ki
+  boundKeyHandles:
+    - oci-prod-api-key
+```
+
+**Scaffold állapot:** ez a milestone a `pki_verify.go` bekötésétől függ, ami jelenleg
+**scaffold** (előfeltétel: CICRootCA bootstrap). Addig M41.2 concept marad.
+
+**DoD:**
+- Modul cert hiánya vagy lejárta: `ErrCapabilityDenied` (nem silent allow)
+- Vault policy: cert fingerprint kötelező mező a keyHandle mellé
+- Cert fingerprint az audit eventbe kerül
+- `MemoryTestSigner` analóg mock cert-tel unit tesztelhető
 
 ---
 
