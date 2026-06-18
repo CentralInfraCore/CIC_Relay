@@ -402,6 +402,20 @@ capabilities:
         algorithms: ["rsa-sha256"]
   clock:
     allow: true
+  git:                          # opcionális; csak ha a modul git host functiont hív
+    allow:
+      - op: status
+        mode: read
+      - op: diff
+        mode: read
+      - op: log
+        mode: read
+      - op: commit
+        mode: write
+        requireAudit: true
+      - op: push
+        mode: write
+        requireAudit: true
 
 limits:
   maxHttpRequests: 100
@@ -418,36 +432,29 @@ logging:
     - x-vault-token
 ```
 
-**Git capability példa a manifestben:**
-```yaml
-capabilities:
-  git:
-    allow:
-      - op: status
-        mode: read
-      - op: diff
-        mode: read
-      - op: log
-        mode: read
-      - op: commit
-        mode: write
-        requireAudit: true
-      - op: push
-        mode: write
-        requireAudit: true
-```
-
 **Tiltott a manifest schema-ban (v1 — parse error, nem silent ignore):**
 - `secret.envelope_read` — **nem valid mező v1-ben**; nem forward-compatible placeholder;
   csak M41.2 design spike lezárása után kerülhet vissza
 - `relay.kv.*` — concept
 - wildcard host (`*`) — alapból tiltott
 
+**Validáció két szinten:**
+```text
+Manifest schema validation (parse/load time):
+  mezők, típusok, enumok, wildcard tiltás, secret.envelope_read tiltott mező
+
+Policy resolution (load/runtime):
+  keyHandle létezik-e → load-time fail (nem runtime surprise)
+  keyHandle engedélyezett-e ehhez a modulhoz → load-time deny
+  algorithm engedélyezett-e a keyHandle-höz → load-time deny
+```
+
 **DoD:**
-- Hibás manifest fail-fast
-- Unknown capability tiltott
-- Unknown keyHandle tiltott
-- Wildcard host tiltott
+- Hibás schema → manifest parse fail, nem silent ignore
+- Unknown capability → parse fail
+- Wildcard host → parse fail
+- Unknown keyHandle → **load-time policy resolution fail** (nem runtime deny)
+- Nem engedélyezett keyHandle/algorithm → load-time deny
 
 ---
 
@@ -495,10 +502,13 @@ Válasz (hiba) — már az ABI szintjén kötelező forma:
 relay.http.request
 relay.crypto.sign
 relay.clock.now   ← csak capability profile-ban; minden hívás ProofTrace-be kerül;
-                     replay/verify módban nem hívható újra, csak recorded value:
+                     recorded value forma:
                      {"capability":"relay.clock.now","value":"2026-06-18T12:00:00Z",
-                      "source":"host","traceId":"..."}
-                     ha nincs recorded value → verify fail
+                      "source":"host","traceId":"...","invocationIndex":0}
+                     replay/verify szabályok:
+                       - hívássorrend szerint kell visszaadni (invocationIndex)
+                       - több vagy kevesebb hívás a trace-ben → verify fail
+                       - nincs recorded value → verify fail
 relay.trace.emit
 relay.git.*       ← meglévő M28 git host functions; M40.5-ben policy alá vonva
 ```
@@ -572,13 +582,29 @@ Relay felelőssége:
 
 Hostcall input:
 ```json
-{ "keyHandle": "oci-prod-api-key", "algorithm": "rsa-sha256", "payload": "base64..." }
+{
+  "keyHandle": "oci-prod-api-key",
+  "algorithm": "rsa-sha256",
+  "purpose": "oci.request-signing",
+  "payload": "base64..."
+}
 ```
+`purpose` v1-ben audit mező (nem policy gate), de előre lefoglalt — így logban és
+auditban nyomon követhető, later policy-hoz felhasználható.
 
 Válasz:
 ```json
 { "signature": "base64...", "keyVersion": "v3", "traceId": "..." }
 ```
+
+**Signing-oracle abuse limitek (per keyHandle):**
+```text
+allowedAlgorithms:   manifest allowlist
+maxSignPayloadBytes: manifest limit (default: 32768)
+maxSignRequests:     manifest limit (default: 50 / invocation)
+```
+`crypto.sign` nem általános signing oracle — ezek a korlátok a manifestből jönnek,
+nem globálisak.
 
 **Vault adapter döntések:**
 - keyHandle → Vault key mapping: Relay konfigurációban
@@ -722,6 +748,15 @@ provider endpoint mapping, request body, provider-specific headers,
 response parsing, retry policy (ha explicit engedett)
 ```
 
+**Signed header invariáns (crypto.sign + http.request szétválasztás):**
+```text
+A Relay nem módosíthat csendben aláírt szemantikai headert a crypto.sign után.
+Provider signing flow-ban a WASM köteles a Relay canonical host szabályai szerint
+előállítani a signing stringet.
+A Relay validál — nem javít.
+Eltérés esetén: deny.
+```
+
 **Egress policy v1 — kötelező szabályok:**
 ```text
 scheme:        csak https (http → deny)
@@ -729,7 +764,8 @@ host:          exact match, canonical lowercase; trailing dot normalizálva
 port:          default 443 vagy explicit allowlist
 wildcard host: tiltott
 IP literal:    tiltott alapból (explicit operator allowlist esetén engedett)
-redirect:      tiltott (Location header figyelmen kívül hagyva)
+redirect:      3xx válasz visszaadható a WASM-nak, de auto-follow tiltott;
+               új hostra/methodra a Relay nem megy tovább; WASM dönt
 proxy env:     ignorálva (HTTP_PROXY / HTTPS_PROXY nem érvényes)
 DNS rebinding: private/link-local/loopback range SSRF-védelem, default-on:
                127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16,
@@ -739,10 +775,16 @@ DNS rebinding: private/link-local/loopback range SSRF-védelem, default-on:
 
 **Header policy:**
 ```text
-redaction (kötelező):  authorization, x-vault-token
-hop-by-hop (tiltott):  Connection, Transfer-Encoding, Keep-Alive, Upgrade
-proxy-related (tiltott): Proxy-Authorization, X-Forwarded-For, X-Real-IP
-Host header:           Relay újraszámolja az allowlist alapján
+redaction (log/audit szinten kötelező):
+  authorization — átmehet outbound requestben ha manifest engedi az adott hosthoz,
+                  de log/trace/audit szinten mindig redacted
+  x-vault-token — mindig redacted, soha nem mehet ki
+  date          — átmehet; clock.now-ból származó érték esetén trace-ben rögzíteni kell
+
+hop-by-hop (tiltott kimenő):   Connection, Transfer-Encoding, Keep-Alive, Upgrade
+proxy-related (tiltott):       Proxy-Authorization, X-Forwarded-For, X-Real-IP
+Host header:                   Relay ellenőrzi, hogy egyezik-e a canonical allowlist hosttal;
+                               eltérés esetén deny — nem csendes felülírás
 ```
 
 **DoD:**
@@ -809,7 +851,8 @@ capability runtime-nak, OCI előtt kötelező.
 **Modul felelőssége:**
 ```text
 relay.clock.now → injected deterministic clock (nem system clock)
-relay.crypto.sign mock → mock signer, rögzített test kulccsal
+relay.crypto.sign mock → determinisztikus fake signature: "mock:" + sha256(payload);
+                          nem valódi private key, nem Vault, nem crypto trust primitive
 relay.http.request mock echo endpoint → request visszatükrözés mock transport-on
 relay.trace.emit → audit event küldés
 ```
@@ -911,6 +954,19 @@ metrics dashboard.
 
 **Vault kiesés soha nem okoz silent allow. Policy default: deny.**
 
+**Threat model review gate (v2.0 előfeltétel):**
+```text
+SSRF                 — egress policy + private range deny lefedi?
+secret exfiltration  — crypto.sign soha nem ad ki kulcsot; secret.envelope_read döntés zárva?
+signing oracle abuse — per-keyHandle limit + purpose mező + maxSignRequests érvényes?
+audit tampering      — ProofTrace chain_hash integritás; recorder commit protected?
+replay divergence    — clock.now invocationIndex; verify fail ha eltér?
+capability escalation— manifest parse fail unknown capability-re; load-time policy resolution?
+git write abuse      — requireAudit: true push/commit; canonical profile deny?
+```
+
+DoD: minden fenyegetéshez deny/audit/test mapping dokumentálva; nincs nyitott SSRF-vektor.
+
 ---
 
 ### Javasolt verziósorrend
@@ -940,13 +996,6 @@ nem valid mezők, amíg a megfelelő design spike le nem zárul.
 | `relay.random.bytes` | tervezett | M41.2 után, ha szükséges |
 | `relay.kv.get` / `relay.kv.put` | concept | külön sprint, KV store design |
 | `relay.crypto.signer.describe` | tervezett | M41 signer metadata döntéstől függ |
-
----
-
-## Tervezett milestone-ok (részletes)
-
-### M30–M31 — Done (archívum)
-Részletek: `ROADMAP_archive.md`
 
 ---
 
