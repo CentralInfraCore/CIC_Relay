@@ -105,7 +105,7 @@ semver==3.0.4
     # via -r requirements.in
 stevedore==5.6.0
     # via bandit
-types-pyyaml==6.0.12.20250915
+types-pyyaml==6.0.12.20260518
     # via -r requirements.in
 types-requests==2.32.4.20250913
     # via -r requirements.in
