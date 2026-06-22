@@ -25,3 +25,6 @@ jobs:
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           LOG_LEVEL: debug
+          # allowedCommands csak globális/admin szinten állítható (security okból),
+          # ezért env-ben adjuk meg: enélkül a postUpgradeTasks.commands tiltott lenne.
+          RENOVATE_ALLOWED_COMMANDS: '["^scripts/gen_manifest\\.sh "]'
