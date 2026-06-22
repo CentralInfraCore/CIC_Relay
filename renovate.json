@@ -8,6 +8,11 @@
   "pip-compile": {
     "enabled": true
   },
+  "postUpgradeTasks": {
+    "commands": ["scripts/gen_manifest.sh . MANIFEST.sha256"],
+    "fileFilters": ["MANIFEST.sha256"],
+    "executionMode": "branch"
+  },
   "packageRules": [
     {
       "matchManagers": ["pip-compile"],
