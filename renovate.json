@@ -8,6 +8,7 @@
   "pip-compile": {
     "enabled": true
   },
+  "rebaseWhen": "behind-base-branch",
   "postUpgradeTasks": {
     "commands": ["scripts/gen_manifest.sh . MANIFEST.sha256"],
     "fileFilters": ["MANIFEST.sha256"],
