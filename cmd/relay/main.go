@@ -40,12 +40,12 @@ var (
 	BuilderImageDigest = "unknown" // pinned builder docker image digest (docker-compose.yaml)
 )
 
-// test seam: unit tesztben felülírható
+// test seam: can be overridden in unit tests
 var listenAndServe = func(srv *http.Server) error {
 	return srv.ListenAndServe()
 }
 
-// newVaultCryptoSvc és newGitStateRecorder injectable seam-ek tesztelhetőséghez.
+// newVaultCryptoSvc and newGitStateRecorder are injectable seams for testability.
 var newVaultCryptoSvc = func(mount, key string) (crypto.CryptoService, error) {
 	return crypto.NewVaultCryptoService(mount, key)
 }
@@ -535,7 +535,7 @@ func buildOperatorIfConfigured(ctx context.Context, cabinetSvc cabinet.Cabinet, 
 	return op
 }
 
-// run: külön függvény, hogy unit tesztben ne main()-t kelljen hívni
+// run is a separate function to avoid calling main() in unit tests
 func run(port string, logger *logrus.Logger, s *relayServer) error {
 	logger.Printf("✅ Central relay API started on %s", port)
 	srv := &http.Server{

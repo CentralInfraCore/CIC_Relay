@@ -10,18 +10,17 @@ related_nodes: []
 objects:
 - name: SetOptions
   kind: struct
-  description: 'SetOptions hordozza a felhasználói beállításokat a Set kéréshez. A
-    Priority jelenleg: low|normal|high (normal az alapértelmezett).'
+  description: 'SetOptions carries user settings for a Set request. Priority is currently:
+    low|normal|high (normal is the default).'
   implements: []
   references: []
 - name: SetPayload
   kind: struct
-  description: SetPayload a Set belépési kérés kanonikus reprezentációja. A Modules
-    csak hivatkozás; semmi sincs példányosítva.
+  description: SetPayload is the canonical representation of a Set entry request. Modules
+    are only references; nothing is instantiated.
   implements: []
   references: []
 - name: CanonicalizeSetPayload
   kind: func
-  description: CanonicalizeSetPayload normalizálja a bemenetet (trim, dedup/sort,
-    defaultok).
+  description: CanonicalizeSetPayload normalizes input (trim, dedup/sort, defaults).
   references: []

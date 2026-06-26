@@ -5,15 +5,15 @@ import (
 	"fmt"
 )
 
-// SetResponse a Set hívás válasza.
+// SetResponse is the response to a Set call.
 type SetResponse struct {
 	Results  map[string]any
 	Warnings []string
 	Trace    *ProofTrace
 }
 
-// ValidateSet a SetPayload minimális szerkezeti ellenőrzése, és a hivatkozott
-// entitások (workflow, modulok) létezésének ellenőrzése.
+// ValidateSet performs minimal structural validation of SetPayload and checks if referenced
+// entities (workflow, modules) exist.
 func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 	if v == nil {
 		return fmt.Errorf("%w: set payload is nil", ErrInvalid)
@@ -27,12 +27,12 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 
 	// Handle options priority validation
 	if v.Options == nil {
-		// Ha az opciók nil-ek, nincs szükség prioritás validációra.
-		// A "options nil should pass" teszt ezt az utat várja el, hibamentesen.
+		// If options are nil, no priority validation is needed.
+		// The "options nil should pass" test expects this path to succeed without errors.
 	} else {
-		// Az opciók nem nil-ek, folytassuk a validációval.
-		// A hibaüzenet szerint itt történik a panic, ami azt jelenti,
-		// hogy v.Options nem nil, de érvénytelen memóriacímre mutat.
+		// Options are not nil, continue with validation.
+		// According to the error message, the panic happens here, which means
+		// that v.Options is not nil but points to an invalid memory address.
 		switch v.Options.Priority {
 		case "", "low", "normal", "high":
 		default:
@@ -40,28 +40,28 @@ func (a *API) ValidateSet(ctx context.Context, v *SetPayload) error {
 		}
 	}
 
-	// Ellenőrzés, hogy a WorkflowID létezik.
+	// Check that WorkflowID exists.
 	if _, err := a.GetWorkflow(v.WorkflowID); err != nil {
 		if IsNotFound(err) {
 			return fmt.Errorf("%w: workflow_id not found: %s", ErrNotFound, v.WorkflowID)
 		}
-		return err // Kezeli a store egyéb lehetséges hibáit
+		return err // Handle other possible store errors
 	}
 
-	// Ellenőrzés, hogy minden ModuleID feloldható.
+	// Check that all ModuleIDs can be resolved.
 	for _, moduleID := range v.Modules {
 		if _, err := a.GetModule(string(moduleID)); err != nil {
 			if IsNotFound(err) {
 				return fmt.Errorf("%w: module_id not found: %s", ErrNotFound, moduleID)
 			}
-			return err // Kezeli a store egyéb lehetséges hibáit
+			return err // Handle other possible store errors
 		}
 	}
 
 	return nil
 }
 
-// Set: belépési pont a séma-ellenőrzéshez és a workflow futtatáshoz.
+// Set is the entry point for schema validation and workflow execution.
 func (a *API) Set(ctx context.Context, in *SetPayload) (*SetResponse, error) {
 	if in == nil {
 		return nil, fmt.Errorf("%w: nil request", ErrInvalid)

@@ -1,9 +1,9 @@
 package cabinet
 
-// ModuleID a modul egyedi azonosítója (string alias).
+// ModuleID is the unique identifier of a module (string alias).
 type ModuleID string
 
-// BaseBlock: minden objektum közös metaadatait és validációs jellemzőit tartalmazza.
+// BaseBlock contains common metadata and validation attributes of every object.
 type BaseBlock struct {
 	Name        string `json:"name" yaml:"name"`
 	Version     string `json:"version" yaml:"version"`
@@ -14,39 +14,39 @@ type BaseBlock struct {
 	Signature   string `json:"signature,omitempty" yaml:"signature,omitempty"`
 	Certificate string `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	CRLRef      string `json:"crlRef,omitempty" yaml:"crlRef,omitempty"`
-	Valid       bool   `json:"-" yaml:"-"` // A Valid mezőt soha ne olvassuk be, mindig futásidőben állítjuk be.
+	Valid       bool   `json:"-" yaml:"-"` // Never read the Valid field; always set it at runtime.
 }
 
-// SchemaDef: egy séma működési specifikációja – állapotfeltételek, függőségek, következő lépések.
+// SchemaDef is the operational specification of a schema – state requirements, dependencies, next steps.
 type SchemaDef struct {
 	StateRequirement map[string]string `json:"stateRequirement,omitempty" yaml:"stateRequirement,omitempty"`
 	Dependencies     []string          `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	NextHops         []string          `json:"nextHops,omitempty" yaml:"nextHops,omitempty"`
 }
 
-// Schema: teljes séma objektum, meta + működési leírás.
+// Schema is the complete schema object, meta + operational specification.
 type Schema struct {
 	Meta BaseBlock `json:"metadata" yaml:"metadata"`
 	Spec SchemaDef `json:"spec" yaml:"spec"`
 }
 
-// NativeFunctions a natív, Go-ban implementált függvények tárolója.
-// A kulcs a függvény neve, az érték maga a Go függvény.
+// NativeFunctions is the storage for native, Go-implemented functions.
+// The key is the function name, the value is the Go function itself.
 type NativeFunctions map[string]interface{}
 
-// ModuleDescriptor: egy modul jellemzői – típusa, támogatott sémák, output kulcsok.
+// ModuleDescriptor describes a module's characteristics – type, supported schemas, output keys.
 type ModuleDescriptor struct {
 	Meta       BaseBlock `json:"metadata" yaml:"metadata"`
 	Type       string    `json:"type" yaml:"type"`
 	Accepts    []string  `json:"accepts" yaml:"accepts"`
 	OutputKeys []string  `json:"outputKeys,omitempty" yaml:"outputKeys,omitempty"`
-	WasmCode   []byte    `json:"-" yaml:"-"` // A WasmCode-ot soha nem szerializáljuk, külön fájlban kezeljük.
+	WasmCode   []byte    `json:"-" yaml:"-"` // Never serialize WasmCode; handle it in a separate file.
 
-	// Futásidejű, nem-perzisztált mezők
-	NativeImpl NativeFunctions `json:"-" yaml:"-"` // A natív Go implementációkat tartalmazó tároló.
+	// Runtime, non-persisted fields
+	NativeImpl NativeFunctions `json:"-" yaml:"-"` // Storage for native Go implementations.
 }
 
-// Workflow: végrehajtási lépések listája, gráf formában – sémákra hivatkozva.
+// Workflow is a list of execution steps in graph form – referencing schemas.
 type Workflow struct {
 	Meta  BaseBlock `json:"metadata" yaml:"metadata"`
 	Steps []string  `json:"steps" yaml:"steps"`

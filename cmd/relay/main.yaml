@@ -58,7 +58,7 @@ objects:
   - cabinet.IsInvalid
 - name: run
   kind: func
-  description: 'run: külön függvény, hogy unit tesztben ne main()-t kelljen hívni'
+  description: 'run is a separate function to avoid calling main() in unit tests'
   references:
   - logrus.Logger
 - name: main
@@ -76,5 +76,5 @@ objects:
   - cabinet.NewCabinetService
 - name: listenAndServe
   kind: var
-  description: 'test seam: unit tesztben felülírható'
+  description: 'test seam: can be overridden in unit tests'
   references: []
