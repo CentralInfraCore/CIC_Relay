@@ -66,6 +66,26 @@ objects:
   description: ''
   implements: []
   references: []
+- name: ResourceSpec
+  kind: struct
+  description: ResourceSpec declares a single managed resource within a Service.
+  implements: []
+  references: []
+- name: SchemaRef
+  kind: struct
+  description: SchemaRef identifies a schema by name and version in the Cabinet registry.
+  implements: []
+  references: []
+- name: ResourceState
+  kind: struct
+  description: ResourceState holds the desired lifecycle state of a resource.
+  implements: []
+  references: []
+- name: ResourceMeta
+  kind: struct
+  description: ResourceMeta holds identifying metadata for a resource instance.
+  implements: []
+  references: []
 - name: Graph
   kind: struct
   description: Graph represents the in-memory execution graph.

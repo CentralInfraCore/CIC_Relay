@@ -1,0 +1,31 @@
+---
+package: git
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestRepoRegistry_KnownRepo
+  kind: func
+  description: TestRepoRegistry_KnownRepo verifies that a registered repoID resolves
+    correctly.
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestRepoRegistry_WhitelistEnforce
+  kind: func
+  description: TestRepoRegistry_WhitelistEnforce verifies that an unknown repoID is
+    rejected.
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestRepoRegistry_Overwrite
+  kind: func
+  description: TestRepoRegistry_Overwrite verifies that re-registering a repoID replaces
+    the path.
+  references:
+  - require.NoError
+  - assert.Equal

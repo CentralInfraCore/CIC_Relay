@@ -1,0 +1,88 @@
+---
+package: schemapipeline_test
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: mockRunner
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: mockCall
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: gitAndRealFileRunner
+  kind: struct
+  description: gitAndRealFileRunner creates schema.yaml AND a .git dir during clone.
+  implements: []
+  references: []
+- name: Run
+  kind: method
+  receiver: mockRunner
+  description: ''
+  references: []
+- name: expectNext
+  kind: method
+  receiver: mockRunner
+  description: ''
+  references: []
+- name: expectErr
+  kind: method
+  receiver: mockRunner
+  description: ''
+  references: []
+- name: TestStart_Success
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+- name: TestStart_CloneFailure
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfigBuildDir
+  - require.NoError
+  - assert.True
+  - assert.NotEqual
+- name: TestStart_ComputesTreeDigest_GitDirSkipped
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+- name: TestStart_MissingVersion
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfigBuildDir
+  - require.ErrorContains
+- name: TestStart_RevParseError
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfigBuildDir
+  - require.Error
+  - assert.Contains
+- name: Run
+  kind: method
+  receiver: gitAndRealFileRunner
+  description: ''
+  references: []
+- name: TestStart_ComputesTreeDigest_GitDirExcluded
+  kind: func
+  description: TestStart_ComputesTreeDigest_GitDirExcluded verifies that .git content
+    is excluded from the tree digest. The golden hash was computed from schema.yaml
+    only. Kills the CONDITIONALS_NEGATION mutant at schemapipeline.go:387 which would
+    stop skipping .git → different hash → test fails.
+  references:
+  - schemapipeline.PipelineConfig
+  - assert.Equal
+  - assert.Error

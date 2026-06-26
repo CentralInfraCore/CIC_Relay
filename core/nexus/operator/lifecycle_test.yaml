@@ -1,0 +1,63 @@
+---
+package: operator
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: newTestLifecycleManager
+  kind: func
+  description: ''
+  references: []
+- name: TestOnboardHost_Valid
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NoError
+  - require.True
+  - assert.True
+  - assert.Equal
+- name: TestOnboardHost_ExpiredToken
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestOnboardHost_InvalidHMAC
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestOffboardHost_Active
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NoError
+  - require.True
+  - assert.False
+  - assert.NotNil
+- name: TestOffboardHost_NotFound
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestOffboardHost_RecorderError_NonFatal
+  kind: func
+  description: ''
+  references:
+  - assert.AnError
+  - require.NoError
+  - assert.NoError
+- name: TestHostRegistry_IsolatesHosts
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True
+  - assert.False

@@ -1,0 +1,17 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestCanonicalJSONOutput
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.ToJSON
+  - require.NoError
+  - assert.JSONEq

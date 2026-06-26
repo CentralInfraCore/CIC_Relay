@@ -70,7 +70,8 @@ objects:
     signing: if signer is non-nil, build_hash is signed and cic_sign is set to the
     resulting signature. When signer is nil, cic_sign is "unavailable" (non-fatal:
     the provenance record is still complete, just without a Vault signature). cic_signed_ca
-    is "stub:pending" until Layer 2 (CICSourceCA cert chain) is wired. The verification_root
+    is set to bctx.CAFingerprint when the PKI trust store is loaded (Layer 2). Falls
+    back to "stub:pending" in dev/test mode when no CA is available. The verification_root
     hash is always valid regardless of signing availability.'
   references:
   - merkle.BuildContext
