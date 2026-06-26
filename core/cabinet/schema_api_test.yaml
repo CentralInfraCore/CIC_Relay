@@ -13,18 +13,55 @@ objects:
   kind: func
   description: ''
   references:
-  - cabinet.SchemaMeta
-  - cabinet.BaseBlockName
+  - cabinet.Schema
+  - cabinet.SchemaConfigName
+  - cabinet.SchemaIdentityVersion
+  position:
+    start_line: 11
+    end_line: 20
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ID
+  - s.ID
+  - t.Fatalf
 - name: TestSchema_ID_API_Empty
   kind: func
   description: ''
   references:
-  - cabinet.SchemaMeta
-  - cabinet.BaseBlockName
-- name: TestSchema_GetData_API_EqualsSpec
+  - cabinet.Schema
+  position:
+    start_line: 21
+    end_line: 27
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ID
+  - s.ID
+  - t.Fatalf
+- name: TestSchema_GetData_API_EqualsConfig
   kind: func
   description: ''
   references:
-  - cabinet.SchemaDef
-  - cabinet.SchemaMeta
-  - cabinet.BaseBlockName
+  - cabinet.SchemaConfig
+  - cabinet.Schema
+  - cabinet.SchemaIdentityVersion
+  position:
+    start_line: 30
+    end_line: 51
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - GetData
+  - reflect.DeepEqual
+  - s.GetData
+  - t.Fatalf

@@ -12,27 +12,132 @@ objects:
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 9
+    end_line: 57
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - IsConflict
+  - IsInvalid
+  - IsNotFound
+  - IsTimeout
+  - errors.New
+  - fmt.Errorf
+  - func
+  - t.Fatalf
+  - t.Run
 - name: TestValidationError_Error_EmptyReturnsErrInvalid
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 58
+    end_line: 66
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ErrInvalid.Error
+  - Error
+  - t.Fatalf
+  - ve.Error
 - name: TestValidationError_Error_WithCauses_JSONPrefixed
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 67
+    end_line: 87
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ErrInvalid.Error
+  - Error
+  - fmt.Sprintf
+  - json.Marshal
+  - string
+  - t.Fatalf
+  - ve.Error
 - name: TestNewValidationError_ConstructsAsExpected
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 88
+    end_line: 103
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewValidationError
+  - t.Fatalf
 - name: TestValidationError_IsInvalidPredicateDoesNotMatch
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 104
+    end_line: 111
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - IsInvalid
+  - t.Fatalf
 - name: TestValidationError_Error_MarshalFails
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 112
+    end_line: 134
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ErrInvalid.Error
+  - Error
+  - errors.New
+  - fmt.Sprintf
+  - func
+  - t.Cleanup
+  - t.Fatalf
+  - ve.Error
 - name: TestNewAPIError
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 135
+    end_line: 191
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ErrConflict.Error
+  - ErrInvalid.Error
+  - ErrNotFound.Error
+  - NewAPIError
+  - NewValidationError
+  - errors.New
+  - func
+  - otherErr.Error
+  - t.Errorf
+  - t.Run

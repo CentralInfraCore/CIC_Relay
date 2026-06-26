@@ -14,11 +14,52 @@ objects:
     for testing.
   references:
   - require.NoError
+  position:
+    start_line: 21
+    end_line: 27
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    - name: ''
+      type: template
+    - name: parent
+      type: '*x509.Certificate'
+    - name: ''
+      type: pub
+    - name: priv
+      type: any
+    returns:
+    - '*x509.Certificate'
+  calls:
+  - require.NoError
+  - x509.CreateCertificate
+  - x509.ParseCertificate
 - name: generateCACert
   kind: func
   description: generateCACert generates a self-signed CA certificate.
   references:
   - require.NoError
+  position:
+    start_line: 30
+    end_line: 45
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    - name: subject
+      type: pkix.Name
+    returns:
+    - '*x509.Certificate'
+    - any
+  calls:
+  - Add
+  - big.NewInt
+  - createTestCertificate
+  - ecdsa.GenerateKey
+  - elliptic.P256
+  - require.NoError
+  - time.Now
 - name: TestVerifyCertificateChain
   kind: func
   description: ''
@@ -28,3 +69,36 @@ objects:
   - assert.Error
   - assert.Contains
   - assert.NoError
+  position:
+    start_line: 46
+    end_line: 240
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - Add
+  - StdEncoding.EncodeToString
+  - VerifyCertificateChain
+  - assert.Contains
+  - assert.Error
+  - assert.NoError
+  - assert.NotEmpty
+  - big.NewInt
+  - createTestCertificate
+  - ecdsa.GenerateKey
+  - elliptic.P256
+  - err.Error
+  - func
+  - generateCACert
+  - intermediatePool.AddCert
+  - require.NoError
+  - rootPool.AddCert
+  - sha256.Sum256
+  - t.Run
+  - time.Now
+  - untrustedPool.AddCert
+  - x509.CreateRevocationList
+  - x509.NewCertPool
+  - x509.ParseRevocationList

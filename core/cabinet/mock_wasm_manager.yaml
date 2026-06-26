@@ -15,12 +15,18 @@ objects:
   implements: []
   references:
   - mock.Mock
+  position:
+    start_line: 10
+    end_line: 12
 - name: MockCicWasmHost
   kind: struct
   description: MockCicWasmHost is a mock for the cicWasmHost interface.
   implements: []
   references:
   - mock.Mock
+  position:
+    start_line: 33
+    end_line: 35
 - name: NewHostInstance
   kind: method
   receiver: MockWasmManager

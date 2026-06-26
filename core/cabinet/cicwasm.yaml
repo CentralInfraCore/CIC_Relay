@@ -14,6 +14,22 @@ objects:
   implements: []
   references:
   - wazero.Runtime
+  position:
+    start_line: 24
+    end_line: 32
+  fields:
+  - name: DefaultTimeoutSeconds
+    type: uint32
+    tag: yaml:"default_timeout_seconds"
+  - name: DefaultMemoryPages
+    type: uint32
+    tag: yaml:"default_memory_pages"
+  - name: LRUCacheSize
+    type: int
+    tag: yaml:"lru_cache_size"
+  - name: HostSetupFn
+    type: func(ctx context.Context, r wazero.Runtime) error
+    tag: yaml:"-"
 - name: WasmManager
   kind: struct
   description: WasmManager is responsible for the entire WASM lifecycle management
@@ -27,6 +43,34 @@ objects:
   - singleflight.Group
   - obs.LogSink
   - obs.MetricSink
+  position:
+    start_line: 38
+    end_line: 47
+  fields:
+  - name: runtime
+    type: wazero.Runtime
+    tag: ''
+  - name: modules
+    type: ModuleStore
+    tag: ''
+  - name: config
+    type: WasmManagerConfig
+    tag: ''
+  - name: compiledModules
+    type: '*lru.Cache[string, wazero.CompiledModule]'
+    tag: ''
+  - name: sf
+    type: singleflight.Group
+    tag: ''
+  - name: closed
+    type: atomic.Bool
+    tag: ''
+  - name: logSink
+    type: obs.LogSink
+    tag: ''
+  - name: metricSink
+    type: obs.MetricSink
+    tag: ''
 - name: CicWasmHost
   kind: struct
   description: CicWasmHost provides a handle to a single live WASM module instance
@@ -37,11 +81,43 @@ objects:
   - api.Module
   - api.Function
   - obs.LogSink
+  position:
+    start_line: 237
+    end_line: 244
+  fields:
+  - name: instance
+    type: api.Module
+    tag: ''
+  - name: callFn
+    type: api.Function
+    tag: ''
+  - name: allocateFn
+    type: api.Function
+    tag: ''
+  - name: deallocateFn
+    type: api.Function
+    tag: ''
+  - name: timeout
+    type: time.Duration
+    tag: ''
+  - name: logSink
+    type: obs.LogSink
+    tag: ''
 - name: GuestResult
   kind: struct
   description: ''
   implements: []
   references: []
+  position:
+    start_line: 362
+    end_line: 366
+  fields:
+  - name: Data
+    type: json.RawMessage
+    tag: json:"data"
+  - name: Error
+    type: json.RawMessage
+    tag: json:"error"
 - name: SetObsSinks
   kind: method
   receiver: WasmManager
@@ -61,6 +137,38 @@ objects:
   - obs.LogRecord
   - obs.ResourceComponent
   - lru.NewWithEvict
+  position:
+    start_line: 57
+    end_line: 111
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: modules
+      type: ModuleStore
+    - name: config
+      type: WasmManagerConfig
+    returns:
+    - '*WasmManager'
+    - error
+  calls:
+  - Format
+  - UTC
+  - WithCloseOnContextDone
+  - config.HostSetupFn
+  - context.Background
+  - ctx.Err
+  - err.Error
+  - fmt.Errorf
+  - func
+  - logSink.RecordLog
+  - mod.Close
+  - modules
+  - r.Close
+  - time.Now
+  - wasi_snapshot_preview1.Instantiate
+  - wazero.NewRuntimeConfig
+  - wazero.NewRuntimeWithConfig
 - name: PreCompileModule
   kind: method
   receiver: WasmManager
@@ -98,6 +206,26 @@ objects:
   references:
   - api.Module
   - obs.LogSink
+  position:
+    start_line: 248
+    end_line: 264
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: instance
+      type: api.Module
+    - name: timeout
+      type: time.Duration
+    - name: logSink
+      type: obs.LogSink
+    returns:
+    - '*CicWasmHost'
+    - error
+  calls:
+  - fmt.Errorf
+  - instance.ExportedFunction
+  - instance.Name
 - name: Close
   kind: method
   receiver: CicWasmHost
@@ -153,3 +281,19 @@ objects:
   description: formatErrorJson constructs a JSON error object with code, message,
     and optional details fields.
   references: []
+  position:
+    start_line: 422
+    end_line: 436
+  signature:
+    params:
+    - name: ''
+      type: code
+    - name: message
+      type: string
+    - name: details
+      type: interface{}
+    returns:
+    - string
+  calls:
+  - json.Marshal
+  - string

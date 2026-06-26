@@ -18,6 +18,18 @@ objects:
   references:
   - nexusgit.GitOps
   - wazero.Runtime
+  position:
+    start_line: 17
+    end_line: 21
+  signature:
+    params:
+    - name: gitOps
+      type: nexusgit.GitOps
+    returns:
+    - func(ctx context.Context, r wazero.Runtime) error
+  calls:
+  - func
+  - registerGitHostFunctions
 - name: registerGitHostFunctions
   kind: func
   description: 'registerGitHostFunctions instantiates the "git" host module on the
@@ -28,12 +40,55 @@ objects:
   references:
   - wazero.Runtime
   - nexusgit.GitOps
+  position:
+    start_line: 31
+    end_line: 72
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: r
+      type: wazero.Runtime
+    - name: gitOps
+      type: nexusgit.GitOps
+    returns:
+    - error
+  calls:
+  - Export
+  - WithFunc
+  - WithParameterNames
+  - WithResultNames
+  - b.Instantiate
+  - b.NewFunctionBuilder
+  - makeCheckoutFn
+  - makeCloneFn
+  - makeCommitFn
+  - makeFetchFn
+  - makePushFn
+  - makeStatusFn
+  - r.NewHostModuleBuilder
 - name: makeCloneFn
   kind: func
   description: makeCloneFn creates a WASM host function that clones a git repository.
   references:
   - nexusgit.GitOps
   - api.Module
+  position:
+    start_line: 77
+    end_line: 92
+  signature:
+    params:
+    - name: ops
+      type: nexusgit.GitOps
+    returns:
+    - func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+  calls:
+  - err.Error
+  - func
+  - gitReadJSON
+  - gitWriteError
+  - gitWriteJSON
+  - ops.Clone
 - name: makeFetchFn
   kind: func
   description: makeFetchFn creates a WASM host function that fetches updates from
@@ -41,12 +96,44 @@ objects:
   references:
   - nexusgit.GitOps
   - api.Module
+  position:
+    start_line: 95
+    end_line: 109
+  signature:
+    params:
+    - name: ops
+      type: nexusgit.GitOps
+    returns:
+    - func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+  calls:
+  - err.Error
+  - func
+  - gitReadJSON
+  - gitWriteError
+  - gitWriteJSON
+  - ops.Fetch
 - name: makeCheckoutFn
   kind: func
   description: makeCheckoutFn creates a WASM host function that checks out a git reference.
   references:
   - nexusgit.GitOps
   - api.Module
+  position:
+    start_line: 112
+    end_line: 126
+  signature:
+    params:
+    - name: ops
+      type: nexusgit.GitOps
+    returns:
+    - func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+  calls:
+  - err.Error
+  - func
+  - gitReadJSON
+  - gitWriteError
+  - gitWriteJSON
+  - ops.Checkout
 - name: makeCommitFn
   kind: func
   description: makeCommitFn creates a WASM host function that commits changes to a
@@ -54,6 +141,22 @@ objects:
   references:
   - nexusgit.GitOps
   - api.Module
+  position:
+    start_line: 129
+    end_line: 145
+  signature:
+    params:
+    - name: ops
+      type: nexusgit.GitOps
+    returns:
+    - func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+  calls:
+  - err.Error
+  - func
+  - gitReadJSON
+  - gitWriteError
+  - gitWriteJSON
+  - ops.Commit
 - name: makePushFn
   kind: func
   description: makePushFn creates a WASM host function that pushes commits to a git
@@ -61,6 +164,22 @@ objects:
   references:
   - nexusgit.GitOps
   - api.Module
+  position:
+    start_line: 148
+    end_line: 163
+  signature:
+    params:
+    - name: ops
+      type: nexusgit.GitOps
+    returns:
+    - func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+  calls:
+  - err.Error
+  - func
+  - gitReadJSON
+  - gitWriteError
+  - gitWriteJSON
+  - ops.Push
 - name: makeStatusFn
   kind: func
   description: makeStatusFn creates a WASM host function that queries the status of
@@ -68,20 +187,93 @@ objects:
   references:
   - nexusgit.GitOps
   - api.Module
+  position:
+    start_line: 166
+    end_line: 180
+  signature:
+    params:
+    - name: ops
+      type: nexusgit.GitOps
+    returns:
+    - func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+  calls:
+  - err.Error
+  - func
+  - gitReadJSON
+  - gitWriteError
+  - gitWriteJSON
+  - ops.Status
 - name: gitReadJSON
   kind: func
   description: gitReadJSON reads reqLen bytes from WASM memory at reqPtr and unmarshals
     into v.
   references:
   - api.Module
+  position:
+    start_line: 185
+    end_line: 191
+  signature:
+    params:
+    - name: mod
+      type: api.Module
+    - name: ''
+      type: reqPtr
+    - name: reqLen
+      type: uint32
+    - name: v
+      type: interface{}
+    returns:
+    - bool
+  calls:
+  - Read
+  - json.Unmarshal
+  - mod.Memory
 - name: gitWriteJSON
   kind: func
   description: gitWriteJSON marshals v as JSON and writes it into WASM memory at (outPtr,
     outLen). Returns bytes written, or -1 if the buffer is too small.
   references:
   - api.Module
+  position:
+    start_line: 195
+    end_line: 207
+  signature:
+    params:
+    - name: mod
+      type: api.Module
+    - name: ''
+      type: outPtr
+    - name: outLen
+      type: uint32
+    - name: v
+      type: interface{}
+    returns:
+    - int32
+  calls:
+  - Write
+  - int32
+  - json.Marshal
+  - mod.Memory
+  - uint32
 - name: gitWriteError
   kind: func
   description: gitWriteError writes a JSON error response into WASM memory.
   references:
   - api.Module
+  position:
+    start_line: 210
+    end_line: 212
+  signature:
+    params:
+    - name: mod
+      type: api.Module
+    - name: ''
+      type: outPtr
+    - name: outLen
+      type: uint32
+    - name: msg
+      type: string
+    returns:
+    - int32
+  calls:
+  - gitWriteJSON

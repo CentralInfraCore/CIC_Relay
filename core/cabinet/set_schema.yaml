@@ -14,15 +14,57 @@ objects:
     low|normal|high (normal is the default).'
   implements: []
   references: []
+  position:
+    start_line: 10
+    end_line: 13
+  fields:
+  - name: TimeoutMS
+    type: int
+    tag: json:"timeout_ms,omitempty" yaml:"timeout_ms,omitempty"
+  - name: Priority
+    type: string `json:"priority,omitempty"   yaml:"priority,omitempty"` // low|normal|high
+    tag: ''
 - name: SetPayload
   kind: struct
   description: SetPayload is the canonical representation of a Set entry request.
     Modules are only references; nothing is instantiated.
   implements: []
   references: []
+  position:
+    start_line: 17
+    end_line: 23
+  fields:
+  - name: WorkflowID
+    type: string
+    tag: json:"workflow_id"             yaml:"workflow_id"
+  - name: Modules
+    type: '[]ModuleID'
+    tag: json:"modules"                 yaml:"modules"
+  - name: Payload
+    type: map[string]any
+    tag: json:"payload"                 yaml:"payload"
+  - name: Options
+    type: '*SetOptions'
+    tag: json:"options,omitempty"       yaml:"options,omitempty"
+  - name: SourceDigest
+    type: string
+    tag: json:"source_digest,omitempty" yaml:"source_digest,omitempty"
 - name: CanonicalizeSetPayload
   kind: func
   description: CanonicalizeSetPayload normalizes a SetPayload by trimming whitespace,
     deduplicating and sorting modules, and setting default options (priority defaults
     to "normal"). This ensures deterministic comparison and hashing of requests.
   references: []
+  position:
+    start_line: 28
+    end_line: 56
+  signature:
+    params:
+    - name: in
+      type: '*SetPayload'
+    returns: []
+  calls:
+  - func
+  - sort.Slice
+  - string
+  - strings.TrimSpace
