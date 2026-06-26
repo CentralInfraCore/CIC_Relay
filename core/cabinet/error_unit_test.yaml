@@ -1,0 +1,38 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestSentinelPredicates
+  kind: func
+  description: ''
+  references: []
+- name: TestValidationError_Error_EmptyReturnsErrInvalid
+  kind: func
+  description: ''
+  references: []
+- name: TestValidationError_Error_WithCauses_JSONPrefixed
+  kind: func
+  description: ''
+  references: []
+- name: TestNewValidationError_ConstructsAsExpected
+  kind: func
+  description: ''
+  references: []
+- name: TestValidationError_IsInvalidPredicateDoesNotMatch
+  kind: func
+  description: ''
+  references: []
+- name: TestValidationError_Error_MarshalFails
+  kind: func
+  description: ''
+  references: []
+- name: TestNewAPIError
+  kind: func
+  description: ''
+  references: []

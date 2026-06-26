@@ -33,7 +33,8 @@ type WasmManagerConfig struct {
 
 // --- WasmManager: The Caching Compiler and Instance Factory ---
 
-// WasmManager is responsible for the entire WASM lifecycle management.
+// WasmManager is responsible for the entire WASM lifecycle management including compilation caching,
+// instance instantiation, and resource cleanup using LRU eviction and singleflight deduplication.
 type WasmManager struct {
 	runtime         wazero.Runtime
 	modules         ModuleStore
@@ -109,7 +110,8 @@ func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManager
 	return m, nil
 }
 
-// PreCompileModule compiles a module and stores it in the cache.
+// PreCompileModule compiles a module from the ModuleStore using the module ID and checksum as a cache key,
+// with deduplication via singleflight to avoid redundant compilations.
 func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wazero.CompiledModule, error) {
 	if m.closed.Load() {
 		return nil, errors.New("WasmManager is closed")
@@ -163,7 +165,7 @@ func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wa
 	return res.(wazero.CompiledModule), nil
 }
 
-// NewHostInstance creates a new, live instance of a module, applying configured limits.
+// NewHostInstance creates a new, live instance of a compiled module with the configured timeout and observability sinks.
 func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cicWasmHost, error) {
 	if m.closed.Load() {
 		return nil, errors.New("WasmManager is closed")
@@ -202,7 +204,7 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 	return h, nil
 }
 
-// EvictModule removes all versions of a compiled module from the cache.
+// EvictModule removes all compiled versions of a module from the LRU cache by moduleID prefix matching.
 func (m *WasmManager) EvictModule(ctx context.Context, moduleID string) {
 	if m.closed.Load() {
 		return
@@ -220,7 +222,7 @@ func (m *WasmManager) EvictModule(ctx context.Context, moduleID string) {
 	}
 }
 
-// Close shuts down the entire WASM runtime and clears all caches.
+// Close shuts down the entire WASM runtime and purges the compiled module cache, invoking eviction callbacks.
 func (m *WasmManager) Close(ctx context.Context) error {
 	m.closed.Store(true)
 	// Purging will call the onEvict callback for all items, closing them.
@@ -230,6 +232,8 @@ func (m *WasmManager) Close(ctx context.Context) error {
 
 // --- CicWasmHost: A Handle to a Single Live WASM Instance ---
 
+// CicWasmHost provides a handle to a single live WASM module instance and manages the CIC WASM ABI
+// including memory allocation, function calls, and timeout handling.
 type CicWasmHost struct {
 	instance     api.Module
 	callFn       api.Function
@@ -239,6 +243,8 @@ type CicWasmHost struct {
 	logSink      obs.LogSink
 }
 
+// newCicWasmHost creates a CicWasmHost from a wazero module instance after verifying that required ABI functions
+// (Call, allocate, deallocate) are exported.
 func newCicWasmHost(ctx context.Context, instance api.Module, timeout time.Duration, logSink obs.LogSink) (*CicWasmHost, error) {
 	callFn := instance.ExportedFunction("Call")
 	allocateFn := instance.ExportedFunction("allocate")
@@ -257,6 +263,7 @@ func newCicWasmHost(ctx context.Context, instance api.Module, timeout time.Durat
 	}, nil
 }
 
+// Close releases the underlying WASM module instance and its memory resources.
 func (h *CicWasmHost) Close(ctx context.Context) error {
 	if h.instance != nil {
 		return h.instance.Close(ctx)
@@ -264,22 +271,32 @@ func (h *CicWasmHost) Close(ctx context.Context) error {
 	return nil
 }
 
+// Process invokes the "process" guest function with the given auth context and input JSON,
+// returning the result data and error JSON as strings.
 func (h *CicWasmHost) Process(ctx context.Context, authContextJson, inputJson string) (string, string) {
 	return h.callGuest(ctx, "process", authContextJson, inputJson)
 }
 
+// Get invokes the "get" guest function with the given auth context and query JSON,
+// returning the result data and error JSON as strings.
 func (h *CicWasmHost) Get(ctx context.Context, authContextJson, queryJson string) (string, string) {
 	return h.callGuest(ctx, "get", authContextJson, queryJson)
 }
 
+// Init invokes the "init" guest function with the given auth context and configuration JSON,
+// returning the result data and error JSON as strings.
 func (h *CicWasmHost) Init(ctx context.Context, authContextJson, configJson string) (string, string) {
 	return h.callGuest(ctx, "init", authContextJson, configJson)
 }
 
+// Notify invokes the "notify" guest function with the given auth context and event JSON,
+// returning the result data and error JSON as strings.
 func (h *CicWasmHost) Notify(ctx context.Context, authContextJson, eventJson string) (string, string) {
 	return h.callGuest(ctx, "notify", authContextJson, eventJson)
 }
 
+// callGuest invokes a named guest function with auth context and input JSON, handling memory allocation,
+// timeout enforcement, and response parsing. It returns data and error JSON strings.
 func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJson string) (string, string) {
 	callCtx, cancel := context.WithTimeout(ctx, h.timeout)
 	defer cancel()
@@ -366,6 +383,8 @@ func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJ
 	return string(dataJsonResult), string(errorJsonResult)
 }
 
+// writeStringToWasm allocates memory in the WASM module, writes the string bytes, and returns
+// the pointer and length; the caller is responsible for deallocation.
 func (h *CicWasmHost) writeStringToWasm(ctx context.Context, s string) (uint32, uint32, error) {
 	data := []byte(s)
 	dataLen := uint32(len(data))
@@ -399,6 +418,7 @@ func (h *CicWasmHost) emitDeallocWarn(ptrType string, err error) {
 	})
 }
 
+// formatErrorJson constructs a JSON error object with code, message, and optional details fields.
 func formatErrorJson(code, message string, details interface{}) string {
 	errorObj := map[string]interface{}{
 		"code":    code,

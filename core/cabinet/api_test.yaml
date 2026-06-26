@@ -1,0 +1,15 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestAPI_Close_NilCabinet
+  kind: func
+  description: ''
+  references:
+  - assert.Panics

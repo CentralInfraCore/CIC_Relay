@@ -1,0 +1,25 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestCanonicalWasmGolden
+  kind: func
+  description: TestCanonicalWasmGolden proves that the WASM stripping logic correctly
+    canonicalizes functionally identical modules with different binary representations.
+  references:
+  - assert.NotEqual
+  - require.NoError
+  - assert.Equal
+- name: TestHashingTimeout
+  kind: func
+  description: TestHashingTimeout verifies that the checksum calculation respects
+    the context timeout.
+  references:
+  - require.Error
+  - assert.ErrorIs

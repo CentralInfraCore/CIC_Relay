@@ -29,9 +29,9 @@ func TestModuleDescriptor_ID_Basic(t *testing.T) {
 }
 
 func TestModuleDescriptor_ID_EmptyParts(t *testing.T) {
-	assert.Equal(t, "@", (&ModuleDescriptor{}).ID(), "üres meta -> @")
-	assert.Equal(t, "a@", (&ModuleDescriptor{Meta: BaseBlock{Name: "a"}}).ID(), "üres version -> a@")
-	assert.Equal(t, "@v1", (&ModuleDescriptor{Meta: BaseBlock{Version: "v1"}}).ID(), "üres név -> @v1")
+	assert.Equal(t, "@", (&ModuleDescriptor{}).ID(), "empty meta -> @")
+	assert.Equal(t, "a@", (&ModuleDescriptor{Meta: BaseBlock{Name: "a"}}).ID(), "empty version -> a@")
+	assert.Equal(t, "@v1", (&ModuleDescriptor{Meta: BaseBlock{Version: "v1"}}).ID(), "empty name -> @v1")
 }
 
 func TestModuleDescriptor_GetData_ReturnsCompositeStruct(t *testing.T) {

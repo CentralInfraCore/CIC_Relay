@@ -1,0 +1,41 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: writeCertPEM
+  kind: func
+  description: ''
+  references: []
+- name: Test_printHelp_DoesNotPanic
+  kind: func
+  description: ''
+  references: []
+- name: Test_main_VerboseYAML
+  kind: func
+  description: ''
+  references: []
+- name: Test_main_CertPath_YAML
+  kind: func
+  description: ''
+  references: []
+- name: Test_main_Help_LongFlag
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+- name: Test_main_CertPath_ECDSACert
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+- name: Test_main_CertPath_Ed25519Cert
+  kind: func
+  description: ''
+  references:
+  - assert.NotEmpty

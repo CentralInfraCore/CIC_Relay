@@ -29,8 +29,9 @@ objects:
 - name: Activate
   kind: method
   receiver: CabinetActivator
-  description: Activate executes the workflow for a validated, desired-present resource.
-    It maps res.SchemaRef → WorkflowID, wraps res.Spec as the payload, and calls Cabinet.Setx().
+  description: Activate executes the workflow for a validated, desired-present IaC
+    resource. It maps res.SchemaRef to WorkflowID, passes res.Spec directly as the
+    payload, and calls Cabinet.Setx().
   references:
   - types.ResourceSpec
   - cabinet.SetPayload

@@ -1,0 +1,79 @@
+---
+package: isolation
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestMain
+  kind: func
+  description: TestMain allows the test binary to act as a subprocess worker in echo
+    mode. When CIC_WORKER_TEST_MODE=echo is set the process runs RunWorkerLoop and
+    exits, instead of running the test suite. This enables the subprocess round-trip
+    test without needing a separately compiled binary.
+  references: []
+- name: TestRunWorkerLoop_Echo
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+  - assert.Equal
+- name: TestRunWorkerLoop_MultipleRequests
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+  - assert.Equal
+- name: TestRunWorkerLoop_InvalidJSON
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEmpty
+  - assert.Contains
+- name: TestRunWorkerLoop_InvalidBase64
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEmpty
+  - assert.Contains
+- name: TestRunWorkerLoop_ContextCancelled
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestRunWorkerLoop_WithWorker_Success
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - require.NoError
+  - assert.Empty
+  - assert.Equal
+- name: TestRunWorkerLoop_WithWorker_DecryptError
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  - assert.Contains
+- name: TestRunWorkerLoop_WithWorker_ResponseError
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  - assert.Contains
+- name: TestSubprocessWorker_RoundTrip
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal

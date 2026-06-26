@@ -11,38 +11,38 @@ related_nodes: []
 objects:
 - name: BaseBlock
   kind: struct
-  description: 'BaseBlock: minden objektum közös metaadatait és validációs jellemzőit
-    tartalmazza.'
+  description: BaseBlock contains common metadata and validation attributes of every
+    object.
   implements: []
   references: []
 - name: SchemaDef
   kind: struct
-  description: 'SchemaDef: egy séma működési specifikációja – állapotfeltételek, függőségek,
-    következő lépések.'
+  description: SchemaDef is the operational specification of a schema – state requirements,
+    dependencies, next steps.
   implements: []
   references: []
 - name: Schema
   kind: struct
-  description: 'Schema: teljes séma objektum, meta + működési leírás.'
+  description: Schema is the complete schema object, meta + operational specification.
   implements: []
   references: []
 - name: ModuleDescriptor
   kind: struct
-  description: 'ModuleDescriptor: egy modul jellemzői – típusa, támogatott sémák,
-    output kulcsok.'
+  description: ModuleDescriptor describes a module's characteristics – type, supported
+    schemas, output keys.
   implements: []
   references: []
 - name: Workflow
   kind: struct
-  description: 'Workflow: végrehajtási lépések listája, gráf formában – sémákra hivatkozva.'
+  description: Workflow is a list of execution steps in graph form – referencing schemas.
   implements: []
   references: []
 - name: ModuleID
   kind: type
-  description: ModuleID a modul egyedi azonosítója (string alias).
+  description: ModuleID is the unique identifier of a module (string alias).
   references: []
 - name: NativeFunctions
   kind: type
-  description: NativeFunctions a natív, Go-ban implementált függvények tárolója. A
-    kulcs a függvény neve, az érték maga a Go függvény.
+  description: NativeFunctions is the storage for native, Go-implemented functions.
+    The key is the function name, the value is the Go function itself.
   references: []

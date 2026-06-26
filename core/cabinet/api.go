@@ -7,7 +7,7 @@ type API struct {
 	Cabinet
 }
 
-// NewAPI creates a new API instance.
+// NewAPI creates a new API instance wrapping the given Cabinet service.
 func NewAPI(svc Cabinet) *API {
 	return &API{svc}
 }

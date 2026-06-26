@@ -1,9 +1,9 @@
 package cabinet
 
-// ModuleID a modul egyedi azonosítója (string alias).
+// ModuleID is the unique identifier of a module (string alias).
 type ModuleID string
 
-// BaseBlock: minden objektum közös metaadatait és validációs jellemzőit tartalmazza.
+// BaseBlock contains common metadata and validation attributes of every object.
 type BaseBlock struct {
 	Name        string `json:"name" yaml:"name"`
 	Version     string `json:"version" yaml:"version"`
@@ -14,17 +14,17 @@ type BaseBlock struct {
 	Signature   string `json:"signature,omitempty" yaml:"signature,omitempty"`
 	Certificate string `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	CRLRef      string `json:"crlRef,omitempty" yaml:"crlRef,omitempty"`
-	Valid       bool   `json:"-" yaml:"-"` // A Valid mezőt soha ne olvassuk be, mindig futásidőben állítjuk be.
+	Valid       bool   `json:"-" yaml:"-"` // Never read the Valid field; always set it at runtime.
 }
 
-// SchemaIdentity: stabil azonosítás — kind, namespace, version.
+// SchemaIdentity provides stable identification – kind, namespace, version.
 type SchemaIdentity struct {
 	Kind      string `json:"kind,omitempty" yaml:"kind,omitempty"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Version   string `json:"version" yaml:"version"`
 }
 
-// SchemaConfig: desired-state surface — a séma által előírt konfiguráció és működési feltételek.
+// SchemaConfig is the desired-state surface – schema-defined configuration and operational constraints.
 type SchemaConfig struct {
 	Name             string            `json:"name" yaml:"name"`
 	Description      string            `json:"description,omitempty" yaml:"description,omitempty"`
@@ -35,7 +35,7 @@ type SchemaConfig struct {
 	NextHops         []string          `json:"nextHops,omitempty" yaml:"nextHops,omitempty"`
 }
 
-// SchemaSigning: kriptográfiai bizonyíték mezők — checksum, aláírás, tanúsítvány.
+// SchemaSigning holds cryptographic evidence fields – checksum, signature, certificate.
 type SchemaSigning struct {
 	Checksum    string `json:"checksum,omitempty" yaml:"checksum,omitempty"`
 	Signature   string `json:"signature,omitempty" yaml:"signature,omitempty"`
@@ -43,12 +43,12 @@ type SchemaSigning struct {
 	CRLRef      string `json:"crlRef,omitempty" yaml:"crlRef,omitempty"`
 }
 
-// SchemaState: observed/runtime state — betöltéskor állítja be a rendszer, soha nem szerializálják.
+// SchemaState is the observed/runtime state – set by the system on load, never serialized.
 type SchemaState struct {
 	Valid bool `json:"-" yaml:"-"`
 }
 
-// Schema: ManagedEntity-konform séma objektum — Identity + Config + Signing + State.
+// Schema is a ManagedEntity-conforming schema object – Identity + Config + Signing + State.
 type Schema struct {
 	Identity SchemaIdentity `json:"identity" yaml:"identity"`
 	Config   SchemaConfig   `json:"config" yaml:"config"`
@@ -56,30 +56,30 @@ type Schema struct {
 	State    SchemaState    `json:"-" yaml:"-"`
 }
 
-// NativeFunctions a natív, Go-ban implementált függvények tárolója.
-// A kulcs a függvény neve, az érték maga a Go függvény.
+// NativeFunctions is the storage for native, Go-implemented functions.
+// The key is the function name, the value is the Go function itself.
 type NativeFunctions map[string]interface{}
 
-// ModuleDescriptor: egy modul jellemzői – típusa, támogatott sémák, output kulcsok.
+// ModuleDescriptor describes a module's characteristics – type, supported schemas, output keys.
 type ModuleDescriptor struct {
 	Meta       BaseBlock `json:"metadata" yaml:"metadata"`
 	Type       string    `json:"type" yaml:"type"`
 	Accepts    []string  `json:"accepts" yaml:"accepts"`
 	OutputKeys []string  `json:"outputKeys,omitempty" yaml:"outputKeys,omitempty"`
-	WasmCode   []byte    `json:"-" yaml:"-"` // A WasmCode-ot soha nem szerializáljuk, külön fájlban kezeljük.
+	WasmCode   []byte    `json:"-" yaml:"-"` // Never serialize WasmCode; handle it in a separate file.
 
-	// Futásidejű, nem-perzisztált mezők
-	NativeImpl NativeFunctions `json:"-" yaml:"-"` // A natív Go implementációkat tartalmazó tároló.
+	// Runtime, non-persisted fields
+	NativeImpl NativeFunctions `json:"-" yaml:"-"` // Storage for native Go implementations.
 }
 
-// WorkflowIdentity: stabil azonosítás — kind, namespace, version.
+// WorkflowIdentity provides stable identification – kind, namespace, version.
 type WorkflowIdentity struct {
 	Kind      string `json:"kind,omitempty" yaml:"kind,omitempty"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Version   string `json:"version" yaml:"version"`
 }
 
-// WorkflowConfig: desired-state surface — a workflow által végrehajtott lépések.
+// WorkflowConfig is the desired-state surface – workflow execution steps and metadata.
 type WorkflowConfig struct {
 	Name        string   `json:"name" yaml:"name"`
 	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
@@ -88,7 +88,7 @@ type WorkflowConfig struct {
 	Steps       []string `json:"steps" yaml:"steps"`
 }
 
-// WorkflowSigning: kriptográfiai bizonyíték mezők.
+// WorkflowSigning holds cryptographic evidence fields.
 type WorkflowSigning struct {
 	Checksum    string `json:"checksum,omitempty" yaml:"checksum,omitempty"`
 	Signature   string `json:"signature,omitempty" yaml:"signature,omitempty"`
@@ -96,12 +96,12 @@ type WorkflowSigning struct {
 	CRLRef      string `json:"crlRef,omitempty" yaml:"crlRef,omitempty"`
 }
 
-// WorkflowState: observed/runtime state — betöltéskor állítja be a rendszer, soha nem szerializálják.
+// WorkflowState is the observed/runtime state – set by the system on load, never serialized.
 type WorkflowState struct {
 	Valid bool `json:"-" yaml:"-"`
 }
 
-// Workflow: ManagedEntity-konform workflow objektum — Identity + Config + Signing + State.
+// Workflow is a ManagedEntity-conforming workflow object – Identity + Config + Signing + State.
 type Workflow struct {
 	Identity WorkflowIdentity `json:"identity" yaml:"identity"`
 	Config   WorkflowConfig   `json:"config" yaml:"config"`

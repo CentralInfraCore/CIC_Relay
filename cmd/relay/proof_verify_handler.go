@@ -21,6 +21,7 @@ type ProofVerifyResponse struct {
 	Warnings  []string `json:"warnings,omitempty"`
 }
 
+// proofVerifyHandler handles POST /v1/proof/verify requests by validating a ProofArtifact against the schema contract.
 func (s *relayServer) proofVerifyHandler(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
 	logEntry := s.logger.WithFields(logrus.Fields{

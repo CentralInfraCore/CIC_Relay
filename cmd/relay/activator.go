@@ -26,8 +26,8 @@ func NewCabinetActivator(c cabinet.Cabinet, logger *logrus.Logger) *CabinetActiv
 	return &CabinetActivator{cabinet: c, logger: logger}
 }
 
-// Activate executes the workflow for a validated, desired-present resource.
-// It maps res.SchemaRef → WorkflowID, passes res.Spec directly as the payload, and calls Cabinet.Setx().
+// Activate executes the workflow for a validated, desired-present IaC resource.
+// It maps res.SchemaRef to WorkflowID, passes res.Spec directly as the payload, and calls Cabinet.Setx().
 func (a *CabinetActivator) Activate(ctx context.Context, svcName string, res types.ResourceSpec) error {
 	schemaID := res.SchemaRef.Name + "@" + res.SchemaRef.Version
 

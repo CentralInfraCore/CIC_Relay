@@ -12,7 +12,8 @@ related_nodes: []
 objects:
 - name: memWorkflowStore
   kind: struct
-  description: ''
+  description: memWorkflowStore is an in-memory implementation of WorkflowStore using
+    a map-based index.
   implements: []
   references: []
 - name: memModuleStore
@@ -24,7 +25,8 @@ objects:
   references: []
 - name: memSchemaStore
   kind: struct
-  description: ''
+  description: memSchemaStore is an in-memory implementation of SchemaStore using
+    a map-based index.
   implements: []
   references: []
 - name: WorkflowStore
@@ -41,58 +43,66 @@ objects:
   references: []
 - name: NewMemWorkflowStore
   kind: func
-  description: ''
+  description: NewMemWorkflowStore creates and returns a new in-memory WorkflowStore
+    instance.
   references: []
 - name: Get
   kind: method
   receiver: memWorkflowStore
-  description: ''
+  description: Get retrieves a Schema by its ID, returning the schema and a boolean
+    indicating existence.
   references: []
 - name: Put
   kind: method
   receiver: memWorkflowStore
-  description: ''
+  description: Put stores a Schema, returning the previous value (if any) and a boolean
+    indicating prior existence.
   references: []
 - name: Exists
   kind: method
   receiver: memWorkflowStore
-  description: ''
+  description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
 - name: NewMemModuleStore
   kind: func
-  description: ''
+  description: NewMemModuleStore creates and returns a new in-memory ModuleStore instance
+    with CAS semantics.
   references: []
 - name: Get
   kind: method
   receiver: memModuleStore
-  description: ''
+  description: Get retrieves a Schema by its ID, returning the schema and a boolean
+    indicating existence.
   references: []
 - name: Put
   kind: method
   receiver: memModuleStore
-  description: ''
+  description: Put stores a Schema, returning the previous value (if any) and a boolean
+    indicating prior existence.
   references: []
 - name: Exists
   kind: method
   receiver: memModuleStore
-  description: ''
+  description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
 - name: NewMemSchemaStore
   kind: func
-  description: ''
+  description: NewMemSchemaStore creates and returns a new in-memory SchemaStore instance.
   references: []
 - name: Get
   kind: method
   receiver: memSchemaStore
-  description: ''
+  description: Get retrieves a Schema by its ID, returning the schema and a boolean
+    indicating existence.
   references: []
 - name: Put
   kind: method
   receiver: memSchemaStore
-  description: ''
+  description: Put stores a Schema, returning the previous value (if any) and a boolean
+    indicating prior existence.
   references: []
 - name: Exists
   kind: method
   receiver: memSchemaStore
-  description: ''
+  description: Exists checks whether a Schema with the given ID exists in the store.
   references: []

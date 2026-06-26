@@ -41,6 +41,7 @@ objects:
     present). 5. commit_record.id == chain_hash when commit_record is present.'
   references:
   - cabinet.ProofTraceStep
+  - cabinet.ComputeChainHashV1
 - name: ProofArtifactFromTrace
   kind: func
   description: ProofArtifactFromTrace converts a cabinet.ProofTrace to a ProofArtifact.
@@ -48,11 +49,6 @@ objects:
   - cabinet.ProofTrace
 - name: MarshalProofArtifact
   kind: func
-  description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON.
+  description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON format
+    for transport or storage.
   references: []
-- name: recomputeChainHash
-  kind: func
-  description: recomputeChainHash mirrors cabinet.computeChainHash without importing
-    the private function.
-  references:
-  - cabinet.ProofTraceStep

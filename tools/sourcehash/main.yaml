@@ -19,3 +19,7 @@ objects:
   description: ''
   references:
   - sourcedigest.ComputeTreeHash
+- name: osExit
+  kind: var
+  description: ''
+  references: []

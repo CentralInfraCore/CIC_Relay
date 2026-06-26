@@ -75,7 +75,7 @@ func TestValidationError_Error_WithCauses_JSONPrefixed(t *testing.T) {
 
 	got := ve.Error()
 
-	b, err := json.Marshal(ve.Cause) // marshallal állítjuk elő az elvárt JSON-t
+	b, err := json.Marshal(ve.Cause) // Produce the expected JSON through marshaling
 	if err != nil {
 		t.Fatalf("json.Marshal failed: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestNewValidationError_ConstructsAsExpected(t *testing.T) {
 }
 
 func TestValidationError_IsInvalidPredicateDoesNotMatch(t *testing.T) {
-	// ValidationError nem wrap-eli az ErrInvalid-et, csak a szövegben használja → IsInvalid false.
+	// ValidationError does not wrap ErrInvalid, only uses it in text → IsInvalid false.
 	ve := &ValidationError{Cause: []FieldError{{Field: "x", Msg: "y"}}}
 	if IsInvalid(ve) {
 		t.Fatalf("IsInvalid(ValidationError) = true, want false")

@@ -24,7 +24,8 @@ objects:
 - name: compileHandler
   kind: method
   receiver: relayServer
-  description: ''
+  description: compileHandler handles POST /v1/schema/compile requests by executing
+    the cic.schema.compile workflow.
   references:
   - uuid.New
   - logrus.Fields

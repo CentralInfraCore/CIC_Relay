@@ -1,0 +1,109 @@
+---
+package: git
+description: ''
+tags:
+- metrics
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: initBareTestRepo
+  kind: func
+  description: initBareTestRepo creates a non-bare git repo with one commit and returns
+    its path.
+  references:
+  - require.NoError
+- name: TestExecGitOps_CloneAndStatus
+  kind: func
+  description: TestExecGitOps_CloneAndStatus clones a local repo and checks that Status
+    returns an empty list (clean working tree).
+  references:
+  - require.NoError
+  - assert.Empty
+- name: TestExecGitOps_UnknownRepo
+  kind: func
+  description: TestExecGitOps_UnknownRepo verifies that any operation with an unregistered
+    repoID fails.
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestHardenedEnv
+  kind: func
+  description: TestHardenedEnv verifies that git commands are executed with the required
+    hardened environment variables.
+  references:
+  - require.NoError
+  - assert.True
+- name: TestParsePortcelainStatus
+  kind: func
+  description: TestParsePortcelainStatus validates the porcelain output parser.
+  references:
+  - require.Len
+  - assert.Equal
+- name: TestExecGitOps_SetObsSinks_MetricEmission
+  kind: func
+  description: TestExecGitOps_SetObsSinks_MetricEmission verifies that after SetObsSinks,
+    a successful git op emits a relay.git.op_duration_ms histogram. (M31)
+  references:
+  - obs.CaptureSink
+  - require.NoError
+  - require.NotEmpty
+  - assert.Equal
+  - assert.True
+- name: TestExecGitOps_SetObsSinks_ErrorLog
+  kind: func
+  description: TestExecGitOps_SetObsSinks_ErrorLog verifies that a failed git op emits
+    a WARN log. (M31)
+  references:
+  - obs.CaptureSink
+  - require.NotEmpty
+  - assert.Equal
+- name: TestExecGitOps_SetObsSinks_NilSafe
+  kind: func
+  description: TestExecGitOps_SetObsSinks_NilSafe verifies that nil sinks don't cause
+    panics. (M31)
+  references:
+  - assert.NotPanics
+- name: TestExecGitOps_Fetch_UnknownRepo
+  kind: func
+  description: ''
+  references:
+  - require.Error
+- name: TestExecGitOps_Checkout_UnknownRepo
+  kind: func
+  description: ''
+  references:
+  - require.Error
+- name: TestExecGitOps_Commit_UnknownRepo
+  kind: func
+  description: ''
+  references:
+  - require.Error
+- name: TestExecGitOps_Push_UnknownRepo
+  kind: func
+  description: ''
+  references:
+  - require.Error
+- name: TestExecGitOps_Fetch_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: TestExecGitOps_Checkout_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: TestExecGitOps_Commit_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Len
+- name: TestExecGitOps_Push_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError

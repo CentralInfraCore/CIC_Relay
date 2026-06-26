@@ -1,0 +1,103 @@
+---
+package: iac
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: silentLogger
+  kind: func
+  description: ''
+  references:
+  - logrus.Logger
+  - logrus.New
+- name: jsonServer
+  kind: func
+  description: jsonServer returns an httptest.Server that responds with the given
+    body and status.
+  references: []
+- name: TestFetchConfig_JSONResponse
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestFetchConfig_YAMLResponse
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestFetchConfig_BearerTokenSent
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestFetchConfig_HTTP404_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestFetchConfig_Retry_SucceedsOnThirdAttempt
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestFetchConfig_AllRetriesExhausted
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+  - assert.Equal
+- name: TestFetchConfig_ContextCancelled
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestParseUpstreamResponse_JSON
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestParseUpstreamResponse_YAML
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestParseUpstreamResponse_InvalidJSON
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestParseUpstreamResponse_EmptyBody
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+- name: TestNewUpstreamSourceFromEnv_NoURL
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Nil
+- name: TestNewUpstreamSourceFromEnv_WithURL
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestNewUpstreamSourceFromEnv_InvalidTimeout
+  kind: func
+  description: ''
+  references:
+  - assert.NotNil

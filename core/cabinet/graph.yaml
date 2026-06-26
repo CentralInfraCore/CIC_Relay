@@ -7,4 +7,27 @@ category: []
 used_in: []
 entrypoint: false
 related_nodes: []
-objects: []
+objects:
+- name: ExecutionGraphStep
+  kind: struct
+  description: ExecutionGraphStep is a single parsed step in a workflow.
+  implements: []
+  references: []
+- name: ExecutionGraph
+  kind: struct
+  description: ExecutionGraph is the ordered list of parsed steps for a workflow execution.
+  implements: []
+  references: []
+- name: ParseExecutionGraph
+  kind: func
+  description: 'ParseExecutionGraph parses a slice of step strings into an ExecutionGraph.
+    Supported formats: New: "component@version.function(inputKey) -> outputKey" Old:
+    "component.function(data)"   (outputKey defaults to "result") Both formats may
+    appear in the same workflow (backward-compatible).'
+  references: []
+- name: parseStep
+  kind: func
+  description: parseStep parses a single step string and extracts its component parts.
+    It supports both new format (component@version.function(inputKey) -> outputKey)
+    and old format (component.function(data)).
+  references: []

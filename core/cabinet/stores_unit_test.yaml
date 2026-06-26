@@ -1,0 +1,24 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestMemStores_Basic
+  kind: func
+  description: ''
+  references: []
+- name: TestMemModuleStore_OverwriteAndCAS
+  kind: func
+  description: ''
+  references:
+  - require.False
+  - require.Nil
+  - assert.True
+  - require.True
+  - assert.Equal
+  - require.NotNil

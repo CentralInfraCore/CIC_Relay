@@ -1,0 +1,28 @@
+---
+package: main
+description: ''
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: ProofVerifyRequest
+  kind: struct
+  description: ProofVerifyRequest is the request body for POST /v1/proof/verify.
+  implements: []
+  references: []
+- name: ProofVerifyResponse
+  kind: struct
+  description: ProofVerifyResponse is the response body for POST /v1/proof/verify.
+  implements: []
+  references: []
+- name: proofVerifyHandler
+  kind: method
+  receiver: relayServer
+  description: proofVerifyHandler handles POST /v1/proof/verify requests by validating
+    a ProofArtifact against the schema contract.
+  references:
+  - uuid.New
+  - logrus.Fields

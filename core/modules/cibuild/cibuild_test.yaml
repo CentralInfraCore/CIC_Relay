@@ -1,0 +1,57 @@
+---
+package: cibuild
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestParseInput
+  kind: func
+  description: TestParseInput covers input validation logic.
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  - assert.Contains
+- name: TestFileDigest
+  kind: func
+  description: TestFileDigest verifies SHA-256 digest calculation.
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestFileDigest_NotFound
+  kind: func
+  description: TestFileDigest_NotFound verifies error on missing file.
+  references:
+  - require.Error
+- name: TestExecute_MissingArtifactOutput
+  kind: func
+  description: TestExecute_MissingArtifactOutput verifies that missing artifact_output
+    fails fast.
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestExecute_WrongInputType
+  kind: func
+  description: TestExecute_WrongInputType verifies type guard.
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestExecute_MakeFails
+  kind: func
+  description: TestExecute_MakeFails verifies that a failing make returns an error.
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: TestExecute_Success
+  kind: func
+  description: TestExecute_Success verifies a full successful build round-trip.
+  references:
+  - require.NoError
+  - require.True
+  - assert.Equal
+  - assert.NotEmpty

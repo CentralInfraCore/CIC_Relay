@@ -456,6 +456,24 @@ def generate(go_file: Path) -> dict:
     }
 
 
+def _object_key(obj: dict) -> str:
+    """Create stable, unique key for object merge.
+
+    Disambiguates same-named objects across different kinds/receivers:
+      method:Store.Save
+      method:Client.Save
+      func:Save
+    """
+    kind = obj.get('kind', 'unknown')
+    if kind == 'method':
+        receiver = obj.get('receiver', '')
+        name = obj.get('name', '')
+        return f"method:{receiver}.{name}"
+    else:
+        name = obj.get('name', '')
+        return f"{kind}:{name}"
+
+
 def _merge_data(new_data: dict, old_data: dict) -> dict:
     """Merge freshly generated data into an existing YAML.
 
@@ -473,6 +491,9 @@ def _merge_data(new_data: dict, old_data: dict) -> dict:
       - New objects (added to Go source) → appended
       - Removed objects (deleted from Go source) → dropped
       - Existing objects → merged per field rules above
+
+    Object matching uses stable key (kind:name or method:receiver.name)
+    to correctly handle same-named methods on different types.
     """
     merged = dict(new_data)
 
@@ -486,13 +507,13 @@ def _merge_data(new_data: dict, old_data: dict) -> dict:
     if not merged.get('description'):
         merged['description'] = old_data.get('description', '')
 
-    # merge objects by name
-    old_by_name: dict[str, dict] = {o['name']: o for o in old_data.get('objects', [])}
+    # merge objects by stable key (kind:name or method:receiver.name)
+    old_by_key: dict[str, dict] = {_object_key(o): o for o in old_data.get('objects', [])}
     merged_objects = []
     for new_obj in new_data.get('objects', []):
-        name = new_obj['name']
-        if name in old_by_name:
-            old_obj = old_by_name[name]
+        key = _object_key(new_obj)
+        if key in old_by_key:
+            old_obj = old_by_key[key]
             obj = dict(new_obj)                          # structural fields from new
             if obj.get('kind') == 'struct':              # implements only meaningful on structs
                 obj['implements'] = old_obj.get('implements', [])

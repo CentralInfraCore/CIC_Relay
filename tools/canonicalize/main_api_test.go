@@ -9,7 +9,7 @@ import (
 )
 
 func TestMain_Smoke_OK(t *testing.T) {
-	// bemenet -> ideiglenes fájl, mert os.Stdin egy *os.File
+	// Input -> temporary file, because os.Stdin is an *os.File
 	dir := t.TempDir()
 	inPath := filepath.Join(dir, "in.json")
 	input := `{"b":2,"a":1,"arr":[3,"x"]}`

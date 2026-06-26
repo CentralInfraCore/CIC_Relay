@@ -18,6 +18,7 @@ objects:
   kind: method
   receiver: Schema
   description: ID returns the unique schema identifier in the form "name@version".
+    This is used for lookups in the schema store.
   references: []
 - name: GetData
   kind: method

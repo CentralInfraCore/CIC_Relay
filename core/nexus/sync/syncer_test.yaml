@@ -1,0 +1,60 @@
+---
+package: sync
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: setupTestRepo
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: createCommitsOnBranch
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: TestGitSyncer_SyncDaily_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Contains
+  - assert.Error
+- name: TestGitSyncer_SyncDaily_NoChanges
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: TestGitSyncer_SyncDaily_WithRemote
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+- name: TestGitSyncer_SyncDaily_Errors
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestGitSyncer_SyncDaily_FallbackBranch
+  kind: func
+  description: ''
+  references: []
+- name: TestGitSyncer_SyncDaily_CommitFails
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestGitSyncer_SyncDaily_PruneFails
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Error

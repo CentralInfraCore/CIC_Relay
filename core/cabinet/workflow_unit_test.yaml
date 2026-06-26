@@ -1,0 +1,22 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestWorkflow_ID_Basic
+  kind: func
+  description: ''
+  references: []
+- name: TestWorkflow_ID_Empty
+  kind: func
+  description: ''
+  references: []
+- name: TestWorkflow_GetData_ReturnsSteps
+  kind: func
+  description: ''
+  references: []
