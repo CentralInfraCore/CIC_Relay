@@ -1,0 +1,84 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- schema
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: newTestCompileServer
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+- name: TestCompileHandler_MethodNotAllowed
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestCompileHandler_BodyTooLarge
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.Equal
+- name: TestCompileHandler_InvalidJSON
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestCompileHandler_MissingSchema
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestCompileHandler_MissingVersion
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestCompileHandler_Success
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponse
+  - cabinet.ProofTraceChainHash
+  - require.Equal
+  - assert.Equal
+  - require.NoError
+  - require.True
+  - require.NotNil
+- name: TestCompileHandler_WithSourceAssertion
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponse
+  - assert.Equal
+- name: TestCompileHandler_Timeout
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - cabinet.ErrTimeout
+  - assert.Equal
+- name: TestCompileHandler_InternalError
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.Equal
+- name: TestCompileHandler_ReadBodyError
+  kind: func
+  description: ''
+  references:
+  - assert.Equal

@@ -1,0 +1,25 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestComputeChainHash
+  kind: func
+  description: ''
+  references:
+  - assert.Len
+  - assert.NotEqual
+  - assert.Equal
+- name: TestHashValue
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Len
+  - assert.NotEqual

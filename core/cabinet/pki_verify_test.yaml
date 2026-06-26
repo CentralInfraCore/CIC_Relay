@@ -1,0 +1,30 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: createTestCertificate
+  kind: func
+  description: createTestCertificate is a helper function to generate certificates
+    for testing.
+  references:
+  - require.NoError
+- name: generateCACert
+  kind: func
+  description: generateCACert generates a self-signed CA certificate.
+  references:
+  - require.NoError
+- name: TestVerifyCertificateChain
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEmpty
+  - assert.Error
+  - assert.Contains
+  - assert.NoError

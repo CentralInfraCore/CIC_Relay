@@ -1,0 +1,93 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: mockCabinet
+  kind: struct
+  description: mockCabinet is a mock implementation of the Cabinet interface for testing
+    error propagation.
+  implements: []
+  references: []
+- name: GetWorkflow
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: GetModule
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: GetSchema
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: PutWorkflow
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: PutModule
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: PutSchema
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: Setx
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: Close
+  kind: method
+  receiver: mockCabinet
+  description: ''
+  references: []
+- name: TestAPI_Set_NilPayload
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.ErrorIs
+  - assert.Contains
+- name: TestAPI_Set_ValidationError
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Error
+  - assert.ErrorIs
+- name: TestAPI_ValidateSet_NilPayload
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.ErrorIs
+  - assert.Contains
+- name: TestAPI_ValidateSet_StoreErrors
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.NotErrorIs
+  - assert.Equal
+- name: TestAPI_ValidateSet_Options
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  - assert.ErrorIs
+  - assert.Contains

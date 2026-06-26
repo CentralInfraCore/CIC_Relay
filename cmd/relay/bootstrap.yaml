@@ -43,13 +43,31 @@ objects:
 - name: registerNativeComponents
   kind: func
   description: registerNativeComponents creates and registers all built-in Go components
-    in the cabinet.
+    in the cabinet. pkiAssets must not be nil; pass the result of bootstrapPKI. bctx
+    carries build-time metadata for the Merkle-root verification hash (M33). CAFingerprint
+    from pkiAssets is merged into bctx if not already set. signer is used to sign
+    artifact build_hash in cic.artifact.sign; pass nil if Vault is unavailable. cfg
+    carries schema pipeline wiring (SchemaBuildDir, SchemaBuilderContainer).
   references:
   - cabinet.Cabinet
+  - merkle.BuildContext
+  - schemacompile.ArtifactSigner
   - cabinet.NativeFunctions
   - cabinet.CoreEcho
   - cabinet.BaseBlockName
   - cabinet.NewModuleDescriptor
+  - cibuild.Execute
+  - schemacompile.CertVerifyFunc
+  - cabinet.VerifyOptions
+  - cabinet.VerifyCertificateChain
+  - schemacompile.NewAssertSourceFunc
+  - schemacompile.BuildSchema
+  - schemacompile.NewSignArtifactFunc
+  - cabinet.NewWorkflow
+  - certselfsigned.Generate
+  - schemapipeline.PipelineConfig
+  - cabinet.NativeFunctionsfuncName
+  - cabinet.BaseBlock
   - logrus.Info
 - name: loadEmbeddedComponents
   kind: func
@@ -60,6 +78,8 @@ objects:
 - name: loadInstalledComponents
   kind: func
   description: loadInstalledComponents loads components from a given filesystem path.
+    pkiAssets must not be nil — pass the result of bootstrapPKI for trust-verified
+    loading.
   references:
   - cabinet.Cabinet
   - logrus.Logger
@@ -91,6 +111,8 @@ objects:
   - cabinet.Cabinet
   - logrus.Logger
   - logrus.Fields
+  - cabinet.VerifyOptions
+  - cabinet.VerifyCertificateChain
   - cabinet.NewModuleDescriptor
   - logrus.WithField
 - name: loadPKIAssets

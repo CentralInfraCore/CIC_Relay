@@ -12,7 +12,8 @@ objects:
   kind: struct
   description: WasmManagerConfig defines the configurable parameters for the WasmManager.
   implements: []
-  references: []
+  references:
+  - wazero.Runtime
 - name: WasmManager
   kind: struct
   description: WasmManager is responsible for the entire WASM lifecycle management.
@@ -22,6 +23,8 @@ objects:
   - lru.Cache
   - wazero.CompiledModule
   - singleflight.Group
+  - obs.LogSink
+  - obs.MetricSink
 - name: CicWasmHost
   kind: struct
   description: ''
@@ -29,11 +32,20 @@ objects:
   references:
   - api.Module
   - api.Function
+  - obs.LogSink
 - name: GuestResult
   kind: struct
   description: ''
   implements: []
   references: []
+- name: SetObsSinks
+  kind: method
+  receiver: WasmManager
+  description: 'SetObsSinks wires the observability sinks into the WasmManager. Both
+    sinks are nil-safe: passing nil disables the corresponding emissions.'
+  references:
+  - obs.LogSink
+  - obs.MetricSink
 - name: NewWasmManager
   kind: func
   description: NewWasmManager creates a new central WASM manager with the given configuration.
@@ -42,6 +54,8 @@ objects:
   - wazero.NewRuntimeWithConfig
   - wasi_snapshot_preview1.Instantiate
   - wazero.CompiledModule
+  - obs.LogRecord
+  - obs.ResourceComponent
   - lru.NewWithEvict
 - name: PreCompileModule
   kind: method
@@ -49,6 +63,8 @@ objects:
   description: PreCompileModule compiles a module and stores it in the cache.
   references:
   - wazero.CompiledModule
+  - obs.HistogramPoint
+  - obs.ResourceComponent
 - name: NewHostInstance
   kind: method
   receiver: WasmManager
@@ -56,6 +72,8 @@ objects:
     configured limits.
   references:
   - wazero.NewModuleConfig
+  - obs.HistogramPoint
+  - obs.ResourceComponent
 - name: EvictModule
   kind: method
   receiver: WasmManager
@@ -71,6 +89,7 @@ objects:
   description: ''
   references:
   - api.Module
+  - obs.LogSink
 - name: Close
   kind: method
   receiver: CicWasmHost
@@ -106,6 +125,14 @@ objects:
   receiver: CicWasmHost
   description: ''
   references: []
+- name: emitDeallocWarn
+  kind: method
+  receiver: CicWasmHost
+  description: emitDeallocWarn emits a WARN log record when a WASM memory deallocation
+    fails. It is a no-op if logSink is nil.
+  references:
+  - obs.LogRecord
+  - obs.ResourceComponent
 - name: formatErrorJson
   kind: func
   description: ''

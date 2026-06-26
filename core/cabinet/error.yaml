@@ -35,6 +35,10 @@ objects:
   kind: func
   description: ''
   references: []
+- name: IsTimeout
+  kind: func
+  description: ''
+  references: []
 - name: Error
   kind: method
   receiver: ValidationError

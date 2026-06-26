@@ -34,6 +34,10 @@ objects:
   kind: interface
   description: Cabinet defines the central API for schema/module/workflow management.
   references: []
+- name: CabinetOption
+  kind: type
+  description: CabinetOption is a functional option for configuring a cabinetService.
+  references: []
 - name: NewExecutionContext
   kind: func
   description: NewExecutionContext creates a new execution context and initializes
@@ -59,6 +63,18 @@ objects:
   receiver: executionContext
   description: StoreModule stores a newly materialized module in the context.
   references: []
+- name: WithRecorder
+  kind: func
+  description: WithRecorder sets an optional ExecutionRecorder on the service. If
+    nil, ProofTrace recording is skipped silently.
+  references: []
+- name: WithObsSinks
+  kind: func
+  description: 'WithObsSinks wires observability sinks into the underlying WasmManager.
+    Both arguments are nil-safe: passing nil disables the corresponding emissions.'
+  references:
+  - obs.LogSink
+  - obs.MetricSink
 - name: NewCabinetService
   kind: func
   description: NewCabinetService creates a new Cabinet service with the given stores
@@ -68,11 +84,18 @@ objects:
   kind: method
   receiver: cabinetService
   description: Setx executes a workflow based on the function-oriented model.
-  references: []
+  references:
+  - logrus.WithFields
+  - logrus.Fields
 - name: Close
   kind: method
   receiver: cabinetService
   description: ''
+  references: []
+- name: isWasmTimeout
+  kind: func
+  description: isWasmTimeout checks whether a WASM errorResult string signals a timeout.
+    The cicwasm layer encodes timeouts as {"code":"TIMEOUT",...}.
   references: []
 - name: PutSchema
   kind: method

@@ -16,8 +16,8 @@ objects:
   references: []
 - name: SetPayload
   kind: struct
-  description: SetPayload is the canonical representation of a Set entry request. Modules
-    are only references; nothing is instantiated.
+  description: SetPayload is the canonical representation of a Set entry request.
+    Modules are only references; nothing is instantiated.
   implements: []
   references: []
 - name: CanonicalizeSetPayload

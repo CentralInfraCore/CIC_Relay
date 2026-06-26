@@ -1,0 +1,16 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestDomainConstructors_GoldenChecksums
+  kind: func
+  description: TestDomainConstructors_GoldenChecksums verifies that the New... constructors
+    for all domain types correctly calculate and assign the deterministic checksum
+    based on the central validateAndChecksum function.
+  references: []

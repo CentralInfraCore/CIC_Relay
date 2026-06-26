@@ -22,9 +22,41 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
+  - obs.TraceSink
+  - obs.LogSink
+  - obs.MetricSink
+  - obs.Resource
+- name: VaultSecrets
+  kind: struct
+  description: VaultSecrets holds Vault connection parameters loaded from the environment.
+  implements: []
+  references: []
 - name: loadConfig
   kind: func
   description: loadConfig loads configuration from environment variables.
+  references:
+  - cabinet.MaxWASMModuleSize
+- name: emitTrace
+  kind: method
+  receiver: relayServer
+  description: emitTrace emits a TraceFrame if a TraceSink is configured.
+  references:
+  - obs.TraceFrame
+- name: emitLog
+  kind: method
+  receiver: relayServer
+  description: emitLog emits a LogRecord if a LogSink is configured.
+  references:
+  - obs.LogRecord
+- name: emitCounter
+  kind: method
+  receiver: relayServer
+  description: emitCounter emits a CounterPoint if a MetricSink is configured.
+  references:
+  - obs.CounterPoint
+- name: writeError
+  kind: func
+  description: 'writeError writes a uniform JSON error response: {"error":"<msg>","code":"<code>"}.'
   references: []
 - name: newMux
   kind: func
@@ -53,18 +85,78 @@ objects:
   description: setHandler processes incoming SetPayload requests.
   references:
   - uuid.New
+  - obs.TraceFrame
+  - obs.CounterPoint
   - logrus.Fields
   - cabinet.SetPayload
+  - cabinet.NewAPI
+  - cabinet.IsTimeout
   - cabinet.IsInvalid
+  - obs.LogRecord
+  - obs.ExecutionContextWorkflowID
+- name: validateConfig
+  kind: func
+  description: 'validateConfig validates the loaded configuration using the cabinet
+    schema engine. This is "dogfooding": the relay validates its own config with the
+    same mechanism it uses to validate workflow inputs (cabinet.ValidateSchema / $schema
+    key check). Range constraints are also enforced directly before the schema ID
+    check.'
+  references:
+  - cabinet.ValidateSchema
+- name: loadSecretsFromVault
+  kind: func
+  description: 'loadSecretsFromVault reads Vault-related parameters from environment
+    variables. Returns nil if VAULT_TOKEN is not set — Vault is not configured, recording
+    disabled (non-fatal). Required env: VAULT_TOKEN (also used by the Vault SDK),
+    VAULT_ADDR (Vault SDK). Optional env: CIC_VAULT_MOUNT (default "transit"), CIC_VAULT_KEY
+    (default "cic-dev-sign-key"), CIC_AUDIT_REPO_PATH (default "/var/lib/cic-relay/audit").'
+  references:
+  - logrus.Logger
+- name: buildRecorderOption
+  kind: func
+  description: buildRecorderOption constructs a cabinet.WithRecorder option from the
+    provided VaultSecrets. If secrets is nil (Vault not configured), returns a no-op
+    option.
+  references:
+  - logrus.Logger
+  - cabinet.CabinetOption
+  - cabinet.WithRecorder
+  - recorder.NewWorkflowRecorder
+  - logrus.Fields
+- name: buildOperatorIfConfigured
+  kind: func
+  description: 'buildOperatorIfConfigured constructs and returns an Operator if CIC_INFRA_REPO_PATH
+    is set. Returns nil if CIC_INFRA_REPO_PATH is not set (operator is optional).
+    Calls logger.Fatal if CIC_INFRA_REPO_PATH is set but CIC_OPERATOR_SECRET is missing.
+    The operator is fully wired: - IaCValidator → Cabinet.GetSchema (schema-bound
+    resource validation) - CabinetActivator → Cabinet.Setx (execution bridge) - IaC
+    graph loaded upfront for dependency gating (WithGraph)'
+  references:
+  - cabinet.Cabinet
+  - logrus.Logger
+  - operator.Operator
+  - iac.IaCSource
+  - iac.NewGitSource
+  - iac.GitSourceConfig
+  - iac.NewFileSource
+  - iac.NewLoader
+  - operator.NewPollingWatcher
+  - operator.NewBootstrapper
+  - operator.NewHostRegistry
+  - operator.NewLifecycleManager
+  - operator.NewOperatorWithLifecycle
+  - iac.NewIaCValidator
+  - logrus.Fields
 - name: run
   kind: func
-  description: 'run is a separate function to avoid calling main() in unit tests'
+  description: run is a separate function to avoid calling main() in unit tests
   references:
   - logrus.Logger
 - name: main
   kind: func
   description: ''
   references:
+  - isolation.RunWorkerLoop
   - logrus.New
   - logrus.JSONFormatter
   - logrus.Fields
@@ -73,8 +165,27 @@ objects:
   - cabinet.NewMemWorkflowStore
   - cabinet.NewMemModuleStore
   - cabinet.WasmManagerConfig
+  - schemacompile.ArtifactSigner
+  - crypto.NewVaultCryptoService
+  - git.NewRepoRegistry
+  - git.NewExecGitOps
+  - obs.NewLogrusSink
+  - cabinet.WithObsSinks
   - cabinet.NewCabinetService
+  - merkle.BuildContext
+  - merkle.GoSumDigest
+  - merkle.GoRuntimeDigest
+  - obs.Resource
 - name: listenAndServe
   kind: var
   description: 'test seam: can be overridden in unit tests'
+  references: []
+- name: newVaultCryptoSvc
+  kind: var
+  description: newVaultCryptoSvc and newGitStateRecorder are injectable seams for
+    testability.
+  references: []
+- name: newGitStateRecorder
+  kind: var
+  description: ''
   references: []

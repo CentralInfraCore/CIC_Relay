@@ -1,0 +1,427 @@
+---
+package: main
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: failingReadFileFS
+  kind: struct
+  description: failingReadFileFS is a mock file system that fails on reading specific
+    files.
+  implements: []
+  references: []
+- name: failingFile
+  kind: struct
+  description: failingFile is a wrapper around fs.File that can be configured to fail
+    on Read.
+  implements: []
+  references: []
+- name: failingReadDirFS
+  kind: struct
+  description: failingReadDirFS is a mock file system that fails on ReadDir.
+  implements: []
+  references: []
+- name: failingStatFS
+  kind: struct
+  description: failingStatFS is a mock file system that fails on Stat for specific
+    files.
+  implements: []
+  references: []
+- name: Read
+  kind: method
+  receiver: failingFile
+  description: ''
+  references: []
+- name: Open
+  kind: method
+  receiver: failingReadFileFS
+  description: ''
+  references: []
+- name: ReadDir
+  kind: method
+  receiver: failingReadDirFS
+  description: ''
+  references: []
+- name: Stat
+  kind: method
+  receiver: failingStatFS
+  description: Stat returns an error for specific files.
+  references: []
+- name: getSubFS
+  kind: func
+  description: getSubFS returns an fs.FS rooted at the given subdirectory within the
+    embedded testdata.
+  references:
+  - require.NoError
+- name: TestLoadPKIAssets
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEqual
+  - assert.True
+  - assert.Equal
+  - assert.Contains
+  - require.Error
+  - assert.ErrorIs
+- name: TestLoadSchema
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  - logrus.StandardLogger
+  - logrus.SetOutput
+- name: TestLoadWorkflow
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  - logrus.StandardLogger
+  - logrus.SetOutput
+- name: TestLoadEmbeddedComponents
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - assert.NoError
+- name: TestLoadEmbeddedComponents_Error
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - assert.Error
+  - assert.Contains
+  - assert.ErrorIs
+- name: TestLoadComponentsFromFS
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - assert.NoError
+  - assert.Contains
+- name: TestLoadModule
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - assert.NoError
+  - assert.Equal
+  - assert.True
+  - assert.Error
+  - assert.Contains
+  - assert.ErrorIs
+  - logrus.New
+  - logrus.ErrorLevel
+  - mock.Anything
+  - cabinet.ErrNotFound
+- name: TestLoadComponentsFromFS_WalkDirError
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.Error
+  - assert.ErrorIs
+- name: TestLoadInstalledComponents_Success
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - logrus.DebugLevel
+  - assert.Contains
+- name: TestLoadInstalledComponents_PathErrors
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.Contains
+  - require.Error
+- name: newDiscardLogger
+  kind: func
+  description: Helper function to create a logrus logger that discards output
+  references:
+  - logrus.Logger
+  - logrus.New
+- name: emptyPKIAssets
+  kind: func
+  description: emptyPKIAssets returns a PKIAssets with empty pools (TrustStoreLoaded=false).
+    Use this in tests that focus on component loading, not PKI verification.
+  references: []
+- name: TestRegisterNativeComponents
+  kind: func
+  description: TestRegisterNativeComponents verifies that the native components are
+    correctly registered in the cabinet.
+  references:
+  - cabinet.ModuleDescriptor
+  - mock.Anything
+  - mock.Arguments
+  - cabinet.Workflow
+  - merkle.BuildContext
+  - require.NoError
+  - require.Len
+  - assert.Equal
+  - require.NotNil
+  - assert.True
+- name: TestRegisterNativeComponents_Errors
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.SetToJSONMock
+  - merkle.BuildContext
+  - require.Error
+  - assert.Contains
+  - mock.Anything
+  - assert.ErrorIs
+- name: buildLoadedPKIAssets
+  kind: func
+  description: buildLoadedPKIAssets creates PKIAssets with TrustStoreLoaded=true using
+    the test root-ca and company-ca from testdata/pki/trust.
+  references:
+  - require.NoError
+  - require.True
+- name: buildModuleFS
+  kind: func
+  description: buildModuleFS builds a fstest.MapFS for a single module with an optional
+    PEM cert.
+  references: []
+- name: TestLoadModule_PKIVerification_Valid
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.Contains
+- name: TestLoadModule_PKIVerification_WrongEKU
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: generateForeignLeafPEM
+  kind: func
+  description: generateForeignLeafPEM creates a leaf cert signed by a freshly-generated
+    root CA that is NOT registered in any PKIAssets trust store — simulating an untrusted
+    chain.
+  references:
+  - require.NoError
+- name: TestLoadModule_PKIVerification_WrongChain
+  kind: func
+  description: TestLoadModule_PKIVerification_WrongChain verifies that a cert signed
+    by an unknown root CA is rejected even if the EKU is correct.
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.Contains
+- name: TestLoadComponentsFromFS_UnknownKind
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.NoError
+  - assert.Contains
+- name: TestRegisterNativeComponents_SequentialPutModuleFailures
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - merkle.BuildContext
+  - require.Error
+  - assert.Contains
+- name: TestLoadComponentsFromFS_NonYAMLSkipped
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - assert.NoError
+- name: TestLoadComponentsFromFS_BadYAMLHeader
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.NoError
+  - assert.Contains
+- name: TestLoadComponentsFromFS_LoadErrorContinue
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.NoError
+  - assert.Contains
+- name: TestRegisterNativeComponents_SubsequentNewModuleDescriptorFailures
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.SetToJSONMock
+  - mock.Anything
+  - merkle.BuildContext
+  - require.Error
+  - assert.Contains
+- name: TestLoadModule_ZeroWasmSize
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: TestLoadComponentsFromFS_LoadErrorFailOnError
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: TestLoadPKIAssets_FileWithNoPEMData
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - require.NoError
+  - assert.False
+  - assert.Contains
+- name: TestLoadComponentsFromFS_ReadFileError
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.NoError
+  - assert.Contains
+- name: TestLoadModule_InvalidPEMSignature
+  kind: func
+  description: ''
+  references:
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+  - logrus.New
+  - assert.NoError
+  - assert.Contains
+- name: embeddedTestdata
+  kind: var
+  description: go:embed testdata
+  references: []
