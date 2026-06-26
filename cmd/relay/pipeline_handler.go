@@ -27,6 +27,7 @@ type PipelineResponse struct {
 	ProofTrace *cabinet.ProofTrace `json:"proof_trace"`
 }
 
+// pipelineHandler handles POST /v1/schemas/pipeline requests by executing the cic.schemas.pipeline workflow.
 func (s *relayServer) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
 	logEntry := s.logger.WithFields(logrus.Fields{

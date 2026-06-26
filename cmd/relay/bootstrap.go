@@ -264,7 +264,8 @@ type ModuleFile struct {
 	WasmSize   int64             `yaml:"wasmSize"`
 }
 
-// loadEmbeddedComponents loads components from the embedded filesystem.
+// loadEmbeddedComponents loads schemas, workflows, and PKI assets from the embedded filesystem.
+// It processes all embedded components and registers them with the cabinet service.
 func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas fs.FS, workflows fs.FS, pki fs.FS, pkiPath string, maxWasmModuleSize int64, logger *logrus.Logger) error {
 	pkiAssets, err := loadPKIAssets(pki, pkiPath, logger)
 	if err != nil {
@@ -357,6 +358,7 @@ func loadComponentsFromFS(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, 
 	})
 }
 
+// loadSchema unmarshals a Schema from YAML content and registers it with the cabinet service.
 func loadSchema(ctx context.Context, svc cabinet.Cabinet, content []byte) error {
 	var file SchemaFile
 	if err := yaml.Unmarshal(content, &file); err != nil {
@@ -372,6 +374,7 @@ func loadSchema(ctx context.Context, svc cabinet.Cabinet, content []byte) error 
 	return svc.PutSchema(schema)
 }
 
+// loadWorkflow unmarshals a Workflow from YAML content and registers it with the cabinet service.
 func loadWorkflow(ctx context.Context, svc cabinet.Cabinet, content []byte) error {
 	var file WorkflowFile
 	if err := yaml.Unmarshal(content, &file); err != nil {
@@ -387,6 +390,8 @@ func loadWorkflow(ctx context.Context, svc cabinet.Cabinet, content []byte) erro
 	return svc.PutWorkflow(workflow)
 }
 
+// loadModule unmarshals a Module from YAML content, verifies its WASM digest, validates its PKI signature,
+// and registers it with the cabinet service.
 func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath string, yamlContent []byte, pkiAssets *PKIAssets, maxWasmModuleSize int64, logger *logrus.Logger) error {
 	var file ModuleFile
 	if err := yaml.Unmarshal(yamlContent, &file); err != nil {
@@ -479,6 +484,8 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	return svc.PutModule(moduleDesc)
 }
 
+// loadPKIAssets loads X.509 certificates and CRLs from a filesystem path and populates PKIAssets
+// with root certificates, intermediates, and revocation lists.
 func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, error) {
 	assets := &PKIAssets{
 		Roots:         x509.NewCertPool(),

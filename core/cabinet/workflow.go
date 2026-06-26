@@ -26,6 +26,7 @@ func NewWorkflow(ctx context.Context, meta BaseBlock, steps []string) (*Workflow
 }
 
 // ID returns the unique workflow identifier in the form "name@version".
+// This is used for lookups in the workflow store.
 func (w *Workflow) ID() string {
 	return w.Meta.Name + "@" + w.Meta.Version
 }

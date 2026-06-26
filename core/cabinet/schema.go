@@ -19,6 +19,7 @@ func NewSchema(ctx context.Context, meta BaseBlock, spec SchemaDef) (*Schema, er
 }
 
 // ID returns the unique schema identifier in the form "name@version".
+// This is used for lookups in the schema store.
 func (s *Schema) ID() string {
 	return s.Meta.Name + "@" + s.Meta.Version
 }

@@ -25,15 +25,18 @@ type SchemaStore interface {
 
 // --- In-memory implementations (PoC) ---
 
+// memWorkflowStore is an in-memory implementation of WorkflowStore using a map-based index.
 type memWorkflowStore struct {
 	mu   sync.RWMutex
 	byID map[string]*Workflow
 }
 
+// NewMemWorkflowStore creates and returns a new in-memory WorkflowStore instance.
 func NewMemWorkflowStore() WorkflowStore {
 	return &memWorkflowStore{byID: map[string]*Workflow{}}
 }
 
+// Get retrieves a Workflow by its ID, returning the workflow and a boolean indicating existence.
 func (s *memWorkflowStore) Get(id string) (*Workflow, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -41,6 +44,7 @@ func (s *memWorkflowStore) Get(id string) (*Workflow, bool) {
 	return v, ok
 }
 
+// Put stores a Workflow, returning the previous value (if any) and a boolean indicating prior existence.
 func (s *memWorkflowStore) Put(w *Workflow) (*Workflow, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -49,6 +53,7 @@ func (s *memWorkflowStore) Put(w *Workflow) (*Workflow, bool) {
 	return prev, existed
 }
 
+// Exists checks whether a Workflow with the given ID exists in the store.
 func (s *memWorkflowStore) Exists(id string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -65,6 +70,7 @@ type memModuleStore struct {
 	byChecksum map[string]*ModuleDescriptor // CAS: checksum -> module
 }
 
+// NewMemModuleStore creates and returns a new in-memory ModuleStore instance with CAS semantics.
 func NewMemModuleStore() ModuleStore {
 	return &memModuleStore{
 		byID:       map[string]string{},
@@ -72,6 +78,7 @@ func NewMemModuleStore() ModuleStore {
 	}
 }
 
+// Get retrieves a ModuleDescriptor by its ID using the two-level CAS index, returning the module and a boolean indicating existence.
 func (s *memModuleStore) Get(id string) (*ModuleDescriptor, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -87,6 +94,7 @@ func (s *memModuleStore) Get(id string) (*ModuleDescriptor, bool) {
 	return module, ok
 }
 
+// Put stores a ModuleDescriptor in the CAS, returning the previous value (if any) and a boolean indicating prior existence.
 func (s *memModuleStore) Put(m *ModuleDescriptor) (*ModuleDescriptor, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -110,6 +118,7 @@ func (s *memModuleStore) Put(m *ModuleDescriptor) (*ModuleDescriptor, bool) {
 	return prev, existed
 }
 
+// Exists checks whether a ModuleDescriptor with the given ID exists in the store.
 func (s *memModuleStore) Exists(id string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -117,15 +126,18 @@ func (s *memModuleStore) Exists(id string) bool {
 	return ok
 }
 
+// memSchemaStore is an in-memory implementation of SchemaStore using a map-based index.
 type memSchemaStore struct {
 	mu   sync.RWMutex
 	byID map[string]*Schema
 }
 
+// NewMemSchemaStore creates and returns a new in-memory SchemaStore instance.
 func NewMemSchemaStore() SchemaStore {
 	return &memSchemaStore{byID: map[string]*Schema{}}
 }
 
+// Get retrieves a Schema by its ID, returning the schema and a boolean indicating existence.
 func (s *memSchemaStore) Get(id string) (*Schema, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -133,6 +145,7 @@ func (s *memSchemaStore) Get(id string) (*Schema, bool) {
 	return v, ok
 }
 
+// Put stores a Schema, returning the previous value (if any) and a boolean indicating prior existence.
 func (s *memSchemaStore) Put(sc *Schema) (*Schema, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -141,6 +154,7 @@ func (s *memSchemaStore) Put(sc *Schema) (*Schema, bool) {
 	return prev, existed
 }
 
+// Exists checks whether a Schema with the given ID exists in the store.
 func (s *memSchemaStore) Exists(id string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -26,7 +26,7 @@ var (
 )
 
 // generateSymbols loads and processes Go packages based on the provided patterns
-// and returns the generated symbols documentation as a byte slice.
+// and returns the generated symbols documentation (constants, variables, functions, types) as a byte slice.
 func generateSymbols(cfg *packages.Config, pkgPatterns []string) ([]byte, error) {
 	// If no package patterns are provided, return nil output and no error.
 	if len(pkgPatterns) == 0 {
@@ -150,7 +150,7 @@ func generateSymbols(cfg *packages.Config, pkgPatterns []string) ([]byte, error)
 	return finalOutput.Bytes(), nil
 }
 
-// run contains the main logic of the symbolsgen tool, allowing it to be tested.
+// run reads a package allowlist, generates symbols documentation, and writes it to the output file.
 func run(allowFilePath, outputFilePath string) error {
 	// 1. Read the allowlist of packages
 	allowlistContent, err := os.ReadFile(allowFilePath)

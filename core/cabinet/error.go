@@ -18,10 +18,16 @@ var (
 	ErrTimeout  = errors.New("timeout")   // execution exceeded time budget
 )
 
-// Helper predicates for common error matching.
+// IsInvalid checks if an error is an ErrInvalid validation or integrity failure.
 func IsInvalid(err error) bool  { return errors.Is(err, ErrInvalid) }
+
+// IsConflict checks if an error is an ErrConflict resource state conflict.
 func IsConflict(err error) bool { return errors.Is(err, ErrConflict) }
+
+// IsNotFound checks if an error is an ErrNotFound resource not found.
 func IsNotFound(err error) bool { return errors.Is(err, ErrNotFound) }
+
+// IsTimeout checks if an error is an ErrTimeout execution exceeded time budget.
 func IsTimeout(err error) bool  { return errors.Is(err, ErrTimeout) }
 
 // FieldError describes a validation error for a specific field.
@@ -35,7 +41,7 @@ type ValidationError struct {
 	Cause []FieldError `json:"cause"`
 }
 
-// Error returns a JSON-encoded list of causes, or a generic message if empty.
+// Error implements the error interface, returning a JSON-encoded list of field-level validation errors or a generic message if empty.
 func (e *ValidationError) Error() string {
 	if len(e.Cause) == 0 {
 		return ErrInvalid.Error()
@@ -47,7 +53,7 @@ func (e *ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", ErrInvalid.Error(), string(b))
 }
 
-// NewValidationError creates a ValidationError from given field errors.
+// NewValidationError constructs a ValidationError from the provided field errors.
 func NewValidationError(fields ...FieldError) *ValidationError {
 	return &ValidationError{Cause: fields}
 }
@@ -59,7 +65,7 @@ type APIError struct {
 	Details []FieldError `json:"details,omitempty"`
 }
 
-// NewAPIError converts a Go error into a standardized APIError.
+// NewAPIError converts a Go error into a standardized APIError response for API consumers.
 func NewAPIError(err error) *APIError {
 	var validationErr *ValidationError
 	if errors.As(err, &validationErr) {
