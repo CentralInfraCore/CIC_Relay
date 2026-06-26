@@ -182,11 +182,7 @@ class TestMergeASTIntoObjects:
         assert 'position' in result[0]
 
     def test_merge_ast_method_matching(self):
-        """Test that methods are correctly matched by Type.Method key.
-
-        Note: _merge_ast_into_objects tries both _object_key format
-        and simple name lookup, so 'String' lookup should work.
-        """
+        """Test that methods are matched by ReceiverType.MethodName key."""
         objects = [
             {
                 'name': 'String',
@@ -196,7 +192,7 @@ class TestMergeASTIntoObjects:
             }
         ]
         ast_meta = {
-            'String': {  # Simple name key (fallback)
+            'MyStruct.String': {  # go_ast_extract._make_key format for methods
                 'position': {'start_line': 20, 'end_line': 25},
                 'signature': {'params': [], 'returns': ['string']},
             }
@@ -204,7 +200,6 @@ class TestMergeASTIntoObjects:
 
         result = _merge_ast_into_objects(objects, ast_meta)
 
-        # Method should be matched and updated
         assert 'position' in result[0]
         assert result[0]['position']['start_line'] == 20
 

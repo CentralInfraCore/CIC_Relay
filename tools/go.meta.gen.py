@@ -499,27 +499,27 @@ def _extract_ast_metadata(go_file: Path) -> dict:
 def _merge_ast_into_objects(objects: list, ast_meta: dict) -> list:
     """Merge AST metadata into objects list.
 
-    AST metadata keys are object names or "Type.Method" for methods.
-    We match these against objects and add ast_metadata field.
+    AST metadata keys match go_ast_extract._make_key format:
+      methods  → "ReceiverType.MethodName"
+      others   → "Name"
     """
     if not ast_meta:
         return objects
 
-    # Build a map of objects by name for easy lookup
-    obj_by_key: dict[str, dict] = {}
     for obj in objects:
-        key = _object_key(obj)
-        obj_by_key[key] = obj
+        name = obj.get('name', '')
+        kind = obj.get('kind', '')
 
-    # Merge AST metadata into matched objects
-    for obj in objects:
-        key = _object_key(obj)
+        # Build key matching go_ast_extract's _make_key output
+        if kind == 'method':
+            receiver = obj.get('receiver', '')
+            ast_key = f"{receiver}.{name}" if receiver else name
+        else:
+            ast_key = name
 
-        # Try both the original key and the name directly (for backward compatibility)
-        ast_info = ast_meta.get(key) or ast_meta.get(obj['name'])
+        ast_info = ast_meta.get(ast_key)
 
         if ast_info:
-            # Add AST metadata fields
             if 'position' in ast_info:
                 obj['position'] = ast_info['position']
             if 'signature' in ast_info and ast_info['signature']:
@@ -530,7 +530,6 @@ def _merge_ast_into_objects(objects: list, ast_meta: dict) -> list:
                 obj['fields'] = ast_info['fields']
             if 'methods' in ast_info and ast_info['methods']:
                 obj['methods'] = ast_info['methods']
-            # Note: exported and kind are already in obj from regex parsing
 
     return objects
 
