@@ -27,5 +27,7 @@ objects:
   references: []
 - name: parseStep
   kind: func
-  description: parseStep parses a single step string.
+  description: parseStep parses a single step string and extracts its component parts.
+    It supports both new format (component@version.function(inputKey) -> outputKey)
+    and old format (component.function(data)).
   references: []

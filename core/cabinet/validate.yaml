@@ -17,7 +17,7 @@ objects:
 - name: SetStripWasmModuleFunc
   kind: func
   description: SetStripWasmModuleFunc allows overriding the default WASM stripping
-    function for testing.
+    function for testing purposes.
   references: []
 - name: computeChecksum
   kind: func

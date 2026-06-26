@@ -33,7 +33,8 @@ objects:
   references: []
 - name: loadConfig
   kind: func
-  description: loadConfig loads configuration from environment variables.
+  description: loadConfig loads the relay configuration from environment variables,
+    with sensible defaults.
   references:
   - cabinet.MaxWASMModuleSize
 - name: emitTrace
@@ -56,11 +57,12 @@ objects:
   - obs.CounterPoint
 - name: writeError
   kind: func
-  description: 'writeError writes a uniform JSON error response: {"error":"<msg>","code":"<code>"}.'
+  description: 'writeError writes a uniform JSON error response with the specified
+    HTTP status code. Response format: {"error":"<msg>","code":"<code>"}.'
   references: []
 - name: newMux
   kind: func
-  description: newMux creates a new HTTP multiplexer with all routes.
+  description: newMux creates a new HTTP multiplexer and registers all relay API routes.
   references: []
 - name: rootHandler
   kind: method

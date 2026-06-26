@@ -24,14 +24,15 @@ objects:
   references: []
 - name: newIPRateLimiter
   kind: func
-  description: ''
+  description: newIPRateLimiter creates a new per-IP rate limiter with the specified
+    requests per second limit.
   references:
   - rate.Limiter
   - rate.Limit
 - name: getLimiter
   kind: method
   receiver: ipRateLimiter
-  description: ''
+  description: getLimiter retrieves or creates a rate limiter for the given IP address.
   references:
   - rate.Limiter
   - rate.NewLimiter
@@ -43,7 +44,8 @@ objects:
   references: []
 - name: newConcurrentLimiter
   kind: func
-  description: ''
+  description: newConcurrentLimiter creates a new limiter that caps the number of
+    simultaneous requests.
   references: []
 - name: Middleware
   kind: method
@@ -53,5 +55,6 @@ objects:
   references: []
 - name: buildHandler
   kind: func
-  description: buildHandler wraps the mux with rate limiting and concurrent cap middleware.
+  description: buildHandler wraps the request multiplexer with per-IP rate limiting
+    and concurrent request cap middleware.
   references: []

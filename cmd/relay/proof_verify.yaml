@@ -49,5 +49,6 @@ objects:
   - cabinet.ProofTrace
 - name: MarshalProofArtifact
   kind: func
-  description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON.
+  description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON format
+    for transport or storage.
   references: []

@@ -24,7 +24,8 @@ objects:
 - name: pipelineHandler
   kind: method
   receiver: relayServer
-  description: ''
+  description: pipelineHandler handles POST /v1/schemas/pipeline requests by executing
+    the cic.schemas.pipeline workflow.
   references:
   - uuid.New
   - logrus.Fields

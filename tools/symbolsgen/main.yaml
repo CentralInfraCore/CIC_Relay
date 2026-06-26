@@ -13,7 +13,8 @@ objects:
 - name: generateSymbols
   kind: func
   description: generateSymbols loads and processes Go packages based on the provided
-    patterns and returns the generated symbols documentation as a byte slice.
+    patterns and returns the generated symbols documentation (constants, variables,
+    functions, types) as a byte slice.
   references:
   - packages.Config
   - packages.NeedName
@@ -23,8 +24,8 @@ objects:
   - packages.Load
 - name: run
   kind: func
-  description: run contains the main logic of the symbolsgen tool, allowing it to
-    be tested.
+  description: run reads a package allowlist, generates symbols documentation, and
+    writes it to the output file.
   references:
   - packages.Config
 - name: main
