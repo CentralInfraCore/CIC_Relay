@@ -1,0 +1,30 @@
+name: renovate
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"  # every Monday 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Renovate
+        uses: renovatebot/github-action@v46.1.15
+        with:
+          configurationFile: renovate.json
+        env:
+          # PAT required: GITHUB_TOKEN cannot trigger CI on created PRs (GitHub security limit)
+          # Create a PAT with repo scope and add as repo secret RENOVATE_TOKEN
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          LOG_LEVEL: debug
+          # allowedCommands csak globális/admin szinten állítható (security okból),
+          # ezért env-ben adjuk meg: enélkül a postUpgradeTasks.commands tiltott lenne.
+          RENOVATE_ALLOWED_COMMANDS: '["^scripts/gen_manifest\\.sh "]'

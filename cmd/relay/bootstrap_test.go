@@ -236,15 +236,15 @@ func TestLoadSchema(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unmarshal error", func(t *testing.T) {
-		content := []byte("kind: Schema\nmetadata: \"not a map\"")
+		content := []byte("kind: Schema\nidentity: \"not a map\"")
 		err := loadSchema(context.Background(), svc, content)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal schema file")
 	})
 
 	t.Run("validation error", func(t *testing.T) {
-		// cabinet.NewSchema requires name and version, so this should fail validation
-		content := []byte("kind: Schema\nmetadata: {}\nspec: {}")
+		// cabinet.NewSchema requires config.name and identity.version
+		content := []byte("kind: Schema\nidentity: {}\nconfig: {}")
 		err := loadSchema(context.Background(), svc, content)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "schema validation")
@@ -253,11 +253,10 @@ func TestLoadSchema(t *testing.T) {
 	t.Run("overwrite existing schema", func(t *testing.T) {
 		content := []byte(`
 kind: Schema
-metadata:
-  name: test.schema
+identity:
   version: "1.0"
-spec:
-  type: object
+config:
+  name: test.schema
 `)
 		// Load once
 		err := loadSchema(context.Background(), svc, content)
@@ -281,7 +280,7 @@ func TestLoadWorkflow(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unmarshal error", func(t *testing.T) {
-		content := []byte("kind: Workflow\nspec: \"not an object\"")
+		content := []byte("kind: Workflow\nidentity: \"not an object\"")
 		err := loadWorkflow(context.Background(), svc, content)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unmarshal workflow file")
@@ -291,10 +290,10 @@ func TestLoadWorkflow(t *testing.T) {
 		// cabinet.NewWorkflow requires at least one step
 		content := []byte(`
 kind: Workflow
-metadata:
-  name: test.flow
+identity:
   version: "1.0"
-spec:
+config:
+  name: test.flow
   steps: []
 `)
 		err := loadWorkflow(context.Background(), svc, content)
@@ -305,10 +304,10 @@ spec:
 	t.Run("overwrite existing workflow", func(t *testing.T) {
 		content := []byte(`
 kind: Workflow
-metadata:
-  name: test.flow
+identity:
   version: "1.0"
-spec:
+config:
+  name: test.flow
   steps: ["step1"]
 `)
 		// Load once

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "cic-graph": {
+      "command": "/home/sinkog/sync/git.partners/CentralInfraCore/MCPs/private/p_venv/bin/python",
+      "args": [
+        "/home/sinkog/sync/git.partners/CentralInfraCore/MCPs/private/mcp-server/server.py"
+      ],
+      "env": {
+        "KB_DATA_DIR": "/home/sinkog/sync/git.partners/CentralInfraCore/MCPs/private/kb_data/pkl"
+      }
+    }
+  }
+}

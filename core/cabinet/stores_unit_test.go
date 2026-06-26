@@ -11,8 +11,7 @@ import (
 func TestMemStores_Basic(t *testing.T) {
 	// Schema store
 	ss := NewMemSchemaStore()
-	meta := BaseBlock{Name: "s", Version: "1"}
-	sc, err := NewSchema(context.Background(), meta, SchemaDef{})
+	sc, err := NewSchema(context.Background(), SchemaIdentity{Version: "1"}, SchemaConfig{Name: "s"}, SchemaSigning{})
 	if err != nil {
 		t.Fatalf("NewSchema err: %v", err)
 	}
@@ -39,7 +38,7 @@ func TestMemStores_Basic(t *testing.T) {
 
 	// Workflow store
 	ws := NewMemWorkflowStore()
-	wf := &Workflow{Meta: BaseBlock{Name: "w", Version: "1"}, Steps: []string{"s"}}
+	wf := &Workflow{Config: WorkflowConfig{Name: "w", Steps: []string{"s"}}, Identity: WorkflowIdentity{Version: "1"}}
 	wid := wf.ID()
 	if ws.Exists(wid) {
 		t.Fatal("workflow should not exist initially")

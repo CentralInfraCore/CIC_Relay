@@ -28,7 +28,7 @@ func (m *mockCabinet) GetWorkflow(id string) (*Workflow, error) {
 		return nil, m.getWorkflowErr
 	}
 	// Return a dummy workflow to satisfy checks that don't care about the content
-	return &Workflow{Meta: BaseBlock{Name: "dummy-wf", Version: "1.0"}}, nil
+	return &Workflow{Config: WorkflowConfig{Name: "dummy-wf"}, Identity: WorkflowIdentity{Version: "1.0"}}, nil
 }
 
 func (m *mockCabinet) GetModule(id string) (*ModuleDescriptor, error) {
@@ -42,7 +42,7 @@ func (m *mockCabinet) GetSchema(id string) (*Schema, error) {
 	if m.getSchemaErr != nil {
 		return nil, m.getSchemaErr
 	}
-	return &Schema{Meta: BaseBlock{Name: "dummy-schema", Version: "1.0"}}, nil
+	return &Schema{Config: SchemaConfig{Name: "dummy-schema"}, Identity: SchemaIdentity{Version: "1.0"}}, nil
 }
 
 func (m *mockCabinet) PutWorkflow(wf *Workflow) error {

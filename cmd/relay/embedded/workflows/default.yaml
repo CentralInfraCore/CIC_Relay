@@ -1,9 +1,11 @@
 apiVersion: relay.cic.com/v1
 kind: Workflow
-metadata:
-  name: core.ping.flow
+identity:
+  kind: Workflow
+  namespace: relay.cic.com
   version: "1.0.0"
+config:
+  name: core.ping.flow
   description: "A simple workflow to execute a ping check."
-spec:
   steps:
     - "core.ping@1.0.0"

@@ -4,6 +4,9 @@ set -euo pipefail
 # Commit message fájl (Git adja paraméterként)
 COMMIT_MSG_FILE="$1"
 
+# Skip Vault signing in CI — no local Vault available (Renovate, GitHub Actions)
+[[ "${CI:-}" == "true" ]] && exit 0
+
 # --- Vault Configuration ---
 # Use environment variables for paths if they exist, otherwise use local defaults.
 # This allows the script to run both locally and inside a Docker container.

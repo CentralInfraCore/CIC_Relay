@@ -10,14 +10,17 @@ import (
 // -- ID() --
 
 func TestWorkflow_ID_API_Basic(t *testing.T) {
-	w := &cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "flow", Version: "1.2.3"}}
+	w := &cabinet.Workflow{
+		Config:   cabinet.WorkflowConfig{Name: "flow"},
+		Identity: cabinet.WorkflowIdentity{Version: "1.2.3"},
+	}
 	if got, want := w.ID(), "flow@1.2.3"; got != want {
 		t.Fatalf("ID() = %q, want %q", got, want)
 	}
 }
 
 func TestWorkflow_ID_API_Empty(t *testing.T) {
-	w := &cabinet.Workflow{Meta: cabinet.BaseBlock{Name: "", Version: ""}}
+	w := &cabinet.Workflow{}
 	if got, want := w.ID(), "@"; got != want {
 		t.Fatalf("ID() = %q, want %q", got, want)
 	}
@@ -25,19 +28,23 @@ func TestWorkflow_ID_API_Empty(t *testing.T) {
 
 // -- GetData() --
 
-func TestWorkflow_GetData_API_ReturnsSteps(t *testing.T) {
+func TestWorkflow_GetData_API_ReturnsConfig(t *testing.T) {
 	steps := []string{"schema.a", "schema.b", "schema.c"}
-	w := &cabinet.Workflow{
-		Meta:  cabinet.BaseBlock{Name: "f", Version: "v"},
+	cfg := cabinet.WorkflowConfig{
+		Name:  "f",
 		Steps: append([]string(nil), steps...),
+	}
+	w := &cabinet.Workflow{
+		Config:   cfg,
+		Identity: cabinet.WorkflowIdentity{Version: "v"},
 	}
 
 	gotAny := w.GetData()
-	got, ok := gotAny.([]string)
+	got, ok := gotAny.(cabinet.WorkflowConfig)
 	if !ok {
-		t.Fatalf("GetData() dynamic type = %T, want []string", gotAny)
+		t.Fatalf("GetData() dynamic type = %T, want cabinet.WorkflowConfig", gotAny)
 	}
-	if !reflect.DeepEqual(got, steps) {
-		t.Fatalf("GetData() != Steps\n got:  %#v\n want: %#v", got, steps)
+	if !reflect.DeepEqual(got.Steps, steps) {
+		t.Fatalf("GetData().Steps != Config.Steps\n got:  %#v\n want: %#v", got.Steps, steps)
 	}
 }
