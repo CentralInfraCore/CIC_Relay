@@ -1,0 +1,30 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: affectedPackages
+  kind: func
+  description: affectedPackages loads every package in the module rooted at cfg.Dir
+    and returns the import paths of the packages directly containing a changed file,
+    plus every package that transitively imports one of those packages. This is the
+    set of packages whose tests can be affected by changedFiles.
+  references:
+  - packages.Config
+  - packages.NeedName
+  - packages.NeedFiles
+  - packages.NeedImports
+  - packages.NeedDeps
+  - packages.Load
+  - packages.PrintErrors
+- name: main
+  kind: func
+  description: ''
+  references:
+  - packages.Config
