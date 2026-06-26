@@ -464,10 +464,19 @@ def generate(go_file: Path) -> dict:
 
 
 def _extract_ast_metadata(go_file: Path) -> dict:
-    """Extract AST metadata using go_ast_extract.py.
+    """Extract AST metadata using go_ast_extract module.
 
     Returns {object_key: ObjectMeta, ...} or {} if extraction fails.
+    Tries direct import first (faster), falls back to subprocess if needed.
     """
+    try:
+        # Try direct import first (faster, no subprocess overhead)
+        from go_ast_extract import extract_ast
+        return extract_ast(go_file)
+    except ImportError:
+        pass
+
+    # Fallback: use subprocess if module import fails
     ast_script = Path(__file__).parent / "go_ast_extract.py"
     if not ast_script.exists():
         return {}
