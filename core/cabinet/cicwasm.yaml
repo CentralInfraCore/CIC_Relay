@@ -16,7 +16,9 @@ objects:
   - wazero.Runtime
 - name: WasmManager
   kind: struct
-  description: WasmManager is responsible for the entire WASM lifecycle management.
+  description: WasmManager is responsible for the entire WASM lifecycle management
+    including compilation caching, instance instantiation, and resource cleanup using
+    LRU eviction and singleflight deduplication.
   implements: []
   references:
   - wazero.Runtime
@@ -27,7 +29,9 @@ objects:
   - obs.MetricSink
 - name: CicWasmHost
   kind: struct
-  description: ''
+  description: CicWasmHost provides a handle to a single live WASM module instance
+    and manages the CIC WASM ABI including memory allocation, function calls, and
+    timeout handling.
   implements: []
   references:
   - api.Module
@@ -60,7 +64,9 @@ objects:
 - name: PreCompileModule
   kind: method
   receiver: WasmManager
-  description: PreCompileModule compiles a module and stores it in the cache.
+  description: PreCompileModule compiles a module from the ModuleStore using the module
+    ID and checksum as a cache key, with deduplication via singleflight to avoid redundant
+    compilations.
   references:
   - wazero.CompiledModule
   - obs.HistogramPoint
@@ -68,8 +74,8 @@ objects:
 - name: NewHostInstance
   kind: method
   receiver: WasmManager
-  description: NewHostInstance creates a new, live instance of a module, applying
-    configured limits.
+  description: NewHostInstance creates a new, live instance of a compiled module with
+    the configured timeout and observability sinks.
   references:
   - wazero.NewModuleConfig
   - obs.HistogramPoint
@@ -77,53 +83,62 @@ objects:
 - name: EvictModule
   kind: method
   receiver: WasmManager
-  description: EvictModule removes all versions of a compiled module from the cache.
+  description: EvictModule removes all compiled versions of a module from the LRU
+    cache by moduleID prefix matching.
   references: []
 - name: Close
   kind: method
   receiver: WasmManager
-  description: Close shuts down the entire WASM runtime and clears all caches.
+  description: Close releases the underlying WASM module instance and its memory resources.
   references: []
 - name: newCicWasmHost
   kind: func
-  description: ''
+  description: newCicWasmHost creates a CicWasmHost from a wazero module instance
+    after verifying that required ABI functions (Call, allocate, deallocate) are exported.
   references:
   - api.Module
   - obs.LogSink
 - name: Close
   kind: method
   receiver: CicWasmHost
-  description: Close shuts down the entire WASM runtime and clears all caches.
+  description: Close releases the underlying WASM module instance and its memory resources.
   references: []
 - name: Process
   kind: method
   receiver: CicWasmHost
-  description: ''
+  description: Process invokes the "process" guest function with the given auth context
+    and input JSON, returning the result data and error JSON as strings.
   references: []
 - name: Get
   kind: method
   receiver: CicWasmHost
-  description: ''
+  description: Get invokes the "get" guest function with the given auth context and
+    query JSON, returning the result data and error JSON as strings.
   references: []
 - name: Init
   kind: method
   receiver: CicWasmHost
-  description: ''
+  description: Init invokes the "init" guest function with the given auth context
+    and configuration JSON, returning the result data and error JSON as strings.
   references: []
 - name: Notify
   kind: method
   receiver: CicWasmHost
-  description: ''
+  description: Notify invokes the "notify" guest function with the given auth context
+    and event JSON, returning the result data and error JSON as strings.
   references: []
 - name: callGuest
   kind: method
   receiver: CicWasmHost
-  description: ''
+  description: callGuest invokes a named guest function with auth context and input
+    JSON, handling memory allocation, timeout enforcement, and response parsing. It
+    returns data and error JSON strings.
   references: []
 - name: writeStringToWasm
   kind: method
   receiver: CicWasmHost
-  description: ''
+  description: writeStringToWasm allocates memory in the WASM module, writes the string
+    bytes, and returns the pointer and length; the caller is responsible for deallocation.
   references: []
 - name: emitDeallocWarn
   kind: method
@@ -135,5 +150,6 @@ objects:
   - obs.ResourceComponent
 - name: formatErrorJson
   kind: func
-  description: ''
+  description: formatErrorJson constructs a JSON error object with code, message,
+    and optional details fields.
   references: []

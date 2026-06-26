@@ -21,7 +21,8 @@ objects:
 - name: proofVerifyHandler
   kind: method
   receiver: relayServer
-  description: ''
+  description: proofVerifyHandler handles POST /v1/proof/verify requests by validating
+    a ProofArtifact against the schema contract.
   references:
   - uuid.New
   - logrus.Fields

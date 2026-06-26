@@ -22,6 +22,7 @@ objects:
   kind: method
   receiver: ModuleDescriptor
   description: ID returns the unique module identifier in the form "name@version".
+    This is used for lookups in the module store.
   references: []
 - name: GetData
   kind: method

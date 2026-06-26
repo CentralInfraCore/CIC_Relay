@@ -20,47 +20,51 @@ objects:
   - wazero.Runtime
 - name: registerGitHostFunctions
   kind: func
-  description: 'registerGitHostFunctions instantiates the "git" host module on r.
-    Each function follows a uniform ABI: (reqPtr i32, reqLen i32, outPtr i32, outLen
-    i32) -> i32 The caller passes a JSON-encoded request in WASM linear memory at
-    (reqPtr, reqLen). The response JSON is written to (outPtr, outLen). The return
-    value is the number of bytes written, or -1 on error.'
+  description: 'registerGitHostFunctions instantiates the "git" host module on the
+    wazero runtime. Each exported function follows a uniform ABI: (reqPtr i32, reqLen
+    i32, outPtr i32, outLen i32) -> i32 The caller passes a JSON-encoded request in
+    WASM linear memory at (reqPtr, reqLen). The response JSON is written to (outPtr,
+    outLen), and the return value is the number of bytes written, or -1 on error.'
   references:
   - wazero.Runtime
   - nexusgit.GitOps
 - name: makeCloneFn
   kind: func
-  description: ''
+  description: makeCloneFn creates a WASM host function that clones a git repository.
   references:
   - nexusgit.GitOps
   - api.Module
 - name: makeFetchFn
   kind: func
-  description: ''
+  description: makeFetchFn creates a WASM host function that fetches updates from
+    a git remote.
   references:
   - nexusgit.GitOps
   - api.Module
 - name: makeCheckoutFn
   kind: func
-  description: ''
+  description: makeCheckoutFn creates a WASM host function that checks out a git reference.
   references:
   - nexusgit.GitOps
   - api.Module
 - name: makeCommitFn
   kind: func
-  description: ''
+  description: makeCommitFn creates a WASM host function that commits changes to a
+    git repository.
   references:
   - nexusgit.GitOps
   - api.Module
 - name: makePushFn
   kind: func
-  description: ''
+  description: makePushFn creates a WASM host function that pushes commits to a git
+    remote.
   references:
   - nexusgit.GitOps
   - api.Module
 - name: makeStatusFn
   kind: func
-  description: ''
+  description: makeStatusFn creates a WASM host function that queries the status of
+    a git repository.
   references:
   - nexusgit.GitOps
   - api.Module

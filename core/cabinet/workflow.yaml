@@ -17,6 +17,7 @@ objects:
   kind: method
   receiver: Workflow
   description: ID returns the unique workflow identifier in the form "name@version".
+    This is used for lookups in the workflow store.
   references: []
 - name: GetData
   kind: method
