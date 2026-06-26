@@ -14,14 +14,39 @@ objects:
   description: Loader is responsible for parsing IaC data and building the graph.
   implements: []
   references: []
+  position:
+    start_line: 21
+    end_line: 23
+  fields:
+  - name: Source
+    type: IaCSource
+    tag: ''
 - name: IaCSource
   kind: interface
   description: IaCSource defines the interface for retrieving raw configuration data.
   references: []
+  position:
+    start_line: 14
+    end_line: 18
+  methods:
+  - name: FetchConfig
+    params:
+    - ctx context.Context
+    returns:
+    - (map[string][]byte, error)
 - name: NewLoader
   kind: func
   description: NewLoader creates a new Loader instance.
   references: []
+  position:
+    start_line: 26
+    end_line: 30
+  signature:
+    params:
+    - name: source
+      type: IaCSource
+    returns:
+    - '*Loader'
 - name: Load
   kind: method
   receiver: Loader
@@ -32,3 +57,26 @@ objects:
   - types.Host
   - types.Service
   - types.BaseComponent
+  position:
+    start_line: 33
+    end_line: 134
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - '*types.Graph'
+    - error
+  calls:
+  - Source.FetchConfig
+  - dir
+  - filepath.Dir
+  - filepath.Ext
+  - filepath.Join
+  - fmt.Errorf
+  - objects
+  - resolution
+  - s
+  - schemas
+  - strings.ToLower
+  - yaml.Unmarshal

@@ -13,6 +13,19 @@ objects:
   description: Event represents a change in the infrastructure definition.
   implements: []
   references: []
+  position:
+    start_line: 29
+    end_line: 33
+  fields:
+  - name: Type
+    type: EventType
+    tag: ''
+  - name: FilePath
+    type: string
+    tag: ''
+  - name: Content
+    type: '[]byte // Content is nil for DELETE events'
+    tag: ''
 - name: Operator
   kind: struct
   description: Operator manages the lifecycle of infrastructure entities based on
@@ -21,22 +34,79 @@ objects:
   references:
   - types.Graph
   - logrus.Logger
+  position:
+    start_line: 53
+    end_line: 64
+  fields:
+  - name: Watcher
+    type: Watcher
+    tag: ''
+  - name: bootstrapper
+    type: '*Bootstrapper'
+    tag: ''
+  - name: lifecycle
+    type: '*LifecycleManager'
+    tag: ''
+  - name: validator
+    type: ResourceValidator // nil = schema validation skipped
+    tag: ''
+  - name: activator
+    type: ResourceActivator // nil = activation logged but not executed
+    tag: ''
+  - name: graph
+    type: '*types.Graph      // nil = dependency gating skipped (lenient)'
+    tag: ''
+  - name: logger
+    type: '*logrus.Logger'
+    tag: ''
+  - name: hostFiles
+    type: map[string]string
+    tag: ''
 - name: PollingWatcher
   kind: struct
   description: PollingWatcher implements Watcher by periodically scanning a directory.
     A simple implementation for now; production usage might prefer fsnotify.
   implements: []
   references: []
+  position:
+    start_line: 286
+    end_line: 289
+  fields:
+  - name: RootPath
+    type: string
+    tag: ''
+  - name: Interval
+    type: time.Duration
+    tag: ''
 - name: Watcher
   kind: interface
   description: Watcher defines the interface for monitoring infrastructure changes.
   references: []
+  position:
+    start_line: 36
+    end_line: 39
+  methods:
+  - name: Watch
+    params:
+    - ctx context.Context
+    returns:
+    - (<-chan Event, error)
 - name: ResourceValidator
   kind: interface
   description: ResourceValidator validates a single resource against an external schema
     registry.
   references:
   - types.ResourceSpec
+  position:
+    start_line: 42
+    end_line: 44
+  methods:
+  - name: ValidateResource
+    params:
+    - ctx context.Context
+    - res types.ResourceSpec
+    returns:
+    - error
 - name: ResourceActivator
   kind: interface
   description: ResourceActivator executes the lifecycle action for a validated, desired-present
@@ -44,16 +114,41 @@ objects:
     direct import.
   references:
   - types.ResourceSpec
+  position:
+    start_line: 48
+    end_line: 50
+  methods:
+  - name: Activate
+    params:
+    - ctx context.Context
+    - svcName string
+    - res types.ResourceSpec
+    returns:
+    - error
 - name: EventType
   kind: type
   description: EventType defines the type of change detected in the infrastructure
     repo.
   references: []
+  position:
+    start_line: 20
+    end_line: 20
 - name: NewOperator
   kind: func
   description: NewOperator creates a basic Operator without lifecycle support. For
     full bootstrap/lifecycle wiring use NewOperatorWithLifecycle.
   references:
+  - logrus.New
+  position:
+    start_line: 68
+    end_line: 74
+  signature:
+    params:
+    - name: watcher
+      type: Watcher
+    returns:
+    - '*Operator'
+  calls:
   - logrus.New
 - name: NewOperatorWithLifecycle
   kind: func
@@ -61,18 +156,51 @@ objects:
     lifecycle support. b and lm may be nil — operations are skipped with a WARN log.
   references:
   - logrus.Logger
+  position:
+    start_line: 78
+    end_line: 86
+  signature:
+    params:
+    - name: watcher
+      type: Watcher
+    - name: b
+      type: '*Bootstrapper'
+    - name: lm
+      type: '*LifecycleManager'
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - '*Operator'
 - name: WithValidator
   kind: method
   receiver: Operator
   description: WithValidator attaches a ResourceValidator to the Operator. When set,
     every Service resource is validated against the schema registry before activation.
   references: []
+  position:
+    start_line: 90
+    end_line: 93
+  signature:
+    params:
+    - name: v
+      type: ResourceValidator
+    returns:
+    - '*Operator'
 - name: WithActivator
   kind: method
   receiver: Operator
   description: WithActivator attaches a ResourceActivator to the Operator. When set,
     resources with state.desired=present are passed to the activator after validation.
   references: []
+  position:
+    start_line: 97
+    end_line: 100
+  signature:
+    params:
+    - name: a
+      type: ResourceActivator
+    returns:
+    - '*Operator'
 - name: WithGraph
   kind: method
   receiver: Operator
@@ -81,17 +209,58 @@ objects:
     in the graph with at least one resource declaring state.desired=present.
   references:
   - types.Graph
+  position:
+    start_line: 105
+    end_line: 108
+  signature:
+    params:
+    - name: g
+      type: '*types.Graph'
+    returns:
+    - '*Operator'
 - name: Run
   kind: method
   receiver: Operator
   description: Run starts the operator loop.
   references:
   - logrus.Fields
+  position:
+    start_line: 111
+    end_line: 133
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - error
+  calls:
+  - Warn
+  - Watcher.Watch
+  - WithFields
+  - ctx.Done
+  - fmt.Errorf
+  - logger.WithError
+  - o.handleEvent
 - name: handleEvent
   kind: method
   receiver: Operator
   description: handleEvent processes a single infrastructure change event.
   references: []
+  position:
+    start_line: 136
+    end_line: 145
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: event
+      type: Event
+    returns:
+    - error
+  calls:
+  - fmt.Errorf
+  - o.onApply
+  - o.onDelete
 - name: onApply
   kind: method
   receiver: Operator
@@ -99,12 +268,49 @@ objects:
   references:
   - types.BaseComponent
   - logrus.Fields
+  position:
+    start_line: 148
+    end_line: 166
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: event
+      type: Event
+    returns:
+    - error
+  calls:
+  - Debug
+  - fmt.Errorf
+  - logger.WithFields
+  - o.onApplyHost
+  - o.onApplyService
+  - yaml.Unmarshal
 - name: onApplyHost
   kind: method
   receiver: Operator
   description: onApplyHost generates a bootstrap token and onboards the host via LifecycleManager.
   references:
   - types.BaseComponent
+  position:
+    start_line: 169
+    end_line: 186
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: event
+      type: Event
+    - name: base
+      type: types.BaseComponent
+    returns:
+    - error
+  calls:
+  - Warn
+  - bootstrapper.BootstrapHost
+  - fmt.Errorf
+  - lifecycle.OnboardHost
+  - logger.WithField
 - name: onApplyService
   kind: method
   receiver: Operator
@@ -113,6 +319,30 @@ objects:
   references:
   - types.Service
   - logrus.Fields
+  position:
+    start_line: 190
+    end_line: 231
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: event
+      type: Event
+    returns:
+    - error
+  calls:
+  - Debug
+  - Warn
+  - activation
+  - activator.Activate
+  - fmt.Errorf
+  - log.Info
+  - log.WithError
+  - log.WithField
+  - logger.WithFields
+  - o.depsReady
+  - validator.ValidateResource
+  - yaml.Unmarshal
 - name: depsReady
   kind: method
   receiver: Operator
@@ -120,6 +350,15 @@ objects:
     graph and have at least one resource declaring state.desired=present. When no
     graph is set, the check is lenient (returns true).
   references: []
+  position:
+    start_line: 236
+    end_line: 260
+  signature:
+    params:
+    - name: deps
+      type: '[]string'
+    returns:
+    - bool
 - name: onDelete
   kind: method
   receiver: Operator
@@ -128,16 +367,65 @@ objects:
     if the file was never seen (e.g. operator restart).
   references:
   - logrus.Fields
+  position:
+    start_line: 265
+    end_line: 282
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: event
+      type: Event
+    returns:
+    - error
+  calls:
+  - Warn
+  - filepath.Base
+  - filepath.Ext
+  - lifecycle.OffboardHost
+  - logger.WithField
+  - logger.WithFields
+  - stem
+  - strings.TrimSuffix
 - name: NewPollingWatcher
   kind: func
   description: NewPollingWatcher creates a new watcher that scans the directory every
     interval.
   references: []
+  position:
+    start_line: 292
+    end_line: 297
+  signature:
+    params:
+    - name: rootPath
+      type: string
+    - name: interval
+      type: time.Duration
+    returns:
+    - '*PollingWatcher'
 - name: scanDir
   kind: func
   description: scanDir walks rootPath and returns a map of relative path → SHA-256
     content hash.
   references: []
+  position:
+    start_line: 300
+    end_line: 319
+  signature:
+    params:
+    - name: rootPath
+      type: string
+    returns:
+    - map[string]string
+    - error
+  calls:
+  - d.IsDir
+  - filepath.Rel
+  - filepath.WalkDir
+  - func
+  - hex.EncodeToString
+  - os.ReadFile
+  - sha256.Sum256
 - name: emitDiff
   kind: func
   description: emitDiff computes CREATE/UPDATE/DELETE events between prev and curr
@@ -145,9 +433,52 @@ objects:
     for all files.
   references:
   - logrus.WithField
+  position:
+    start_line: 323
+    end_line: 355
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: ch
+      type: chan<- Event
+    - name: ''
+      type: prev
+    - name: curr
+      type: map[string]string
+    - name: rootPath
+      type: string
+    returns: []
+  calls:
+  - Warn
+  - WithError
+  - ctx.Done
+  - filepath.Join
+  - logrus.WithField
+  - os.ReadFile
 - name: Watch
   kind: method
   receiver: PollingWatcher
   description: ''
   references:
   - logrus.WithField
+  position:
+    start_line: 356
+    end_line: 384
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - <-chan Event
+    - error
+  calls:
+  - Warn
+  - WithError
+  - ctx.Done
+  - emitDiff
+  - func
+  - logrus.WithField
+  - scanDir
+  - ticker.Stop
+  - time.NewTicker

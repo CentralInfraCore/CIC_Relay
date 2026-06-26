@@ -14,12 +14,40 @@ objects:
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 19
+    end_line: 26
+  signature:
+    params: []
+    returns: []
+  calls:
+  - RunFunc
+  - fmt.Fprintf
+  - osExit
 - name: Run
   kind: func
   description: Run reads JSON from input, canonicalizes it, and writes the result
     to output.
   references:
   - canonicaljson.ToJSON
+  position:
+    start_line: 29
+    end_line: 55
+  signature:
+    params:
+    - name: input
+      type: io.Reader
+    - name: output
+      type: io.Writer
+    returns:
+    - error
+  calls:
+  - canonicaljson.ToJSON
+  - fmt.Errorf
+  - fmt.Fprintln
+  - io.ReadAll
+  - json.Unmarshal
+  - string
 - name: RunFunc
   kind: var
   description: RunFunc is a variable that holds the actual run function. It can be

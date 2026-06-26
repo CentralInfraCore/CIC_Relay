@@ -18,19 +18,85 @@ objects:
     it the existing LocalWorker (in-process) is used, preserving backward compatibility.'
   implements: []
   references: []
+  position:
+    start_line: 22
+    end_line: 26
+  fields:
+  - name: executable
+    type: string   // path to the relay binary
+    tag: ''
+  - name: args
+    type: '[]string // extra args passed to the subprocess (e.g. --mode=module-worker)'
+    tag: ''
+  - name: env
+    type: '[]string // environment for the subprocess; nil = inherit os.Environ()'
+    tag: ''
 - name: NewSubprocessWorker
   kind: func
   description: NewSubprocessWorker returns a SubprocessWorker that re-executes the
     running binary with --mode=module-worker.
   references: []
+  position:
+    start_line: 30
+    end_line: 39
+  signature:
+    params: []
+    returns:
+    - '*SubprocessWorker'
+    - error
+  calls:
+  - fmt.Errorf
+  - os.Executable
 - name: newSubprocessWorkerWithExe
   kind: func
   description: newSubprocessWorkerWithExe constructs a SubprocessWorker with explicit
     executable, args, and env. Intended for tests only.
   references: []
+  position:
+    start_line: 43
+    end_line: 45
+  signature:
+    params:
+    - name: executable
+      type: string
+    - name: args
+      type: '[]string'
+    - name: env
+      type: '[]string'
+    returns:
+    - '*SubprocessWorker'
 - name: Decrypt
   kind: method
   receiver: SubprocessWorker
   description: Decrypt spawns a subprocess, sends the encrypted payload, and returns
     the decrypted result.
   references: []
+  position:
+    start_line: 48
+    end_line: 105
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: req
+      type: DecryptRequest
+    returns:
+    - '*DecryptResponse'
+    - error
+  calls:
+  - Close
+  - Encode
+  - Process.Kill
+  - StdEncoding.DecodeString
+  - StdEncoding.EncodeToString
+  - bufio.NewScanner
+  - cmd.Start
+  - cmd.StdinPipe
+  - cmd.StdoutPipe
+  - cmd.Wait
+  - exec.CommandContext
+  - fmt.Errorf
+  - json.NewEncoder
+  - json.Unmarshal
+  - scanner.Bytes
+  - scanner.Scan

@@ -121,6 +121,18 @@ objects:
   description: Error implements the error interface, returning a JSON-encoded list
     of field-level validation errors or a generic message if empty.
   references: []
+  position:
+    start_line: 45
+    end_line: 54
+  signature:
+    params: []
+    returns:
+    - string
+  calls:
+  - ErrInvalid.Error
+  - fmt.Sprintf
+  - jsonMarshal
+  - string
 - name: NewValidationError
   kind: func
   description: NewValidationError constructs a ValidationError from the provided field

@@ -70,12 +70,42 @@ objects:
   references:
   - rate.Limiter
   - rate.NewLimiter
+  position:
+    start_line: 29
+    end_line: 38
+  signature:
+    params:
+    - name: ip
+      type: string
+    returns:
+    - '*rate.Limiter'
+  calls:
+  - mu.Lock
+  - mu.Unlock
+  - rate.NewLimiter
 - name: Middleware
   kind: method
   receiver: ipRateLimiter
   description: Middleware returns an http.Handler that enforces the concurrent request
     cap. When the cap is reached, 503 Service Unavailable is returned immediately.
   references: []
+  position:
+    start_line: 42
+    end_line: 54
+  signature:
+    params:
+    - name: next
+      type: http.Handler
+    returns:
+    - http.Handler
+  calls:
+  - Allow
+  - func
+  - http.HandlerFunc
+  - l.getLimiter
+  - net.SplitHostPort
+  - next.ServeHTTP
+  - writeError
 - name: newConcurrentLimiter
   kind: func
   description: newConcurrentLimiter creates a new limiter that caps the number of
@@ -96,6 +126,20 @@ objects:
   description: Middleware returns an http.Handler that enforces the concurrent request
     cap. When the cap is reached, 503 Service Unavailable is returned immediately.
   references: []
+  position:
+    start_line: 68
+    end_line: 78
+  signature:
+    params:
+    - name: next
+      type: http.Handler
+    returns:
+    - http.Handler
+  calls:
+  - func
+  - http.HandlerFunc
+  - next.ServeHTTP
+  - writeError
 - name: buildHandler
   kind: func
   description: buildHandler wraps the request multiplexer with per-IP rate limiting

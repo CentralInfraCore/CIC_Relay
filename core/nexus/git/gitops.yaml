@@ -13,9 +13,67 @@ objects:
   description: StatusEntry represents a single file entry from git status --porcelain.
   implements: []
   references: []
+  position:
+    start_line: 6
+    end_line: 9
+  fields:
+  - name: Path
+    type: string // file path (relative to repo root)
+    tag: ''
+  - name: State
+    type: string // two-char XY porcelain state code (e.g., "M ", " M", "??")
+    tag: ''
 - name: GitOps
   kind: interface
   description: GitOps is the typed API that WASM modules can invoke for git operations.
     All operations are scoped to registered repositories — arbitrary paths are not
     accepted.
   references: []
+  position:
+    start_line: 14
+    end_line: 32
+  methods:
+  - name: Clone
+    params:
+    - ctx context.Context
+    - repoID
+    - url
+    - branch string
+    returns:
+    - error
+  - name: Fetch
+    params:
+    - ctx context.Context
+    - repoID
+    - remote string
+    returns:
+    - error
+  - name: Checkout
+    params:
+    - ctx context.Context
+    - repoID
+    - ref string
+    returns:
+    - error
+  - name: Commit
+    params:
+    - ctx context.Context
+    - repoID
+    - message string
+    - paths []string
+    returns:
+    - (string, error)
+  - name: Push
+    params:
+    - ctx context.Context
+    - repoID
+    - remote
+    - refspec string
+    returns:
+    - error
+  - name: Status
+    params:
+    - ctx context.Context
+    - repoID string
+    returns:
+    - ([]StatusEntry, error)

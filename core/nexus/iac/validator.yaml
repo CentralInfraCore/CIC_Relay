@@ -17,11 +17,27 @@ objects:
   implements: []
   references:
   - cabinet.Cabinet
+  position:
+    start_line: 14
+    end_line: 16
+  fields:
+  - name: cabinet
+    type: cabinet.Cabinet
+    tag: ''
 - name: NewIaCValidator
   kind: func
   description: NewIaCValidator creates a new IaCValidator backed by the given Cabinet.
   references:
   - cabinet.Cabinet
+  position:
+    start_line: 19
+    end_line: 21
+  signature:
+    params:
+    - name: c
+      type: cabinet.Cabinet
+    returns:
+    - '*IaCValidator'
 - name: Validate
   kind: method
   receiver: IaCValidator
@@ -29,6 +45,20 @@ objects:
     It returns a joined error listing every schemaRef that could not be resolved.
   references:
   - types.Graph
+  position:
+    start_line: 25
+    end_line: 35
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: graph
+      type: '*types.Graph'
+    returns:
+    - error
+  calls:
+  - errors.Join
+  - v.resolveSchema
 - name: ValidateResource
   kind: method
   receiver: IaCValidator
@@ -36,6 +66,19 @@ objects:
     schema registry. Suitable for per-event validation in the Operator.
   references:
   - types.ResourceSpec
+  position:
+    start_line: 39
+    end_line: 41
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: res
+      type: types.ResourceSpec
+    returns:
+    - error
+  calls:
+  - v.resolveSchema
 - name: resolveSchema
   kind: method
   receiver: IaCValidator
@@ -44,3 +87,19 @@ objects:
   references:
   - types.ResourceSpec
   - cabinet.GetSchema
+  position:
+    start_line: 44
+    end_line: 53
+  signature:
+    params:
+    - name: _
+      type: context.Context
+    - name: svcName
+      type: string
+    - name: res
+      type: types.ResourceSpec
+    returns:
+    - error
+  calls:
+  - cabinet.GetSchema
+  - fmt.Errorf

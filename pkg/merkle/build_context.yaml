@@ -16,6 +16,37 @@ objects:
     with NullMarker ("∅") by LeafHash automatically.
   implements: []
   references: []
+  position:
+    start_line: 18
+    end_line: 35
+  fields:
+  - name: SourceRef
+    type: string // commit SHA — from -X main.CommitHash
+    tag: ''
+  - name: SourceTreeDigest
+    type: string // source tree hash — from -X main.SourceTreeHash
+    tag: ''
+  - name: DockerImageChecksum
+    type: string // pinned builder image digest
+    tag: ''
+  - name: ToolchainDigest
+    type: string // compiler/toolchain version digest
+    tag: ''
+  - name: DependencyLockDigest
+    type: string // sha256(go.sum) — use GoSumDigest()
+    tag: ''
+  - name: PipelinePolicyDigest
+    type: string // CI pipeline policy digest
+    tag: ''
+  - name: CAFingerprint
+    type: string // sha256 of the trust anchor CA cert
+    tag: ''
+  - name: CertChainHash
+    type: string // hash of the full certificate chain
+    tag: ''
+  - name: SigningPolicyDigest
+    type: string // digest of the signing policy config
+    tag: ''
 - name: GoRuntimeDigest
   kind: func
   description: 'GoRuntimeDigest returns a "sha256:<hex>" digest of the Go toolchain
@@ -26,9 +57,38 @@ objects:
     only runtime.Version() would miss CGO mode and build-tag variation that can materially
     change binary behavior while keeping the same version string.'
   references: []
+  position:
+    start_line: 49
+    end_line: 70
+  signature:
+    params: []
+    returns:
+    - string
+  calls:
+  - byte
+  - debug.ReadBuildInfo
+  - hex.EncodeToString
+  - runtime.Version
+  - sb.String
+  - sb.WriteByte
+  - sb.WriteString
+  - sha256.Sum256
 - name: GoSumDigest
   kind: func
   description: GoSumDigest reads the go.sum file at path and returns its lowercase
     SHA-256 hex digest prefixed with "sha256:". Returns NullMarker if path is empty
     or the file cannot be read.
   references: []
+  position:
+    start_line: 75
+    end_line: 85
+  signature:
+    params:
+    - name: path
+      type: string
+    returns:
+    - string
+  calls:
+  - hex.EncodeToString
+  - os.ReadFile
+  - sha256.Sum256

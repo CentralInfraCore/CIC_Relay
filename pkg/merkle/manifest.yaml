@@ -16,21 +16,94 @@ objects:
     5 = AUDIT'
   implements: []
   references: []
+  position:
+    start_line: 17
+    end_line: 25
+  fields:
+  - name: Version
+    type: int
+    tag: ''
+  - name: Source
+    type: SourceFields
+    tag: ''
+  - name: BuildEnv
+    type: BuildEnvFields
+    tag: ''
+  - name: Inputs
+    type: InputsFields
+    tag: ''
+  - name: Artifact
+    type: ArtifactFields
+    tag: ''
+  - name: Validation
+    type: ValidationFields
+    tag: ''
+  - name: Audit
+    type: AuditFields
+    tag: ''
 - name: SourceFields
   kind: struct
   description: SourceFields — subtree 0.
   implements: []
   references: []
+  position:
+    start_line: 28
+    end_line: 36
+  fields:
+  - name: SourceRef
+    type: string
+    tag: ''
+  - name: SourceTreeDigest
+    type: string
+    tag: ''
+  - name: CommitSignature
+    type: string
+    tag: ''
 - name: BuildEnvFields
   kind: struct
   description: BuildEnvFields — subtree 1.
   implements: []
   references: []
+  position:
+    start_line: 39
+    end_line: 50
+  fields:
+  - name: SchemaDigest
+    type: string
+    tag: ''
+  - name: DockerImageChecksum
+    type: string
+    tag: ''
+  - name: ToolchainDigest
+    type: string
+    tag: ''
+  - name: DependencyLockDigest
+    type: string
+    tag: ''
+  - name: PipelinePolicyDigest
+    type: string
+    tag: ''
 - name: InputsFields
   kind: struct
   description: InputsFields — subtree 2.
   implements: []
   references: []
+  position:
+    start_line: 53
+    end_line: 60
+  fields:
+  - name: WorkflowDescriptorDigest
+    type: string
+    tag: ''
+  - name: ModuleDescriptorDigest
+    type: string
+    tag: ''
+  - name: SchemaDescriptorDigest
+    type: string
+    tag: ''
+  - name: RuntimeInputDigest
+    type: string
+    tag: ''
 - name: ArtifactFields
   kind: struct
   description: 'ArtifactFields — subtree 3. For WASM artifacts, ArtifactDigest must
@@ -38,11 +111,40 @@ objects:
     non-deterministic CustomSection data.'
   implements: []
   references: []
+  position:
+    start_line: 68
+    end_line: 77
+  fields:
+  - name: ArtifactDigest
+    type: string
+    tag: ''
+  - name: ArtifactSize
+    type: int64
+    tag: ''
+  - name: EmbeddedBuildMetaDigest
+    type: string
+    tag: ''
+  - name: ExternalBuildMetaDigest
+    type: string
+    tag: ''
 - name: ValidationFields
   kind: struct
   description: ValidationFields — subtree 4. Quorum fields are absent in v0.1.
   implements: []
   references: []
+  position:
+    start_line: 81
+    end_line: 88
+  fields:
+  - name: BuildSignatureDigest
+    type: string
+    tag: ''
+  - name: CAFingerprint
+    type: string
+    tag: ''
+  - name: CertChainHash
+    type: string
+    tag: ''
 - name: AuditFields
   kind: struct
   description: AuditFields — subtree 5. SigningPolicyDigest is the digest of the policy
@@ -51,6 +153,22 @@ objects:
     itself (avoids circularity).
   implements: []
   references: []
+  position:
+    start_line: 94
+    end_line: 103
+  fields:
+  - name: PipelineLogDigest
+    type: string
+    tag: ''
+  - name: ReleasePolicyDigest
+    type: string
+    tag: ''
+  - name: Timestamp
+    type: string
+    tag: ''
+  - name: SigningPolicyDigest
+    type: string
+    tag: ''
 - name: BuildVerificationRoot
   kind: func
   description: 'BuildVerificationRoot computes the single final verification hash
@@ -58,3 +176,17 @@ objects:
     1. Call BuildVerificationRoot → root 2. Sign(root) externally → signature 3. Publish
     { final_verification_hash: root, signature: ... } as separate object'
   references: []
+  position:
+    start_line: 112
+    end_line: 164
+  signature:
+    params:
+    - name: m
+      type: '*VerificationManifest'
+    returns:
+    - string
+  calls:
+  - LeafHash
+  - MerkleRoot
+  - SizeLeaf
+  - hex.EncodeToString

@@ -46,3 +46,37 @@ objects:
   references:
   - uuid.New
   - logrus.Fields
+  position:
+    start_line: 25
+    end_line: 69
+  signature:
+    params:
+    - name: w
+      type: http.ResponseWriter
+    - name: r
+      type: '*http.Request'
+    returns: []
+  calls:
+  - Body.Close
+  - Encode
+  - Error
+  - Info
+  - ProofVerifyResponse
+  - Set
+  - String
+  - VerifyProofArtifact
+  - WithError
+  - WithField
+  - err.Error
+  - int64
+  - io.LimitReader
+  - io.ReadAll
+  - json.NewEncoder
+  - json.Unmarshal
+  - logEntry.Info
+  - logEntry.WithField
+  - logger.WithFields
+  - uuid.New
+  - w.Header
+  - w.WriteHeader
+  - writeError
