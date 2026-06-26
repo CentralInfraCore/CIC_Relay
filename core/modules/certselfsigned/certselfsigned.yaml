@@ -15,18 +15,76 @@ objects:
   description: Input is the expected input structure for the cert.selfsigned module.
   implements: []
   references: []
+  position:
+    start_line: 21
+    end_line: 25
+  fields:
+  - name: CN
+    type: string   `json:"cn"`            // Common Name (required)
+    tag: ''
+  - name: DNSSANs
+    type: '[]string `json:"dns_sans"`      // DNS Subject Alternative Names (optional)'
+    tag: ''
+  - name: ValidityDays
+    type: 'int      `json:"validity_days"` // Certificate validity in days (default:
+      365)'
+    tag: ''
 - name: Output
   kind: struct
   description: Output is the result returned by Generate.
   implements: []
   references: []
+  position:
+    start_line: 28
+    end_line: 34
+  fields:
+  - name: CertPEM
+    type: string `json:"cert_pem"`    // PEM-encoded certificate
+    tag: ''
+  - name: KeyPEM
+    type: string `json:"key_pem"`     // PEM-encoded private key
+    tag: ''
+  - name: CommonName
+    type: string `json:"common_name"` // CN from the generated cert
+    tag: ''
+  - name: NotBefore
+    type: string `json:"not_before"`  // RFC3339
+    tag: ''
+  - name: NotAfter
+    type: string `json:"not_after"`   // RFC3339
+    tag: ''
 - name: Generate
   kind: func
   description: 'Generate creates a self-signed ECDSA P-256 certificate. Satisfies
     the cabinet NativeFunc signature: func(context.Context, interface{}) (interface{},
     error)'
   references: []
+  position:
+    start_line: 50
+    end_line: 50
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: input
+      type: interface{}
+    returns:
+    - interface
 - name: parseInput
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 106
+    end_line: 120
+  signature:
+    params:
+    - name: raw
+      type: interface{}
+    returns:
+    - '*Input'
+    - error
+  calls:
+  - fmt.Errorf
+  - json.Marshal
+  - json.Unmarshal

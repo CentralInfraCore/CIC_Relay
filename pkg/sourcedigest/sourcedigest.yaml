@@ -18,16 +18,71 @@ objects:
   description: ''
   implements: []
   references: []
+  position:
+    start_line: 41
+    end_line: 45
+  fields:
+  - name: relPath
+    type: string
+    tag: ''
+  - name: hexHash
+    type: string
+    tag: ''
 - name: ComputeTreeHash
   kind: func
   description: ComputeTreeHash returns a deterministic SHA-256 digest of all regular
     files under rootPath.  Top-level directories whose name matches an entry in excludes
     (or DefaultExcludes if nil) are skipped entirely.
   references: []
+  position:
+    start_line: 33
+    end_line: 90
+  signature:
+    params:
+    - name: rootPath
+      type: string
+    - name: excludes
+      type: '[]string'
+    returns:
+    - string
+    - error
+  calls:
+  - IsRegular
+  - agg.Sum
+  - d.IsDir
+  - d.Type
+  - fileContentHash
+  - filepath.Rel
+  - filepath.ToSlash
+  - filepath.WalkDir
+  - fmt.Errorf
+  - fmt.Fprintf
+  - func
+  - hex.EncodeToString
+  - sha256.New
+  - sort.Slice
+  - strings.SplitN
 - name: fileContentHash
   kind: func
   description: fileContentHash returns the hex-encoded SHA-256 of the file at path.
   references: []
+  position:
+    start_line: 93
+    end_line: 104
+  signature:
+    params:
+    - name: path
+      type: string
+    returns:
+    - string
+    - error
+  calls:
+  - f.Close
+  - h.Sum
+  - hex.EncodeToString
+  - io.Copy
+  - os.Open
+  - sha256.New
 - name: DefaultExcludes
   kind: var
   description: DefaultExcludes is the set of top-level directory names skipped by

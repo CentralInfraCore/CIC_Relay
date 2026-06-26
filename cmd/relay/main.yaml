@@ -126,18 +126,48 @@ objects:
   description: emitTrace emits a TraceFrame if a TraceSink is configured.
   references:
   - obs.TraceFrame
+  position:
+    start_line: 158
+    end_line: 162
+  signature:
+    params:
+    - name: f
+      type: obs.TraceFrame
+    returns: []
+  calls:
+  - traceSink.RecordTrace
 - name: emitLog
   kind: method
   receiver: relayServer
   description: emitLog emits a LogRecord if a LogSink is configured.
   references:
   - obs.LogRecord
+  position:
+    start_line: 165
+    end_line: 169
+  signature:
+    params:
+    - name: r
+      type: obs.LogRecord
+    returns: []
+  calls:
+  - logSink.RecordLog
 - name: emitCounter
   kind: method
   receiver: relayServer
   description: emitCounter emits a CounterPoint if a MetricSink is configured.
   references:
   - obs.CounterPoint
+  position:
+    start_line: 172
+    end_line: 176
+  signature:
+    params:
+    - name: p
+      type: obs.CounterPoint
+    returns: []
+  calls:
+  - metricSink.RecordCounter
 - name: writeError
   kind: func
   description: 'writeError writes a uniform JSON error response with the specified
@@ -186,16 +216,66 @@ objects:
   references:
   - uuid.New
   - logrus.Fields
+  position:
+    start_line: 200
+    end_line: 212
+  signature:
+    params:
+    - name: w
+      type: http.ResponseWriter
+    - name: r
+      type: '*http.Request'
+    returns: []
+  calls:
+  - Set
+  - String
+  - fmt.Fprintln
+  - logEntry.Info
+  - logger.WithFields
+  - uuid.New
+  - w.Header
 - name: healthzHandler
   kind: method
   receiver: relayServer
   description: healthzHandler serves the health check endpoint.
   references: []
+  position:
+    start_line: 215
+    end_line: 219
+  signature:
+    params:
+    - name: w
+      type: http.ResponseWriter
+    - name: r
+      type: '*http.Request'
+    returns: []
+  calls:
+  - Encode
+  - Set
+  - json.NewEncoder
+  - w.Header
+  - w.WriteHeader
 - name: readyzHandler
   kind: method
   receiver: relayServer
   description: readyzHandler serves the readiness check endpoint.
   references: []
+  position:
+    start_line: 222
+    end_line: 228
+  signature:
+    params:
+    - name: w
+      type: http.ResponseWriter
+    - name: r
+      type: '*http.Request'
+    returns: []
+  calls:
+  - Encode
+  - Set
+  - json.NewEncoder
+  - w.Header
+  - w.WriteHeader
 - name: setHandler
   kind: method
   receiver: relayServer
@@ -211,6 +291,56 @@ objects:
   - cabinet.IsInvalid
   - obs.LogRecord
   - obs.ExecutionContextWorkflowID
+  position:
+    start_line: 231
+    end_line: 363
+  signature:
+    params:
+    - name: w
+      type: http.ResponseWriter
+    - name: r
+      type: '*http.Request'
+    returns: []
+  calls:
+  - API.Set
+  - Body.Close
+  - Cabinet.Setx
+  - Encode
+  - Error
+  - Format
+  - Info
+  - Set
+  - String
+  - UTC
+  - ValidateSet
+  - Warn
+  - WithError
+  - cabinet.IsInvalid
+  - cabinet.IsTimeout
+  - cabinet.NewAPI
+  - err.Error
+  - files
+  - fmt.Sprintf
+  - func
+  - int64
+  - io.LimitReader
+  - io.ReadAll
+  - json.NewEncoder
+  - json.Unmarshal
+  - logEntry.Info
+  - logEntry.WithField
+  - logEntry.WithFields
+  - logger.WithFields
+  - r.Context
+  - s.emitCounter
+  - s.emitLog
+  - s.emitTrace
+  - start.UTC
+  - time.Now
+  - uuid.New
+  - w.Header
+  - w.WriteHeader
+  - writeError
 - name: validateConfig
   kind: func
   description: 'validateConfig validates the loaded configuration using the cabinet

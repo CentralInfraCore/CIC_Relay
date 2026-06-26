@@ -33,36 +33,144 @@ objects:
   description: NewHostInstance mocks the creation of a new host instance. It allows
     tests to specify what cicWasmHost instance (or error) should be returned.
   references: []
+  position:
+    start_line: 16
+    end_line: 24
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: moduleID
+      type: string
+    returns:
+    - cicWasmHost
+    - error
+  calls:
+  - args.Error
+  - args.Get
+  - m.Called
 - name: Close
   kind: method
   receiver: MockWasmManager
   description: Close mocks the closing of the WasmManager.
   references: []
+  position:
+    start_line: 27
+    end_line: 30
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - error
+  calls:
+  - args.Error
+  - m.Called
 - name: Process
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  position:
+    start_line: 36
+    end_line: 40
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: ''
+      type: authContextJson
+    - name: inputJson
+      type: string
+    returns:
+    - string
+    - string
+  calls:
+  - args.String
+  - m.Called
 - name: Get
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  position:
+    start_line: 41
+    end_line: 45
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: ''
+      type: authContextJson
+    - name: queryJson
+      type: string
+    returns:
+    - string
+    - string
+  calls:
+  - args.String
+  - m.Called
 - name: Init
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  position:
+    start_line: 46
+    end_line: 50
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: ''
+      type: authContextJson
+    - name: configJson
+      type: string
+    returns:
+    - string
+    - string
+  calls:
+  - args.String
+  - m.Called
 - name: Notify
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  position:
+    start_line: 51
+    end_line: 55
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: ''
+      type: authContextJson
+    - name: eventJson
+      type: string
+    returns:
+    - string
+    - string
+  calls:
+  - args.String
+  - m.Called
 - name: Close
   kind: method
   receiver: MockCicWasmHost
   description: Close mocks the closing of the WasmManager.
   references: []
+  position:
+    start_line: 56
+    end_line: 60
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - error
+  calls:
+  - args.Error
+  - m.Called
 - name: _
   kind: var
   description: Ensure MockCicWasmHost implements the cicWasmHost interface.

@@ -15,14 +15,46 @@ objects:
   implements: []
   references:
   - crypto.CryptoService
+  position:
+    start_line: 12
+    end_line: 14
+  fields:
+  - name: CryptoService
+    type: crypto.CryptoService
+    tag: ''
 - name: NewLocalWorker
   kind: func
   description: NewLocalWorker creates a new worker that uses the given CryptoService.
   references:
   - crypto.CryptoService
+  position:
+    start_line: 17
+    end_line: 21
+  signature:
+    params:
+    - name: svc
+      type: crypto.CryptoService
+    returns:
+    - '*LocalWorker'
 - name: Decrypt
   kind: method
   receiver: LocalWorker
   description: Decrypt calls the underlying CryptoService's Decrypt method. In a real
     implementation, this would run in a separate process with its own identity.
   references: []
+  position:
+    start_line: 25
+    end_line: 42
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: req
+      type: DecryptRequest
+    returns:
+    - '*DecryptResponse'
+    - error
+  calls:
+  - CryptoService.Decrypt
+  - fmt.Errorf
+  - worker

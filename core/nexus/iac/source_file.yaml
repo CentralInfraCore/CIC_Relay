@@ -13,12 +13,47 @@ objects:
   description: FileSource implements IaCSource for the local file system.
   implements: []
   references: []
+  position:
+    start_line: 12
+    end_line: 14
+  fields:
+  - name: RootPath
+    type: string
+    tag: ''
 - name: NewFileSource
   kind: func
   description: NewFileSource creates a new FileSource rooted at the given path.
   references: []
+  position:
+    start_line: 17
+    end_line: 21
+  signature:
+    params:
+    - name: rootPath
+      type: string
+    returns:
+    - '*FileSource'
 - name: FetchConfig
   kind: method
   receiver: FileSource
   description: FetchConfig walks the directory tree and reads all YAML/JSON files.
   references: []
+  position:
+    start_line: 24
+    end_line: 66
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - map[string][]byte
+    - error
+  calls:
+  - d.IsDir
+  - d.Name
+  - filepath.Ext
+  - filepath.Rel
+  - filepath.WalkDir
+  - func
+  - os.ReadFile
+  - strings.ToLower

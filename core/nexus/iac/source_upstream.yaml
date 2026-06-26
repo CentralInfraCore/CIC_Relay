@@ -17,6 +17,22 @@ objects:
   implements: []
   references:
   - logrus.Logger
+  position:
+    start_line: 27
+    end_line: 32
+  fields:
+  - name: url
+    type: string
+    tag: ''
+  - name: token
+    type: string
+    tag: ''
+  - name: client
+    type: '*http.Client'
+    tag: ''
+  - name: logger
+    type: '*logrus.Logger'
+    tag: ''
 - name: NewUpstreamSource
   kind: func
   description: NewUpstreamSource creates an UpstreamSource with the given URL, bearer
@@ -24,6 +40,21 @@ objects:
     to the 10s default.
   references:
   - logrus.Logger
+  position:
+    start_line: 36
+    end_line: 46
+  signature:
+    params:
+    - name: ''
+      type: url
+    - name: token
+      type: string
+    - name: timeout
+      type: time.Duration
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - '*UpstreamSource'
 - name: NewUpstreamSourceFromEnv
   kind: func
   description: NewUpstreamSourceFromEnv reads CIC_UPSTREAM_URL, CIC_UPSTREAM_TOKEN,
@@ -32,6 +63,21 @@ objects:
     FileSource.
   references:
   - logrus.Logger
+  position:
+    start_line: 51
+    end_line: 67
+  signature:
+    params:
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - '*UpstreamSource'
+    - error
+  calls:
+  - NewUpstreamSource
+  - fmt.Errorf
+  - os.Getenv
+  - time.ParseDuration
 - name: FetchConfig
   kind: method
   receiver: UpstreamSource
@@ -40,16 +86,75 @@ objects:
     "<content>"}.'
   references:
   - logrus.Fields
+  position:
+    start_line: 71
+    end_line: 96
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - map[string][]byte
+    - error
+  calls:
+  - Warn
+  - WithField
+  - ctx.Done
+  - ctx.Err
+  - fmt.Errorf
+  - logger.WithError
+  - logger.WithFields
+  - s.fetchOnce
+  - time.After
 - name: fetchOnce
   kind: method
   receiver: UpstreamSource
   description: fetchOnce performs a single HTTP GET and parses the response.
   references: []
+  position:
+    start_line: 99
+    end_line: 125
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - map[string][]byte
+    - error
+  calls:
+  - Body.Close
+  - Header.Get
+  - Header.Set
+  - client.Do
+  - fmt.Errorf
+  - http.NewRequestWithContext
+  - io.ReadAll
+  - parseUpstreamResponse
 - name: parseUpstreamResponse
   kind: func
   description: parseUpstreamResponse detects JSON vs YAML from Content-Type and unmarshals
     the body as map[string]string, returning map[string][]byte.
   references: []
+  position:
+    start_line: 129
+    end_line: 150
+  signature:
+    params:
+    - name: contentType
+      type: string
+    - name: body
+      type: '[]byte'
+    returns:
+    - map[string][]byte
+    - error
+  calls:
+  - JSON
+  - byte
+  - fmt.Errorf
+  - json.Unmarshal
+  - strings.Contains
+  - strings.ToLower
+  - yaml.Unmarshal
 - name: retryBackoff
   kind: var
   description: ''
