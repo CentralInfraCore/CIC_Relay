@@ -12,16 +12,76 @@ objects:
   kind: func
   description: main is required by the compiler, but we don't want it to run automatically.
   references: []
+  position:
+    start_line: 10
+    end_line: 10
+  signature:
+    params: []
+    returns: []
 - name: allocate
   kind: func
   description: export allocate
   references: []
+  position:
+    start_line: 13
+    end_line: 15
+  signature:
+    params:
+    - name: size
+      type: uint32
+    returns:
+    - uintptr
+  calls:
+  - C.malloc
+  - C.size_t
+  - uintptr
 - name: deallocate
   kind: func
   description: export deallocate
   references: []
+  position:
+    start_line: 18
+    end_line: 20
+  signature:
+    params:
+    - name: ptr
+      type: uintptr
+    - name: size
+      type: uint32
+    returns: []
+  calls:
+  - C.free
+  - unsafe.Pointer
 - name: Call
   kind: func
   description: Call is the main entry point for the module. It returns a hardcoded
     JSON string based on the `op` parameter provided by the host. export Call
   references: []
+  position:
+    start_line: 26
+    end_line: 51
+  signature:
+    params:
+    - name: ''
+      type: opPtr
+    - name: ''
+      type: opLen
+    - name: ''
+      type: authContextPtr
+    - name: ''
+      type: authContextLen
+    - name: ''
+      type: inputPtr
+    - name: inputLen
+      type: uint32
+    returns:
+    - uint64
+  calls:
+  - allocate
+  - byte
+  - string
+  - uint32
+  - uint64
+  - uintptr
+  - unsafe.Pointer
+  - unsafe.Slice

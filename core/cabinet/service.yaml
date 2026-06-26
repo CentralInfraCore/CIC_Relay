@@ -191,22 +191,61 @@ objects:
   receiver: executionContext
   description: Get retrieves a value from the context's variable store.
   references: []
+  position:
+    start_line: 52
+    end_line: 52
+  signature:
+    params:
+    - name: key
+      type: string
+    returns:
+    - interface
 - name: Set
   kind: method
   receiver: executionContext
   description: Set stores a value in the context's variable store.
   references: []
+  position:
+    start_line: 58
+    end_line: 60
+  signature:
+    params:
+    - name: key
+      type: string
+    - name: value
+      type: interface{}
+    returns: []
 - name: GetModule
   kind: method
   receiver: executionContext
   description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
     if not present.
   references: []
+  position:
+    start_line: 63
+    end_line: 66
+  signature:
+    params:
+    - name: id
+      type: string
+    returns:
+    - '*ModuleDescriptor'
+    - bool
 - name: StoreModule
   kind: method
   receiver: executionContext
   description: StoreModule stores a newly materialized module in the context.
   references: []
+  position:
+    start_line: 69
+    end_line: 71
+  signature:
+    params:
+    - name: mod
+      type: '*ModuleDescriptor'
+    returns: []
+  calls:
+  - mod.ID
 - name: WithRecorder
   kind: func
   description: WithRecorder sets an optional ExecutionRecorder on the service. If
@@ -286,11 +325,81 @@ objects:
   references:
   - logrus.WithFields
   - logrus.Fields
+  position:
+    start_line: 145
+    end_line: 313
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: in
+      type: '*SetPayload'
+    returns:
+    - '*SetResponse'
+    - error
+  calls:
+  - ComputeChainHashV1
+  - Elem
+  - Format
+  - In
+  - Interface
+  - IsNil
+  - NewExecutionContext
+  - NumIn
+  - NumOut
+  - Out
+  - ParseExecutionGraph
+  - ProofTrace
+  - UTC
+  - Warn
+  - byte
+  - c.GetModule
+  - c.GetWorkflow
+  - clockFn
+  - execCtx.Get
+  - execCtx.Set
+  - execution
+  - fmt.Errorf
+  - func
+  - funcValue.Call
+  - funcValue.Kind
+  - funcValue.Type
+  - hashValue
+  - host.Close
+  - host.Get
+  - host.Init
+  - host.Notify
+  - host.Process
+  - implementation
+  - isWasmTimeout
+  - json.Marshal
+  - json.Unmarshal
+  - logrus.WithFields
+  - recorder.Record
+  - reflect.TypeOf
+  - reflect.ValueOf
+  - string
+  - strings.ToLower
+  - time.Now
+  - validateInputSchema
+  - wasmManager.NewHostInstance
+  - workflow.ID
 - name: Close
   kind: method
   receiver: cabinetService
   description: Close closes the underlying WASM runtime and frees all associated resources.
   references: []
+  position:
+    start_line: 316
+    end_line: 318
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - error
+  calls:
+  - wasmManager.Close
 - name: isWasmTimeout
   kind: func
   description: isWasmTimeout checks whether a WASM errorResult string signals a timeout.
@@ -313,30 +422,99 @@ objects:
   receiver: cabinetService
   description: PutSchema stores a Schema in the underlying SchemaStore.
   references: []
+  position:
+    start_line: 330
+    end_line: 334
+  signature:
+    params:
+    - name: s
+      type: '*Schema'
+    returns:
+    - error
+  calls:
+  - schemas.Put
 - name: GetSchema
   kind: method
   receiver: cabinetService
   description: GetSchema retrieves a Schema by ID, returning ErrNotFound if not present.
   references: []
+  position:
+    start_line: 337
+    end_line: 342
+  signature:
+    params:
+    - name: id
+      type: string
+    returns:
+    - '*Schema'
+    - error
+  calls:
+  - schemas.Get
 - name: PutModule
   kind: method
   receiver: cabinetService
   description: PutModule stores a ModuleDescriptor in the underlying ModuleStore.
   references: []
+  position:
+    start_line: 345
+    end_line: 349
+  signature:
+    params:
+    - name: m
+      type: '*ModuleDescriptor'
+    returns:
+    - error
+  calls:
+  - modules.Put
 - name: GetModule
   kind: method
   receiver: cabinetService
   description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
     if not present.
   references: []
+  position:
+    start_line: 352
+    end_line: 357
+  signature:
+    params:
+    - name: id
+      type: string
+    returns:
+    - '*ModuleDescriptor'
+    - error
+  calls:
+  - modules.Get
 - name: PutWorkflow
   kind: method
   receiver: cabinetService
   description: PutWorkflow stores a Workflow in the underlying WorkflowStore.
   references: []
+  position:
+    start_line: 360
+    end_line: 364
+  signature:
+    params:
+    - name: w
+      type: '*Workflow'
+    returns:
+    - error
+  calls:
+  - workflows.Put
 - name: GetWorkflow
   kind: method
   receiver: cabinetService
   description: GetWorkflow retrieves a Workflow by ID, returning ErrNotFound if not
     present.
   references: []
+  position:
+    start_line: 367
+    end_line: 372
+  signature:
+    params:
+    - name: id
+      type: string
+    returns:
+    - '*Workflow'
+    - error
+  calls:
+  - workflows.Get

@@ -33,8 +33,42 @@ objects:
   description: ValidateSet performs minimal structural validation of SetPayload and
     checks if referenced entities (workflow, modules) exist.
   references: []
+  position:
+    start_line: 17
+    end_line: 62
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: v
+      type: '*SetPayload'
+    returns:
+    - error
+  calls:
+  - IsNotFound
+  - a.GetModule
+  - a.GetWorkflow
+  - fmt.Errorf
+  - string
 - name: Set
   kind: method
   receiver: API
   description: Set is the entry point for schema validation and workflow execution.
   references: []
+  position:
+    start_line: 65
+    end_line: 76
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: in
+      type: '*SetPayload'
+    returns:
+    - '*SetResponse'
+    - error
+  calls:
+  - Cabinet.Setx
+  - CanonicalizeSetPayload
+  - a.ValidateSet
+  - fmt.Errorf

@@ -23,8 +23,45 @@ objects:
   - packages.NeedDeps
   - packages.Load
   - packages.PrintErrors
+  position:
+    start_line: 25
+    end_line: 92
+  signature:
+    params:
+    - name: cfg
+      type: '*packages.Config'
+    - name: changedFiles
+      type: '[]string'
+    returns:
+    - '[]string'
+    - error
+  calls:
+  - error
+  - filepath.Abs
+  - filepath.Dir
+  - filepath.Join
+  - fmt.Errorf
+  - packages.Load
+  - packages.PrintErrors
+  - sort.Strings
+  - strings.HasSuffix
+  - strings.TrimSpace
 - name: main
   kind: func
   description: ''
   references:
   - packages.Config
+  position:
+    start_line: 93
+    end_line: 114
+  signature:
+    params: []
+    returns: []
+  calls:
+  - affectedPackages
+  - bufio.NewScanner
+  - fatalf
+  - fmt.Println
+  - scanner.Err
+  - scanner.Scan
+  - scanner.Text

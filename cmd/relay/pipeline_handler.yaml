@@ -63,3 +63,38 @@ objects:
   - logrus.Fields
   - cabinet.SetPayload
   - cabinet.IsTimeout
+  position:
+    start_line: 31
+    end_line: 117
+  signature:
+    params:
+    - name: w
+      type: http.ResponseWriter
+    - name: r
+      type: '*http.Request'
+    returns: []
+  calls:
+  - Body.Close
+  - Encode
+  - Error
+  - Info
+  - Set
+  - String
+  - Warn
+  - WithError
+  - api.Setx
+  - cabinet.IsTimeout
+  - err.Error
+  - int64
+  - io.LimitReader
+  - io.ReadAll
+  - json.NewEncoder
+  - json.Unmarshal
+  - logEntry.Info
+  - logEntry.WithField
+  - logger.WithFields
+  - r.Context
+  - uuid.New
+  - w.Header
+  - w.WriteHeader
+  - writeError
