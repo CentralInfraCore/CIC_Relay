@@ -120,7 +120,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 		}
 
 		// Create a workflow that uses the WASM module
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.success", Version: "1.0"}, []string{"test.wasm@1.0.Process(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.success", Steps: []string{"test.wasm@1.0.Process(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -150,7 +150,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 			wasmManager: mockWasmManager,
 		}
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.init.success", Version: "1.0"}, []string{"test.wasm@1.0.Init(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.init.success", Steps: []string{"test.wasm@1.0.Init(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -178,7 +178,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 			wasmManager: mockWasmManager,
 		}
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.get.success", Version: "1.0"}, []string{"test.wasm@1.0.Get(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.get.success", Steps: []string{"test.wasm@1.0.Get(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -206,7 +206,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 			wasmManager: mockWasmManager,
 		}
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.notify.success", Version: "1.0"}, []string{"test.wasm@1.0.Notify(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.notify.success", Steps: []string{"test.wasm@1.0.Notify(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -246,7 +246,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 		}
 
 		// Create a workflow that uses the WASM module
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.host.fail", Version: "1.0"}, []string{"test.wasm@1.0.Process(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.host.fail", Steps: []string{"test.wasm@1.0.Process(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -270,7 +270,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 
 		svc := &cabinetService{modules: modStore, workflows: wfStore, wasmManager: mockWasmManager}
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.bad.op", Version: "1.0"}, []string{"test.wasm@1.0.Delete(input)"}) // Delete is not a valid op
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.bad.op", Steps: []string{"test.wasm@1.0.Delete(input)"}}, WorkflowSigning{}) // Delete is not a valid op
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -293,7 +293,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 
 		svc := &cabinetService{modules: modStore, workflows: wfStore, wasmManager: mockWasmManager}
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.guest.fail", Version: "1.0"}, []string{"test.wasm@1.0.Process(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.guest.fail", Steps: []string{"test.wasm@1.0.Process(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -319,7 +319,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 
 		svc := &cabinetService{modules: modStore, workflows: wfStore, wasmManager: mockWasmManager}
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.timeout", Version: "1.0"}, []string{"test.wasm@1.0.Process(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.timeout", Steps: []string{"test.wasm@1.0.Process(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -341,7 +341,7 @@ func TestSetx_Wasm_Unit(t *testing.T) {
 
 		svc := &cabinetService{modules: modStore, workflows: wfStore, wasmManager: mockWasmManager}
 
-		wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.wasm.marshal.fail", Version: "1.0"}, []string{"test.wasm@1.0.Process(input)"})
+		wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.wasm.marshal.fail", Steps: []string{"test.wasm@1.0.Process(input)"}}, WorkflowSigning{})
 		require.NoError(t, err)
 		svc.workflows.Put(wf)
 
@@ -361,7 +361,7 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Schema Put/Get", func(t *testing.T) {
-		schema, err := NewSchema(context.Background(), BaseBlock{Name: "s1", Version: "v1"}, SchemaDef{})
+		schema, err := NewSchema(context.Background(), SchemaIdentity{Version: "v1"}, SchemaConfig{Name: "s1"}, SchemaSigning{})
 		require.NoError(t, err, "NewSchema should succeed for valid input")
 
 		err = svc.PutSchema(schema)
@@ -387,7 +387,7 @@ func TestCabinetService_PutAndGet_Success(t *testing.T) {
 	})
 
 	t.Run("Workflow Put/Get", func(t *testing.T) {
-		workflow, err := NewWorkflow(context.Background(), BaseBlock{Name: "wf1", Version: "v1"}, []string{"step1"})
+		workflow, err := NewWorkflow(context.Background(), WorkflowIdentity{Version: "v1"}, WorkflowConfig{Name: "wf1", Steps: []string{"step1"}}, WorkflowSigning{})
 		require.NoError(t, err, "NewWorkflow should succeed for valid input")
 
 		err = svc.PutWorkflow(workflow)
@@ -429,7 +429,7 @@ func TestSetx_ProofTrace(t *testing.T) {
 	mod.NativeImpl = native
 	modStore.Put(mod)
 
-	wf, err := NewWorkflow(ctx, BaseBlock{Name: "wf.trace", Version: "1.0"}, []string{"echo@1.0.echo(input)"})
+	wf, err := NewWorkflow(ctx, WorkflowIdentity{Version: "1.0"}, WorkflowConfig{Name: "wf.trace", Steps: []string{"echo@1.0.echo(input)"}}, WorkflowSigning{})
 	require.NoError(t, err)
 	wfStore.Put(wf)
 

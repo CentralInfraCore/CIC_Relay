@@ -61,11 +61,11 @@ func TestHashingTimeout(t *testing.T) {
 	time.Sleep(2 * time.Nanosecond)
 
 	// 2. Prepare dummy data for a schema.
-	meta := BaseBlock{Name: "timeout.test", Version: "1.0"}
-	spec := SchemaDef{}
+	identity := SchemaIdentity{Version: "1.0"}
+	config := SchemaConfig{Name: "timeout.test"}
 
 	// 3. Call a constructor function with the cancelled context.
-	_, err := NewSchema(ctx, meta, spec)
+	_, err := NewSchema(ctx, identity, config, SchemaSigning{})
 
 	// 4. Verify that the error is due to the context deadline being exceeded.
 	require.Error(t, err, "Expected an error due to timeout")

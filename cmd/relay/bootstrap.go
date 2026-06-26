@@ -113,12 +113,18 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	}
 
 	// --- Register cic.schema.compile workflow ---
-	compileMeta := cabinet.BaseBlock{Name: "cic.schema.compile", Version: "1.0", Description: "Schema compilation workflow: assert source, build, sign artifact."}
-	compileWorkflow, err := cabinet.NewWorkflow(ctx, compileMeta, []string{
-		"cic.source.assert@1.0.assert(input) -> assert_result",
-		"cic.schema.build@1.0.build(assert_result) -> artifact",
-		"cic.artifact.sign@1.0.sign(artifact) -> signed_artifact",
-	})
+	compileWorkflow, err := cabinet.NewWorkflow(ctx,
+		cabinet.WorkflowIdentity{Version: "1.0"},
+		cabinet.WorkflowConfig{
+			Name:        "cic.schema.compile",
+			Description: "Schema compilation workflow: assert source, build, sign artifact.",
+			Steps: []string{
+				"cic.source.assert@1.0.assert(input) -> assert_result",
+				"cic.schema.build@1.0.build(assert_result) -> artifact",
+				"cic.artifact.sign@1.0.sign(artifact) -> signed_artifact",
+			},
+		},
+		cabinet.WorkflowSigning{})
 	if err != nil {
 		return fmt.Errorf("failed to create cic.schema.compile workflow: %w", err)
 	}
@@ -141,10 +147,14 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	}
 
 	// --- Register cert.selfsigned workflow ---
-	certWorkflowMeta := cabinet.BaseBlock{Name: "cert.selfsigned", Version: "1.0", Description: "Self-signed certificate generation workflow (dev level)."}
-	certWorkflow, err := cabinet.NewWorkflow(ctx, certWorkflowMeta, []string{
-		"cert.selfsigned@1.0.generate(input) -> cert",
-	})
+	certWorkflow, err := cabinet.NewWorkflow(ctx,
+		cabinet.WorkflowIdentity{Version: "1.0"},
+		cabinet.WorkflowConfig{
+			Name:        "cert.selfsigned",
+			Description: "Self-signed certificate generation workflow (dev level).",
+			Steps:       []string{"cert.selfsigned@1.0.generate(input) -> cert"},
+		},
+		cabinet.WorkflowSigning{})
 	if err != nil {
 		return fmt.Errorf("failed to create cert.selfsigned workflow: %w", err)
 	}
@@ -199,20 +209,22 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	}
 
 	// --- Register cic.schemas.pipeline workflow ---
-	pipelineWorkflowMeta := cabinet.BaseBlock{
-		Name:        "cic.schemas.pipeline",
-		Version:     "1.0",
-		Description: "Full CIC-Schemas build pipeline: clone, test, validate, release, assert, build, sign.",
-	}
-	pipelineWorkflow, err := cabinet.NewWorkflow(ctx, pipelineWorkflowMeta, []string{
-		"cic.pipeline.start@1.0.start(input) -> start_result",
-		"cic.pipeline.test@1.0.test(start_result) -> test_result",
-		"cic.pipeline.validate@1.0.validate(test_result) -> validate_result",
-		"cic.pipeline.release@1.0.release(validate_result) -> release_result",
-		"cic.source.assert@1.0.assert(release_result) -> assert_result",
-		"cic.schema.build@1.0.build(assert_result) -> artifact",
-		"cic.artifact.sign@1.0.sign(artifact) -> signed_artifact",
-	})
+	pipelineWorkflow, err := cabinet.NewWorkflow(ctx,
+		cabinet.WorkflowIdentity{Version: "1.0"},
+		cabinet.WorkflowConfig{
+			Name:        "cic.schemas.pipeline",
+			Description: "Full CIC-Schemas build pipeline: clone, test, validate, release, assert, build, sign.",
+			Steps: []string{
+				"cic.pipeline.start@1.0.start(input) -> start_result",
+				"cic.pipeline.test@1.0.test(start_result) -> test_result",
+				"cic.pipeline.validate@1.0.validate(test_result) -> validate_result",
+				"cic.pipeline.release@1.0.release(validate_result) -> release_result",
+				"cic.source.assert@1.0.assert(release_result) -> assert_result",
+				"cic.schema.build@1.0.build(assert_result) -> artifact",
+				"cic.artifact.sign@1.0.sign(artifact) -> signed_artifact",
+			},
+		},
+		cabinet.WorkflowSigning{})
 	if err != nil {
 		return fmt.Errorf("failed to create cic.schemas.pipeline workflow: %w", err)
 	}
@@ -242,16 +254,16 @@ type ComponentHeader struct {
 
 // SchemaFile defines the structure of a Schema YAML file.
 type SchemaFile struct {
-	Metadata cabinet.BaseBlock `yaml:"metadata"`
-	Spec     cabinet.SchemaDef `yaml:"spec"`
+	Identity cabinet.SchemaIdentity `yaml:"identity"`
+	Config   cabinet.SchemaConfig   `yaml:"config"`
+	Signing  cabinet.SchemaSigning  `yaml:"signing"`
 }
 
 // WorkflowFile defines the structure of a Workflow YAML file.
 type WorkflowFile struct {
-	Metadata cabinet.BaseBlock `yaml:"metadata"`
-	Spec     struct {
-		Steps []string `yaml:"steps"`
-	} `yaml:"spec"`
+	Identity cabinet.WorkflowIdentity `yaml:"identity"`
+	Config   cabinet.WorkflowConfig   `yaml:"config"`
+	Signing  cabinet.WorkflowSigning  `yaml:"signing"`
 }
 
 // ModuleFile defines the structure of a Module YAML file.
@@ -364,7 +376,7 @@ func loadSchema(ctx context.Context, svc cabinet.Cabinet, content []byte) error 
 	if err := yaml.Unmarshal(content, &file); err != nil {
 		return fmt.Errorf("unmarshal schema file: %w", err)
 	}
-	schema, err := cabinet.NewSchema(ctx, file.Metadata, file.Spec)
+	schema, err := cabinet.NewSchema(ctx, file.Identity, file.Config, file.Signing)
 	if err != nil {
 		return fmt.Errorf("schema validation: %w", err)
 	}
@@ -380,7 +392,7 @@ func loadWorkflow(ctx context.Context, svc cabinet.Cabinet, content []byte) erro
 	if err := yaml.Unmarshal(content, &file); err != nil {
 		return fmt.Errorf("unmarshal workflow file: %w", err)
 	}
-	workflow, err := cabinet.NewWorkflow(ctx, file.Metadata, file.Spec.Steps)
+	workflow, err := cabinet.NewWorkflow(ctx, file.Identity, file.Config, file.Signing)
 	if err != nil {
 		return fmt.Errorf("workflow validation: %w", err)
 	}

@@ -1,74 +1,14 @@
 apiVersion: cic/v1
 kind: Schema
-metadata:
-  name: proof_artifact
+identity:
+  kind: Schema
+  namespace: cic
   version: "1.0"
+config:
+  name: proof_artifact
   description: >
     Unified proof artifact schema for CIC-Relay.
     Every ProofTrace-based execution produces one artifact of this shape.
     The schema is the contract between runtime, Git state recorder, and verifier.
-spec:
-  type: object
-  required:
-    - workflow_id
-    - source_digest
-    - chain_hash
-    - steps
-    - timestamp
-  properties:
-    workflow_id:
-      type: string
-      description: "ID of the executed workflow (name@version)."
-    source_digest:
-      type: string
-      description: "SHA-256 of the source tree at build time (anchors chain to code revision)."
-    chain_hash:
-      type: string
-      description: >
-        SHA-256 over: sourceDigest + workflowID + per-step (name, module, inputHash, outputHash).
-        Computed by computeChainHash(). Uniquely identifies this execution.
-    steps:
-      type: array
-      items:
-        type: object
-        required:
-          - name
-          - module
-          - input_hash
-          - output_hash
-        properties:
-          name:
-            type: string
-            description: "Step name as declared in the workflow."
-          module:
-            type: string
-            description: "Module ID that executed this step (name@version)."
-          input_hash:
-            type: string
-            description: "SHA-256 of the canonical JSON input passed to this step."
-          output_hash:
-            type: string
-            description: "SHA-256 of the canonical JSON output produced by this step."
-    timestamp:
-      type: string
-      description: "RFC3339 timestamp of execution completion."
-    pose_result:
-      type: string
-      description: "Optional PoSE verification result: 'VERIFIED' | 'DRIFT' | 'SKIPPED'."
-      enum: [VERIFIED, DRIFT, SKIPPED]
-    commit_record:
-      type: object
-      description: "Optional state commit record, populated after PoSE verification."
-      properties:
-        id:
-          type: string
-          description: "State hash (equals chain_hash for committed states)."
-        trace_head:
-          type: string
-          description: "ProofTrace event ID that anchors this commit."
-        pose_root:
-          type: string
-          description: "PBS root hash at commit time."
-        actor:
-          type: string
-          description: "Identity of the responsible party."
+    Required fields: workflow_id, source_digest, chain_hash, steps, timestamp.
+    Optional: pose_result (VERIFIED|DRIFT|SKIPPED), commit_record.

@@ -40,6 +40,12 @@ jobs:
       - name: Vulnerability scan
         run: govulncheck ./...
 
+      - name: Install deadcode
+        run: go install golang.org/x/tools/cmd/deadcode@latest
+
+      - name: Dead code scan
+        run: deadcode ./...
+
       - name: Check for symbol drift
         run: |
           go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md
@@ -59,6 +65,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -69,16 +77,45 @@ jobs:
         run: |
           go mod download || true
 
-      - name: Generate coverage report
+      # On pull_request, test the full module — this is the merge gate.
+      # On push, scope to the packages affected by the changed files (the
+      # changed packages plus everything that transitively imports them) so
+      # incremental pushes get fast feedback without paying for a full run.
+      - name: Determine test scope
+        id: scope
         run: |
-          go test -race -covermode=atomic -coverprofile=coverage.out ./...
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "pkgs=./..." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            BASE=$(git merge-base origin/main HEAD 2>/dev/null || true)
+          fi
+          if [ -z "$BASE" ]; then
+            echo "pkgs=./..." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PKGS=$(git diff --name-only "$BASE" "${{ github.sha }}" -- '*.go' | go run ./tools/affected | tr '\n' ' ')
+          echo "pkgs=${PKGS:-none}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate coverage report
+        if: steps.scope.outputs.pkgs != 'none'
+        run: |
+          go test -race -covermode=atomic -coverprofile=coverage.out ${{ steps.scope.outputs.pkgs }}
           go tool cover -html=coverage.out -o coverage.html
 
+      - name: No affected packages
+        if: steps.scope.outputs.pkgs == 'none'
+        run: echo "No Go packages affected by this push — skipping coverage run."
+
       - name: Per-package coverage thresholds
+        if: steps.scope.outputs.pkgs != 'none'
         run: |
           set -euo pipefail
           FAIL=0
-          for p in $(go list ./... | grep -v /vendor/); do
+          for p in $(go list ${{ steps.scope.outputs.pkgs }} | grep -v /vendor/); do
             # Packages with no testable code
             case "$p" in
               */core/nexus/types) echo "$p: skip (types-only)"; continue ;;
@@ -88,7 +125,7 @@ jobs:
             go test -coverprofile=/tmp/pkg_cover.out "$p" > /dev/null 2>&1 || continue
             pc=$(go tool cover -func=/tmp/pkg_cover.out | awk 'END{gsub(/%/,""); print $3+0}')
             case "$p" in
-              */cmd/relay)                   min=80  ;;
+              */cmd/relay)                   min=90  ;;
               */core/cabinet)                min=93  ;;
               */core/modules/certselfsigned) min=99  ;;
               */core/modules/cibuild)        min=94  ;;
@@ -122,6 +159,9 @@ jobs:
           path: coverage.html
 
   mutation:
+    # Gremlins mutation testing is too slow to run on every push — it's a
+    # merge gate only, not incremental feedback.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

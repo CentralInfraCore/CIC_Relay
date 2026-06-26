@@ -5,7 +5,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 -include mk/infra.mk
 
 # ---- Phony ----
-.PHONY: all help infra-init prepare fmt fmt-go fmt-check lint lint-go vet quality \
+.PHONY: all help infra-init prepare fmt fmt-go fmt-check lint lint-go vet quality deadcode \
 	test test-go test-py coverage coverage-threshold coverage-profile coverage-html \
 	build build-relay verify manifest-src \
 	tdd cache-populate mq-publish verify-auto verify-debug \
@@ -145,7 +145,7 @@ help: ## Show available make targets
 	@echo "  typecheck           Run static type checking (Python MyPy)."
 	@echo "  check               Run all code quality checks."
 	@echo "  vuln                Run Go vulnerability scan."
-	@echo "  quality             Go quality gate (fmt-check + lint-go + vet + vuln)."
+	@echo "  quality             Go quality gate (fmt-check + lint-go + vet + vuln + deadcode)."
 	@echo ""
 	@echo "Coverage:"
 	@echo "  coverage            Run tests with coverage (profile + HTML)."
@@ -223,11 +223,11 @@ endif
 # =============================================================================
 symbols: ## Generate symbols documentation
 	@echo "Generating symbols..."
-	@$(call GO_FIXER, go run ./tools/symbolsgen)
+	@$(call GO_FIXER, go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md)
 
 check-symbols: ## Check if symbols documentation is up-to-date
 	@echo "Checking for symbol drift..."
-	@$(call GO_FIXER, go run ./tools/symbolsgen && (git diff --exit-code context/SYMBOLS.md))
+	@$(call GO_FIXER, go run ./tools/symbolsgen context/SYMBOLS.ALLOWPKGS context/SYMBOLS.md && (git diff --exit-code context/SYMBOLS.md))
 
 # =============================================================================
 # Code Quality — Go
@@ -280,7 +280,15 @@ vuln: ## Run Go vulnerability scan (govulncheck)
 		GO111MODULE=on GOFLAGS="$(GOFLAGS)" govulncheck $$PKGS \
 	)
 
-quality: fmt-check lint-go vet vuln ## Go quality gate: all checks must pass
+deadcode: ## Scan for functions unreachable from any main entrypoint (catches exported dead code staticcheck misses)
+	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
+		set -euo pipefail; \
+		command -v deadcode >/dev/null 2>&1 || GOFLAGS="" go install golang.org/x/tools/cmd/deadcode@latest; \
+		echo "deadcode ./..."; \
+		GO111MODULE=on GOFLAGS="$(GOFLAGS)" deadcode ./... \
+	)
+
+quality: fmt-check lint-go vet vuln deadcode ## Go quality gate: all checks must pass
 
 # =============================================================================
 # Code Quality — combined (Go + Python)
@@ -576,6 +584,7 @@ cache-populate: ## Pre-populate Go module and tool cache
 		&& echo ineffassign && go install github.com/gordonklaus/ineffassign@v0.1.0 \
 		&& echo reflex && go install github.com/cespare/reflex@v0.3.1 \
 		&& echo govulncheck && go install golang.org/x/vuln/cmd/govulncheck@v1.1.4 \
+		&& echo deadcode && go install golang.org/x/tools/cmd/deadcode@latest \
 		&& echo gremlins && go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0 \
 		"
 

@@ -1,8 +1,10 @@
 apiVersion: relay.cic.com/v1
 kind: Workflow
-metadata:
-  name: order.workflow
+identity:
+  kind: Workflow
+  namespace: relay.cic.com
   version: "1.0"
-spec:
+config:
+  name: order.workflow
   steps:
     - "run: user"
