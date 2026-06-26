@@ -16,11 +16,17 @@ objects:
   references: []
 - name: Run
   kind: func
-  description: ''
+  description: Run reads JSON from input, canonicalizes it, and writes the result
+    to output.
   references:
   - canonicaljson.ToJSON
 - name: RunFunc
   kind: var
   description: RunFunc is a variable that holds the actual run function. It can be
     reassigned for testing purposes.
+  references: []
+- name: osExit
+  kind: var
+  description: osExit is a variable that holds the os.Exit function. It can be replaced
+    in tests to prevent actual process exit.
   references: []

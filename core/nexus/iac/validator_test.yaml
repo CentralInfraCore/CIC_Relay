@@ -1,0 +1,115 @@
+---
+package: iac
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: stubCabinet
+  kind: struct
+  description: stubCabinet implements cabinet.Cabinet with only GetSchema functional.
+    All other methods are no-ops — only schema resolution is tested here.
+  implements: []
+  references: []
+- name: GetSchema
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references:
+  - cabinet.Schema
+- name: PutSchema
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references:
+  - cabinet.Schema
+- name: PutModule
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor
+- name: GetModule
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor
+- name: PutWorkflow
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references:
+  - cabinet.Workflow
+- name: GetWorkflow
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references:
+  - cabinet.Workflow
+- name: Setx
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references:
+  - cabinet.SetPayload
+  - cabinet.SetResponse
+- name: Close
+  kind: method
+  receiver: stubCabinet
+  description: ''
+  references: []
+- name: newStubCabinet
+  kind: func
+  description: newStubCabinet returns a cabinet stub with the given schema IDs pre-populated.
+  references: []
+- name: makeTestResource
+  kind: func
+  description: ''
+  references:
+  - types.ResourceSpec
+  - types.ResourceMetaName
+  - types.SchemaRefName
+  - types.ResourceStateDesired
+- name: TestIaCValidator_ValidateResource_SchemaFound
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: TestIaCValidator_ValidateResource_SchemaNotFound
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestIaCValidator_Validate_Graph_AllValid
+  kind: func
+  description: ''
+  references:
+  - types.Graph
+  - types.Service
+  - types.ServiceSpecResources
+  - types.ResourceSpec
+  - require.NoError
+- name: TestIaCValidator_Validate_Graph_PartialFailure
+  kind: func
+  description: ''
+  references:
+  - types.Graph
+  - types.Service
+  - types.ServiceSpecResources
+  - types.ResourceSpec
+  - require.Error
+  - assert.Contains
+  - assert.NotContains
+- name: TestIaCValidator_Validate_EmptyGraph
+  kind: func
+  description: ''
+  references:
+  - types.GraphServices
+  - types.Service
+  - require.NoError

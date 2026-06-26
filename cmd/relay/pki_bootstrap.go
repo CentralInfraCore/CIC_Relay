@@ -15,8 +15,8 @@ const (
 	TrustModeProd = "prod" // scaffold: CICPlatformCA not embedded — out-of-band provisioning required
 )
 
-// resolveTrustMode reads CIC_TRUST_MODE env var, defaults to "dev".
-// Missing or empty value is treated as dev with a WARN log.
+// resolveTrustMode reads the CIC_TRUST_MODE environment variable and returns the trust mode (dev or prod).
+// Missing or empty values default to "dev" with a warning log.
 func resolveTrustMode(logger *logrus.Logger) string {
 	mode := strings.TrimSpace(os.Getenv("CIC_TRUST_MODE"))
 	if mode == "" {

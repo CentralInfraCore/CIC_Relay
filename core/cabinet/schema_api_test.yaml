@@ -1,0 +1,30 @@
+---
+package: cabinet_test
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestSchema_ID_API_Basic
+  kind: func
+  description: ''
+  references:
+  - cabinet.SchemaMeta
+  - cabinet.BaseBlockName
+- name: TestSchema_ID_API_Empty
+  kind: func
+  description: ''
+  references:
+  - cabinet.SchemaMeta
+  - cabinet.BaseBlockName
+- name: TestSchema_GetData_API_EqualsSpec
+  kind: func
+  description: ''
+  references:
+  - cabinet.SchemaDef
+  - cabinet.SchemaMeta
+  - cabinet.BaseBlockName

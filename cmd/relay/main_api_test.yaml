@@ -1,0 +1,191 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: errorReader
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: assertErrorJSON
+  kind: func
+  description: assertErrorJSON checks that the response body is a valid error JSON
+    with the expected code.
+  references:
+  - assert.NoError
+  - assert.Equal
+  - assert.NotEmpty
+- name: TestSetHandler_Success
+  kind: func
+  description: TestSetHandler_Success tests the happy path for the /set endpoint.
+  references:
+  - cabinet.SetResponseResults
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ModuleDescriptor
+  - logrus.New
+  - assert.Equal
+  - cabinet.SetResponse
+  - assert.NoError
+- name: TestSetHandler_MethodNotAllowed
+  kind: func
+  description: TestSetHandler_MethodNotAllowed tests that the /set endpoint only accepts
+    POST requests.
+  references:
+  - logrus.New
+  - assert.Equal
+- name: TestSetHandler_BodyTooLarge
+  kind: func
+  description: TestSetHandler_BodyTooLarge tests that the handler rejects bodies larger
+    than the configured limit.
+  references:
+  - logrus.New
+  - assert.Equal
+- name: TestSetHandler_InvalidJSON
+  kind: func
+  description: TestSetHandler_InvalidJSON tests that the handler returns a 400 error
+    for malformed JSON.
+  references:
+  - logrus.New
+  - assert.Equal
+- name: TestSetHandler_CabinetInvalidError
+  kind: func
+  description: TestSetHandler_CabinetInvalidError tests the handler's response to
+    a validation error from the cabinet.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ErrInvalid
+  - logrus.New
+  - assert.Equal
+- name: TestSetHandler_Timeout
+  kind: func
+  description: TestSetHandler_Timeout tests the handler's response to a timeout from
+    the cabinet.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ErrTimeout
+  - logrus.New
+  - assert.Equal
+- name: TestSetHandler_CabinetInternalError
+  kind: func
+  description: TestSetHandler_CabinetInternalError tests the handler's response to
+    an unexpected internal error.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - logrus.New
+  - assert.Equal
+- name: TestSetHandler_ObsEmission_Success
+  kind: func
+  description: TestSetHandler_ObsEmission_Success verifies that a successful /set
+    call emits one TraceFrame (status=ok), one CounterPoint, and one LogRecord.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ModuleDescriptor
+  - cabinet.SetResponseResults
+  - logrus.New
+  - obs.CaptureSink
+  - assert.Equal
+  - assert.Len
+  - assert.NotEmpty
+  - assert.NotNil
+- name: TestSetHandler_ObsEmission_MethodNotAllowed
+  kind: func
+  description: TestSetHandler_ObsEmission_MethodNotAllowed verifies that a rejected
+    request emits a TraceFrame with status=rejected (no LogRecord).
+  references:
+  - logrus.New
+  - obs.CaptureSink
+  - assert.Equal
+  - assert.Len
+  - assert.Empty
+- name: TestSetHandler_ObsEmission_Timeout
+  kind: func
+  description: TestSetHandler_ObsEmission_Timeout verifies that a timed-out request
+    emits a TraceFrame with status=timeout.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ErrTimeout
+  - logrus.New
+  - obs.CaptureSink
+  - assert.Equal
+  - assert.Len
+- name: TestSetHandler_ObsEmission_NilSinks
+  kind: func
+  description: TestSetHandler_ObsEmission_NilSinks verifies that nil sinks do not
+    panic. Existing tests use &relayServer{} without obs fields (nil interface).
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ModuleDescriptor
+  - cabinet.SetResponseResults
+  - logrus.New
+  - assert.NotPanics
+  - assert.Equal
+- name: TestSetHandler_ChainAnchor_Success
+  kind: func
+  description: TestSetHandler_ChainAnchor_Success verifies that when Setx returns
+    a ProofTrace with a ChainHash, the TraceFrame carries a matching chain_anchor
+    attribute.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ModuleDescriptor
+  - cabinet.SetResponse
+  - cabinet.ProofTraceChainHash
+  - logrus.New
+  - obs.CaptureSink
+  - assert.Equal
+  - require.Len
+- name: TestSetHandler_ChainAnchor_Error
+  kind: func
+  description: TestSetHandler_ChainAnchor_Error verifies that when Setx returns an
+    error, the TraceFrame does NOT carry a chain_anchor attribute.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - logrus.New
+  - obs.CaptureSink
+  - assert.Equal
+  - require.Len
+  - assert.False
+- name: TestSimpleHandlers
+  kind: func
+  description: TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz,
+    /readyz, and /.
+  references:
+  - logrus.New
+  - assert.Equal
+  - assert.JSONEq
+- name: Read
+  kind: method
+  receiver: errorReader
+  description: ''
+  references: []
+- name: TestSetHandler_ReadBodyError
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.Equal
+- name: TestSetHandler_SourceDigestFromTreeHash
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponseResults
+  - logrus.New

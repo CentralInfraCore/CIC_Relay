@@ -1,0 +1,57 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: newTestPipelineServer
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+- name: TestPipelineHandler_MethodNotAllowed
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestPipelineHandler_BodyTooLarge
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.Equal
+- name: TestPipelineHandler_InvalidJSON
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestPipelineHandler_MissingFields
+  kind: func
+  description: ''
+  references:
+  - cabinet.SetResponse
+  - cabinet.ProofTraceChainHash
+  - assert.Equal
+  - mock.Anything
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponseResults
+- name: TestPipelineHandler_ConfigDefaultsUsed
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponseResults
+  - assert.Equal
+- name: TestPipelineHandler_InternalError
+  kind: func
+  description: ''
+  references:
+  - mock.Anything

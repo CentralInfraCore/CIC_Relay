@@ -1,0 +1,117 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: validProofArtifact
+  kind: func
+  description: ''
+  references:
+  - cabinet.ComputeChainHashV1
+- name: TestVerifyProofArtifact_Valid
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.Empty
+- name: TestVerifyProofArtifact_MissingWorkflowID
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.Contains
+- name: TestVerifyProofArtifact_MissingChainHash
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.Contains
+- name: TestVerifyProofArtifact_MissingTimestamp
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.Contains
+- name: TestVerifyProofArtifact_EmptySourceDigest_Warns
+  kind: func
+  description: ''
+  references:
+  - cabinet.ComputeChainHashV1
+  - assert.True
+  - require.NotEmpty
+  - assert.Contains
+- name: TestVerifyProofArtifact_ChainHashMismatch
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.Contains
+- name: TestVerifyProofArtifact_StepMissingFields
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProofTraceStep
+  - cabinet.ComputeChainHashV1
+  - cabinet.ProofTraceStepempty
+  - assert.False
+  - assert.Contains
+- name: TestVerifyProofArtifact_ValidPoSEResults
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.Empty
+- name: TestVerifyProofArtifact_InvalidPoSEResult
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.Contains
+- name: TestVerifyProofArtifact_CommitRecord_Consistent
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.Empty
+- name: TestVerifyProofArtifact_CommitRecord_IDMismatch
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.Contains
+- name: TestVerifyProofArtifact_CommitRecord_PoseNotVerified_Warns
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - require.NotEmpty
+  - assert.Contains
+- name: TestProofArtifactFromTrace
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProofTrace
+  - cabinet.ProofTraceStep
+  - assert.Equal
+  - require.Len
+- name: TestProofArtifactFromTrace_EmptySteps
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProofTrace
+  - assert.Empty
+- name: TestMarshalProofArtifact
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+- name: testSteps
+  kind: var
+  description: ''
+  references: []

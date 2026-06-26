@@ -5,15 +5,15 @@ import (
 	"strings"
 )
 
-// SetOptions hordozza a felhasználói beállításokat a Set kéréshez.
-// A Priority jelenleg: low|normal|high (normal az alapértelmezett).
+// SetOptions carries user settings for a Set request.
+// Priority is currently: low|normal|high (normal is the default).
 type SetOptions struct {
 	TimeoutMS int    `json:"timeout_ms,omitempty" yaml:"timeout_ms,omitempty"`
 	Priority  string `json:"priority,omitempty"   yaml:"priority,omitempty"` // low|normal|high
 }
 
-// SetPayload a Set belépési kérés kanonikus reprezentációja.
-// A Modules csak hivatkozás; semmi sincs példányosítva.
+// SetPayload is the canonical representation of a Set entry request.
+// Modules are only references; nothing is instantiated.
 type SetPayload struct {
 	WorkflowID   string         `json:"workflow_id"             yaml:"workflow_id"`
 	Modules      []ModuleID     `json:"modules"                 yaml:"modules"`
@@ -22,14 +22,16 @@ type SetPayload struct {
 	SourceDigest string         `json:"source_digest,omitempty" yaml:"source_digest,omitempty"`
 }
 
-// CanonicalizeSetPayload normalizálja a bemenetet (trim, dedup/sort, defaultok).
+// CanonicalizeSetPayload normalizes a SetPayload by trimming whitespace, deduplicating and sorting modules,
+// and setting default options (priority defaults to "normal").
+// This ensures deterministic comparison and hashing of requests.
 func CanonicalizeSetPayload(in *SetPayload) {
 	if in == nil {
 		return
 	}
 	in.WorkflowID = strings.TrimSpace(in.WorkflowID)
 
-	// Options defaultok
+	// Options defaults
 	if in.Options == nil {
 		in.Options = &SetOptions{}
 	}
@@ -37,7 +39,7 @@ func CanonicalizeSetPayload(in *SetPayload) {
 		in.Options.Priority = "normal"
 	}
 
-	// Modules dedup + sort a determinisztikus összehasonlításért/hash-ért
+	// Modules dedup + sort for deterministic comparison/hash
 	if len(in.Modules) > 0 {
 		seen := make(map[ModuleID]struct{}, len(in.Modules))
 		uniq := make([]ModuleID, 0, len(in.Modules))

@@ -1,0 +1,75 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestValidateAndChecksum
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.SetToJSONMock
+  - testify_assert.Error
+  - testify_assert.ErrorIs
+  - testify_assert.Contains
+  - testify_assert.False
+  - require.NoError
+  - testify_assert.Equal
+  - testify_assert.True
+  - testify_assert.NoError
+  - require.Error
+- name: TestComputeChecksum_ErrorCases
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.SetToJSONMock
+  - canonicaljson.ToJSONOriginal
+  - testify_assert.Error
+  - testify_assert.Contains
+  - testify_assert.NoError
+- name: TestStripWasmModuleFunc_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - testify_assert.Contains
+- name: TestComputeChecksum_ContextCancelled
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - testify_assert.ErrorIs
+- name: TestNewModuleDescriptor_ContextCancelled
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - testify_assert.ErrorIs
+- name: TestNewWorkflow_ContextCancelled
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - testify_assert.ErrorIs
+- name: TestNewSchema_ContextCancelled
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - testify_assert.ErrorIs
+- name: wasmBase
+  kind: var
+  description: 'wasmBase is the binary representation of a simple WASM module that
+    exports a single function `add`. wat: (module (func (export "add") (param i32
+    i32) (result i32) local.get 0 local.get 1 i32.add))'
+  references: []
+- name: wasmWithCustomSection
+  kind: var
+  description: wasmWithCustomSection is the same module but with an added, non-essential
+    custom section.
+  references: []

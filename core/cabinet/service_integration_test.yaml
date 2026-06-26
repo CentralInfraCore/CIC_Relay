@@ -1,0 +1,16 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestSetx_SchemaValidation_Integration
+  kind: func
+  description: TestSetx_SchemaValidation_Integration verifies that Setx enforces the
+    Accepts schema constraint on each workflow step's input data.
+  references: []

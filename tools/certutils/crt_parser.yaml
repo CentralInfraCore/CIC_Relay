@@ -15,7 +15,8 @@ objects:
   references: []
 - name: printHelp
   kind: func
-  description: ''
+  description: printHelp prints the usage and command-line options for the certificate
+    parser.
   references: []
 - name: main
   kind: func

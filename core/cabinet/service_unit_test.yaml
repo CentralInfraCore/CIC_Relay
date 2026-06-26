@@ -1,0 +1,73 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestNewCabinetService_WasmManagerError
+  kind: func
+  description: TestNewCabinetService_WasmManagerError tests the error path for NewCabinetService
+    when the WasmManager fails to initialize.
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestWithRecorder
+  kind: func
+  description: TestWithRecorder verifies that WithRecorder sets the recorder field
+    on the service.
+  references:
+  - require.NoError
+  - require.NotNil
+- name: TestExecutionContext
+  kind: func
+  description: TestExecutionContext verifies the functionality of the executionContext
+    struct.
+  references:
+  - require.NotNil
+  - require.True
+  - assert.Equal
+  - assert.False
+  - require.NoError
+- name: TestSetx_Wasm_Unit
+  kind: func
+  description: TestSetx_Wasm_Unit provides unit tests for the WASM execution path
+    of Setx using mocks.
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  - assert.Contains
+  - assert.ErrorIs
+- name: TestCabinetService_PutAndGet_Success
+  kind: func
+  description: TestCabinetService_PutAndGet_Success verifies the core Put/Get functionality
+    of the service.
+  references:
+  - require.NoError
+  - assert.NoError
+  - assert.Equal
+- name: TestCabinetService_Get_NotFound
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.ErrorIs
+- name: TestSetx_ProofTrace
+  kind: func
+  description: TestSetx_ProofTrace verifies that Setx produces a correct ProofTrace.
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.Equal
+  - require.Len
+  - assert.NotEmpty
+- name: TestCabinetService_Close
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NoError

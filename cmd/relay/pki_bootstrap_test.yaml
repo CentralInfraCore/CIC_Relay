@@ -1,0 +1,63 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestResolveTrustMode_Default
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestResolveTrustMode_Dev
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestResolveTrustMode_Prod
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestBootstrapPKI_DevMode_TrustStoreLoaded
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True
+  - assert.NotNil
+- name: TestBootstrapPKI_ProdMode_NoBundleEnv_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestBootstrapPKI_ProdMode_WithBundle
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True
+  - assert.NotNil
+- name: TestBootstrapPKI_ProdMode_InvalidPath_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestBootstrapPKI_UnknownMode_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestBootstrapPKI_DevMode_LoadError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains

@@ -1,0 +1,19 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestValidateSchema
+  kind: func
+  description: ''
+  references: []
+- name: TestValidateInputSchema
+  kind: func
+  description: ''
+  references: []

@@ -15,7 +15,7 @@ objects:
   references: []
 - name: NewAPI
   kind: func
-  description: NewAPI creates a new API instance.
+  description: NewAPI creates a new API instance wrapping the given Cabinet service.
   references: []
 - name: Close
   kind: method

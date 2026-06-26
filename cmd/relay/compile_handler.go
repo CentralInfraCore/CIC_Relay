@@ -24,6 +24,7 @@ type CompileResponse struct {
 	ProofTrace *cabinet.ProofTrace `json:"proof_trace"`
 }
 
+// compileHandler handles POST /v1/schema/compile requests by executing the cic.schema.compile workflow.
 func (s *relayServer) compileHandler(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
 	logEntry := s.logger.WithFields(logrus.Fields{

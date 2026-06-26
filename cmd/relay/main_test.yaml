@@ -1,0 +1,429 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- schema
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: mockCryptoService
+  kind: struct
+  description: mockCryptoService implements crypto.CryptoService for testing.
+  implements: []
+  references: []
+- name: Sign
+  kind: method
+  receiver: mockCryptoService
+  description: ''
+  references: []
+- name: Decrypt
+  kind: method
+  receiver: mockCryptoService
+  description: ''
+  references: []
+- name: HealthCheck
+  kind: method
+  receiver: mockCryptoService
+  description: ''
+  references: []
+- name: TestMain
+  kind: func
+  description: ''
+  references:
+  - logrus.StandardLogger
+  - logrus.SetOutput
+- name: TestRun_ServerStart
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NoError
+- name: TestLoadConfig_Defaults
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.NotNil
+  - assert.Equal
+- name: TestLoadConfig_AllEnvSet
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.NotNil
+  - assert.Equal
+- name: TestLoadConfig_InvalidJSONSize
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_InvalidWASMSize
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_InvalidHashingTimeout
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_WasmExecTimeout_Custom
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.NotNil
+  - assert.Equal
+- name: TestLoadConfig_WasmExecTimeout_InvalidNotNumber
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_WasmExecTimeout_InvalidZero
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_RateLimitRPS_Custom
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Equal
+- name: TestLoadConfig_RateLimitRPS_Invalid
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_RateLimitRPS_InvalidNotNumber
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_MaxConcurrent_Custom
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Equal
+- name: TestLoadConfig_MaxConcurrent_Invalid
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestLoadConfig_MaxConcurrent_InvalidNotNumber
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestNewMux
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestValidateConfig_Valid
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+- name: TestValidateConfig_RangeViolation_JSONSize
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestValidateConfig_RangeViolation_WASMSize
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestValidateConfig_RangeViolation_HashingTimeout
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestValidateConfig_RangeViolation_WasmExecTimeout
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestValidateConfig_RangeViolation_RateLimitRPS
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestValidateConfig_RangeViolation_MaxConcurrent
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestLoadSecretsFromVault_NoToken
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.Nil
+- name: TestLoadSecretsFromVault_WithToken_Defaults
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+  - assert.Equal
+- name: TestLoadSecretsFromVault_WithToken_CustomValues
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+  - assert.Equal
+- name: TestBuildRecorderOption_NoVaultToken
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - assert.NoError
+- name: TestBuildRecorderOption_WithVaultToken_ValidPath
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - assert.NoError
+- name: TestBuildRecorderOption_WithVaultToken_InvalidPath
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - assert.NoError
+- name: TestMockCabinetService_PutSchema
+  kind: func
+  description: ''
+  references:
+  - cabinet.SchemaMeta
+  - cabinet.BaseBlockName
+  - assert.NoError
+- name: TestMockCabinetService_PutSchema_Error
+  kind: func
+  description: ''
+  references:
+  - cabinet.SchemaMeta
+  - cabinet.BaseBlockName
+  - assert.Error
+  - assert.Equal
+- name: TestMockCabinetService_GetSchema
+  kind: func
+  description: ''
+  references:
+  - cabinet.SchemaMeta
+  - cabinet.BaseBlockName
+  - assert.NoError
+  - assert.Equal
+- name: TestMockCabinetService_GetSchema_NotFound
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Nil
+- name: TestMockCabinetService_GetSchema_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Nil
+  - assert.Equal
+- name: TestMockCabinetService_PutModule
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptorMeta
+  - cabinet.BaseBlockName
+  - assert.NoError
+- name: TestMockCabinetService_PutModule_Error
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptorMeta
+  - cabinet.BaseBlockName
+  - assert.Error
+  - assert.Equal
+- name: TestMockCabinetService_GetModule
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptorMeta
+  - cabinet.BaseBlockName
+  - assert.NoError
+  - assert.Equal
+- name: TestMockCabinetService_GetModule_NotFound
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Nil
+- name: TestMockCabinetService_GetModule_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Nil
+  - assert.Equal
+- name: TestMockCabinetService_PutWorkflow
+  kind: func
+  description: ''
+  references:
+  - cabinet.WorkflowMeta
+  - cabinet.BaseBlockName
+  - assert.NoError
+- name: TestMockCabinetService_PutWorkflow_Error
+  kind: func
+  description: ''
+  references:
+  - cabinet.WorkflowMeta
+  - cabinet.BaseBlockName
+  - assert.Error
+  - assert.Equal
+- name: TestMockCabinetService_GetWorkflow
+  kind: func
+  description: ''
+  references:
+  - cabinet.WorkflowMeta
+  - cabinet.BaseBlockName
+  - assert.NoError
+  - assert.Equal
+- name: TestMockCabinetService_GetWorkflow_NotFound
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Nil
+- name: TestMockCabinetService_GetWorkflow_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Nil
+  - assert.Equal
+- name: TestMockCabinetService_Set
+  kind: func
+  description: ''
+  references:
+  - cabinet.SetPayload
+  - cabinet.SetResponse
+  - assert.NoError
+  - assert.Equal
+- name: TestMockCabinetService_Set_Error
+  kind: func
+  description: ''
+  references:
+  - cabinet.SetPayload
+  - assert.Error
+  - assert.Nil
+  - assert.Equal
+- name: TestMockCabinetService_Close
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+- name: TestMockCabinetService_Close_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Equal
+- name: TestBuildOperatorIfConfigured_NilWhenEnvUnset
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.Nil
+- name: TestBuildRecorderOption_NilSecrets
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+- name: TestBuildRecorderOption_CryptoInitFails
+  kind: func
+  description: ''
+  references:
+  - crypto.CryptoService
+  - logrus.New
+  - assert.NotNil
+- name: TestBuildRecorderOption_FullSuccess
+  kind: func
+  description: ''
+  references:
+  - recorder.GitStateRecorder
+  - crypto.CryptoService
+  - logrus.New
+  - assert.NotNil
+- name: TestBuildRecorderOption_RecorderInitFails
+  kind: func
+  description: ''
+  references:
+  - crypto.CryptoService
+  - recorder.GitStateRecorder
+  - logrus.New
+  - assert.NotNil
+- name: TestBuildOperatorIfConfigured_MissingSecret
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.True
+  - assert.Nil
+- name: TestBuildOperatorIfConfigured_WithFileSource
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+- name: TestBuildOperatorIfConfigured_MissingGitLocalPath
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.NotNil
+- name: _
+  kind: var
+  description: ''
+  references: []

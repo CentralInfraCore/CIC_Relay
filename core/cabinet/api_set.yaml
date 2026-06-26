@@ -11,19 +11,17 @@ related_nodes: []
 objects:
 - name: SetResponse
   kind: struct
-  description: SetResponse a Set hívás válasza. A Results későbbi iterációban kerül
-    feltöltésre a workflow futtatása után; jelen patch csak a séma/validáció alapját
-    hozza.
+  description: SetResponse is the response to a Set call.
   implements: []
   references: []
 - name: ValidateSet
   kind: method
   receiver: API
-  description: ValidateSet a SetPayload minimális szerkezeti ellenőrzése, és a hivatkozott
-    entitások (workflow, modulok) létezésének ellenőrzése.
+  description: ValidateSet performs minimal structural validation of SetPayload and
+    checks if referenced entities (workflow, modules) exist.
   references: []
 - name: Set
   kind: method
   receiver: API
-  description: 'Set: belépési pont a séma-ellenőrzéshez és a workflow futtatáshoz.'
+  description: Set is the entry point for schema validation and workflow execution.
   references: []

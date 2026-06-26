@@ -1,0 +1,33 @@
+---
+package: cabinet_test
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestModuleDescriptor_ID_API_Basic
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptorMeta
+  - cabinet.BaseBlockName
+- name: TestModuleDescriptor_ID_API_EmptyParts
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptorMeta
+  - cabinet.BaseBlockName
+- name: TestModuleDescriptor_GetData_API_JSONShapeAndValues
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.BaseBlockName
+- name: TestModuleDescriptor_GetData_API_DefensiveCopies
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor

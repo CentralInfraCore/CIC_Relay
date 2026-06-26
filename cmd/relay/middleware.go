@@ -16,6 +16,7 @@ type ipRateLimiter struct {
 	burst    int
 }
 
+// newIPRateLimiter creates a new per-IP rate limiter with the specified requests per second limit.
 func newIPRateLimiter(rps int) *ipRateLimiter {
 	return &ipRateLimiter{
 		limiters: make(map[string]*rate.Limiter),
@@ -24,6 +25,7 @@ func newIPRateLimiter(rps int) *ipRateLimiter {
 	}
 }
 
+// getLimiter retrieves or creates a rate limiter for the given IP address.
 func (l *ipRateLimiter) getLimiter(ip string) *rate.Limiter {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -56,6 +58,7 @@ type concurrentLimiter struct {
 	sem chan struct{}
 }
 
+// newConcurrentLimiter creates a new limiter that caps the number of simultaneous requests.
 func newConcurrentLimiter(max int) *concurrentLimiter {
 	return &concurrentLimiter{sem: make(chan struct{}, max)}
 }
@@ -74,7 +77,7 @@ func (l *concurrentLimiter) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// buildHandler wraps the mux with rate limiting and concurrent cap middleware.
+// buildHandler wraps the request multiplexer with per-IP rate limiting and concurrent request cap middleware.
 func buildHandler(s *relayServer) http.Handler {
 	mux := newMux(s)
 	cl := newConcurrentLimiter(s.config.MaxConcurrentRequests)

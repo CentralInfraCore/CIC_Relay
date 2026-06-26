@@ -25,29 +25,37 @@ objects:
   references: []
 - name: IsInvalid
   kind: func
-  description: Helper predicates for common error matching.
+  description: IsInvalid checks if an error is an ErrInvalid validation or integrity
+    failure.
   references: []
 - name: IsConflict
   kind: func
-  description: ''
+  description: IsConflict checks if an error is an ErrConflict resource state conflict.
   references: []
 - name: IsNotFound
   kind: func
-  description: ''
+  description: IsNotFound checks if an error is an ErrNotFound resource not found.
+  references: []
+- name: IsTimeout
+  kind: func
+  description: IsTimeout checks if an error is an ErrTimeout execution exceeded time
+    budget.
   references: []
 - name: Error
   kind: method
   receiver: ValidationError
-  description: Error returns a JSON-encoded list of causes, or a generic message if
-    empty.
+  description: Error implements the error interface, returning a JSON-encoded list
+    of field-level validation errors or a generic message if empty.
   references: []
 - name: NewValidationError
   kind: func
-  description: NewValidationError creates a ValidationError from given field errors.
+  description: NewValidationError constructs a ValidationError from the provided field
+    errors.
   references: []
 - name: NewAPIError
   kind: func
-  description: NewAPIError converts a Go error into a standardized APIError.
+  description: NewAPIError converts a Go error into a standardized APIError response
+    for API consumers.
   references: []
 - name: jsonMarshal
   kind: var

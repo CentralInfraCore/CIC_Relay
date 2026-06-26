@@ -10,13 +10,19 @@ related_nodes: []
 objects:
 - name: NewModuleDescriptor
   kind: func
-  description: NewModuleDescriptor constructs a ModuleDescriptor by calling the single
-    central entry point for validation and checksum calculation.
+  description: 'NewModuleDescriptor constructs a ModuleDescriptor by calling the single
+    central entry point for validation and checksum calculation. WASM canonicalization
+    contract: custom sections are stripped from wasmCode *before* building the composite
+    data struct used for checksum. This ensures the checksum is over the canonical
+    (deterministic) form of the module, regardless of non-functional metadata embedded
+    by compilers. The stripped bytes are also stored in the descriptor so that stored
+    and executed bytes always match the checksummed form.'
   references: []
 - name: ID
   kind: method
   receiver: ModuleDescriptor
   description: ID returns the unique module identifier in the form "name@version".
+    This is used for lookups in the module store.
   references: []
 - name: GetData
   kind: method

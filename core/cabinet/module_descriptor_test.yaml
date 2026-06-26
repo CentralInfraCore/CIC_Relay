@@ -1,0 +1,36 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestNewModuleDescriptor_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Nil
+  - assert.ErrorIs
+- name: TestModuleDescriptor_ID_Basic
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestModuleDescriptor_ID_EmptyParts
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestModuleDescriptor_GetData_ReturnsCompositeStruct
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.ToJSON
+  - require.NoError
+  - assert.JSONEq
+  - require.True
+  - assert.Equal

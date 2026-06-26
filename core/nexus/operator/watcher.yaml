@@ -18,7 +18,9 @@ objects:
   description: Operator manages the lifecycle of infrastructure entities based on
     Watcher events.
   implements: []
-  references: []
+  references:
+  - types.Graph
+  - logrus.Logger
 - name: PollingWatcher
   kind: struct
   description: PollingWatcher implements Watcher by periodically scanning a directory.
@@ -29,6 +31,19 @@ objects:
   kind: interface
   description: Watcher defines the interface for monitoring infrastructure changes.
   references: []
+- name: ResourceValidator
+  kind: interface
+  description: ResourceValidator validates a single resource against an external schema
+    registry.
+  references:
+  - types.ResourceSpec
+- name: ResourceActivator
+  kind: interface
+  description: ResourceActivator executes the lifecycle action for a validated, desired-present
+    resource. The implementation bridges nexus/operator to core/cabinet without a
+    direct import.
+  references:
+  - types.ResourceSpec
 - name: EventType
   kind: type
   description: EventType defines the type of change detected in the infrastructure
@@ -36,13 +51,42 @@ objects:
   references: []
 - name: NewOperator
   kind: func
-  description: NewOperator creates a new Operator.
+  description: NewOperator creates a basic Operator without lifecycle support. For
+    full bootstrap/lifecycle wiring use NewOperatorWithLifecycle.
+  references:
+  - logrus.New
+- name: NewOperatorWithLifecycle
+  kind: func
+  description: NewOperatorWithLifecycle creates an Operator with full bootstrap and
+    lifecycle support. b and lm may be nil — operations are skipped with a WARN log.
+  references:
+  - logrus.Logger
+- name: WithValidator
+  kind: method
+  receiver: Operator
+  description: WithValidator attaches a ResourceValidator to the Operator. When set,
+    every Service resource is validated against the schema registry before activation.
   references: []
+- name: WithActivator
+  kind: method
+  receiver: Operator
+  description: WithActivator attaches a ResourceActivator to the Operator. When set,
+    resources with state.desired=present are passed to the activator after validation.
+  references: []
+- name: WithGraph
+  kind: method
+  receiver: Operator
+  description: WithGraph provides the full infrastructure graph for dependency resolution.
+    When set, a resource is only activated if all its declared dependencies exist
+    in the graph with at least one resource declaring state.desired=present.
+  references:
+  - types.Graph
 - name: Run
   kind: method
   receiver: Operator
   description: Run starts the operator loop.
-  references: []
+  references:
+  - logrus.Fields
 - name: handleEvent
   kind: method
   receiver: Operator
@@ -51,20 +95,59 @@ objects:
 - name: onApply
   kind: method
   receiver: Operator
-  description: onApply handles creation or update of an entity (Onboarding).
+  description: onApply handles creation or update of a Host or Service entity.
+  references:
+  - types.BaseComponent
+  - logrus.Fields
+- name: onApplyHost
+  kind: method
+  receiver: Operator
+  description: onApplyHost generates a bootstrap token and onboards the host via LifecycleManager.
+  references:
+  - types.BaseComponent
+- name: onApplyService
+  kind: method
+  receiver: Operator
+  description: onApplyService validates each resource in the service against the schema
+    registry and logs resources that are ready for activation.
+  references:
+  - types.Service
+  - logrus.Fields
+- name: depsReady
+  kind: method
+  receiver: Operator
+  description: depsReady returns true if all named service dependencies exist in the
+    graph and have at least one resource declaring state.desired=present. When no
+    graph is set, the check is lenient (returns true).
   references: []
 - name: onDelete
   kind: method
   receiver: Operator
-  description: onDelete handles deletion of an entity (Offboarding).
-  references: []
+  description: onDelete handles deletion of a Host entity. Resolves hostID from the
+    cached metadata.name seen during CREATE/UPDATE. Falls back to the filename stem
+    if the file was never seen (e.g. operator restart).
+  references:
+  - logrus.Fields
 - name: NewPollingWatcher
   kind: func
   description: NewPollingWatcher creates a new watcher that scans the directory every
     interval.
   references: []
+- name: scanDir
+  kind: func
+  description: scanDir walks rootPath and returns a map of relative path → SHA-256
+    content hash.
+  references: []
+- name: emitDiff
+  kind: func
+  description: emitDiff computes CREATE/UPDATE/DELETE events between prev and curr
+    snapshots and sends them on ch. First call should pass prev=nil to emit CREATE
+    for all files.
+  references:
+  - logrus.WithField
 - name: Watch
   kind: method
   receiver: PollingWatcher
   description: ''
-  references: []
+  references:
+  - logrus.WithField

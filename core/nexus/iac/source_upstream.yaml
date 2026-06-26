@@ -10,16 +10,47 @@ related_nodes: []
 objects:
 - name: UpstreamSource
   kind: struct
-  description: UpstreamSource implements IaCSource for fetching config from an upstream
-    Relay API.
+  description: UpstreamSource implements IaCSource by fetching config from an upstream
+    HTTP endpoint. The endpoint must return a JSON or YAML object mapping relative
+    file paths to content strings. On error it logs WARN and propagates a wrapped
+    error (degraded mode — non-fatal to callers).
   implements: []
-  references: []
+  references:
+  - logrus.Logger
 - name: NewUpstreamSource
   kind: func
-  description: NewUpstreamSource creates a new UpstreamSource.
-  references: []
+  description: NewUpstreamSource creates an UpstreamSource with the given URL, bearer
+    token, timeout and logger. token may be empty (no auth). timeout=0 falls back
+    to the 10s default.
+  references:
+  - logrus.Logger
+- name: NewUpstreamSourceFromEnv
+  kind: func
+  description: NewUpstreamSourceFromEnv reads CIC_UPSTREAM_URL, CIC_UPSTREAM_TOKEN,
+    and CIC_UPSTREAM_FETCH_TIMEOUT from the environment and returns a configured UpstreamSource.
+    Returns (nil, nil) when CIC_UPSTREAM_URL is absent — caller should fall back to
+    FileSource.
+  references:
+  - logrus.Logger
 - name: FetchConfig
   kind: method
   receiver: UpstreamSource
-  description: FetchConfig calls the upstream API to get the configuration.
+  description: 'FetchConfig performs an HTTP GET with retry/backoff and returns the
+    parsed config map. The upstream response must be a flat JSON or YAML object: {"path/to/file.yaml":
+    "<content>"}.'
+  references:
+  - logrus.Fields
+- name: fetchOnce
+  kind: method
+  receiver: UpstreamSource
+  description: fetchOnce performs a single HTTP GET and parses the response.
+  references: []
+- name: parseUpstreamResponse
+  kind: func
+  description: parseUpstreamResponse detects JSON vs YAML from Content-Type and unmarshals
+    the body as map[string]string, returning map[string][]byte.
+  references: []
+- name: retryBackoff
+  kind: var
+  description: ''
   references: []

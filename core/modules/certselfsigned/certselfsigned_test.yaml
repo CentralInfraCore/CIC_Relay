@@ -1,0 +1,74 @@
+---
+package: certselfsigned
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestGenerate_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.True
+  - assert.Equal
+  - assert.NotEmpty
+  - require.NotNil
+  - assert.Contains
+  - assert.False
+- name: TestGenerate_DefaultValidity
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.InDelta
+- name: TestGenerate_NoCN_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestGenerate_InvalidInput_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+- name: TestGenerate_SelfSigned
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestGenerate_MarshalError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestGenerate_KeyGenError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestGenerate_SerialError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestGenerate_CertCreateError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestGenerate_MarshalKeyError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains

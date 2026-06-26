@@ -17,7 +17,9 @@ objects:
   references: []
 - name: cabinetService
   kind: struct
-  description: ''
+  description: cabinetService is the concrete implementation of the Cabinet interface,
+    managing schemas, modules, workflows, and their execution via a WASM runtime with
+    optional audit recording.
   implements: []
   references: []
 - name: cicWasmHost
@@ -33,6 +35,10 @@ objects:
 - name: Cabinet
   kind: interface
   description: Cabinet defines the central API for schema/module/workflow management.
+  references: []
+- name: CabinetOption
+  kind: type
+  description: CabinetOption is a functional option for configuring a cabinetService.
   references: []
 - name: NewExecutionContext
   kind: func
@@ -52,13 +58,26 @@ objects:
 - name: GetModule
   kind: method
   receiver: executionContext
-  description: GetModule retrieves a materialized module from the context.
+  description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
+    if not present.
   references: []
 - name: StoreModule
   kind: method
   receiver: executionContext
   description: StoreModule stores a newly materialized module in the context.
   references: []
+- name: WithRecorder
+  kind: func
+  description: WithRecorder sets an optional ExecutionRecorder on the service. If
+    nil, ProofTrace recording is skipped silently.
+  references: []
+- name: WithObsSinks
+  kind: func
+  description: 'WithObsSinks wires observability sinks into the underlying WasmManager.
+    Both arguments are nil-safe: passing nil disables the corresponding emissions.'
+  references:
+  - obs.LogSink
+  - obs.MetricSink
 - name: NewCabinetService
   kind: func
   description: NewCabinetService creates a new Cabinet service with the given stores
@@ -67,40 +86,51 @@ objects:
 - name: Setx
   kind: method
   receiver: cabinetService
-  description: Setx executes a workflow based on the function-oriented model.
-  references: []
+  description: Setx executes a workflow based on the function-oriented model, resolving
+    components, validating input schemas, dispatching to native or WASM implementations,
+    and recording ProofTrace steps with input/output hashing.
+  references:
+  - logrus.WithFields
+  - logrus.Fields
 - name: Close
   kind: method
   receiver: cabinetService
-  description: ''
+  description: Close closes the underlying WASM runtime and frees all associated resources.
+  references: []
+- name: isWasmTimeout
+  kind: func
+  description: isWasmTimeout checks whether a WASM errorResult string signals a timeout.
+    The cicwasm layer encodes timeouts as {"code":"TIMEOUT",...}.
   references: []
 - name: PutSchema
   kind: method
   receiver: cabinetService
-  description: ''
+  description: PutSchema stores a Schema in the underlying SchemaStore.
   references: []
 - name: GetSchema
   kind: method
   receiver: cabinetService
-  description: ''
+  description: GetSchema retrieves a Schema by ID, returning ErrNotFound if not present.
   references: []
 - name: PutModule
   kind: method
   receiver: cabinetService
-  description: ''
+  description: PutModule stores a ModuleDescriptor in the underlying ModuleStore.
   references: []
 - name: GetModule
   kind: method
   receiver: cabinetService
-  description: GetModule retrieves a materialized module from the context.
+  description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
+    if not present.
   references: []
 - name: PutWorkflow
   kind: method
   receiver: cabinetService
-  description: ''
+  description: PutWorkflow stores a Workflow in the underlying WorkflowStore.
   references: []
 - name: GetWorkflow
   kind: method
   receiver: cabinetService
-  description: ''
+  description: GetWorkflow retrieves a Workflow by ID, returning ErrNotFound if not
+    present.
   references: []

@@ -1,0 +1,19 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestNewWorkflow_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Nil
+  - assert.ErrorIs
+  - require.Error
+  - assert.EqualError

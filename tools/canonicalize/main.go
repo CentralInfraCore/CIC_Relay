@@ -25,6 +25,7 @@ func main() {
 	}
 }
 
+// Run reads JSON from input, canonicalizes it, and writes the result to output.
 func Run(input io.Reader, output io.Writer) error {
 	stdin, err := io.ReadAll(input)
 	if err != nil {

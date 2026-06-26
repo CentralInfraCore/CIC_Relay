@@ -19,6 +19,7 @@ func NewSchema(ctx context.Context, identity SchemaIdentity, config SchemaConfig
 }
 
 // ID returns the unique schema identifier in the form "name@version".
+// This is used for lookups in the schema store.
 func (s *Schema) ID() string {
 	return s.Config.Name + "@" + s.Identity.Version
 }

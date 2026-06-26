@@ -1,0 +1,36 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestBaseBlock_Shape
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestSchemaDef_ShapeAndZeroValue
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestSchema_Shape
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestModuleDescriptor_Shape
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestWorkflow_Shape
+  kind: func
+  description: ''
+  references:
+  - assert.Equal

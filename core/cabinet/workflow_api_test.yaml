@@ -1,0 +1,28 @@
+---
+package: cabinet_test
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestWorkflow_ID_API_Basic
+  kind: func
+  description: ''
+  references:
+  - cabinet.WorkflowMeta
+  - cabinet.BaseBlockName
+- name: TestWorkflow_ID_API_Empty
+  kind: func
+  description: ''
+  references:
+  - cabinet.WorkflowMeta
+  - cabinet.BaseBlockName
+- name: TestWorkflow_GetData_API_ReturnsSteps
+  kind: func
+  description: ''
+  references:
+  - cabinet.Workflow
+  - cabinet.BaseBlockName

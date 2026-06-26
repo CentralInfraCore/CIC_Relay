@@ -1,0 +1,50 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestIPRateLimiter_AllowsUnderLimit
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestIPRateLimiter_BlocksWhenExhausted
+  kind: func
+  description: ''
+  references:
+  - assert.True
+- name: TestIPRateLimiter_IsolatesPerIP
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestConcurrentLimiter_AllowsUnderCap
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestConcurrentLimiter_BlocksWhenFull
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestIPRateLimiter_InvalidRemoteAddr
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestConcurrentLimiter_ReleasesSlotAfterRequest
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: okHandler
+  kind: var
+  description: ''
+  references: []

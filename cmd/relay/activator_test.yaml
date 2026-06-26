@@ -1,0 +1,59 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: silentActivatorLogger
+  kind: func
+  description: ''
+  references:
+  - logrus.Logger
+  - logrus.New
+- name: makeResource
+  kind: func
+  description: ''
+  references:
+  - types.ResourceSpec
+  - types.ResourceMetaName
+  - types.SchemaRefName
+  - types.ResourceStateDesired
+- name: TestCabinetActivator_Activate_Success
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponse
+  - cabinet.ProofTraceChainHash
+  - require.NoError
+- name: TestCabinetActivator_Activate_SetxError
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.Error
+  - assert.Contains
+- name: TestCabinetActivator_Activate_NilTrace
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - cabinet.SetResponse
+  - require.NoError
+- name: TestCabinetActivator_Activate_PayloadMapping
+  kind: func
+  description: ''
+  references:
+  - cabinet.SetPayload
+  - mock.Anything
+  - mock.Arguments
+  - cabinet.SetResponse
+  - require.NoError
+  - require.NotNil
+  - assert.Equal

@@ -1,0 +1,14 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestMain_Smoke_OK
+  kind: func
+  description: ''
+  references: []

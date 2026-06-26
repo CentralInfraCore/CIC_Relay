@@ -41,7 +41,7 @@ var stripWasmModuleFunc = func(rawData []byte) ([]byte, error) {
 	return encodedBytes, nil
 }
 
-// SetStripWasmModuleFunc allows overriding the default WASM stripping function for testing.
+// SetStripWasmModuleFunc allows overriding the default WASM stripping function for testing purposes.
 func SetStripWasmModuleFunc(f func([]byte) ([]byte, error)) {
 	stripWasmModuleFunc = f
 }

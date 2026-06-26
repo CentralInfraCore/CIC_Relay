@@ -1,0 +1,183 @@
+---
+package: operator
+description: ''
+tags:
+- test
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MockWatcher
+  kind: struct
+  description: MockWatcher is a mock implementation of the Watcher interface.
+  implements: []
+  references:
+  - mock.Mock
+- name: mockValidator
+  kind: struct
+  description: mockValidator is a stub ResourceValidator for testing WithValidator.
+  implements: []
+  references: []
+- name: mockActivator
+  kind: struct
+  description: mockActivator records Activate calls for assertion in tests.
+  implements: []
+  references: []
+- name: Watch
+  kind: method
+  receiver: MockWatcher
+  description: ''
+  references: []
+- name: TestOperator_Run
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.NoError
+  - assert.Error
+  - assert.Contains
+- name: TestOperator_handleEvent
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+- name: TestOperatorWithLifecycle_OnApply_Host
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - require.True
+  - assert.True
+- name: TestOperatorWithLifecycle_OnApply_NonHost_Skipped
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.False
+- name: TestOperatorWithLifecycle_OnDelete
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NoError
+  - require.True
+  - assert.False
+- name: TestOperatorWithLifecycle_OnDelete_NotFound
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestPollingWatcher_Watch
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: collectEvents
+  kind: func
+  description: ''
+  references: []
+- name: TestPollingWatcher_StateDiff_Create
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Len
+  - assert.Equal
+  - assert.NotEmpty
+- name: TestPollingWatcher_StateDiff_Update
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Len
+  - assert.Equal
+- name: TestPollingWatcher_StateDiff_Delete
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Len
+  - assert.Equal
+  - assert.Nil
+- name: ValidateResource
+  kind: method
+  receiver: mockValidator
+  description: ''
+  references:
+  - types.ResourceSpec
+- name: Activate
+  kind: method
+  receiver: mockActivator
+  description: ''
+  references:
+  - types.ResourceSpec
+- name: makeServiceYAML
+  kind: func
+  description: ''
+  references: []
+- name: TestOnApplyService_DesiredPresent_Activated
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Len
+  - assert.Equal
+- name: TestOnApplyService_DesiredAbsent_NotActivated
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+- name: TestOnApplyService_DepsNotInGraph_Skipped
+  kind: func
+  description: ''
+  references:
+  - types.GraphServices
+  - types.Service
+  - require.NoError
+  - assert.Empty
+- name: TestOnApplyService_DepsReady_Activated
+  kind: func
+  description: ''
+  references:
+  - types.Graph
+  - types.Service
+  - types.ServiceSpec
+  - types.ResourceSpec
+  - types.ResourceStateDesired
+  - require.NoError
+  - require.Len
+  - assert.Equal
+- name: TestOnApplyService_ActivatorError_ContinuesNextResource
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Len
+- name: TestPollingWatcher_EmptyDir_NoEvents
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+- name: TestWithValidator_SetsValidator
+  kind: func
+  description: ''
+  references:
+  - assert.Same
+- name: TestOnApplyService_ValidatorError_SkipsActivation
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+- name: TestOnApplyService_ValidatorPass_Activated
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Len
