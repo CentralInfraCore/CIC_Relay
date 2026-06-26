@@ -34,3 +34,14 @@ objects:
   receiver: API
   description: Close closes the underlying resources, like the WASM runtime.
   references: []
+  position:
+    start_line: 16
+    end_line: 18
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    returns:
+    - error
+  calls:
+  - Cabinet.Close

@@ -16,21 +16,91 @@ objects:
   description: LeafHash computes a domain-separated hash for a named leaf. An empty
     value is silently replaced with NullMarker.
   references: []
+  position:
+    start_line: 31
+    end_line: 41
+  signature:
+    params:
+    - name: ''
+      type: name
+    - name: value
+      type: string
+    returns:
+    - '[]byte'
+  calls:
+  - byte
+  - h.Sum
+  - h.Write
+  - sha256.New
 - name: NodeHash
   kind: func
   description: NodeHash combines two child hashes into a parent inner-node hash.
   references: []
+  position:
+    start_line: 44
+    end_line: 50
+  signature:
+    params:
+    - name: ''
+      type: left
+    - name: right
+      type: '[]byte'
+    returns:
+    - '[]byte'
+  calls:
+  - h.Sum
+  - h.Write
+  - sha256.New
 - name: MerkleRoot
   kind: func
   description: MerkleRoot computes the root of a binary Merkle tree over items. Returns
     SHA256("empty") when items is empty or nil. Odd-count levels duplicate the last
     element.
   references: []
+  position:
+    start_line: 55
+    end_line: 75
+  signature:
+    params:
+    - name: items
+      type: '[][]byte'
+    returns:
+    - '[]byte'
+  calls:
+  - NodeHash
+  - byte
+  - sha256.Sum256
 - name: HexMerkleRoot
   kind: func
   description: HexMerkleRoot returns the lowercase hex-encoded Merkle root.
   references: []
+  position:
+    start_line: 78
+    end_line: 80
+  signature:
+    params:
+    - name: items
+      type: '[][]byte'
+    returns:
+    - string
+  calls:
+  - MerkleRoot
+  - hex.EncodeToString
 - name: SizeLeaf
   kind: func
   description: SizeLeaf encodes an int64 as a decimal string leaf (no leading zeros).
   references: []
+  position:
+    start_line: 83
+    end_line: 85
+  signature:
+    params:
+    - name: name
+      type: string
+    - name: size
+      type: int64
+    returns:
+    - '[]byte'
+  calls:
+  - LeafHash
+  - strconv.FormatInt

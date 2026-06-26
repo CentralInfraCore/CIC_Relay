@@ -50,6 +50,13 @@ objects:
   description: ID returns the unique module identifier in the form "name@version".
     This is used for lookups in the module store.
   references: []
+  position:
+    start_line: 56
+    end_line: 58
+  signature:
+    params: []
+    returns:
+    - string
 - name: GetData
   kind: method
   receiver: ModuleDescriptor
@@ -57,8 +64,22 @@ objects:
     calculation. It now always returns a composite structure including policy fields
     and optional WASM code.
   references: []
+  position:
+    start_line: 62
+    end_line: 82
+  signature:
+    params: []
+    returns:
+    - any
 - name: Checksum
   kind: method
   receiver: ModuleDescriptor
   description: Checksum returns the pre-computed checksum from the Meta block.
   references: []
+  position:
+    start_line: 85
+    end_line: 87
+  signature:
+    params: []
+    returns:
+    - string

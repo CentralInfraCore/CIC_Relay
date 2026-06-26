@@ -14,12 +14,41 @@ objects:
   description: HostDefinition describes a host to be bootstrapped.
   implements: []
   references: []
+  position:
+    start_line: 23
+    end_line: 27
+  fields:
+  - name: HostID
+    type: string
+    tag: ''
+  - name: Hostname
+    type: string
+    tag: ''
+  - name: Labels
+    type: map[string]string
+    tag: ''
 - name: BootstrapToken
   kind: struct
   description: BootstrapToken is a time-limited HMAC-SHA256 signed token for host
     registration.
   implements: []
   references: []
+  position:
+    start_line: 30
+    end_line: 35
+  fields:
+  - name: HostID
+    type: string
+    tag: ''
+  - name: Token
+    type: string // hex-encoded HMAC-SHA256
+    tag: ''
+  - name: IssuedAt
+    type: time.Time
+    tag: ''
+  - name: ExpiresAt
+    type: time.Time
+    tag: ''
 - name: Bootstrapper
   kind: struct
   description: 'Bootstrapper handles HMAC-based host token generation and validation.
@@ -28,6 +57,19 @@ objects:
   references:
   - recorder.StateRecorder
   - logrus.Logger
+  position:
+    start_line: 39
+    end_line: 43
+  fields:
+  - name: secret
+    type: '[]byte'
+    tag: ''
+  - name: recorder
+    type: recorder.StateRecorder // nil = recording disabled
+    tag: ''
+  - name: logger
+    type: '*logrus.Logger'
+    tag: ''
 - name: NewBootstrapper
   kind: func
   description: NewBootstrapper creates a Bootstrapper with the given HMAC secret.
@@ -35,6 +77,19 @@ objects:
   references:
   - recorder.StateRecorder
   - logrus.Logger
+  position:
+    start_line: 47
+    end_line: 49
+  signature:
+    params:
+    - name: secret
+      type: '[]byte'
+    - name: rec
+      type: recorder.StateRecorder
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - '*Bootstrapper'
 - name: BootstrapHost
   kind: method
   receiver: Bootstrapper
@@ -42,16 +97,75 @@ objects:
     and records the issuance event via the StateRecorder (if configured).
   references:
   - logrus.Fields
+  position:
+    start_line: 53
+    end_line: 72
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: hostDef
+      type: HostDefinition
+    returns:
+    - '*BootstrapToken'
+    - error
+  calls:
+  - Info
+  - UTC
+  - b.recordIssuance
+  - computeHMAC
+  - fmt.Errorf
+  - logger.WithFields
+  - now.Add
+  - time.Now
 - name: ValidateToken
   kind: method
   receiver: Bootstrapper
   description: ValidateToken verifies that the token has not expired and the HMAC
     is correct.
   references: []
+  position:
+    start_line: 75
+    end_line: 87
+  signature:
+    params:
+    - name: tok
+      type: '*BootstrapToken'
+    returns:
+    - error
+  calls:
+  - After
+  - UTC
+  - byte
+  - computeHMAC
+  - fmt.Errorf
+  - hmac.Equal
+  - s
+  - time.Now
 - name: computeHMAC
   kind: func
   description: computeHMAC returns hex(HMAC-SHA256(secret, hostID|issuedAt)).
   references: []
+  position:
+    start_line: 90
+    end_line: 94
+  signature:
+    params:
+    - name: secret
+      type: '[]byte'
+    - name: hostID
+      type: string
+    - name: issuedAt
+      type: time.Time
+    returns:
+    - string
+  calls:
+  - byte
+  - h.Sum
+  - h.Write
+  - hex.EncodeToString
+  - hmac.New
+  - issuedAt.Format
 - name: recordIssuance
   kind: method
   receiver: Bootstrapper
@@ -59,6 +173,21 @@ objects:
     logs WARN if recorder is absent or fails.'
   references:
   - types.ExpectedState
+  - recorder.RecordState
+  position:
+    start_line: 98
+    end_line: 110
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: tok
+      type: '*BootstrapToken'
+    returns: []
+  calls:
+  - Warn
+  - logger.Warn
+  - logger.WithError
   - recorder.RecordState
 - name: bootstrapTokenTTL
   kind: const

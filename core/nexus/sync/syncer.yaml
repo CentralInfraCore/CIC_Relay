@@ -13,27 +13,104 @@ objects:
   description: GitSyncerConfig holds the configuration for the GitSyncer.
   implements: []
   references: []
+  position:
+    start_line: 18
+    end_line: 23
+  fields:
+  - name: RepoPath
+    type: string
+    tag: ''
+  - name: RemoteURL
+    type: string
+    tag: ''
+  - name: CacheBranch
+    type: string // e.g., "cache/date"
+    tag: ''
+  - name: DailyBranch
+    type: string // e.g., "daily"
+    tag: ''
 - name: GitSyncer
   kind: struct
   description: GitSyncer implements the Syncer interface using git commands.
   implements: []
   references: []
+  position:
+    start_line: 26
+    end_line: 28
+  fields:
+  - name: config
+    type: GitSyncerConfig
+    tag: ''
 - name: Syncer
   kind: interface
   description: Syncer defines the interface for synchronizing local state to a central
     repository.
   references: []
+  position:
+    start_line: 12
+    end_line: 15
+  methods:
+  - name: SyncDaily
+    params:
+    - ctx context.Context
+    - date time.Time
+    returns:
+    - error
 - name: NewGitSyncer
   kind: func
   description: NewGitSyncer creates a new GitSyncer.
   references: []
+  position:
+    start_line: 31
+    end_line: 41
+  signature:
+    params:
+    - name: config
+      type: GitSyncerConfig
+    returns:
+    - '*GitSyncer'
 - name: SyncDaily
   kind: method
   receiver: GitSyncer
   description: SyncDaily performs the daily squash and push.
   references: []
+  position:
+    start_line: 44
+    end_line: 98
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: date
+      type: time.Time
+    returns:
+    - error
+  calls:
+  - date.Format
+  - err.Error
+  - fmt.Errorf
+  - fmt.Println
+  - fmt.Sprintf
+  - s.runGit
+  - strings.Contains
 - name: runGit
   kind: method
   receiver: GitSyncer
   description: runGit executes a git command in the repo directory.
   references: []
+  position:
+    start_line: 101
+    end_line: 109
+  signature:
+    params:
+    - name: args
+      type: '...string'
+    returns:
+    - error
+  calls:
+  - cmd.CombinedOutput
+  - exec.Command
+  - fmt.Errorf
+  - s
+  - string
+  - strings.Join
