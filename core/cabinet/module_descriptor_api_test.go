@@ -36,13 +36,13 @@ func TestModuleDescriptor_GetData_API_JSONShapeAndValues(t *testing.T) {
 
 	got := m.GetData()
 
-	// JSON-re visszük és ellenőrizzük a kulcsok/értékek megfelelését.
+	// Convert to JSON and verify keys/values match.
 	gotJSON, err := json.Marshal(got)
 	if err != nil {
 		t.Fatalf("json.Marshal(GetData) failed: %v", err)
 	}
 
-	// forma és érték elvárás
+	// Expected form and values
 	wantStruct := struct {
 		Type       string   `json:"type"`
 		Accepts    []string `json:"accepts"`
@@ -60,7 +60,7 @@ func TestModuleDescriptor_GetData_API_JSONShapeAndValues(t *testing.T) {
 		t.Fatalf("GetData JSON mismatch:\n got:  %s\n want: %s", string(gotJSON), string(wantJSON))
 	}
 
-	// plusz ellenőrzés: ne szivárogjon bele más mező (pl. Meta)
+	// Additional check: no other fields should leak in (e.g., Meta)
 	var mapp map[string]any
 	if err := json.Unmarshal(gotJSON, &mapp); err != nil {
 		t.Fatalf("json.Unmarshal(GetData) failed: %v", err)
@@ -97,11 +97,11 @@ func TestModuleDescriptor_GetData_API_DefensiveCopies(t *testing.T) {
 		t.Fatalf("json.Marshal(base) failed: %v", err)
 	}
 
-	// módosítjuk az eredeti szeleteket
+	// Modify the original slices
 	orig.Accepts[0] = "A*"
 	orig.OutputKeys = append(orig.OutputKeys, "Z")
 
-	// a GetData() által visszaadott érték NE változzon utólag
+	// The value returned by GetData() must NOT change afterwards
 	afterJSON, err := json.Marshal(data)
 	if err != nil {
 		t.Fatalf("json.Marshal(after) failed: %v", err)

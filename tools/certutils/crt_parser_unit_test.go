@@ -74,7 +74,7 @@ func Test_main_VerboseYAML(t *testing.T) {
 }
 
 func Test_main_CertPath_YAML(t *testing.T) {
-	// self-signed cert generálás ideiglenes fájlba
+	// Self-signed certificate generation to temporary file
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatalf("rsa.GenerateKey: %v", err)
@@ -114,7 +114,7 @@ func Test_main_CertPath_YAML(t *testing.T) {
 	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
 	out := buf.String()
-	// minimális sanity: legyen nem üres és strukturált
+	// Minimal sanity check: must be non-empty and structured
 	if strings.TrimSpace(out) == "" || !strings.Contains(out, ":") {
 		t.Fatalf("unexpected YAML-like output:\n%s", out)
 	}
