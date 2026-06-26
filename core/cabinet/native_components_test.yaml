@@ -15,3 +15,19 @@ objects:
   - require.NoError
   - assert.Equal
   - assert.Nil
+  position:
+    start_line: 10
+    end_line: 34
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - CoreEcho
+  - assert.Equal
+  - assert.Nil
+  - context.Background
+  - func
+  - require.NoError
+  - t.Run

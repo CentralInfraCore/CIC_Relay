@@ -13,16 +13,55 @@ objects:
   description: ''
   references:
   - assert.Equal
+  position:
+    start_line: 12
+    end_line: 17
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - newDiscardLogger
+  - resolveTrustMode
+  - t.Setenv
 - name: TestResolveTrustMode_Dev
   kind: func
   description: ''
   references:
   - assert.Equal
+  position:
+    start_line: 18
+    end_line: 23
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - newDiscardLogger
+  - resolveTrustMode
+  - t.Setenv
 - name: TestResolveTrustMode_Prod
   kind: func
   description: ''
   references:
   - assert.Equal
+  position:
+    start_line: 24
+    end_line: 29
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - newDiscardLogger
+  - resolveTrustMode
+  - t.Setenv
 - name: TestBootstrapPKI_DevMode_TrustStoreLoaded
   kind: func
   description: ''
@@ -30,12 +69,41 @@ objects:
   - require.NoError
   - assert.True
   - assert.NotNil
+  position:
+    start_line: 30
+    end_line: 37
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.NotNil
+  - assert.True
+  - bootstrapPKI
+  - newDiscardLogger
+  - require.NoError
 - name: TestBootstrapPKI_ProdMode_NoBundleEnv_Error
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  position:
+    start_line: 38
+    end_line: 44
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - bootstrapPKI
+  - err.Error
+  - newDiscardLogger
+  - require.Error
+  - t.Setenv
 - name: TestBootstrapPKI_ProdMode_WithBundle
   kind: func
   description: ''
@@ -43,21 +111,87 @@ objects:
   - require.NoError
   - assert.True
   - assert.NotNil
+  position:
+    start_line: 45
+    end_line: 57
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.NotNil
+  - assert.True
+  - bootstrapPKI
+  - embeddedFS.ReadFile
+  - filepath.Join
+  - newDiscardLogger
+  - os.WriteFile
+  - require.NoError
+  - t.Setenv
+  - t.TempDir
 - name: TestBootstrapPKI_ProdMode_InvalidPath_Error
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  position:
+    start_line: 58
+    end_line: 64
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - bootstrap
+  - bootstrapPKI
+  - err.Error
+  - newDiscardLogger
+  - require.Error
+  - t.Setenv
 - name: TestBootstrapPKI_UnknownMode_Error
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  position:
+    start_line: 65
+    end_line: 71
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - bootstrapPKI
+  - err.Error
+  - newDiscardLogger
+  - require.Error
 - name: TestBootstrapPKI_DevMode_LoadError
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  position:
+    start_line: 72
+    end_line: 82
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - bootstrap
+  - bootstrapPKI
+  - byte
+  - err.Error
+  - file
+  - newDiscardLogger
+  - require.Error

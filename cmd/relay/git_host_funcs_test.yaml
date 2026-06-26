@@ -14,17 +14,56 @@ objects:
   implements: []
   references:
   - api.Memory
+  position:
+    start_line: 18
+    end_line: 22
+  fields:
+  - name: buf
+    type: '[]byte'
+    tag: ''
 - name: minMod
   kind: struct
   description: ''
   implements: []
   references:
   - api.Module
+  position:
+    start_line: 42
+    end_line: 46
+  fields:
+  - name: mem
+    type: '*fixedMem'
+    tag: ''
 - name: stubGitOps
   kind: struct
   description: ''
   implements: []
   references: []
+  position:
+    start_line: 61
+    end_line: 70
+  fields:
+  - name: cloneErr
+    type: error
+    tag: ''
+  - name: fetchErr
+    type: error
+    tag: ''
+  - name: checkoutErr
+    type: error
+    tag: ''
+  - name: commitHash
+    type: string
+    tag: ''
+  - name: commitErr
+    type: error
+    tag: ''
+  - name: pushErr
+    type: error
+    tag: ''
+  - name: statusErr
+    type: error
+    tag: ''
 - name: Read
   kind: method
   receiver: fixedMem
@@ -45,10 +84,36 @@ objects:
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 49
+    end_line: 52
+  signature:
+    params:
+    - name: size
+      type: int
+    returns:
+    - '*minMod'
 - name: putJSON
   kind: func
   description: ''
   references: []
+  position:
+    start_line: 53
+    end_line: 58
+  signature:
+    params:
+    - name: mod
+      type: '*minMod'
+    - name: offset
+      type: uint32
+    - name: v
+      type: interface{}
+    returns:
+    - uint32
+  calls:
+  - json.Marshal
+  - mem.Write
+  - uint32
 - name: Clone
   kind: method
   receiver: stubGitOps
@@ -86,16 +151,58 @@ objects:
   references:
   - assert.True
   - assert.Equal
+  position:
+    start_line: 84
+    end_line: 92
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - assert.True
+  - gitReadJSON
+  - json.Marshal
+  - mem.Write
+  - newMod
+  - uint32
 - name: TestGitReadJSON_BadOffset
   kind: func
   description: ''
   references:
   - assert.False
+  position:
+    start_line: 93
+    end_line: 98
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.False
+  - gitReadJSON
+  - newMod
 - name: TestGitReadJSON_BadJSON
   kind: func
   description: ''
   references:
   - assert.False
+  position:
+    start_line: 99
+    end_line: 105
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.False
+  - byte
+  - gitReadJSON
+  - mem.Write
+  - newMod
 - name: TestGitWriteJSON_OK
   kind: func
   description: ''
@@ -103,132 +210,578 @@ objects:
   - assert.Greater
   - require.True
   - assert.Contains
+  position:
+    start_line: 106
+    end_line: 114
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - assert.Greater
+  - gitWriteJSON
+  - int32
+  - mem.Read
+  - newMod
+  - require.True
+  - string
+  - uint32
 - name: TestGitWriteJSON_BufferTooSmall
   kind: func
   description: ''
   references:
   - assert.Equal
+  position:
+    start_line: 115
+    end_line: 120
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - gitWriteJSON
+  - int32
+  - newMod
 - name: TestGitWriteJSON_WriteFailure
   kind: func
   description: ''
   references:
   - assert.Equal
+  position:
+    start_line: 121
+    end_line: 126
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - gitWriteJSON
+  - int32
+  - newMod
 - name: TestGitWriteError_WritesErrorField
   kind: func
   description: ''
   references:
   - require.Greater
   - assert.Contains
+  position:
+    start_line: 127
+    end_line: 134
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - gitWriteError
+  - int32
+  - mem.Read
+  - newMod
+  - require.Greater
+  - string
+  - uint32
 - name: TestRegisterGitHostFunctions
   kind: func
   description: ''
   references:
   - wazero.NewRuntime
   - require.NoError
+  position:
+    start_line: 137
+    end_line: 143
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - context.Background
+  - r.Close
+  - registerGitHostFunctions
+  - require.NoError
+  - wazero.NewRuntime
 - name: TestMakeGitHostSetupFn
   kind: func
   description: ''
   references:
   - wazero.NewRuntime
   - require.NoError
+  position:
+    start_line: 144
+    end_line: 151
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - context.Background
+  - fn
+  - makeGitHostSetupFn
+  - r.Close
+  - require.NoError
+  - wazero.NewRuntime
 - name: TestMakeCloneFn_Success
   kind: func
   description: ''
   references:
   - assert.Greater
   - assert.Contains
+  position:
+    start_line: 154
+    end_line: 163
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - assert.Greater
+  - context.Background
+  - fn
+  - int32
+  - makeCloneFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeCloneFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 164
+    end_line: 172
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - errors.New
+  - fn
+  - makeCloneFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeCloneFn_BadJSON
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 173
+    end_line: 181
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - byte
+  - context.Background
+  - fn
+  - makeCloneFn
+  - mem.Read
+  - mem.Write
+  - newMod
+  - string
+  - uint32
 - name: TestMakeFetchFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 182
+    end_line: 190
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeFetchFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeFetchFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 191
+    end_line: 199
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - errors.New
+  - fn
+  - makeFetchFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeCheckoutFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 200
+    end_line: 208
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeCheckoutFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeCheckoutFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 209
+    end_line: 217
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - errors.New
+  - fn
+  - makeCheckoutFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeCommitFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 218
+    end_line: 226
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeCommitFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeCommitFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 227
+    end_line: 235
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - errors.New
+  - fn
+  - makeCommitFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakePushFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 236
+    end_line: 244
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makePushFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakePushFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 245
+    end_line: 253
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - errors.New
+  - fn
+  - makePushFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeStatusFn_Success
   kind: func
   description: ''
   references:
   - assert.Greater
+  position:
+    start_line: 254
+    end_line: 261
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Greater
+  - context.Background
+  - fn
+  - int32
+  - makeStatusFn
+  - newMod
+  - putJSON
 - name: TestMakeStatusFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 262
+    end_line: 270
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - errors.New
+  - fn
+  - makeStatusFn
+  - mem.Read
+  - newMod
+  - putJSON
+  - string
+  - uint32
 - name: TestMakeCloneFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 273
+    end_line: 280
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeCloneFn
+  - mem.Read
+  - newMod
+  - string
+  - uint32
 - name: TestMakeFetchFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 281
+    end_line: 288
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeFetchFn
+  - mem.Read
+  - newMod
+  - string
+  - uint32
 - name: TestMakeCheckoutFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 289
+    end_line: 296
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeCheckoutFn
+  - mem.Read
+  - newMod
+  - string
+  - uint32
 - name: TestMakeCommitFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 297
+    end_line: 304
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeCommitFn
+  - mem.Read
+  - newMod
+  - string
+  - uint32
 - name: TestMakePushFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 305
+    end_line: 312
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makePushFn
+  - mem.Read
+  - newMod
+  - string
+  - uint32
 - name: TestMakeStatusFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
+  position:
+    start_line: 313
+    end_line: 320
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Contains
+  - context.Background
+  - fn
+  - makeStatusFn
+  - mem.Read
+  - newMod
+  - string
+  - uint32
 - name: TestGitWriteJSON_MarshalError
   kind: func
   description: ''
   references:
   - assert.Equal
+  position:
+    start_line: 321
+    end_line: 327
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - gitWriteJSON
+  - int32
+  - newMod

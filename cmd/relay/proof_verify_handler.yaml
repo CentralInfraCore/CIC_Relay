@@ -13,11 +13,31 @@ objects:
   description: ProofVerifyRequest is the request body for POST /v1/proof/verify.
   implements: []
   references: []
+  position:
+    start_line: 13
+    end_line: 15
+  fields:
+  - name: ProofArtifact
+    type: '*ProofArtifact'
+    tag: json:"proof_artifact"
 - name: ProofVerifyResponse
   kind: struct
   description: ProofVerifyResponse is the response body for POST /v1/proof/verify.
   implements: []
   references: []
+  position:
+    start_line: 18
+    end_line: 22
+  fields:
+  - name: Valid
+    type: bool
+    tag: json:"valid"
+  - name: Errors
+    type: '[]string'
+    tag: json:"errors,omitempty"
+  - name: Warnings
+    type: '[]string'
+    tag: json:"warnings,omitempty"
 - name: proofVerifyHandler
   kind: method
   receiver: relayServer

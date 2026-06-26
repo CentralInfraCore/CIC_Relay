@@ -13,30 +13,91 @@ objects:
   description: ''
   references:
   - cabinet.ComputeChainHashV1
+  position:
+    start_line: 15
+    end_line: 26
+  signature:
+    params: []
+    returns:
+    - '*ProofArtifact'
+  calls:
+  - cabinet.ComputeChainHashV1
 - name: TestVerifyProofArtifact_Valid
   kind: func
   description: ''
   references:
   - assert.True
   - assert.Empty
+  position:
+    start_line: 27
+    end_line: 32
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Empty
+  - assert.True
+  - validProofArtifact
 - name: TestVerifyProofArtifact_MissingWorkflowID
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  position:
+    start_line: 33
+    end_line: 40
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.False
+  - validProofArtifact
 - name: TestVerifyProofArtifact_MissingChainHash
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  position:
+    start_line: 41
+    end_line: 48
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.False
+  - validProofArtifact
 - name: TestVerifyProofArtifact_MissingTimestamp
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  position:
+    start_line: 49
+    end_line: 56
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.False
+  - validProofArtifact
 - name: TestVerifyProofArtifact_EmptySourceDigest_Warns
   kind: func
   description: ''
@@ -45,12 +106,41 @@ objects:
   - assert.True
   - require.NotEmpty
   - assert.Contains
+  position:
+    start_line: 57
+    end_line: 66
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.True
+  - cabinet.ComputeChainHashV1
+  - require.NotEmpty
+  - validProofArtifact
 - name: TestVerifyProofArtifact_ChainHashMismatch
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  position:
+    start_line: 67
+    end_line: 74
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.False
+  - strings.Repeat
+  - validProofArtifact
 - name: TestVerifyProofArtifact_StepMissingFields
   kind: func
   description: ''
@@ -60,30 +150,97 @@ objects:
   - cabinet.ProofTraceStepempty
   - assert.False
   - assert.Contains
+  position:
+    start_line: 75
+    end_line: 85
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.False
+  - cabinet.ComputeChainHashV1
+  - strings.Join
+  - validProofArtifact
 - name: TestVerifyProofArtifact_ValidPoSEResults
   kind: func
   description: ''
   references:
   - assert.True
   - assert.Empty
+  position:
+    start_line: 86
+    end_line: 95
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Empty
+  - assert.True
+  - validProofArtifact
 - name: TestVerifyProofArtifact_InvalidPoSEResult
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  position:
+    start_line: 96
+    end_line: 103
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.False
+  - validProofArtifact
 - name: TestVerifyProofArtifact_CommitRecord_Consistent
   kind: func
   description: ''
   references:
   - assert.True
   - assert.Empty
+  position:
+    start_line: 104
+    end_line: 112
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Empty
+  - assert.True
+  - validProofArtifact
 - name: TestVerifyProofArtifact_CommitRecord_IDMismatch
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  position:
+    start_line: 113
+    end_line: 120
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.False
+  - validProofArtifact
 - name: TestVerifyProofArtifact_CommitRecord_PoseNotVerified_Warns
   kind: func
   description: ''
@@ -91,6 +248,20 @@ objects:
   - assert.True
   - require.NotEmpty
   - assert.Contains
+  position:
+    start_line: 121
+    end_line: 129
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.True
+  - require.NotEmpty
+  - validProofArtifact
 - name: TestProofArtifactFromTrace
   kind: func
   description: ''
@@ -99,11 +270,34 @@ objects:
   - cabinet.ProofTraceStep
   - assert.Equal
   - require.Len
+  position:
+    start_line: 130
+    end_line: 149
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ProofArtifactFromTrace
+  - assert.Equal
+  - require.Len
 - name: TestProofArtifactFromTrace_EmptySteps
   kind: func
   description: ''
   references:
   - cabinet.ProofTrace
+  - assert.Empty
+  position:
+    start_line: 150
+    end_line: 159
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ProofArtifactFromTrace
   - assert.Empty
 - name: TestMarshalProofArtifact
   kind: func
@@ -111,6 +305,20 @@ objects:
   references:
   - require.NoError
   - assert.Contains
+  position:
+    start_line: 160
+    end_line: 169
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - MarshalProofArtifact
+  - assert.Contains
+  - require.NoError
+  - string
+  - validProofArtifact
 - name: testSteps
   kind: var
   description: ''

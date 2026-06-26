@@ -14,3 +14,33 @@ objects:
   description: TestSetx_SchemaValidation_Integration verifies that Setx enforces the
     Accepts schema constraint on each workflow step's input data.
   references: []
+  position:
+    start_line: 11
+    end_line: 168
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - 0.echo
+  - 0.fail
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - Payload
+  - context.Background
+  - errors.Is
+  - errors.New
+  - func
+  - modules.Put
+  - new
+  - newSvc
+  - svc.Setx
+  - t.Fatal
+  - t.Fatalf
+  - t.Run
+  - wf.ID
+  - workflows.Put

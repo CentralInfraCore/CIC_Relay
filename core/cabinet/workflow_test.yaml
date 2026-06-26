@@ -17,3 +17,21 @@ objects:
   - assert.ErrorIs
   - require.Error
   - assert.EqualError
+  position:
+    start_line: 10
+    end_line: 31
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewWorkflow
+  - assert.EqualError
+  - assert.Error
+  - assert.ErrorIs
+  - assert.Nil
+  - context.Background
+  - func
+  - require.Error
+  - t.Run

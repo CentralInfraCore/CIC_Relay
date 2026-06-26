@@ -11,9 +11,27 @@ related_nodes: []
 objects:
 - name: NewSchema
   kind: func
-  description: NewSchema constructs a Schema by calling the single central entry point
-    for validation and checksum calculation.
+  description: NewSchema constructs a ManagedEntity-conformant Schema with validated
+    checksum.
   references: []
+  position:
+    start_line: 6
+    end_line: 19
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: identity
+      type: SchemaIdentity
+    - name: config
+      type: SchemaConfig
+    - name: signing
+      type: SchemaSigning
+    returns:
+    - '*Schema'
+    - error
+  calls:
+  - validateAndChecksumSchema
 - name: ID
   kind: method
   receiver: Schema
@@ -23,11 +41,10 @@ objects:
 - name: GetData
   kind: method
   receiver: Schema
-  description: GetData returns the schema's specification for checksum purposes.
+  description: GetData returns the schema's config surface for checksum purposes.
   references: []
 - name: Checksum
   kind: method
   receiver: Schema
-  description: Checksum returns the pre-computed checksum from the Meta block. It
-    does not recalculate the hash, adhering to the "No shortcut" rule.
+  description: Checksum returns the pre-computed checksum from the Signing block.
   references: []

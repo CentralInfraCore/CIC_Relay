@@ -18,6 +18,32 @@ objects:
     by compilers. The stripped bytes are also stored in the descriptor so that stored
     and executed bytes always match the checksummed form.'
   references: []
+  position:
+    start_line: 15
+    end_line: 52
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: meta
+      type: BaseBlock
+    - name: moduleType
+      type: string
+    - name: accepts
+      type: '[]string'
+    - name: outputKeys
+      type: '[]string'
+    - name: wasmCode
+      type: '[]byte'
+    returns:
+    - '*ModuleDescriptor'
+    - error
+  calls:
+  - fmt.Errorf
+  - stripWasmModuleFunc
+  - struct
+  - tempDescriptorForData.GetData
+  - validateAndChecksum
 - name: ID
   kind: method
   receiver: ModuleDescriptor

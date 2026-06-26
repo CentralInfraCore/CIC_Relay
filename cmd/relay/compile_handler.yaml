@@ -15,12 +15,36 @@ objects:
   description: CompileRequest is the request body for POST /v1/schema/compile.
   implements: []
   references: []
+  position:
+    start_line: 15
+    end_line: 19
+  fields:
+  - name: Schema
+    type: string
+    tag: json:"schema"
+  - name: Version
+    type: string
+    tag: json:"version"
+  - name: SourceAssertion
+    type: string `json:"source_assertion,omitempty"` // developer-signed artifact
+      YAML from CIC-Schemas
+    tag: ''
 - name: CompileResponse
   kind: struct
   description: CompileResponse is the response body for POST /v1/schema/compile.
   implements: []
   references:
   - cabinet.ProofTrace
+  position:
+    start_line: 22
+    end_line: 25
+  fields:
+  - name: Artifact
+    type: interface{}
+    tag: json:"artifact"
+  - name: ProofTrace
+    type: '*cabinet.ProofTrace'
+    tag: json:"proof_trace"
 - name: compileHandler
   kind: method
   receiver: relayServer
