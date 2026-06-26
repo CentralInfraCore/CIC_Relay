@@ -17,6 +17,20 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  position:
+    start_line: 20
+    end_line: 30
+  signature:
+    params:
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - string
+  calls:
+  - Warn
+  - logger.WithFields
+  - os.Getenv
+  - strings.TrimSpace
 - name: bootstrapPKI
   kind: func
   description: 'bootstrapPKI loads the CA trust store based on trustMode. dev  → loads
@@ -26,3 +40,31 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  position:
+    start_line: 38
+    end_line: 80
+  signature:
+    params:
+    - name: trustMode
+      type: string
+    - name: embeddedPKI
+      type: fs.FS
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - '*PKIAssets'
+    - error
+  calls:
+  - CIC_PLATFORM_CA_BUNDLE
+  - Info
+  - bootstrap
+  - bootstrapped
+  - fmt.Errorf
+  - loadPKIAssets
+  - logger.WithFields
+  - os.Getenv
+  - os.ReadFile
+  - pool.AppendCertsFromPEM
+  - q
+  - strings.TrimSpace
+  - x509.NewCertPool

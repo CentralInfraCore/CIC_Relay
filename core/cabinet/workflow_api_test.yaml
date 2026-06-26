@@ -12,17 +12,56 @@ objects:
   kind: func
   description: ''
   references:
-  - cabinet.WorkflowMeta
-  - cabinet.BaseBlockName
+  - cabinet.Workflow
+  - cabinet.WorkflowConfigName
+  - cabinet.WorkflowIdentityVersion
+  position:
+    start_line: 11
+    end_line: 20
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ID
+  - t.Fatalf
+  - w.ID
 - name: TestWorkflow_ID_API_Empty
   kind: func
   description: ''
   references:
-  - cabinet.WorkflowMeta
-  - cabinet.BaseBlockName
-- name: TestWorkflow_GetData_API_ReturnsSteps
+  - cabinet.Workflow
+  position:
+    start_line: 21
+    end_line: 27
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - ID
+  - t.Fatalf
+  - w.ID
+- name: TestWorkflow_GetData_API_ReturnsConfig
   kind: func
   description: ''
   references:
+  - cabinet.WorkflowConfig
   - cabinet.Workflow
-  - cabinet.BaseBlockName
+  - cabinet.WorkflowIdentityVersion
+  position:
+    start_line: 30
+    end_line: 50
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - GetData
+  - reflect.DeepEqual
+  - string
+  - t.Fatalf
+  - w.GetData

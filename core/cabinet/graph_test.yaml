@@ -13,3 +13,24 @@ objects:
   description: ''
   references:
   - cabinet.ParseExecutionGraph
+  position:
+    start_line: 8
+    end_line: 115
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - 0.Process
+  - 0.Run
+  - 0.echo
+  - Process
+  - cabinet.ParseExecutionGraph
+  - empty
+  - func
+  - name
+  - t.Errorf
+  - t.Fatal
+  - t.Fatalf
+  - t.Run

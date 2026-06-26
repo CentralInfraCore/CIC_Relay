@@ -17,17 +17,51 @@ objects:
   references:
   - rate.Limiter
   - rate.Limit
+  position:
+    start_line: 12
+    end_line: 17
+  fields:
+  - name: mu
+    type: sync.Mutex
+    tag: ''
+  - name: limiters
+    type: map[string]*rate.Limiter
+    tag: ''
+  - name: rps
+    type: rate.Limit
+    tag: ''
+  - name: burst
+    type: int
+    tag: ''
 - name: concurrentLimiter
   kind: struct
   description: concurrentLimiter enforces a cap on simultaneous in-flight requests.
   implements: []
   references: []
+  position:
+    start_line: 57
+    end_line: 59
+  fields:
+  - name: sem
+    type: chan struct{}
+    tag: ''
 - name: newIPRateLimiter
   kind: func
   description: newIPRateLimiter creates a new per-IP rate limiter with the specified
     requests per second limit.
   references:
   - rate.Limiter
+  - rate.Limit
+  position:
+    start_line: 20
+    end_line: 26
+  signature:
+    params:
+    - name: rps
+      type: int
+    returns:
+    - '*ipRateLimiter'
+  calls:
   - rate.Limit
 - name: getLimiter
   kind: method
@@ -47,6 +81,15 @@ objects:
   description: newConcurrentLimiter creates a new limiter that caps the number of
     simultaneous requests.
   references: []
+  position:
+    start_line: 62
+    end_line: 64
+  signature:
+    params:
+    - name: max
+      type: int
+    returns:
+    - '*concurrentLimiter'
 - name: Middleware
   kind: method
   receiver: concurrentLimiter
@@ -58,3 +101,18 @@ objects:
   description: buildHandler wraps the request multiplexer with per-IP rate limiting
     and concurrent request cap middleware.
   references: []
+  position:
+    start_line: 81
+    end_line: 86
+  signature:
+    params:
+    - name: s
+      type: '*relayServer'
+    returns:
+    - http.Handler
+  calls:
+  - cl.Middleware
+  - newConcurrentLimiter
+  - newIPRateLimiter
+  - newMux
+  - rl.Middleware

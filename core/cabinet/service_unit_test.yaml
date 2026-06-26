@@ -15,11 +15,45 @@ objects:
   references:
   - require.Error
   - assert.Contains
+  position:
+    start_line: 14
+    end_line: 23
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - assert.Contains
+  - context.Background
+  - err.Error
+  - require.Error
 - name: TestWithRecorder
   kind: func
   description: TestWithRecorder verifies that WithRecorder sets the recorder field
     on the service.
   references:
+  - require.NoError
+  - require.NotNil
+  position:
+    start_line: 26
+    end_line: 34
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - WithRecorder
+  - context.Background
   - require.NoError
   - require.NotNil
 - name: TestExecutionContext
@@ -32,6 +66,29 @@ objects:
   - assert.Equal
   - assert.False
   - require.NoError
+  position:
+    start_line: 37
+    end_line: 89
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewExecutionContext
+  - NewModuleDescriptor
+  - assert.Equal
+  - assert.False
+  - context.Background
+  - ec.Get
+  - ec.GetModule
+  - ec.Set
+  - ec.StoreModule
+  - func
+  - require.NoError
+  - require.NotNil
+  - require.True
+  - t.Run
 - name: TestSetx_Wasm_Unit
   kind: func
   description: TestSetx_Wasm_Unit provides unit tests for the WASM execution path
@@ -42,6 +99,50 @@ objects:
   - require.Error
   - assert.Contains
   - assert.ErrorIs
+  position:
+    start_line: 92
+    end_line: 355
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - 0.Delete
+  - 0.Get
+  - 0.Init
+  - 0.Notify
+  - 0.Process
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - Once
+  - Return
+  - assert.Contains
+  - assert.Equal
+  - assert.ErrorIs
+  - cicWasmHost
+  - context.Background
+  - coverage
+  - err.Error
+  - expectedErr.Error
+  - fmt.Errorf
+  - func
+  - mockCicWasmHost.AssertExpectations
+  - mockCicWasmHost.Close
+  - mockCicWasmHost.On
+  - mockWasmManager.AssertExpectations
+  - mockWasmManager.On
+  - modStore.Put
+  - new
+  - require.Error
+  - require.NoError
+  - svc.Setx
+  - t.Run
+  - wasmMod.ID
+  - wf.ID
+  - workflows.Put
 - name: TestCabinetService_PutAndGet_Success
   kind: func
   description: TestCabinetService_PutAndGet_Success verifies the core Put/Get functionality
@@ -50,12 +151,67 @@ objects:
   - require.NoError
   - assert.NoError
   - assert.Equal
+  position:
+    start_line: 358
+    end_line: 401
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewSchema
+  - NewWorkflow
+  - assert.Equal
+  - assert.NoError
+  - context.Background
+  - func
+  - module.Checksum
+  - module.ID
+  - require.NoError
+  - retrieved.Checksum
+  - retrieved.ID
+  - schema.Checksum
+  - schema.ID
+  - svc.GetModule
+  - svc.GetSchema
+  - svc.GetWorkflow
+  - svc.PutModule
+  - svc.PutSchema
+  - svc.PutWorkflow
+  - t.Run
+  - workflow.Checksum
+  - workflow.ID
 - name: TestCabinetService_Get_NotFound
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.ErrorIs
+  position:
+    start_line: 402
+    end_line: 416
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - assert.ErrorIs
+  - context.Background
+  - require.NoError
+  - svc.GetModule
+  - svc.GetSchema
+  - svc.GetWorkflow
 - name: TestSetx_ProofTrace
   kind: func
   description: TestSetx_ProofTrace verifies that Setx produces a correct ProofTrace.
@@ -65,9 +221,60 @@ objects:
   - assert.Equal
   - require.Len
   - assert.NotEmpty
+  position:
+    start_line: 419
+    end_line: 474
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - 0.echo
+  - ComputeChainHashV1
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - assert.Equal
+  - assert.NotEmpty
+  - context.Background
+  - func
+  - modStore.Put
+  - new
+  - require.Len
+  - require.NoError
+  - require.NotNil
+  - svc.Setx
+  - wf.ID
+  - wfStore.Put
 - name: TestCabinetService_Close
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.NoError
+  position:
+    start_line: 475
+    end_line: 500
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - Once
+  - Return
+  - assert.NoError
+  - context.Background
+  - func
+  - mockWasmManager.AssertExpectations
+  - mockWasmManager.On
+  - new
+  - require.NoError
+  - svc.Close
+  - t.Run

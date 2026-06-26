@@ -15,34 +15,288 @@ objects:
     object.
   implements: []
   references: []
-- name: SchemaDef
+  position:
+    start_line: 7
+    end_line: 18
+  fields:
+  - name: Name
+    type: string
+    tag: json:"name" yaml:"name"
+  - name: Version
+    type: string
+    tag: json:"version" yaml:"version"
+  - name: Description
+    type: string
+    tag: json:"description,omitempty" yaml:"description,omitempty"
+  - name: CreatedBy
+    type: string
+    tag: json:"createdBy,omitempty" yaml:"createdBy,omitempty"
+  - name: Timestamp
+    type: string
+    tag: json:"timestamp,omitempty" yaml:"timestamp,omitempty"
+  - name: Checksum
+    type: string
+    tag: json:"checksum,omitempty" yaml:"checksum,omitempty"
+  - name: Signature
+    type: string
+    tag: json:"signature,omitempty" yaml:"signature,omitempty"
+  - name: Certificate
+    type: string
+    tag: json:"certificate,omitempty" yaml:"certificate,omitempty"
+  - name: CRLRef
+    type: string
+    tag: json:"crlRef,omitempty" yaml:"crlRef,omitempty"
+  - name: Valid
+    type: bool   `json:"-" yaml:"-"` // Never read the Valid field; always set it
+      at runtime.
+    tag: ''
+- name: SchemaIdentity
   kind: struct
-  description: SchemaDef is the operational specification of a schema – state requirements,
-    dependencies, next steps.
+  description: SchemaIdentity provides stable identification – kind, namespace, version.
   implements: []
   references: []
+  position:
+    start_line: 21
+    end_line: 25
+  fields:
+  - name: Kind
+    type: string
+    tag: json:"kind,omitempty" yaml:"kind,omitempty"
+  - name: Namespace
+    type: string
+    tag: json:"namespace,omitempty" yaml:"namespace,omitempty"
+  - name: Version
+    type: string
+    tag: json:"version" yaml:"version"
+- name: SchemaConfig
+  kind: struct
+  description: SchemaConfig is the desired-state surface – schema-defined configuration
+    and operational constraints.
+  implements: []
+  references: []
+  position:
+    start_line: 28
+    end_line: 36
+  fields:
+  - name: Name
+    type: string
+    tag: json:"name" yaml:"name"
+  - name: Description
+    type: string
+    tag: json:"description,omitempty" yaml:"description,omitempty"
+  - name: CreatedBy
+    type: string
+    tag: json:"createdBy,omitempty" yaml:"createdBy,omitempty"
+  - name: Timestamp
+    type: string
+    tag: json:"timestamp,omitempty" yaml:"timestamp,omitempty"
+  - name: StateRequirement
+    type: map[string]string
+    tag: json:"stateRequirement,omitempty" yaml:"stateRequirement,omitempty"
+  - name: Dependencies
+    type: '[]string'
+    tag: json:"dependencies,omitempty" yaml:"dependencies,omitempty"
+  - name: NextHops
+    type: '[]string'
+    tag: json:"nextHops,omitempty" yaml:"nextHops,omitempty"
+- name: SchemaSigning
+  kind: struct
+  description: SchemaSigning holds cryptographic evidence fields – checksum, signature,
+    certificate.
+  implements: []
+  references: []
+  position:
+    start_line: 39
+    end_line: 44
+  fields:
+  - name: Checksum
+    type: string
+    tag: json:"checksum,omitempty" yaml:"checksum,omitempty"
+  - name: Signature
+    type: string
+    tag: json:"signature,omitempty" yaml:"signature,omitempty"
+  - name: Certificate
+    type: string
+    tag: json:"certificate,omitempty" yaml:"certificate,omitempty"
+  - name: CRLRef
+    type: string
+    tag: json:"crlRef,omitempty" yaml:"crlRef,omitempty"
+- name: SchemaState
+  kind: struct
+  description: SchemaState is the observed/runtime state – set by the system on load,
+    never serialized.
+  implements: []
+  references: []
+  position:
+    start_line: 47
+    end_line: 49
+  fields:
+  - name: Valid
+    type: bool
+    tag: json:"-" yaml:"-"
 - name: Schema
   kind: struct
-  description: Schema is the complete schema object, meta + operational specification.
+  description: Schema is a ManagedEntity-conforming schema object – Identity + Config
+    + Signing + State.
   implements: []
   references: []
+  position:
+    start_line: 52
+    end_line: 57
+  fields:
+  - name: Identity
+    type: SchemaIdentity
+    tag: json:"identity" yaml:"identity"
+  - name: Config
+    type: SchemaConfig
+    tag: json:"config" yaml:"config"
+  - name: Signing
+    type: SchemaSigning
+    tag: json:"signing,omitempty" yaml:"signing,omitempty"
+  - name: State
+    type: SchemaState
+    tag: json:"-" yaml:"-"
 - name: ModuleDescriptor
   kind: struct
   description: ModuleDescriptor describes a module's characteristics – type, supported
     schemas, output keys.
   implements: []
   references: []
-- name: Workflow
+  position:
+    start_line: 64
+    end_line: 73
+  fields:
+  - name: Meta
+    type: BaseBlock
+    tag: json:"metadata" yaml:"metadata"
+  - name: Type
+    type: string
+    tag: json:"type" yaml:"type"
+  - name: Accepts
+    type: '[]string'
+    tag: json:"accepts" yaml:"accepts"
+  - name: OutputKeys
+    type: '[]string'
+    tag: json:"outputKeys,omitempty" yaml:"outputKeys,omitempty"
+  - name: WasmCode
+    type: '[]byte    `json:"-" yaml:"-"` // Never serialize WasmCode; handle it in
+      a separate file.'
+    tag: ''
+  - name: NativeImpl
+    type: NativeFunctions `json:"-" yaml:"-"` // Storage for native Go implementations.
+    tag: ''
+- name: WorkflowIdentity
   kind: struct
-  description: Workflow is a list of execution steps in graph form – referencing schemas.
+  description: WorkflowIdentity provides stable identification – kind, namespace,
+    version.
   implements: []
   references: []
+  position:
+    start_line: 76
+    end_line: 80
+  fields:
+  - name: Kind
+    type: string
+    tag: json:"kind,omitempty" yaml:"kind,omitempty"
+  - name: Namespace
+    type: string
+    tag: json:"namespace,omitempty" yaml:"namespace,omitempty"
+  - name: Version
+    type: string
+    tag: json:"version" yaml:"version"
+- name: WorkflowConfig
+  kind: struct
+  description: WorkflowConfig is the desired-state surface – workflow execution steps
+    and metadata.
+  implements: []
+  references: []
+  position:
+    start_line: 83
+    end_line: 89
+  fields:
+  - name: Name
+    type: string
+    tag: json:"name" yaml:"name"
+  - name: Description
+    type: string
+    tag: json:"description,omitempty" yaml:"description,omitempty"
+  - name: CreatedBy
+    type: string
+    tag: json:"createdBy,omitempty" yaml:"createdBy,omitempty"
+  - name: Timestamp
+    type: string
+    tag: json:"timestamp,omitempty" yaml:"timestamp,omitempty"
+  - name: Steps
+    type: '[]string'
+    tag: json:"steps" yaml:"steps"
+- name: WorkflowSigning
+  kind: struct
+  description: WorkflowSigning holds cryptographic evidence fields.
+  implements: []
+  references: []
+  position:
+    start_line: 92
+    end_line: 97
+  fields:
+  - name: Checksum
+    type: string
+    tag: json:"checksum,omitempty" yaml:"checksum,omitempty"
+  - name: Signature
+    type: string
+    tag: json:"signature,omitempty" yaml:"signature,omitempty"
+  - name: Certificate
+    type: string
+    tag: json:"certificate,omitempty" yaml:"certificate,omitempty"
+  - name: CRLRef
+    type: string
+    tag: json:"crlRef,omitempty" yaml:"crlRef,omitempty"
+- name: WorkflowState
+  kind: struct
+  description: WorkflowState is the observed/runtime state – set by the system on
+    load, never serialized.
+  implements: []
+  references: []
+  position:
+    start_line: 100
+    end_line: 102
+  fields:
+  - name: Valid
+    type: bool
+    tag: json:"-" yaml:"-"
+- name: Workflow
+  kind: struct
+  description: Workflow is a ManagedEntity-conforming workflow object – Identity +
+    Config + Signing + State.
+  implements: []
+  references: []
+  position:
+    start_line: 105
+    end_line: 110
+  fields:
+  - name: Identity
+    type: WorkflowIdentity
+    tag: json:"identity" yaml:"identity"
+  - name: Config
+    type: WorkflowConfig
+    tag: json:"config" yaml:"config"
+  - name: Signing
+    type: WorkflowSigning
+    tag: json:"signing,omitempty" yaml:"signing,omitempty"
+  - name: State
+    type: WorkflowState
+    tag: json:"-" yaml:"-"
 - name: ModuleID
   kind: type
   description: ModuleID is the unique identifier of a module (string alias).
   references: []
+  position:
+    start_line: 4
+    end_line: 4
 - name: NativeFunctions
   kind: type
   description: NativeFunctions is the storage for native, Go-implemented functions.
     The key is the function name, the value is the Go function itself.
   references: []
+  position:
+    start_line: 61
+    end_line: 61

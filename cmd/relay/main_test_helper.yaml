@@ -18,6 +18,9 @@ objects:
   implements: []
   references:
   - mock.Mock
+  position:
+    start_line: 12
+    end_line: 14
 - name: PutSchema
   kind: method
   receiver: mockCabinetService

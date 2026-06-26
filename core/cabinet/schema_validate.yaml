@@ -17,6 +17,21 @@ objects:
     This is the exported counterpart of validateInputSchema and can be used independently
     without a ModuleDescriptor (e.g. for self-validation).
   references: []
+  position:
+    start_line: 8
+    end_line: 30
+  signature:
+    params:
+    - name: accepts
+      type: '[]string'
+    - name: data
+      type: interface{}
+    returns:
+    - error
+  calls:
+  - accepted
+  - fmt.Errorf
+  - key
 - name: validateInputSchema
   kind: func
   description: validateInputSchema checks whether inputData declares a "$schema" key
@@ -27,3 +42,19 @@ objects:
     carrying a "$schema" string value whose value appears in the Accepts list. Any
     deviation returns ErrInvalid.
   references: []
+  position:
+    start_line: 42
+    end_line: 69
+  signature:
+    params:
+    - name: moduleDesc
+      type: '*ModuleDescriptor'
+    - name: inputData
+      type: interface{}
+    returns:
+    - error
+  calls:
+  - fmt.Errorf
+  - key
+  - moduleDesc.ID
+  - q
