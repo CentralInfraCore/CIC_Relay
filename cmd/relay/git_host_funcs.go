@@ -20,14 +20,14 @@ func makeGitHostSetupFn(gitOps nexusgit.GitOps) func(ctx context.Context, r waze
 	}
 }
 
-// registerGitHostFunctions instantiates the "git" host module on r.
-// Each function follows a uniform ABI:
+// registerGitHostFunctions instantiates the "git" host module on the wazero runtime.
+// Each exported function follows a uniform ABI:
 //
 //	(reqPtr i32, reqLen i32, outPtr i32, outLen i32) -> i32
 //
-// The caller passes a JSON-encoded request in WASM linear memory at
-// (reqPtr, reqLen). The response JSON is written to (outPtr, outLen).
-// The return value is the number of bytes written, or -1 on error.
+// The caller passes a JSON-encoded request in WASM linear memory at (reqPtr, reqLen).
+// The response JSON is written to (outPtr, outLen), and the return value is the number
+// of bytes written, or -1 on error.
 func registerGitHostFunctions(ctx context.Context, r wazero.Runtime, gitOps nexusgit.GitOps) error {
 	b := r.NewHostModuleBuilder("git")
 
@@ -73,6 +73,7 @@ func registerGitHostFunctions(ctx context.Context, r wazero.Runtime, gitOps nexu
 
 // --- host function factories ---
 
+// makeCloneFn creates a WASM host function that clones a git repository.
 func makeCloneFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req struct {
@@ -90,6 +91,7 @@ func makeCloneFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, 
 	}
 }
 
+// makeFetchFn creates a WASM host function that fetches updates from a git remote.
 func makeFetchFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req struct {
@@ -106,6 +108,7 @@ func makeFetchFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, 
 	}
 }
 
+// makeCheckoutFn creates a WASM host function that checks out a git reference.
 func makeCheckoutFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req struct {
@@ -122,6 +125,7 @@ func makeCheckoutFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint3
 	}
 }
 
+// makeCommitFn creates a WASM host function that commits changes to a git repository.
 func makeCommitFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req struct {
@@ -140,6 +144,7 @@ func makeCommitFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32,
 	}
 }
 
+// makePushFn creates a WASM host function that pushes commits to a git remote.
 func makePushFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req struct {
@@ -157,6 +162,7 @@ func makePushFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, u
 	}
 }
 
+// makeStatusFn creates a WASM host function that queries the status of a git repository.
 func makeStatusFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req struct {

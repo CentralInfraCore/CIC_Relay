@@ -52,6 +52,7 @@ func NewModuleDescriptor(ctx context.Context, meta BaseBlock, moduleType string,
 }
 
 // ID returns the unique module identifier in the form "name@version".
+// This is used for lookups in the module store.
 func (m *ModuleDescriptor) ID() string {
 	return m.Meta.Name + "@" + m.Meta.Version
 }

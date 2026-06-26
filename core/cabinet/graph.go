@@ -39,7 +39,9 @@ func ParseExecutionGraph(steps []string) (*ExecutionGraph, error) {
 	return &ExecutionGraph{Steps: parsed}, nil
 }
 
-// parseStep parses a single step string.
+// parseStep parses a single step string and extracts its component parts.
+// It supports both new format (component@version.function(inputKey) -> outputKey)
+// and old format (component.function(data)).
 func parseStep(s string) (ExecutionGraphStep, error) {
 	// Split on " -> " first to detect new format.
 	var outputKey string

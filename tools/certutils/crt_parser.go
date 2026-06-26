@@ -30,6 +30,7 @@ type BuildMeta struct {
 	CAFingerprint string `yaml:"ca_fingerprint"`
 }
 
+// printHelp prints the usage and command-line options for the certificate parser.
 func printHelp() {
 	exe := filepath.Base(os.Args[0])
 	fmt.Printf("Usage: %s [options]\n", exe)

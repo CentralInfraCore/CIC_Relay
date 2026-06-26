@@ -67,7 +67,7 @@ type config struct {
 	SchemaBuilderContainer string // Docker container running the CIC-Schemas build env
 }
 
-// loadConfig loads configuration from environment variables.
+// loadConfig loads the relay configuration from environment variables, with sensible defaults.
 func loadConfig() (*config, error) {
 	cfg := &config{
 		MaxJSONInputSize:       4 * 1024 * 1024,           // Default to 4 MB
@@ -175,14 +175,15 @@ func (s *relayServer) emitCounter(p obs.CounterPoint) {
 	}
 }
 
-// writeError writes a uniform JSON error response: {"error":"<msg>","code":"<code>"}.
+// writeError writes a uniform JSON error response with the specified HTTP status code.
+// Response format: {"error":"<msg>","code":"<code>"}.
 func writeError(w http.ResponseWriter, status int, code, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg, "code": code})
 }
 
-// newMux creates a new HTTP multiplexer with all routes.
+// newMux creates a new HTTP multiplexer and registers all relay API routes.
 func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.rootHandler)

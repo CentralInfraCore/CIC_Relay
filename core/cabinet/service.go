@@ -88,6 +88,8 @@ type Cabinet interface {
 	Close(ctx context.Context) error
 }
 
+// cabinetService is the concrete implementation of the Cabinet interface, managing schemas, modules,
+// workflows, and their execution via a WASM runtime with optional audit recording.
 type cabinetService struct {
 	schemas     SchemaStore
 	modules     ModuleStore
@@ -138,7 +140,8 @@ func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleS
 	return svc, nil
 }
 
-// Setx executes a workflow based on the function-oriented model.
+// Setx executes a workflow based on the function-oriented model, resolving components, validating input schemas,
+// dispatching to native or WASM implementations, and recording ProofTrace steps with input/output hashing.
 func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse, error) {
 	// 1. Resolve the workflow itself.
 	workflow, err := c.GetWorkflow(in.WorkflowID)
@@ -309,6 +312,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	}, nil
 }
 
+// Close closes the underlying WASM runtime and frees all associated resources.
 func (c *cabinetService) Close(ctx context.Context) error {
 	return c.wasmManager.Close(ctx)
 }
@@ -322,12 +326,14 @@ func isWasmTimeout(errorResult string) bool {
 	return json.Unmarshal([]byte(errorResult), &v) == nil && v.Code == "TIMEOUT"
 }
 
+// PutSchema stores a Schema in the underlying SchemaStore.
 func (c *cabinetService) PutSchema(s *Schema) error {
 	// Validation is now handled by the constructor.
 	c.schemas.Put(s)
 	return nil
 }
 
+// GetSchema retrieves a Schema by ID, returning ErrNotFound if not present.
 func (c *cabinetService) GetSchema(id string) (*Schema, error) {
 	if s, ok := c.schemas.Get(id); ok {
 		return s, nil
@@ -335,12 +341,14 @@ func (c *cabinetService) GetSchema(id string) (*Schema, error) {
 	return nil, ErrNotFound
 }
 
+// PutModule stores a ModuleDescriptor in the underlying ModuleStore.
 func (c *cabinetService) PutModule(m *ModuleDescriptor) error {
 	// Validation is now handled by the constructor.
 	c.modules.Put(m)
 	return nil
 }
 
+// GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound if not present.
 func (c *cabinetService) GetModule(id string) (*ModuleDescriptor, error) {
 	if m, ok := c.modules.Get(id); ok {
 		return m, nil
@@ -348,12 +356,14 @@ func (c *cabinetService) GetModule(id string) (*ModuleDescriptor, error) {
 	return nil, ErrNotFound
 }
 
+// PutWorkflow stores a Workflow in the underlying WorkflowStore.
 func (c *cabinetService) PutWorkflow(w *Workflow) error {
 	// Validation is now handled by the constructor.
 	c.workflows.Put(w)
 	return nil
 }
 
+// GetWorkflow retrieves a Workflow by ID, returning ErrNotFound if not present.
 func (c *cabinetService) GetWorkflow(id string) (*Workflow, error) {
 	if w, ok := c.workflows.Get(id); ok {
 		return w, nil

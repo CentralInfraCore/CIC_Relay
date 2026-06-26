@@ -154,7 +154,7 @@ func ProofArtifactFromTrace(t *cabinet.ProofTrace) *ProofArtifact {
 	}
 }
 
-// MarshalProofArtifact serializes a ProofArtifact to canonical JSON.
+// MarshalProofArtifact serializes a ProofArtifact to canonical JSON format for transport or storage.
 func MarshalProofArtifact(a *ProofArtifact) ([]byte, error) {
 	return json.Marshal(a)
 }

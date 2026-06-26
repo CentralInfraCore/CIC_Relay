@@ -22,7 +22,9 @@ type SetPayload struct {
 	SourceDigest string         `json:"source_digest,omitempty" yaml:"source_digest,omitempty"`
 }
 
-// CanonicalizeSetPayload normalizes input (trim, dedup/sort, defaults).
+// CanonicalizeSetPayload normalizes a SetPayload by trimming whitespace, deduplicating and sorting modules,
+// and setting default options (priority defaults to "normal").
+// This ensures deterministic comparison and hashing of requests.
 func CanonicalizeSetPayload(in *SetPayload) {
 	if in == nil {
 		return

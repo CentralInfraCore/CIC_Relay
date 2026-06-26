@@ -2,9 +2,9 @@ package cabinet
 
 import "fmt"
 
-// ValidateSchema checks whether data carries a "$schema" key matching one of accepts.
-// If accepts is empty, all data passes. This is the exported counterpart of
-// validateInputSchema — usable without a ModuleDescriptor (e.g. for self-validation).
+// ValidateSchema checks whether data carries a "$schema" key matching one of the accepted schema IDs.
+// If accepts is empty, all data passes validation. This is the exported counterpart of validateInputSchema
+// and can be used independently without a ModuleDescriptor (e.g. for self-validation).
 func ValidateSchema(accepts []string, data interface{}) error {
 	if len(accepts) == 0 {
 		return nil
