@@ -11,19 +11,17 @@ related_nodes: []
 objects:
 - name: SetResponse
   kind: struct
-  description: SetResponse is the response to a Set call. Results will be populated in
-    later iterations after workflow execution; this patch provides the foundation for
-    schema/validation.
+  description: SetResponse is the response to a Set call.
   implements: []
   references: []
 - name: ValidateSet
   kind: method
   receiver: API
-  description: ValidateSet performs minimal structural validation of SetPayload and checks
-    if referenced entities (workflow, modules) exist.
+  description: ValidateSet performs minimal structural validation of SetPayload and
+    checks if referenced entities (workflow, modules) exist.
   references: []
 - name: Set
   kind: method
   receiver: API
-  description: 'Set is the entry point for schema validation and workflow execution.'
+  description: Set is the entry point for schema validation and workflow execution.
   references: []

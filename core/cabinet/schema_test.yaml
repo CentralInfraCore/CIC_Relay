@@ -1,0 +1,18 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestNewSchema_Error
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Nil
+  - assert.ErrorIs

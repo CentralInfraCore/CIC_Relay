@@ -1,0 +1,224 @@
+---
+package: cabinet
+description: ''
+tags:
+- metrics
+- storage
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: mockModuleStore
+  kind: struct
+  description: mockModuleStore is a mock implementation of the ModuleStore interface
+    for testing.
+  implements: []
+  references: []
+- name: loadWasmFile
+  kind: func
+  description: loadWasmFile is a test helper to load a compiled WASM module from the
+    testdata directory.
+  references:
+  - require.NoError
+- name: newMockModuleStore
+  kind: func
+  description: ''
+  references: []
+- name: Get
+  kind: method
+  receiver: mockModuleStore
+  description: ''
+  references: []
+- name: Put
+  kind: method
+  receiver: mockModuleStore
+  description: ''
+  references: []
+- name: Exists
+  kind: method
+  receiver: mockModuleStore
+  description: ''
+  references: []
+- name: TestWasmManager_NewAndClose
+  kind: func
+  description: TestWasmManager_NewAndClose tests the basic creation and destruction
+    of the WasmManager.
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.NoError
+  - assert.Error
+  - require.Error
+  - assert.Contains
+- name: TestWasmManager_PreCompile_Simple
+  kind: func
+  description: TestWasmManager_PreCompile_Simple tests a single, successful compilation
+    and caching.
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.True
+  - assert.Same
+- name: TestWasmManager_NewHostInstance
+  kind: func
+  description: TestWasmManager_NewHostInstance tests creating a new host instance.
+  references:
+  - require.NoError
+  - assert.Error
+  - require.NotNil
+  - assert.NoError
+- name: TestWasmManager_EvictModule
+  kind: func
+  description: TestWasmManager_EvictModule tests evicting a module from the cache.
+  references:
+  - require.NoError
+  - assert.True
+  - assert.False
+- name: TestCicWasmHost_Process
+  kind: func
+  description: TestCicWasmHost_Process tests the Process method of a host instance.
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.Equal
+- name: TestCicWasmHost_Get
+  kind: func
+  description: TestCicWasmHost_Get tests the Get method of a host instance.
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestCicWasmHost_Init
+  kind: func
+  description: TestCicWasmHost_Init tests the Init method of a host instance.
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestCicWasmHost_Notify
+  kind: func
+  description: TestCicWasmHost_Notify tests the Notify method of a host instance.
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestWasmManager_NewHostInstance_MissingABI
+  kind: func
+  description: TestWasmManager_NewHostInstance_MissingABI tests creating an instance
+    from a module that is missing a required function.
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: TestWasmManager_PreCompile_NilCode
+  kind: func
+  description: TestWasmManager_PreCompile_NilCode tests pre-compiling a module with
+    no code.
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: TestCicWasmHost_Process_BadRead
+  kind: func
+  description: TestCicWasmHost_Process_BadRead tests when the guest returns a pointer
+    to invalid memory.
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Contains
+- name: TestCicWasmHost_Process_TrapDealloc
+  kind: func
+  description: TestCicWasmHost_Process_TrapDealloc tests that a trap in deallocate
+    is handled.
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestCicWasmHost_Process_Timeout
+  kind: func
+  description: TestCicWasmHost_Process_Timeout tests the timeout functionality.
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Contains
+- name: TestFormatErrorJson_WithDetails
+  kind: func
+  description: TestFormatErrorJson_WithDetails tests that the details field is correctly
+    included.
+  references:
+  - assert.Contains
+- name: TestFormatErrorJson_MarshalError
+  kind: func
+  description: TestFormatErrorJson_MarshalError tests the error path of formatErrorJson.
+  references:
+  - assert.Equal
+- name: TestCicWasmHost_Close_NilInstance
+  kind: func
+  description: TestCicWasmHost_Close_NilInstance tests closing a nil instance.
+  references:
+  - assert.NoError
+- name: TestWasmManager_EvictModule_Prefix
+  kind: func
+  description: TestWasmManager_EvictModule_Prefix tests that EvictModule evicts all
+    versions of a module.
+  references:
+  - require.NoError
+  - assert.False
+- name: TestCicWasmHost_callGuest_Errors
+  kind: func
+  description: TestCicWasmHost_callGuest_Errors covers various error scenarios in
+    the callGuest function.
+  references:
+  - require.NoError
+  - require.True
+  - assert.Contains
+  - assert.Equal
+  - assert.JSONEq
+- name: TestWasmManager_SetObsSinks_CompileMetric
+  kind: func
+  description: TestWasmManager_SetObsSinks_CompileMetric verifies that after SetObsSinks,
+    compiling a module emits a relay.wasm.compile_duration_ms histogram point. (M22.8)
+  references:
+  - require.NoError
+  - obs.CaptureSink
+  - require.Len
+  - assert.Equal
+- name: TestWasmManager_SetObsSinks_InstantiateMetric
+  kind: func
+  description: TestWasmManager_SetObsSinks_InstantiateMetric verifies that NewHostInstance
+    emits a relay.wasm.instantiate_duration_ms histogram point after SetObsSinks.
+    (M22.8)
+  references:
+  - require.NoError
+  - obs.CaptureSink
+  - require.Len
+  - assert.Contains
+- name: TestCicWasmHost_Process_NoSpuriousDeallocWarn
+  kind: func
+  description: TestCicWasmHost_Process_NoSpuriousDeallocWarn verifies that no WARN
+    log is emitted when Process completes successfully (all four dealloc defers succeed).
+    Kills the err != nil → err == nil mutation in each defer closure.
+  references:
+  - require.NoError
+  - obs.CaptureSink
+- name: TestCicWasmHost_EmitDeallocWarn_NilSafe
+  kind: func
+  description: TestCicWasmHost_EmitDeallocWarn_NilSafe verifies that emitDeallocWarn
+    is a no-op when logSink is nil — no panic. (M22.8)
+  references:
+  - assert.NotPanics
+  - assert.AnError
+- name: TestCicWasmHost_EmitDeallocWarn_RecordsLog
+  kind: func
+  description: TestCicWasmHost_EmitDeallocWarn_RecordsLog verifies that emitDeallocWarn
+    emits a WARN LogRecord when logSink is set. (M22.8)
+  references:
+  - obs.CaptureSink
+  - assert.AnError
+  - require.Len
+  - assert.Equal
+- name: TestNewWasmManager_HostSetupFn_Error
+  kind: func
+  description: ''
+  references:
+  - wazero.Runtime
+  - require.Error
+  - assert.Contains

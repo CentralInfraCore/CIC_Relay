@@ -1,0 +1,67 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: newTestProofVerifyServer
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+- name: validProofVerifyBody
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProofTraceStep
+  - cabinet.ComputeChainHashV1
+  - require.NoError
+- name: TestProofVerifyHandler_MethodNotAllowed
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestProofVerifyHandler_BodyTooLarge
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - assert.Equal
+- name: TestProofVerifyHandler_InvalidJSON
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestProofVerifyHandler_MissingProofArtifact
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestProofVerifyHandler_ReadBodyError
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestProofVerifyHandler_ValidArtifact
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - assert.Equal
+  - require.NoError
+  - assert.True
+  - assert.Empty
+- name: TestProofVerifyHandler_InvalidChainHash
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - require.NoError
+  - assert.False
+  - require.NotEmpty
+  - assert.Contains

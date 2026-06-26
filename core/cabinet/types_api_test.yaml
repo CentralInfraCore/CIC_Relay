@@ -1,0 +1,41 @@
+---
+package: cabinet_test
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestBaseBlock_API_Shape
+  kind: func
+  description: ''
+  references:
+  - cabinet.BaseBlock
+  - assert.Equal
+- name: TestSchemaDef_API_ShapeAndZeroValue
+  kind: func
+  description: ''
+  references:
+  - cabinet.SchemaDef
+  - assert.Equal
+- name: TestSchema_API_Shape
+  kind: func
+  description: ''
+  references:
+  - cabinet.Schema
+  - assert.Equal
+- name: TestModuleDescriptor_API_Shape
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor
+  - assert.Equal
+- name: TestWorkflow_API_Shape
+  kind: func
+  description: ''
+  references:
+  - cabinet.Workflow
+  - assert.Equal

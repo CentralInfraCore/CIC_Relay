@@ -11,29 +11,30 @@ related_nodes: []
 objects:
 - name: BaseBlock
   kind: struct
-  description: 'BaseBlock contains common metadata and validation attributes of every object.'
+  description: BaseBlock contains common metadata and validation attributes of every
+    object.
   implements: []
   references: []
 - name: SchemaDef
   kind: struct
-  description: 'SchemaDef is the operational specification of a schema – state requirements,
-    dependencies, next steps.'
+  description: SchemaDef is the operational specification of a schema – state requirements,
+    dependencies, next steps.
   implements: []
   references: []
 - name: Schema
   kind: struct
-  description: 'Schema is the complete schema object, meta + operational specification.'
+  description: Schema is the complete schema object, meta + operational specification.
   implements: []
   references: []
 - name: ModuleDescriptor
   kind: struct
-  description: 'ModuleDescriptor describes a module''s characteristics – type, supported
-    schemas, output keys.'
+  description: ModuleDescriptor describes a module's characteristics – type, supported
+    schemas, output keys.
   implements: []
   references: []
 - name: Workflow
   kind: struct
-  description: 'Workflow is a list of execution steps in graph form – referencing schemas.'
+  description: Workflow is a list of execution steps in graph form – referencing schemas.
   implements: []
   references: []
 - name: ModuleID
@@ -42,6 +43,6 @@ objects:
   references: []
 - name: NativeFunctions
   kind: type
-  description: NativeFunctions is the storage for native, Go-implemented functions. The
-    key is the function name, the value is the Go function itself.
+  description: NativeFunctions is the storage for native, Go-implemented functions.
+    The key is the function name, the value is the Go function itself.
   references: []
