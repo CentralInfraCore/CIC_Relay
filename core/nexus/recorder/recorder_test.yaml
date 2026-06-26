@@ -1,0 +1,105 @@
+---
+package: recorder
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MockCryptoService
+  kind: struct
+  description: MockCryptoService implements CryptoService for testing.
+  implements: []
+  references: []
+- name: mockStateRecorder
+  kind: struct
+  description: mockStateRecorder is a test double for StateRecorder.
+  implements: []
+  references:
+  - types.ExpectedState
+- name: Sign
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+- name: Decrypt
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+- name: HealthCheck
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+- name: TestGitStateRecorder_RecordState_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedState
+  - assert.NotEmpty
+  - assert.Equal
+- name: TestWorkflowRecorder_Record_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+- name: TestWorkflowRecorder_Record_NilStateRecorder
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestWorkflowRecorder_Record_VaultUnavailable
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+- name: TestWorkflowRecorder_RunID_Is_WorkflowID
+  kind: func
+  description: ''
+  references:
+  - types.ExpectedState
+  - require.NoError
+  - assert.Equal
+- name: RecordState
+  kind: method
+  receiver: mockStateRecorder
+  description: ''
+  references:
+  - types.ExpectedState
+- name: TestGitStateRecorder_RecordState_Errors
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - require.NoError
+  - types.ExpectedState
+  - assert.Contains
+  - assert.AnError
+- name: TestGitStateRecorder_GetHeadHash_NoCommits
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Error
+  - assert.Contains
+- name: TestGitStateRecorder_Init_AlreadyInitialized
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+- name: TestGitStateRecorder_RecordState_WriteFileFails
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  - require.Error
+  - assert.Contains

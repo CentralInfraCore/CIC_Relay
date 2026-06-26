@@ -1,0 +1,85 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: createTempFile
+  kind: func
+  description: Helper function to create a temporary file with content
+  references: []
+- name: createTempGoPackage
+  kind: func
+  description: Helper function to create a temporary Go package directory and file
+  references: []
+- name: readFileContent
+  kind: func
+  description: Helper function to read file content
+  references: []
+- name: TestRun_Success
+  kind: func
+  description: ''
+  references: []
+- name: TestRun_AllowlistNotFound
+  kind: func
+  description: ''
+  references: []
+- name: TestRun_GenerateSymbolsError
+  kind: func
+  description: ''
+  references: []
+- name: TestGenerateSymbols_Success
+  kind: func
+  description: ''
+  references:
+  - packages.Config
+- name: TestGenerateSymbols_NoPackages
+  kind: func
+  description: ''
+  references:
+  - packages.Config
+- name: TestGenerateSymbols_PackageLoadError
+  kind: func
+  description: ''
+  references:
+  - packages.Config
+- name: TestGenerateSymbols_PackageWithErrors
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+- name: TestGenerateSymbols_CustomPackage
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+- name: TestGenerateSymbols_DocNewFromFilesError
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+- name: TestMain_WrongArgCount
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestMain_RunError
+  kind: func
+  description: ''
+  references:
+  - assert.True
+- name: TestRun_EmptyAllowlist
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+- name: TestRun_WriteError
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains

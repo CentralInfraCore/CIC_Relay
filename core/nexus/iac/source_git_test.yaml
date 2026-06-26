@@ -1,0 +1,36 @@
+---
+package: iac
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: initTestRepo
+  kind: func
+  description: initTestRepo creates a local git repo in dir with one YAML file and
+    returns the branch name used (always "main").
+  references:
+  - require.NoError
+- name: TestGitSource_CloneFresh
+  kind: func
+  description: TestGitSource_CloneFresh tests cloning a fresh repo and reading YAML
+    files.
+  references:
+  - require.NoError
+  - assert.Contains
+- name: TestGitSource_FetchExisting
+  kind: func
+  description: TestGitSource_FetchExisting tests that calling FetchConfig on an already-cloned
+    repo performs a fetch+checkout without error.
+  references:
+  - require.NoError
+  - assert.Contains
+- name: TestGitSource_InvalidURL
+  kind: func
+  description: TestGitSource_InvalidURL tests that an invalid URL returns a wrapped
+    error.
+  references:
+  - assert.Equal

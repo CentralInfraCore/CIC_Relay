@@ -1,0 +1,95 @@
+---
+package: operator
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: mockStateRecorder
+  kind: struct
+  description: mockStateRecorder records calls for assertions.
+  implements: []
+  references: []
+- name: RecordState
+  kind: method
+  receiver: mockStateRecorder
+  description: ''
+  references:
+  - types.ExpectedState
+- name: silentLogger
+  kind: func
+  description: ''
+  references:
+  - logrus.Logger
+  - logrus.New
+- name: TestBootstrapHost_Valid
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.True
+- name: TestBootstrapHost_EmptyHostID
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  - assert.Error
+  - assert.Contains
+- name: TestBootstrapHost_NilRecorder
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotNil
+- name: TestBootstrapHost_RecorderError_NonFatal
+  kind: func
+  description: ''
+  references:
+  - assert.AnError
+  - require.NoError
+  - assert.NotNil
+- name: TestBootstrapToken_TTL
+  kind: func
+  description: ''
+  references:
+  - require.NotNil
+  - assert.WithinDuration
+- name: TestValidateToken_Valid
+  kind: func
+  description: ''
+  references:
+  - require.NotNil
+  - assert.NoError
+- name: TestValidateToken_Expired
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestValidateToken_InvalidHMAC
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestValidateToken_Nil
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestComputeHMAC_Deterministic
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestComputeHMAC_DifferentSecrets
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual

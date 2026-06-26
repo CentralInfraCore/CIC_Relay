@@ -1,0 +1,54 @@
+---
+package: iac
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: mockErrorSource
+  kind: struct
+  description: mockErrorSource always returns an error.
+  implements: []
+  references: []
+- name: TestLoader_Load_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.Len
+  - require.True
+  - assert.Equal
+  - require.Len
+- name: TestLoader_Load_RelativePaths
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+- name: TestLoader_Load_Errors
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: FetchConfig
+  kind: method
+  receiver: mockErrorSource
+  description: ''
+  references:
+  - assert.AnError
+- name: TestFileSource_FetchConfig_BrokenSymlink
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+- name: TestFileSource_FetchConfig_EmptyDir
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty

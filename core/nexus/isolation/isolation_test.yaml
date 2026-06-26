@@ -1,0 +1,109 @@
+---
+package: isolation
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MockWorker
+  kind: struct
+  description: MockWorker is a mock implementation of the Worker interface.
+  implements: []
+  references:
+  - mock.Mock
+- name: MockCryptoService
+  kind: struct
+  description: MockCryptoService for LocalWorker testing
+  implements: []
+  references:
+  - mock.Mock
+- name: Decrypt
+  kind: method
+  receiver: MockWorker
+  description: ''
+  references: []
+- name: Sign
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+- name: Decrypt
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+- name: HealthCheck
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+- name: TestCoordinator_Unwrap_Success
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.NoError
+  - assert.Equal
+- name: TestCoordinator_Unwrap_Errors
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.Error
+  - assert.Contains
+- name: TestCoordinator_Unwrap_WorkerResponseErrors
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.Error
+  - assert.Contains
+- name: TestLocalWorker_Decrypt
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.NoError
+  - assert.Nil
+  - assert.Equal
+  - assert.Error
+  - assert.Contains
+- name: TestNewSubprocessWorker_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+- name: TestSubprocessWorker_Decrypt_BadExecutable
+  kind: func
+  description: ''
+  references:
+  - require.Error
+- name: TestSubprocessWorker_Decrypt_NoResponse
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestSubprocessWorker_Decrypt_BadJSON
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+- name: TestSubprocessWorker_Decrypt_WorkerError
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.Contains
+- name: TestSubprocessWorker_Decrypt_WithEnv
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Nil

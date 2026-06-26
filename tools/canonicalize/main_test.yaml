@@ -1,0 +1,76 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: mockReader
+  kind: struct
+  description: mockReader is a reader that always returns an error on read.
+  implements: []
+  references: []
+- name: failingWriter
+  kind: struct
+  description: failingWriter is a writer that always returns an error on write.
+  implements: []
+  references: []
+- name: Read
+  kind: method
+  receiver: mockReader
+  description: ''
+  references: []
+- name: Write
+  kind: method
+  receiver: failingWriter
+  description: ''
+  references: []
+- name: TestRun_Success
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Equal
+- name: TestRun_ReadError
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestRun_EmptyInput
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Equal
+- name: TestRun_UnmarshalError
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestRun_WriteError
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+- name: TestRun_CanonicalJsonError
+  kind: func
+  description: ''
+  references:
+  - canonicaljson.SetToJSONMock
+  - assert.Error
+  - assert.Contains
+- name: TestMain_ErrorPath
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestMain_SuccessPath
+  kind: func
+  description: ''
+  references: []

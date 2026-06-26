@@ -1,0 +1,21 @@
+---
+package: crypto
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: setupTestVault
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+- name: TestNewVaultCryptoService_Errors
+  kind: func
+  description: ''
+  references: []
