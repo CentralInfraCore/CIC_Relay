@@ -25,8 +25,14 @@ def extract_ast(go_file: Path) -> dict:
       - "FuncName" for functions
       - "TypeName" for types/structs/interfaces
       - "ReceiverType.MethodName" for methods (matched to go.meta.gen.py's receiver field)
+
+    Returns empty dict if file doesn't exist or can't be read.
     """
-    source = go_file.read_text(encoding="utf-8")
+    try:
+        source = go_file.read_text(encoding="utf-8")
+    except (FileNotFoundError, IsADirectoryError, PermissionError):
+        return {}
+
     lines = source.split('\n')
     result = {}
 
