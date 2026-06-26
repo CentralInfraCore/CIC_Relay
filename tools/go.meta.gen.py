@@ -26,6 +26,8 @@ Options:
 import re
 import sys
 import argparse
+import json
+import subprocess
 from pathlib import Path
 
 try:
@@ -444,6 +446,11 @@ def generate(go_file: Path) -> dict:
     imports = _parse_imports(source)
     objects = _parse_objects(source, imports, module_name)
 
+    # Merge AST metadata into objects
+    ast_meta = _extract_ast_metadata(go_file)
+    if ast_meta:
+        objects = _merge_ast_into_objects(objects, ast_meta)
+
     return {
         "package": package,
         "description": _extract_package_doc(source),
@@ -454,6 +461,69 @@ def generate(go_file: Path) -> dict:
         "related_nodes": [],
         "objects": objects,
     }
+
+
+def _extract_ast_metadata(go_file: Path) -> dict:
+    """Extract AST metadata using go_ast_extract.py.
+
+    Returns {object_key: ObjectMeta, ...} or {} if extraction fails.
+    """
+    ast_script = Path(__file__).parent / "go_ast_extract.py"
+    if not ast_script.exists():
+        return {}
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(ast_script), str(go_file)],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+    except Exception:
+        pass
+
+    return {}
+
+
+def _merge_ast_into_objects(objects: list, ast_meta: dict) -> list:
+    """Merge AST metadata into objects list.
+
+    AST metadata keys are object names or "Type.Method" for methods.
+    We match these against objects and add ast_metadata field.
+    """
+    if not ast_meta:
+        return objects
+
+    # Build a map of objects by name for easy lookup
+    obj_by_key: dict[str, dict] = {}
+    for obj in objects:
+        key = _object_key(obj)
+        obj_by_key[key] = obj
+
+    # Merge AST metadata into matched objects
+    for obj in objects:
+        key = _object_key(obj)
+
+        # Try both the original key and the name directly (for backward compatibility)
+        ast_info = ast_meta.get(key) or ast_meta.get(obj['name'])
+
+        if ast_info:
+            # Add AST metadata fields
+            if 'position' in ast_info:
+                obj['position'] = ast_info['position']
+            if 'signature' in ast_info and ast_info['signature']:
+                obj['signature'] = ast_info['signature']
+            if 'calls' in ast_info and ast_info['calls']:
+                obj['calls'] = ast_info['calls']
+            if 'fields' in ast_info and ast_info['fields']:
+                obj['fields'] = ast_info['fields']
+            if 'methods' in ast_info and ast_info['methods']:
+                obj['methods'] = ast_info['methods']
+            # Note: exported and kind are already in obj from regex parsing
+
+    return objects
 
 
 def _object_key(obj: dict) -> str:

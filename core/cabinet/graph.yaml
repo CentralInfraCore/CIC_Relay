@@ -13,11 +13,37 @@ objects:
   description: ExecutionGraphStep is a single parsed step in a workflow.
   implements: []
   references: []
+  position:
+    start_line: 9
+    end_line: 15
+  fields:
+  - name: Raw
+    type: string // original step string, preserved for ProofTrace
+    tag: ''
+  - name: ComponentID
+    type: string // e.g. "deploy@1.0"
+    tag: ''
+  - name: FunctionName
+    type: string // e.g. "Process"
+    tag: ''
+  - name: InputKey
+    type: string // context variable to read as input
+    tag: ''
+  - name: OutputKey
+    type: string // context variable to write result into
+    tag: ''
 - name: ExecutionGraph
   kind: struct
   description: ExecutionGraph is the ordered list of parsed steps for a workflow execution.
   implements: []
   references: []
+  position:
+    start_line: 18
+    end_line: 20
+  fields:
+  - name: Steps
+    type: '[]ExecutionGraphStep'
+    tag: ''
 - name: ParseExecutionGraph
   kind: func
   description: 'ParseExecutionGraph parses a slice of step strings into an ExecutionGraph.
@@ -25,9 +51,39 @@ objects:
     "component.function(data)"   (outputKey defaults to "result") Both formats may
     appear in the same workflow (backward-compatible).'
   references: []
+  position:
+    start_line: 30
+    end_line: 40
+  signature:
+    params:
+    - name: steps
+      type: '[]string'
+    returns:
+    - '*ExecutionGraph'
+    - error
+  calls:
+  - fmt.Errorf
+  - parseStep
 - name: parseStep
   kind: func
   description: parseStep parses a single step string and extracts its component parts.
     It supports both new format (component@version.function(inputKey) -> outputKey)
     and old format (component.function(data)).
   references: []
+  position:
+    start_line: 45
+    end_line: 79
+  signature:
+    params:
+    - name: s
+      type: string
+    returns:
+    - ExecutionGraphStep
+    - error
+  calls:
+  - componentID.functionName
+  - fmt.Errorf
+  - strings.HasSuffix
+  - strings.Index
+  - strings.LastIndex
+  - strings.TrimSpace

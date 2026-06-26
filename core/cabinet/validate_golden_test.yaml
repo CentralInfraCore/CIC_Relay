@@ -16,6 +16,26 @@ objects:
   - assert.NotEqual
   - require.NoError
   - assert.Equal
+  position:
+    start_line: 14
+    end_line: 52
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - assert.Equal
+  - assert.NotEqual
+  - canonical
+  - func
+  - length
+  - metadata
+  - module
+  - process
+  - require.NoError
+  - size
+  - stripWasmModuleFunc
 - name: TestHashingTimeout
   kind: func
   description: TestHashingTimeout verifies that the checksum calculation respects
@@ -23,3 +43,19 @@ objects:
   references:
   - require.Error
   - assert.ErrorIs
+  position:
+    start_line: 55
+    end_line: 73
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewSchema
+  - assert.ErrorIs
+  - cancel
+  - context.Background
+  - context.WithTimeout
+  - require.Error
+  - time.Sleep

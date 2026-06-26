@@ -23,6 +23,39 @@ objects:
   - testify_assert.True
   - testify_assert.NoError
   - require.Error
+  position:
+    start_line: 33
+    end_line: 180
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - SetStripWasmModuleFunc
+  - byte
+  - cancel
+  - canonicaljson.SetToJSONMock
+  - computeChecksum
+  - context.Background
+  - context.WithCancel
+  - data
+  - err.Error
+  - errors.New
+  - fmt.Sprintf
+  - func
+  - require.Error
+  - require.NoError
+  - t.Cleanup
+  - t.Run
+  - testify_assert.Contains
+  - testify_assert.Equal
+  - testify_assert.Error
+  - testify_assert.ErrorIs
+  - testify_assert.False
+  - testify_assert.NoError
+  - testify_assert.True
+  - validateAndChecksum
 - name: TestComputeChecksum_ErrorCases
   kind: func
   description: ''
@@ -32,16 +65,72 @@ objects:
   - testify_assert.Error
   - testify_assert.Contains
   - testify_assert.NoError
+  position:
+    start_line: 181
+    end_line: 257
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - canonicaljson.SetToJSONMock
+  - canonicaljson.ToJSONOriginal
+  - computeChecksum
+  - context.Background
+  - err.Error
+  - errors.New
+  - func
+  - math.NaN
+  - part
+  - t.Cleanup
+  - t.Run
+  - testify_assert.Contains
+  - testify_assert.Error
+  - testify_assert.NoError
 - name: TestStripWasmModuleFunc_Error
   kind: func
   description: ''
   references:
   - require.Error
   - testify_assert.Contains
+  position:
+    start_line: 258
+    end_line: 268
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - err.Error
+  - func
+  - module
+  - require.Error
+  - stripWasmModuleFunc
+  - t.Run
+  - testify_assert.Contains
 - name: TestComputeChecksum_ContextCancelled
   kind: func
   description: ''
   references:
+  - require.Error
+  - testify_assert.ErrorIs
+  position:
+    start_line: 269
+    end_line: 285
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - byte
+  - cancel
+  - computeChecksum
+  - context.Background
+  - context.WithCancel
+  - ctx.Err
   - require.Error
   - testify_assert.ErrorIs
 - name: TestNewModuleDescriptor_ContextCancelled
@@ -50,10 +139,40 @@ objects:
   references:
   - require.Error
   - testify_assert.ErrorIs
+  position:
+    start_line: 286
+    end_line: 294
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewModuleDescriptor
+  - cancel
+  - context.Background
+  - context.WithCancel
+  - require.Error
+  - testify_assert.ErrorIs
 - name: TestNewWorkflow_ContextCancelled
   kind: func
   description: ''
   references:
+  - require.Error
+  - testify_assert.ErrorIs
+  position:
+    start_line: 295
+    end_line: 303
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewWorkflow
+  - cancel
+  - context.Background
+  - context.WithCancel
   - require.Error
   - testify_assert.ErrorIs
 - name: TestNewSchema_ContextCancelled
@@ -61,6 +180,69 @@ objects:
   description: ''
   references:
   - require.Error
+  - testify_assert.ErrorIs
+  position:
+    start_line: 304
+    end_line: 312
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewSchema
+  - cancel
+  - context.Background
+  - context.WithCancel
+  - require.Error
+  - testify_assert.ErrorIs
+- name: TestValidateAndChecksumSchema_Validation
+  kind: func
+  description: ''
+  references:
+  - testify_assert.Error
+  - testify_assert.ErrorIs
+  - testify_assert.Contains
+  position:
+    start_line: 313
+    end_line: 339
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewSchema
+  - context.Background
+  - err.Error
+  - func
+  - t.Run
+  - testify_assert.Contains
+  - testify_assert.Error
+  - testify_assert.ErrorIs
+- name: TestValidateAndChecksumWorkflow_Validation
+  kind: func
+  description: ''
+  references:
+  - testify_assert.Error
+  - testify_assert.ErrorIs
+  - testify_assert.Contains
+  position:
+    start_line: 340
+    end_line: 368
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewWorkflow
+  - context.Background
+  - err.Error
+  - func
+  - t.Run
+  - testify_assert.Contains
+  - testify_assert.Error
   - testify_assert.ErrorIs
 - name: wasmBase
   kind: var

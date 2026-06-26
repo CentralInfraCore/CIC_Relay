@@ -13,3 +13,17 @@ objects:
   description: ''
   references:
   - assert.Panics
+  position:
+    start_line: 9
+    end_line: 17
+  signature:
+    params:
+    - name: t
+      type: '*testing.T'
+    returns: []
+  calls:
+  - NewAPI
+  - api.Close
+  - assert.Panics
+  - context.Background
+  - func

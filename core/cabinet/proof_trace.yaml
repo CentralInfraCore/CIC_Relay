@@ -14,6 +14,22 @@ objects:
     step.
   implements: []
   references: []
+  position:
+    start_line: 12
+    end_line: 17
+  fields:
+  - name: Name
+    type: string
+    tag: json:"name"
+  - name: Module
+    type: string
+    tag: json:"module"
+  - name: InputHash
+    type: string
+    tag: json:"input_hash"
+  - name: OutputHash
+    type: string
+    tag: json:"output_hash"
 - name: ProofTrace
   kind: struct
   description: ProofTrace is the immutable audit record of a completed workflow execution.
@@ -24,12 +40,45 @@ objects:
     the hash-chain continuous from source to output.
   implements: []
   references: []
+  position:
+    start_line: 26
+    end_line: 32
+  fields:
+  - name: WorkflowID
+    type: string
+    tag: json:"workflow_id"
+  - name: SourceDigest
+    type: string
+    tag: json:"source_digest,omitempty"
+  - name: Steps
+    type: '[]ProofTraceStep'
+    tag: json:"steps"
+  - name: ChainHash
+    type: string
+    tag: json:"chain_hash"
+  - name: Timestamp
+    type: string
+    tag: json:"timestamp"
 - name: hashValue
   kind: func
   description: hashValue returns the hex-encoded SHA-256 of the canonical JSON representation
     of v.
   references:
   - canonicaljson.ToJSON
+  position:
+    start_line: 35
+    end_line: 42
+  signature:
+    params:
+    - name: v
+      type: interface{}
+    returns:
+    - string
+    - error
+  calls:
+  - canonicaljson.ToJSON
+  - hex.EncodeToString
+  - sha256.Sum256
 - name: ComputeChainHashV1
   kind: func
   description: 'ComputeChainHashV1 returns SHA-256 over the full execution identity:
@@ -44,3 +93,23 @@ objects:
     executed. InputHash and step Name are included so that two different workflows
     producing the same outputs cannot share the same ChainHash.'
   references: []
+  position:
+    start_line: 59
+    end_line: 79
+  signature:
+    params:
+    - name: ''
+      type: workflowID
+    - name: sourceDigest
+      type: string
+    - name: steps
+      type: '[]ProofTraceStep'
+    returns:
+    - string
+  calls:
+  - byte
+  - hex.EncodeToString
+  - sb.String
+  - sb.WriteByte
+  - sb.WriteString
+  - sha256.Sum256

@@ -15,6 +15,34 @@ objects:
   description: config holds the application's configuration.
   implements: []
   references: []
+  position:
+    start_line: 57
+    end_line: 68
+  fields:
+  - name: MaxJSONInputSize
+    type: int64
+    tag: ''
+  - name: MaxWASMModuleSize
+    type: int64
+    tag: ''
+  - name: HashingTimeout
+    type: time.Duration
+    tag: ''
+  - name: WasmExecTimeoutSeconds
+    type: int
+    tag: ''
+  - name: RateLimitRPS
+    type: int
+    tag: ''
+  - name: MaxConcurrentRequests
+    type: int
+    tag: ''
+  - name: SchemaBuildDir
+    type: string // shared volume path where schemas are cloned+built
+    tag: ''
+  - name: SchemaBuilderContainer
+    type: string // Docker container running the CIC-Schemas build env
+    tag: ''
 - name: relayServer
   kind: struct
   description: relayServer holds the dependencies for our HTTP handlers.
@@ -26,17 +54,72 @@ objects:
   - obs.LogSink
   - obs.MetricSink
   - obs.Resource
+  position:
+    start_line: 145
+    end_line: 155
+  fields:
+  - name: api
+    type: cabinet.Cabinet // Use the interface type
+    tag: ''
+  - name: config
+    type: '*config'
+    tag: ''
+  - name: logger
+    type: '*logrus.Logger // Use logrus logger'
+    tag: ''
+  - name: traceSink
+    type: obs.TraceSink
+    tag: ''
+  - name: logSink
+    type: obs.LogSink
+    tag: ''
+  - name: metricSink
+    type: obs.MetricSink
+    tag: ''
+  - name: obsResource
+    type: obs.Resource // self-identification for obs records
+    tag: ''
 - name: VaultSecrets
   kind: struct
   description: VaultSecrets holds Vault connection parameters loaded from the environment.
   implements: []
   references: []
+  position:
+    start_line: 401
+    end_line: 406
+  fields:
+  - name: Token
+    type: string
+    tag: ''
+  - name: MountPath
+    type: string
+    tag: ''
+  - name: KeyName
+    type: string
+    tag: ''
+  - name: AuditRepoPath
+    type: string
+    tag: ''
 - name: loadConfig
   kind: func
   description: loadConfig loads the relay configuration from environment variables,
     with sensible defaults.
   references:
   - cabinet.MaxWASMModuleSize
+  position:
+    start_line: 71
+    end_line: 142
+  signature:
+    params: []
+    returns:
+    - '*config'
+    - error
+  calls:
+  - fmt.Errorf
+  - os.Getenv
+  - strconv.Atoi
+  - strconv.ParseInt
+  - time.ParseDuration
 - name: emitTrace
   kind: method
   receiver: relayServer
@@ -60,10 +143,42 @@ objects:
   description: 'writeError writes a uniform JSON error response with the specified
     HTTP status code. Response format: {"error":"<msg>","code":"<code>"}.'
   references: []
+  position:
+    start_line: 180
+    end_line: 184
+  signature:
+    params:
+    - name: w
+      type: http.ResponseWriter
+    - name: status
+      type: int
+    - name: ''
+      type: code
+    - name: msg
+      type: string
+    returns: []
+  calls:
+  - Encode
+  - Set
+  - json.NewEncoder
+  - w.Header
+  - w.WriteHeader
 - name: newMux
   kind: func
   description: newMux creates a new HTTP multiplexer and registers all relay API routes.
   references: []
+  position:
+    start_line: 187
+    end_line: 197
+  signature:
+    params:
+    - name: s
+      type: '*relayServer'
+    returns:
+    - '*http.ServeMux'
+  calls:
+  - http.NewServeMux
+  - mux.HandleFunc
 - name: rootHandler
   kind: method
   receiver: relayServer
@@ -105,6 +220,19 @@ objects:
     check.'
   references:
   - cabinet.ValidateSchema
+  position:
+    start_line: 369
+    end_line: 398
+  signature:
+    params:
+    - name: cfg
+      type: '*config'
+    returns:
+    - error
+  calls:
+  - HashingTimeout.String
+  - cabinet.ValidateSchema
+  - fmt.Errorf
 - name: loadSecretsFromVault
   kind: func
   description: 'loadSecretsFromVault reads Vault-related parameters from environment
@@ -114,6 +242,18 @@ objects:
     (default "cic-dev-sign-key"), CIC_AUDIT_REPO_PATH (default "/var/lib/cic-relay/audit").'
   references:
   - logrus.Logger
+  position:
+    start_line: 414
+    end_line: 440
+  signature:
+    params:
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - '*VaultSecrets'
+  calls:
+  - logger.Warn
+  - os.Getenv
 - name: buildRecorderOption
   kind: func
   description: buildRecorderOption constructs a cabinet.WithRecorder option from the
@@ -125,6 +265,26 @@ objects:
   - cabinet.WithRecorder
   - recorder.NewWorkflowRecorder
   - logrus.Fields
+  position:
+    start_line: 444
+    end_line: 468
+  signature:
+    params:
+    - name: logger
+      type: '*logrus.Logger'
+    - name: secrets
+      type: '*VaultSecrets'
+    returns:
+    - cabinet.CabinetOption
+  calls:
+  - Info
+  - Warn
+  - cabinet.WithRecorder
+  - logger.WithError
+  - logger.WithFields
+  - newGitStateRecorder
+  - newVaultCryptoSvc
+  - recorder.NewWorkflowRecorder
 - name: buildOperatorIfConfigured
   kind: func
   description: 'buildOperatorIfConfigured constructs and returns an Operator if CIC_INFRA_REPO_PATH
@@ -140,6 +300,7 @@ objects:
   - iac.IaCSource
   - iac.NewGitSource
   - iac.GitSourceConfig
+  - iac.NewUpstreamSourceFromEnv
   - iac.NewFileSource
   - iac.NewLoader
   - operator.NewPollingWatcher
@@ -149,11 +310,68 @@ objects:
   - operator.NewOperatorWithLifecycle
   - iac.NewIaCValidator
   - logrus.Fields
+  position:
+    start_line: 478
+    end_line: 542
+  signature:
+    params:
+    - name: ctx
+      type: context.Context
+    - name: cabinetSvc
+      type: cabinet.Cabinet
+    - name: logger
+      type: '*logrus.Logger'
+    returns:
+    - '*operator.Operator'
+  calls:
+  - Fatal
+  - FileSource
+  - Info
+  - Load
+  - NewCabinetActivator
+  - Warn
+  - WithActivator
+  - WithValidator
+  - byte
+  - iac.NewFileSource
+  - iac.NewGitSource
+  - iac.NewIaCValidator
+  - iac.NewLoader
+  - iac.NewUpstreamSourceFromEnv
+  - logger.Fatal
+  - logger.Warn
+  - logger.WithError
+  - logger.WithFields
+  - op.WithGraph
+  - operator.NewBootstrapper
+  - operator.NewHostRegistry
+  - operator.NewLifecycleManager
+  - operator.NewOperatorWithLifecycle
+  - operator.NewPollingWatcher
+  - os.Getenv
+  - production
 - name: run
   kind: func
   description: run is a separate function to avoid calling main() in unit tests
   references:
   - logrus.Logger
+  position:
+    start_line: 545
+    end_line: 556
+  signature:
+    params:
+    - name: port
+      type: string
+    - name: logger
+      type: '*logrus.Logger'
+    - name: s
+      type: '*relayServer'
+    returns:
+    - error
+  calls:
+  - buildHandler
+  - listenAndServe
+  - logger.Printf
 - name: main
   kind: func
   description: ''
@@ -178,6 +396,70 @@ objects:
   - merkle.GoSumDigest
   - merkle.GoRuntimeDigest
   - obs.Resource
+  position:
+    start_line: 557
+    end_line: 724
+  signature:
+    params: []
+    returns: []
+  calls:
+  - Debug
+  - Fatal
+  - Info
+  - Initialization
+  - String
+  - Warn
+  - above
+  - bootstrapPKI
+  - buildOperatorIfConfigured
+  - buildRecorderOption
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WithObsSinks
+  - cabinetSvc.Close
+  - cancel
+  - case
+  - context.Background
+  - context.WithCancel
+  - context.WithTimeout
+  - crypto.NewVaultCryptoService
+  - first
+  - func
+  - git.NewExecGitOps
+  - git.NewRepoRegistry
+  - gitOps.SetObsSinks
+  - gitRegistry.Register
+  - isolation.RunWorkerLoop
+  - later
+  - loadConfig
+  - loadEmbeddedComponents
+  - loadInstalledComponents
+  - loadSecretsFromVault
+  - logger.Fatal
+  - logger.Info
+  - logger.SetFormatter
+  - logger.WithError
+  - logger.WithField
+  - logger.WithFields
+  - logrus.New
+  - loop
+  - makeGitHostSetupFn
+  - merkle.GoRuntimeDigest
+  - merkle.GoSumDigest
+  - obs.NewLogrusSink
+  - op.Run
+  - os.Getenv
+  - registerNativeComponents
+  - resolveTrustMode
+  - run
+  - store
+  - string
+  - uint32
+  - uuid.New
+  - validateConfig
+  - validated
 - name: listenAndServe
   kind: var
   description: 'test seam: can be overridden in unit tests'

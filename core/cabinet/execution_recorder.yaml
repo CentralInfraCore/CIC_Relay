@@ -14,3 +14,14 @@ objects:
     by Setx. If nil, recording is silently skipped. Errors from recording are non-fatal:
     the caller logs a WARN and continues.'
   references: []
+  position:
+    start_line: 8
+    end_line: 10
+  methods:
+  - name: Record
+    params:
+    - ctx context.Context
+    - workflowID string
+    - trace interface{}
+    returns:
+    - error
