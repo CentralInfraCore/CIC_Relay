@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - interface
 category: []
 used_in: []
@@ -13,31 +15,11 @@ objects:
   description: ProofVerifyRequest is the request body for POST /v1/proof/verify.
   implements: []
   references: []
-  position:
-    start_line: 13
-    end_line: 15
-  fields:
-  - name: ProofArtifact
-    type: '*ProofArtifact'
-    tag: json:"proof_artifact"
 - name: ProofVerifyResponse
   kind: struct
   description: ProofVerifyResponse is the response body for POST /v1/proof/verify.
   implements: []
   references: []
-  position:
-    start_line: 18
-    end_line: 22
-  fields:
-  - name: Valid
-    type: bool
-    tag: json:"valid"
-  - name: Errors
-    type: '[]string'
-    tag: json:"errors,omitempty"
-  - name: Warnings
-    type: '[]string'
-    tag: json:"warnings,omitempty"
 - name: proofVerifyHandler
   kind: method
   receiver: relayServer
@@ -46,37 +28,5 @@ objects:
   references:
   - uuid.New
   - logrus.Fields
-  position:
-    start_line: 25
-    end_line: 69
-  signature:
-    params:
-    - name: w
-      type: http.ResponseWriter
-    - name: r
-      type: '*http.Request'
-    returns: []
-  calls:
-  - Body.Close
-  - Encode
-  - Error
-  - Info
-  - ProofVerifyResponse
-  - Set
-  - String
-  - VerifyProofArtifact
-  - WithError
-  - WithField
-  - err.Error
-  - int64
-  - io.LimitReader
-  - io.ReadAll
-  - json.NewEncoder
-  - json.Unmarshal
-  - logEntry.Info
-  - logEntry.WithField
-  - logger.WithFields
-  - uuid.New
-  - w.Header
-  - w.WriteHeader
-  - writeError
+  - http.ResponseWriter.Header
+  - http.ResponseWriter.WriteHeader

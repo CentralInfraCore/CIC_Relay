@@ -15,86 +15,18 @@ objects:
     SPKI pins.
   implements: []
   references: []
-  position:
-    start_line: 12
-    end_line: 18
-  fields:
-  - name: Roots
-    type: '*x509.CertPool'
-    tag: ''
-  - name: Intermediates
-    type: '*x509.CertPool'
-    tag: ''
-  - name: KeyUsages
-    type: '[]x509.ExtKeyUsage'
-    tag: ''
-  - name: CRLs
-    type: '[]*x509.RevocationList // Added for M3 revocation check'
-    tag: ''
-  - name: PinnedSPKIs
-    type: map[string]bool        // Added for M3 SPKI pinning. Map of base64-encoded
-      SHA-256 SPKI hashes.
-    tag: ''
 - name: checkRevocation
   kind: func
   description: checkRevocation checks if any certificate in the provided chains is
     in the revocation list.
   references: []
-  position:
-    start_line: 21
-    end_line: 43
-  signature:
-    params:
-    - name: chains
-      type: '[][]*x509.Certificate'
-    - name: crls
-      type: '[]*x509.RevocationList'
-    returns:
-    - error
-  calls:
-  - Issuer.String
-  - SerialNumber.Cmp
-  - fmt.Errorf
 - name: checkSPKIPinning
   kind: func
   description: checkSPKIPinning checks if any certificate in the chains matches the
     pinned SPKI hashes.
   references: []
-  position:
-    start_line: 46
-    end_line: 68
-  signature:
-    params:
-    - name: chains
-      type: '[][]*x509.Certificate'
-    - name: pinnedSPKIs
-      type: map[string]bool
-    returns:
-    - error
-  calls:
-  - Info
-  - StdEncoding.EncodeToString
-  - fmt.Errorf
-  - sha256.Sum256
 - name: VerifyCertificateChain
   kind: func
   description: VerifyCertificateChain checks a certificate against a trust store and
     specific key usages. This is the core function for M3 - Private PKI verification.
   references: []
-  position:
-    start_line: 72
-    end_line: 101
-  signature:
-    params:
-    - name: cert
-      type: '*x509.Certificate'
-    - name: opts
-      type: VerifyOptions
-    returns:
-    - '[][]*x509.Certificate'
-    - error
-  calls:
-  - cert.Verify
-  - checkRevocation
-  - checkSPKIPinning
-  - fmt.Errorf

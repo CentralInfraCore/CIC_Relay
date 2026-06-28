@@ -1,0 +1,39 @@
+---
+package: canonicaljson
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: failingWriter
+  kind: struct
+  description: failingWriter is a mock io.Writer that fails on demand.
+  implements: []
+  references: []
+- name: Write
+  kind: method
+  receiver: failingWriter
+  description: ''
+  references: []
+- name: TestToJSON_DataTypes
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - require.NoError
+  - assert.Equal
+- name: TestToJSON_ErrorCases
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Equal
+- name: TestSetToJSONMock
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal

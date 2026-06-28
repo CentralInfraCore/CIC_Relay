@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -12,28 +13,3 @@ objects:
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 7
-    end_line: 77
-  signature:
-    params: []
-    returns: []
-  calls:
-  - 0.echo
-  - NewAPI
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NewModuleDescriptor
-  - NewSchema
-  - NewWorkflow
-  - api.Set
-  - const
-  - context.Background
-  - error
-  - fmt.Printf
-  - fmt.Println
-  - modStore.Put
-  - schemaStore.Put
-  - wfStore.Put

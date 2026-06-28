@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - interface
 - test
 category: []
@@ -14,115 +16,22 @@ objects:
   description: ''
   references:
   - logrus.New
-  position:
-    start_line: 19
-    end_line: 34
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    - name: mockAPI
-      type: '*mockCabinetService'
-    returns:
-    - '*relayServer'
-  calls:
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Helper
 - name: TestPipelineHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 35
-    end_line: 43
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - new
-  - newTestPipelineServer
-  - server.pipelineHandler
 - name: TestPipelineHandler_BodyTooLarge
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 44
-    end_line: 58
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - bytes.Repeat
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - server.pipelineHandler
 - name: TestPipelineHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 59
-    end_line: 221
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.Bytes
-  - Get
-  - Return
-  - TestPipelineHandler_ConfigDefaultsUsed
-  - TestPipelineHandler_InternalError
-  - TestPipelineHandler_MissingFields
-  - TestPipelineHandler_ReadBodyError
-  - TestPipelineHandler_RequestOverridesConfig
-  - TestPipelineHandler_Success
-  - TestPipelineHandler_Timeout
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - fmt.Errorf
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - io.NopCloser
-  - json.Marshal
-  - json.Unmarshal
-  - mock.MatchedBy
-  - mockAPI.AssertExpectations
-  - mockAPI.On
-  - new
-  - newTestPipelineServer
-  - require.Equal
-  - require.NoError
-  - require.NotNil
-  - server.pipelineHandler
-  - t.Run
-  - w.Header
 - name: TestPipelineHandler_MissingFields
   kind: func
   description: ''
@@ -134,26 +43,6 @@ objects:
   - mock.MatchedBy
   - cabinet.SetPayload
   - cabinet.SetResponseResults
-  position:
-    start_line: 68
-    end_line: 90
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - bytes.NewReader
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - new
-  - newTestPipelineServer
-  - server.pipelineHandler
-  - t.Run
 - name: TestPipelineHandler_ConfigDefaultsUsed
   kind: func
   description: ''
@@ -163,51 +52,8 @@ objects:
   - cabinet.SetPayload
   - cabinet.SetResponseResults
   - assert.Equal
-  position:
-    start_line: 160
-    end_line: 179
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Equal
-  - bytes.NewReader
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - mock.MatchedBy
-  - mockAPI.AssertExpectations
-  - mockAPI.On
-  - new
-  - newTestPipelineServer
-  - server.pipelineHandler
 - name: TestPipelineHandler_InternalError
   kind: func
   description: ''
   references:
   - mock.Anything
-  position:
-    start_line: 196
-    end_line: 211
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Equal
-  - assertErrorJSON
-  - bytes.NewReader
-  - fmt.Errorf
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - mockAPI.On
-  - new
-  - newTestPipelineServer
-  - server.pipelineHandler

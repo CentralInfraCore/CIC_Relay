@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - interface
 - schema
 - test
@@ -15,17 +17,6 @@ objects:
   description: mockCryptoService implements crypto.CryptoService for testing.
   implements: []
   references: []
-  position:
-    start_line: 21
-    end_line: 25
-  fields:
-  - name: func
-    type: (m *mockCryptoService) Sign(_ context.Context, _ []byte) (string, error)
-      {
-    tag: ''
-  - name: return
-    type: '"mock-sig", nil'
-    tag: ''
 - name: Sign
   kind: method
   receiver: mockCryptoService
@@ -47,40 +38,12 @@ objects:
   references:
   - logrus.StandardLogger
   - logrus.SetOutput
-  position:
-    start_line: 32
-    end_line: 40
-  signature:
-    params:
-    - name: m
-      type: '*testing.M'
-    returns: []
-  calls:
-  - logrus.SetOutput
-  - logrus.StandardLogger
-  - m.Run
-  - os.Exit
 - name: TestRun_ServerStart
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NoError
-  position:
-    start_line: 41
-    end_line: 64
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NoError
-  - func
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - run
 - name: TestLoadConfig_Defaults
   kind: func
   description: ''
@@ -88,21 +51,6 @@ objects:
   - assert.NoError
   - assert.NotNil
   - assert.Equal
-  position:
-    start_line: 65
-    end_line: 78
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.NoError
-  - assert.NotNil
-  - int64
-  - loadConfig
-  - os.Clearenv
 - name: TestLoadConfig_AllEnvSet
   kind: func
   description: ''
@@ -110,21 +58,6 @@ objects:
   - assert.NoError
   - assert.NotNil
   - assert.Equal
-  position:
-    start_line: 79
-    end_line: 90
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.NoError
-  - assert.NotNil
-  - int64
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_InvalidJSONSize
   kind: func
   description: ''
@@ -132,21 +65,6 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 91
-    end_line: 99
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_InvalidWASMSize
   kind: func
   description: ''
@@ -154,21 +72,6 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 100
-    end_line: 108
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_InvalidHashingTimeout
   kind: func
   description: ''
@@ -176,21 +79,6 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 109
-    end_line: 117
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_WasmExecTimeout_Custom
   kind: func
   description: ''
@@ -198,20 +86,6 @@ objects:
   - assert.NoError
   - assert.NotNil
   - assert.Equal
-  position:
-    start_line: 118
-    end_line: 126
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.NoError
-  - assert.NotNil
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_WasmExecTimeout_InvalidNotNumber
   kind: func
   description: ''
@@ -219,21 +93,6 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 127
-    end_line: 135
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_WasmExecTimeout_InvalidZero
   kind: func
   description: ''
@@ -241,40 +100,12 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 136
-    end_line: 144
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_RateLimitRPS_Custom
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Equal
-  position:
-    start_line: 145
-    end_line: 152
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.NoError
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_RateLimitRPS_Invalid
   kind: func
   description: ''
@@ -282,21 +113,6 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 153
-    end_line: 161
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_RateLimitRPS_InvalidNotNumber
   kind: func
   description: ''
@@ -304,40 +120,12 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 162
-    end_line: 170
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_MaxConcurrent_Custom
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Equal
-  position:
-    start_line: 171
-    end_line: 178
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.NoError
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_MaxConcurrent_Invalid
   kind: func
   description: ''
@@ -345,21 +133,6 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 179
-    end_line: 187
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestLoadConfig_MaxConcurrent_InvalidNotNumber
   kind: func
   description: ''
@@ -367,172 +140,52 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
-  position:
-    start_line: 188
-    end_line: 196
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.Nil
-  - err.Error
-  - loadConfig
-  - t.Setenv
 - name: TestNewMux
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 197
-    end_line: 208
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - httptest.NewRequest
-  - mux.Handler
-  - newMux
 - name: TestValidateConfig_Valid
   kind: func
   description: ''
   references:
   - assert.NoError
-  position:
-    start_line: 209
-    end_line: 220
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NoError
-  - validateConfig
 - name: TestValidateConfig_RangeViolation_JSONSize
   kind: func
   description: ''
   references:
   - assert.Error
-  position:
-    start_line: 221
-    end_line: 232
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Error
-  - validateConfig
 - name: TestValidateConfig_RangeViolation_WASMSize
   kind: func
   description: ''
   references:
   - assert.Error
-  position:
-    start_line: 233
-    end_line: 244
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Error
-  - validateConfig
 - name: TestValidateConfig_RangeViolation_HashingTimeout
   kind: func
   description: ''
   references:
   - assert.Error
-  position:
-    start_line: 245
-    end_line: 256
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Error
-  - validateConfig
 - name: TestValidateConfig_RangeViolation_WasmExecTimeout
   kind: func
   description: ''
   references:
   - assert.Error
-  position:
-    start_line: 257
-    end_line: 268
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Error
-  - validateConfig
 - name: TestValidateConfig_RangeViolation_RateLimitRPS
   kind: func
   description: ''
   references:
   - assert.Error
-  position:
-    start_line: 269
-    end_line: 280
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Error
-  - validateConfig
 - name: TestValidateConfig_RangeViolation_MaxConcurrent
   kind: func
   description: ''
   references:
   - assert.Error
-  position:
-    start_line: 281
-    end_line: 292
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Error
-  - validateConfig
 - name: TestLoadSecretsFromVault_NoToken
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Nil
-  position:
-    start_line: 293
-    end_line: 302
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Nil
-  - loadSecretsFromVault
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Setenv
 - name: TestLoadSecretsFromVault_WithToken_Defaults
   kind: func
   description: ''
@@ -540,22 +193,6 @@ objects:
   - logrus.New
   - assert.NotNil
   - assert.Equal
-  position:
-    start_line: 303
-    end_line: 319
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.NotNil
-  - loadSecretsFromVault
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Setenv
 - name: TestLoadSecretsFromVault_WithToken_CustomValues
   kind: func
   description: ''
@@ -563,22 +200,6 @@ objects:
   - logrus.New
   - assert.NotNil
   - assert.Equal
-  position:
-    start_line: 320
-    end_line: 336
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.NotNil
-  - loadSecretsFromVault
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Setenv
 - name: TestBuildRecorderOption_NoVaultToken
   kind: func
   description: ''
@@ -591,27 +212,6 @@ objects:
   - cabinet.NewMemModuleStore
   - cabinet.NewMemWorkflowStore
   - assert.NoError
-  position:
-    start_line: 337
-    end_line: 353
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NoError
-  - assert.NotNil
-  - buildRecorderOption
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - svc.Close
 - name: TestBuildRecorderOption_WithVaultToken_ValidPath
   kind: func
   description: ''
@@ -624,28 +224,6 @@ objects:
   - cabinet.NewMemModuleStore
   - cabinet.NewMemWorkflowStore
   - assert.NoError
-  position:
-    start_line: 354
-    end_line: 376
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NoError
-  - assert.NotNil
-  - buildRecorderOption
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - svc.Close
-  - t.TempDir
 - name: TestBuildRecorderOption_WithVaultToken_InvalidPath
   kind: func
   description: ''
@@ -658,27 +236,6 @@ objects:
   - cabinet.NewMemModuleStore
   - cabinet.NewMemWorkflowStore
   - assert.NoError
-  position:
-    start_line: 377
-    end_line: 399
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NoError
-  - assert.NotNil
-  - buildRecorderOption
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - svc.Close
 - name: TestMockCabinetService_PutSchema
   kind: func
   description: ''
@@ -687,22 +244,6 @@ objects:
   - cabinet.SchemaConfigName
   - cabinet.SchemaIdentityVersion
   - assert.NoError
-  position:
-    start_line: 400
-    end_line: 413
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.PutSchema
-  - new
 - name: TestMockCabinetService_PutSchema_Error
   kind: func
   description: ''
@@ -712,24 +253,6 @@ objects:
   - cabinet.SchemaIdentityVersion
   - assert.Error
   - assert.Equal
-  position:
-    start_line: 414
-    end_line: 429
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.PutSchema
-  - new
 - name: TestMockCabinetService_GetSchema
   kind: func
   description: ''
@@ -739,46 +262,12 @@ objects:
   - cabinet.SchemaIdentityVersion
   - assert.NoError
   - assert.Equal
-  position:
-    start_line: 430
-    end_line: 445
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.GetSchema
-  - mockService.On
-  - new
 - name: TestMockCabinetService_GetSchema_NotFound
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Nil
-  position:
-    start_line: 446
-    end_line: 457
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Nil
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.GetSchema
-  - mockService.On
-  - new
 - name: TestMockCabinetService_GetSchema_Error
   kind: func
   description: ''
@@ -786,25 +275,6 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
-  position:
-    start_line: 458
-    end_line: 471
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - assert.Nil
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.GetSchema
-  - mockService.On
-  - new
 - name: TestMockCabinetService_PutModule
   kind: func
   description: ''
@@ -812,22 +282,6 @@ objects:
   - cabinet.ModuleDescriptorMeta
   - cabinet.BaseBlockName
   - assert.NoError
-  position:
-    start_line: 472
-    end_line: 482
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.PutModule
-  - new
 - name: TestMockCabinetService_PutModule_Error
   kind: func
   description: ''
@@ -836,24 +290,6 @@ objects:
   - cabinet.BaseBlockName
   - assert.Error
   - assert.Equal
-  position:
-    start_line: 483
-    end_line: 495
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.PutModule
-  - new
 - name: TestMockCabinetService_GetModule
   kind: func
   description: ''
@@ -862,46 +298,12 @@ objects:
   - cabinet.BaseBlockName
   - assert.NoError
   - assert.Equal
-  position:
-    start_line: 496
-    end_line: 508
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.GetModule
-  - mockService.On
-  - new
 - name: TestMockCabinetService_GetModule_NotFound
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Nil
-  position:
-    start_line: 509
-    end_line: 520
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Nil
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.GetModule
-  - mockService.On
-  - new
 - name: TestMockCabinetService_GetModule_Error
   kind: func
   description: ''
@@ -909,25 +311,6 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
-  position:
-    start_line: 521
-    end_line: 534
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - assert.Nil
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.GetModule
-  - mockService.On
-  - new
 - name: TestMockCabinetService_PutWorkflow
   kind: func
   description: ''
@@ -936,22 +319,6 @@ objects:
   - cabinet.WorkflowConfigName
   - cabinet.WorkflowIdentityVersion
   - assert.NoError
-  position:
-    start_line: 535
-    end_line: 548
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.PutWorkflow
-  - new
 - name: TestMockCabinetService_PutWorkflow_Error
   kind: func
   description: ''
@@ -961,24 +328,6 @@ objects:
   - cabinet.WorkflowIdentityVersion
   - assert.Error
   - assert.Equal
-  position:
-    start_line: 549
-    end_line: 564
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.PutWorkflow
-  - new
 - name: TestMockCabinetService_GetWorkflow
   kind: func
   description: ''
@@ -988,46 +337,12 @@ objects:
   - cabinet.WorkflowIdentityVersion
   - assert.NoError
   - assert.Equal
-  position:
-    start_line: 565
-    end_line: 580
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.GetWorkflow
-  - mockService.On
-  - new
 - name: TestMockCabinetService_GetWorkflow_NotFound
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Nil
-  position:
-    start_line: 581
-    end_line: 592
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Nil
-  - assert.NoError
-  - mockService.AssertExpectations
-  - mockService.GetWorkflow
-  - mockService.On
-  - new
 - name: TestMockCabinetService_GetWorkflow_Error
   kind: func
   description: ''
@@ -1035,25 +350,6 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
-  position:
-    start_line: 593
-    end_line: 606
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - assert.Nil
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.GetWorkflow
-  - mockService.On
-  - new
 - name: TestMockCabinetService_Set
   kind: func
   description: ''
@@ -1062,24 +358,6 @@ objects:
   - cabinet.SetResponse
   - assert.NoError
   - assert.Equal
-  position:
-    start_line: 607
-    end_line: 620
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.NoError
-  - context.Background
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.Setx
-  - new
 - name: TestMockCabinetService_Set_Error
   kind: func
   description: ''
@@ -1088,112 +366,29 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
-  position:
-    start_line: 621
-    end_line: 635
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - assert.Nil
-  - context.Background
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.On
-  - mockService.Setx
-  - new
 - name: TestMockCabinetService_Close
   kind: func
   description: ''
   references:
   - assert.NoError
-  position:
-    start_line: 636
-    end_line: 646
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.NoError
-  - context.Background
-  - mockService.AssertExpectations
-  - mockService.Close
-  - mockService.On
-  - new
 - name: TestMockCabinetService_Close_Error
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Equal
-  position:
-    start_line: 647
-    end_line: 659
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Equal
-  - assert.Error
-  - context.Background
-  - errors.New
-  - mockService.AssertExpectations
-  - mockService.Close
-  - mockService.On
-  - new
 - name: TestBuildOperatorIfConfigured_NilWhenEnvUnset
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Nil
-  position:
-    start_line: 660
-    end_line: 666
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Nil
-  - buildOperatorIfConfigured
-  - context.Background
-  - logrus.New
-  - t.Setenv
 - name: TestBuildRecorderOption_NilSecrets
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NotNil
-  position:
-    start_line: 667
-    end_line: 672
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - WithRecorder
-  - assert.NotNil
-  - buildRecorderOption
-  - logrus.New
 - name: TestBuildRecorderOption_CryptoInitFails
   kind: func
   description: ''
@@ -1201,23 +396,6 @@ objects:
   - crypto.CryptoService
   - logrus.New
   - assert.NotNil
-  position:
-    start_line: 673
-    end_line: 688
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NotNil
-  - buildRecorderOption
-  - errors.New
-  - func
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.TempDir
 - name: TestBuildRecorderOption_FullSuccess
   kind: func
   description: ''
@@ -1226,22 +404,6 @@ objects:
   - crypto.CryptoService
   - logrus.New
   - assert.NotNil
-  position:
-    start_line: 689
-    end_line: 715
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NotNil
-  - buildRecorderOption
-  - func
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.TempDir
 - name: TestBuildRecorderOption_RecorderInitFails
   kind: func
   description: ''
@@ -1250,22 +412,6 @@ objects:
   - recorder.GitStateRecorder
   - logrus.New
   - assert.NotNil
-  position:
-    start_line: 716
-    end_line: 738
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NotNil
-  - buildRecorderOption
-  - errors.New
-  - func
-  - logger.SetOutput
-  - logrus.New
-  - new
 - name: TestBuildOperatorIfConfigured_MissingSecret
   kind: func
   description: ''
@@ -1273,73 +419,18 @@ objects:
   - logrus.New
   - assert.True
   - assert.Nil
-  position:
-    start_line: 739
-    end_line: 752
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Nil
-  - assert.True
-  - buildOperatorIfConfigured
-  - context.Background
-  - func
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Setenv
-  - t.TempDir
 - name: TestBuildOperatorIfConfigured_WithFileSource
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NotNil
-  position:
-    start_line: 753
-    end_line: 764
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NotNil
-  - buildOperatorIfConfigured
-  - context.Background
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Setenv
-  - t.TempDir
 - name: TestBuildOperatorIfConfigured_MissingGitLocalPath
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NotNil
-  position:
-    start_line: 765
-    end_line: 780
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Nil
-  - assert.True
-  - buildOperatorIfConfigured
-  - context.Background
-  - func
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Setenv
-  - t.TempDir
 - name: TestBuildOperatorIfConfigured_WithUpstreamSource
   kind: func
   description: ''
@@ -1347,23 +438,6 @@ objects:
   - logrus.New
   - assert.True
   - assert.Nil
-  position:
-    start_line: 798
-    end_line: 812
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NotNil
-  - buildOperatorIfConfigured
-  - context.Background
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Setenv
-  - t.TempDir
 - name: _
   kind: var
   description: ''

@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - interface
 - test
 category: []
@@ -14,150 +16,36 @@ objects:
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 15
-    end_line: 26
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - handler.ServeHTTP
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newIPRateLimiter
-  - rl.Middleware
 - name: TestIPRateLimiter_BlocksWhenExhausted
   kind: func
   description: ''
   references:
   - assert.True
-  position:
-    start_line: 27
-    end_line: 47
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.True
-  - burst
-  - handler.ServeHTTP
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newIPRateLimiter
-  - rl.Middleware
 - name: TestIPRateLimiter_IsolatesPerIP
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 48
-    end_line: 66
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - allowed
-  - assert.Equal
-  - handler.ServeHTTP
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newIPRateLimiter
-  - rl.Middleware
 - name: TestConcurrentLimiter_AllowsUnderCap
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 67
-    end_line: 76
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - cl.Middleware
-  - handler.ServeHTTP
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newConcurrentLimiter
 - name: TestConcurrentLimiter_BlocksWhenFull
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 77
-    end_line: 113
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ServeHTTP
-  - assert.Equal
-  - cl.Middleware
-  - func
-  - handler.ServeHTTP
-  - http.HandlerFunc
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newConcurrentLimiter
-  - w.WriteHeader
-  - wg.Add
-  - wg.Done
-  - wg.Wait
 - name: TestIPRateLimiter_InvalidRemoteAddr
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 114
-    end_line: 126
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - handler.ServeHTTP
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newIPRateLimiter
-  - rl.Middleware
 - name: TestConcurrentLimiter_ReleasesSlotAfterRequest
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 127
-    end_line: 142
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - cl.Middleware
-  - handler.ServeHTTP
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newConcurrentLimiter
 - name: okHandler
   kind: var
   description: ''

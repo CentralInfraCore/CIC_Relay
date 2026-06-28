@@ -15,92 +15,22 @@ objects:
     execution. It implements the proof_artifact@1.0 schema contract.
   implements: []
   references: []
-  position:
-    start_line: 12
-    end_line: 20
-  fields:
-  - name: WorkflowID
-    type: string
-    tag: json:"workflow_id"
-  - name: SourceDigest
-    type: string
-    tag: json:"source_digest"
-  - name: ChainHash
-    type: string
-    tag: json:"chain_hash"
-  - name: Steps
-    type: '[]ProofArtifactStep'
-    tag: json:"steps"
-  - name: Timestamp
-    type: string
-    tag: json:"timestamp"
-  - name: PoSEResult
-    type: string
-    tag: json:"pose_result,omitempty"
-  - name: CommitRecord
-    type: '*ProofArtifactCommit'
-    tag: json:"commit_record,omitempty"
 - name: ProofArtifactStep
   kind: struct
   description: ProofArtifactStep mirrors cabinet.ProofTraceStep for the verifier.
   implements: []
   references: []
-  position:
-    start_line: 23
-    end_line: 28
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name"
-  - name: Module
-    type: string
-    tag: json:"module"
-  - name: InputHash
-    type: string
-    tag: json:"input_hash"
-  - name: OutputHash
-    type: string
-    tag: json:"output_hash"
 - name: ProofArtifactCommit
   kind: struct
   description: ProofArtifactCommit holds the state commit record appended after PoSE
     verification.
   implements: []
   references: []
-  position:
-    start_line: 31
-    end_line: 36
-  fields:
-  - name: ID
-    type: string
-    tag: json:"id"
-  - name: TraceHead
-    type: string
-    tag: json:"trace_head"
-  - name: PoSERoot
-    type: string
-    tag: json:"pose_root"
-  - name: Actor
-    type: string
-    tag: json:"actor,omitempty"
 - name: VerifyResult
   kind: struct
   description: VerifyResult is the output of VerifyProofArtifact.
   implements: []
   references: []
-  position:
-    start_line: 39
-    end_line: 43
-  fields:
-  - name: Valid
-    type: bool
-    tag: json:"valid"
-  - name: Errors
-    type: '[]string'
-    tag: json:"errors,omitempty"
-  - name: Warnings
-    type: '[]string'
-    tag: json:"warnings,omitempty"
 - name: VerifyProofArtifact
   kind: func
   description: 'VerifyProofArtifact validates a ProofArtifact against the proof_artifact@1.0
@@ -112,46 +42,13 @@ objects:
   references:
   - cabinet.ProofTraceStep
   - cabinet.ComputeChainHashV1
-  position:
-    start_line: 53
-    end_line: 135
-  signature:
-    params:
-    - name: a
-      type: '*ProofArtifact'
-    returns:
-    - VerifyResult
-  calls:
-  - cabinet.ComputeChainHashV1
-  - fmt.Sprintf
 - name: ProofArtifactFromTrace
   kind: func
   description: ProofArtifactFromTrace converts a cabinet.ProofTrace to a ProofArtifact.
   references:
   - cabinet.ProofTrace
-  position:
-    start_line: 138
-    end_line: 155
-  signature:
-    params:
-    - name: t
-      type: '*cabinet.ProofTrace'
-    returns:
-    - '*ProofArtifact'
 - name: MarshalProofArtifact
   kind: func
   description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON format
     for transport or storage.
   references: []
-  position:
-    start_line: 158
-    end_line: 160
-  signature:
-    params:
-    - name: a
-      type: '*ProofArtifact'
-    returns:
-    - '[]byte'
-    - error
-  calls:
-  - json.Marshal

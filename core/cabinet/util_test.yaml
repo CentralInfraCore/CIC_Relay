@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -14,24 +15,3 @@ objects:
     for all domain types correctly calculate and assign the deterministic checksum
     based on the central validateAndChecksum function.
   references: []
-  position:
-    start_line: 11
-    end_line: 61
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewModuleDescriptor
-  - NewSchema
-  - NewWorkflow
-  - canonical_json
-  - context.Background
-  - func
-  - mod.Checksum
-  - schema.Checksum
-  - t.Errorf
-  - t.Fatalf
-  - t.Run
-  - wf.Checksum

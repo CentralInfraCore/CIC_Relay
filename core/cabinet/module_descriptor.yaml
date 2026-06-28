@@ -18,45 +18,12 @@ objects:
     by compilers. The stripped bytes are also stored in the descriptor so that stored
     and executed bytes always match the checksummed form.'
   references: []
-  position:
-    start_line: 15
-    end_line: 52
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: meta
-      type: BaseBlock
-    - name: moduleType
-      type: string
-    - name: accepts
-      type: '[]string'
-    - name: outputKeys
-      type: '[]string'
-    - name: wasmCode
-      type: '[]byte'
-    returns:
-    - '*ModuleDescriptor'
-    - error
-  calls:
-  - fmt.Errorf
-  - stripWasmModuleFunc
-  - struct
-  - tempDescriptorForData.GetData
-  - validateAndChecksum
 - name: ID
   kind: method
   receiver: ModuleDescriptor
   description: ID returns the unique module identifier in the form "name@version".
     This is used for lookups in the module store.
   references: []
-  position:
-    start_line: 56
-    end_line: 58
-  signature:
-    params: []
-    returns:
-    - string
 - name: GetData
   kind: method
   receiver: ModuleDescriptor
@@ -64,22 +31,8 @@ objects:
     calculation. It now always returns a composite structure including policy fields
     and optional WASM code.
   references: []
-  position:
-    start_line: 62
-    end_line: 82
-  signature:
-    params: []
-    returns:
-    - any
 - name: Checksum
   kind: method
   receiver: ModuleDescriptor
   description: Checksum returns the pre-computed checksum from the Meta block.
   references: []
-  position:
-    start_line: 85
-    end_line: 87
-  signature:
-    params: []
-    returns:
-    - string

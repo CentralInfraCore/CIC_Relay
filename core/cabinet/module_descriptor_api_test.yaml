@@ -2,6 +2,7 @@
 package: cabinet_test
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -14,75 +15,20 @@ objects:
   references:
   - cabinet.ModuleDescriptorMeta
   - cabinet.BaseBlockName
-  position:
-    start_line: 12
-    end_line: 18
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
-  - m.ID
-  - t.Fatalf
 - name: TestModuleDescriptor_ID_API_EmptyParts
   kind: func
   description: ''
   references:
   - cabinet.ModuleDescriptorMeta
   - cabinet.BaseBlockName
-  position:
-    start_line: 19
-    end_line: 25
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
-  - m.ID
-  - t.Fatalf
 - name: TestModuleDescriptor_GetData_API_JSONShapeAndValues
   kind: func
   description: ''
   references:
   - cabinet.ModuleDescriptor
   - cabinet.BaseBlockName
-  position:
-    start_line: 28
-    end_line: 83
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - bytes.Equal
-  - in
-  - json.Marshal
-  - json.Unmarshal
-  - m.GetData
-  - string
-  - t.Fatalf
 - name: TestModuleDescriptor_GetData_API_DefensiveCopies
   kind: func
   description: ''
   references:
   - cabinet.ModuleDescriptor
-  position:
-    start_line: 84
-    end_line: 112
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - GetData
-  - bytes.Equal
-  - json.Marshal
-  - orig.GetData
-  - string
-  - t.Fatalf

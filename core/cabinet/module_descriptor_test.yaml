@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -15,53 +16,15 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.ErrorIs
-  position:
-    start_line: 12
-    end_line: 24
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewModuleDescriptor
-  - assert.Error
-  - assert.ErrorIs
-  - assert.Nil
-  - context.Background
-  - func
-  - t.Run
 - name: TestModuleDescriptor_ID_Basic
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 25
-    end_line: 29
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - m.ID
 - name: TestModuleDescriptor_ID_EmptyParts
   kind: func
   description: ''
   references:
-  - assert.Equal
-  position:
-    start_line: 30
-    end_line: 35
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
   - assert.Equal
 - name: TestModuleDescriptor_GetData_ReturnsCompositeStruct
   kind: func
@@ -72,20 +35,3 @@ objects:
   - assert.JSONEq
   - require.True
   - assert.Equal
-  position:
-    start_line: 36
-    end_line: 78
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.JSONEq
-  - canonicaljson.ToJSON
-  - m1.GetData
-  - m2.GetData
-  - require.NoError
-  - require.True
-  - string

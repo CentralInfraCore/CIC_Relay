@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - interface
 - test
 category: []
@@ -14,20 +16,6 @@ objects:
   description: ''
   references:
   - logrus.New
-  position:
-    start_line: 18
-    end_line: 31
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns:
-    - '*relayServer'
-  calls:
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Helper
 - name: validProofVerifyBody
   kind: func
   description: ''
@@ -35,151 +23,32 @@ objects:
   - cabinet.ProofTraceStep
   - cabinet.ComputeChainHashV1
   - require.NoError
-  position:
-    start_line: 32
-    end_line: 50
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns:
-    - '[]byte'
-  calls:
-  - cabinet.ComputeChainHashV1
-  - json.Marshal
-  - require.NoError
-  - t.Helper
 - name: TestProofVerifyHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 51
-    end_line: 59
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - newTestProofVerifyServer
-  - s.proofVerifyHandler
 - name: TestProofVerifyHandler_BodyTooLarge
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 60
-    end_line: 74
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - bytes.Repeat
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - s.proofVerifyHandler
 - name: TestProofVerifyHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 75
-    end_line: 147
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.Bytes
-  - Get
-  - Header.Set
-  - TestProofVerifyHandler_InvalidChainHash
-  - TestProofVerifyHandler_MissingProofArtifact
-  - TestProofVerifyHandler_ReadBodyError
-  - TestProofVerifyHandler_ValidArtifact
-  - assert.Contains
-  - assert.Empty
-  - assert.Equal
-  - assert.False
-  - assert.True
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - io.NopCloser
-  - json.Marshal
-  - json.Unmarshal
-  - newTestProofVerifyServer
-  - require.Equal
-  - require.NoError
-  - require.NotEmpty
-  - s.proofVerifyHandler
-  - strings.Repeat
-  - validProofVerifyBody
-  - w.Header
 - name: TestProofVerifyHandler_MissingProofArtifact
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 84
-    end_line: 93
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - newTestProofVerifyServer
-  - s.proofVerifyHandler
 - name: TestProofVerifyHandler_ReadBodyError
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 94
-    end_line: 102
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - io.NopCloser
-  - newTestProofVerifyServer
-  - s.proofVerifyHandler
 - name: TestProofVerifyHandler_ValidArtifact
   kind: func
   description: ''
@@ -189,31 +58,6 @@ objects:
   - require.NoError
   - assert.True
   - assert.Empty
-  position:
-    start_line: 103
-    end_line: 118
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.Bytes
-  - Get
-  - Header.Set
-  - assert.Empty
-  - assert.Equal
-  - assert.True
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Unmarshal
-  - newTestProofVerifyServer
-  - require.Equal
-  - require.NoError
-  - s.proofVerifyHandler
-  - validProofVerifyBody
-  - w.Header
 - name: TestProofVerifyHandler_InvalidChainHash
   kind: func
   description: ''
@@ -223,27 +67,3 @@ objects:
   - assert.False
   - require.NotEmpty
   - assert.Contains
-  position:
-    start_line: 119
-    end_line: 146
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.Bytes
-  - Header.Set
-  - assert.Contains
-  - assert.False
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - json.Unmarshal
-  - newTestProofVerifyServer
-  - require.Equal
-  - require.NoError
-  - require.NotEmpty
-  - s.proofVerifyHandler
-  - strings.Repeat

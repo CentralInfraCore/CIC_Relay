@@ -2,6 +2,7 @@
 package: cabinet_test
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -15,35 +16,11 @@ objects:
   - cabinet.Workflow
   - cabinet.WorkflowConfigName
   - cabinet.WorkflowIdentityVersion
-  position:
-    start_line: 11
-    end_line: 20
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
-  - t.Fatalf
-  - w.ID
 - name: TestWorkflow_ID_API_Empty
   kind: func
   description: ''
   references:
   - cabinet.Workflow
-  position:
-    start_line: 21
-    end_line: 27
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
-  - t.Fatalf
-  - w.ID
 - name: TestWorkflow_GetData_API_ReturnsConfig
   kind: func
   description: ''
@@ -51,17 +28,3 @@ objects:
   - cabinet.WorkflowConfig
   - cabinet.Workflow
   - cabinet.WorkflowIdentityVersion
-  position:
-    start_line: 30
-    end_line: 50
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - GetData
-  - reflect.DeepEqual
-  - string
-  - t.Fatalf
-  - w.GetData

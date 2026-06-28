@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - test
 category: []
 used_in: []
@@ -14,16 +16,6 @@ objects:
   references:
   - logrus.Logger
   - logrus.New
-  position:
-    start_line: 17
-    end_line: 22
-  signature:
-    params: []
-    returns:
-    - '*logrus.Logger'
-  calls:
-  - l.SetOutput
-  - logrus.New
 - name: makeResource
   kind: func
   description: ''
@@ -32,19 +24,6 @@ objects:
   - types.ResourceMetaName
   - types.SchemaRefName
   - types.ResourceStateDesired
-  position:
-    start_line: 23
-    end_line: 31
-  signature:
-    params:
-    - name: ''
-      type: schemaName
-    - name: schemaVersion
-      type: string
-    - name: spec
-      type: map[string]any
-    returns:
-    - types.ResourceSpec
 - name: TestCabinetActivator_Activate_Success
   kind: func
   description: ''
@@ -55,28 +34,6 @@ objects:
   - cabinet.SetResponse
   - cabinet.ProofTraceChainHash
   - require.NoError
-  position:
-    start_line: 32
-    end_line: 50
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewCabinetActivator
-  - Return
-  - act.Activate
-  - context.Background
-  - func
-  - makeResource
-  - mc.AssertExpectations
-  - mc.On
-  - mock.MatchedBy
-  - new
-  - require.NoError
-  - silentActivatorLogger
-  - string
 - name: TestCabinetActivator_Activate_SetxError
   kind: func
   description: ''
@@ -84,27 +41,6 @@ objects:
   - mock.Anything
   - require.Error
   - assert.Contains
-  position:
-    start_line: 51
-    end_line: 63
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewCabinetActivator
-  - Return
-  - act.Activate
-  - assert.Contains
-  - context.Background
-  - err.Error
-  - errors.New
-  - makeResource
-  - mc.On
-  - new
-  - require.Error
-  - silentActivatorLogger
 - name: TestCabinetActivator_Activate_NilTrace
   kind: func
   description: ''
@@ -112,24 +48,6 @@ objects:
   - mock.Anything
   - cabinet.SetResponse
   - require.NoError
-  position:
-    start_line: 64
-    end_line: 77
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewCabinetActivator
-  - Return
-  - act.Activate
-  - context.Background
-  - makeResource
-  - mc.On
-  - new
-  - require.NoError
-  - silentActivatorLogger
 - name: TestCabinetActivator_Activate_PayloadMapping
   kind: func
   description: ''
@@ -141,26 +59,3 @@ objects:
   - require.NoError
   - require.NotNil
   - assert.Equal
-  position:
-    start_line: 78
-    end_line: 95
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewCabinetActivator
-  - Return
-  - Run
-  - act.Activate
-  - args.Get
-  - assert.Equal
-  - context.Background
-  - func
-  - makeResource
-  - mc.On
-  - new
-  - require.NoError
-  - require.NotNil
-  - silentActivatorLogger

@@ -14,58 +14,19 @@ objects:
   description: NewSchema constructs a ManagedEntity-conformant Schema with validated
     checksum.
   references: []
-  position:
-    start_line: 6
-    end_line: 19
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: identity
-      type: SchemaIdentity
-    - name: config
-      type: SchemaConfig
-    - name: signing
-      type: SchemaSigning
-    returns:
-    - '*Schema'
-    - error
-  calls:
-  - validateAndChecksumSchema
 - name: ID
   kind: method
   receiver: Schema
   description: ID returns the unique schema identifier in the form "name@version".
     This is used for lookups in the schema store.
   references: []
-  position:
-    start_line: 23
-    end_line: 25
-  signature:
-    params: []
-    returns:
-    - string
 - name: GetData
   kind: method
   receiver: Schema
   description: GetData returns the schema's config surface for checksum purposes.
   references: []
-  position:
-    start_line: 28
-    end_line: 30
-  signature:
-    params: []
-    returns:
-    - any
 - name: Checksum
   kind: method
   receiver: Schema
   description: Checksum returns the pre-computed checksum from the Signing block.
   references: []
-  position:
-    start_line: 33
-    end_line: 35
-  signature:
-    params: []
-    returns:
-    - string

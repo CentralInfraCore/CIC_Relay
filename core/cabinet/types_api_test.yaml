@@ -2,6 +2,7 @@
 package: cabinet_test
 description: ''
 tags:
+- core
 - schema
 - test
 category: []
@@ -15,177 +16,57 @@ objects:
   references:
   - cabinet.BaseBlock
   - assert.Equal
-  position:
-    start_line: 11
-    end_line: 15
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchemaIdentity_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.SchemaIdentity
   - assert.Equal
-  position:
-    start_line: 16
-    end_line: 20
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchemaConfig_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.SchemaConfig
   - assert.Equal
-  position:
-    start_line: 21
-    end_line: 25
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchemaSigning_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.SchemaSigning
   - assert.Equal
-  position:
-    start_line: 26
-    end_line: 30
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchema_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.Schema
   - assert.Equal
-  position:
-    start_line: 31
-    end_line: 35
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestModuleDescriptor_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.ModuleDescriptor
   - assert.Equal
-  position:
-    start_line: 36
-    end_line: 41
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflowIdentity_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.WorkflowIdentity
   - assert.Equal
-  position:
-    start_line: 42
-    end_line: 46
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflowConfig_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.WorkflowConfig
   - assert.Equal
-  position:
-    start_line: 47
-    end_line: 51
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflowSigning_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.WorkflowSigning
   - assert.Equal
-  position:
-    start_line: 52
-    end_line: 56
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflow_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.Workflow
   - assert.Equal
-  position:
-    start_line: 57
-    end_line: 61
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField

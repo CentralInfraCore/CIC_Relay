@@ -1,0 +1,53 @@
+---
+module: tools.releaselib.vault_service
+description: ''
+tags:
+- builder
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: VaultService
+  kind: class
+  decorators: []
+  description: A service class to abstract Vault operations, including signing and
+    secret retrieval.
+  implements: []
+  references: []
+- name: __init__
+  kind: method
+  receiver: VaultService
+  decorators: []
+  description: ''
+  references:
+  - .exceptions.VaultServiceError
+- name: sign
+  kind: method
+  receiver: VaultService
+  decorators: []
+  description: Signs a pre-hashed, base64-encoded digest using Vault's Transit Engine.
+  references:
+  - .exceptions.VaultServiceError
+  - requests.exceptions
+  - requests.post
+- name: verify
+  kind: method
+  receiver: VaultService
+  decorators: []
+  description: Verifies a signature against a pre-hashed, base64-encoded digest using
+    Vault's Transit Engine. Returns True if valid.
+  references:
+  - .exceptions.VaultServiceError
+  - requests.exceptions
+  - requests.post
+- name: get_certificate
+  kind: method
+  receiver: VaultService
+  decorators: []
+  description: Retrieves a certificate (or any secret) from Vault's KV v2 engine.
+    In dry-run mode, returns a placeholder certificate.
+  references:
+  - .exceptions.VaultServiceError
+  - requests.exceptions
+  - requests.get

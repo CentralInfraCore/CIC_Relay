@@ -20,33 +20,12 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
-  position:
-    start_line: 19
-    end_line: 22
-  fields:
-  - name: cabinet
-    type: cabinet.Cabinet
-    tag: ''
-  - name: logger
-    type: '*logrus.Logger'
-    tag: ''
 - name: NewCabinetActivator
   kind: func
   description: NewCabinetActivator creates an activator backed by the given Cabinet.
   references:
   - cabinet.Cabinet
   - logrus.Logger
-  position:
-    start_line: 25
-    end_line: 27
-  signature:
-    params:
-    - name: c
-      type: cabinet.Cabinet
-    - name: logger
-      type: '*logrus.Logger'
-    returns:
-    - '*CabinetActivator'
 - name: Activate
   kind: method
   receiver: CabinetActivator
@@ -60,25 +39,3 @@ objects:
   - cabinet.CanonicalizeSetPayload
   - cabinet.Setx
   - logrus.Fields
-  position:
-    start_line: 31
-    end_line: 56
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svcName
-      type: string
-    - name: res
-      type: types.ResourceSpec
-    returns:
-    - error
-  calls:
-  - cabinet.CanonicalizeSetPayload
-  - cabinet.ModuleID
-  - cabinet.Setx
-  - fmt.Errorf
-  - log.Info
-  - log.WithField
-  - logger.WithFields
-  - s

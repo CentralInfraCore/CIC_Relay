@@ -1,0 +1,136 @@
+---
+package: merkle
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestLeafHash_DomainSeparation
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+- name: TestLeafHash_NullMarker
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestLeafHash_Determinism
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestLeafHash_NameAndValueBothMatter
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+- name: TestNodeHash_NotCommutative
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+- name: TestMerkleRoot_Empty
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestMerkleRoot_Single
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestMerkleRoot_Two
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestMerkleRoot_OddCount_DuplicatesLast
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestMerkleRoot_EvenCount
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestMerkleRoot_OrderMatters
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+- name: TestMerkleRoot_Determinism
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestSizeLeaf_DecimalEncoding
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestSizeLeaf_NoLeadingZeros
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestBuildVerificationRoot_Determinism
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestBuildVerificationRoot_HexOutput
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Len
+- name: TestBuildVerificationRoot_SensitiveToLeafChange
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+- name: TestBuildVerificationRoot_SensitiveToSubtreePosition
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+- name: TestBuildVerificationRoot_EmptyManifestIsStable
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Len
+- name: TestBuildVerificationRoot_ArtifactSizeZeroVsNonZero
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+- name: TestGoRuntimeDigest_Format
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - require.NoError
+  - assert.Len
+- name: TestGoRuntimeDigest_Determinism
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestGoSumDigest_MissingFile
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+- name: TestGoSumDigest_File
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True
+  - assert.Len

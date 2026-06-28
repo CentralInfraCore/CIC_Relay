@@ -19,17 +19,6 @@ objects:
   description: ''
   references:
   - sourcedigest.ComputeTreeHash
-  position:
-    start_line: 20
-    end_line: 33
-  signature:
-    params: []
-    returns: []
-  calls:
-  - fmt.Fprintf
-  - fmt.Print
-  - osExit
-  - sourcedigest.ComputeTreeHash
 - name: osExit
   kind: var
   description: ''
