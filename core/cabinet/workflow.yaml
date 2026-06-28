@@ -13,59 +13,19 @@ objects:
   description: NewWorkflow constructs a ManagedEntity-conformant Workflow with validated
     checksum.
   references: []
-  position:
-    start_line: 9
-    end_line: 26
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: identity
-      type: WorkflowIdentity
-    - name: config
-      type: WorkflowConfig
-    - name: signing
-      type: WorkflowSigning
-    returns:
-    - '*Workflow'
-    - error
-  calls:
-  - fmt.Errorf
-  - validateAndChecksumWorkflow
 - name: ID
   kind: method
   receiver: Workflow
   description: ID returns the unique workflow identifier in the form "name@version".
     This is used for lookups in the workflow store.
   references: []
-  position:
-    start_line: 30
-    end_line: 32
-  signature:
-    params: []
-    returns:
-    - string
 - name: GetData
   kind: method
   receiver: Workflow
   description: GetData returns the workflow's config surface for checksum purposes.
   references: []
-  position:
-    start_line: 35
-    end_line: 37
-  signature:
-    params: []
-    returns:
-    - any
 - name: Checksum
   kind: method
   receiver: Workflow
   description: Checksum returns the pre-computed checksum from the Signing block.
   references: []
-  position:
-    start_line: 40
-    end_line: 42
-  signature:
-    params: []
-    returns:
-    - string

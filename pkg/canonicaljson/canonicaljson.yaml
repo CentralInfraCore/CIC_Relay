@@ -11,144 +11,40 @@ objects:
   kind: type
   description: ToJSONFunc is the type for the ToJSON function, allowing it to be mocked.
   references: []
-  position:
-    start_line: 12
-    end_line: 12
 - name: ToJSONOriginal
   kind: func
   description: ToJSONOriginal is the original implementation of ToJSON.
   references: []
-  position:
-    start_line: 18
-    end_line: 24
-  signature:
-    params:
-    - name: v
-      type: any
-    returns:
-    - '[]byte'
-    - error
-  calls:
-  - buf.Bytes
-  - writeCanonicalJSON
 - name: ToJSON
   kind: func
   description: ToJSON marshals a Go value into a canonical JSON string. It ensures
     that map keys are sorted alphabetically for deterministic output.
   references: []
-  position:
-    start_line: 28
-    end_line: 30
-  signature:
-    params:
-    - name: v
-      type: any
-    returns:
-    - '[]byte'
-    - error
-  calls:
-  - ToJSONImpl
 - name: SetToJSONMock
   kind: func
   description: SetToJSONMock sets the mock function for ToJSON. Pass nil to restore
     the original implementation.
   references: []
-  position:
-    start_line: 34
-    end_line: 40
-  signature:
-    params:
-    - name: mock
-      type: ToJSONFunc
-    returns: []
 - name: writeCanonicalJSON
   kind: func
   description: ''
-  references: []
-  position:
-    start_line: 41
-    end_line: 141
-  signature:
-    params:
-    - name: w
-      type: io.Writer
-    - name: v
-      type: any
-    returns:
-    - error
-  calls:
-  - byte
-  - fmt.Errorf
-  - fmt.Sprintf
-  - formatting
-  - json.Marshal
-  - json.Unmarshal
-  - primitive
-  - sort.Strings
-  - types
-  - w.Write
-  - writeCanonicalJSON
-  - writeJSONArray
-  - writeJSONMap
-  - writeJSONString
+  references:
+  - io.Writer.Write
 - name: writeJSONString
   kind: func
   description: ''
-  references: []
-  position:
-    start_line: 82
-    end_line: 90
-  signature:
-    params:
-    - name: w
-      type: io.Writer
-    - name: v
-      type: any
-    returns:
-    - error
-  calls:
-  - json.Marshal
-  - w.Write
+  references:
+  - io.Writer.Write
 - name: writeJSONArray
   kind: func
   description: ''
-  references: []
-  position:
-    start_line: 91
-    end_line: 108
-  signature:
-    params:
-    - name: w
-      type: io.Writer
-    - name: arr
-      type: '[]any'
-    returns:
-    - error
-  calls:
-  - byte
-  - w.Write
-  - writeCanonicalJSON
+  references:
+  - io.Writer.Write
 - name: writeJSONMap
   kind: func
   description: ''
-  references: []
-  position:
-    start_line: 109
-    end_line: 140
-  signature:
-    params:
-    - name: w
-      type: io.Writer
-    - name: m
-      type: map[string]any
-    returns:
-    - error
-  calls:
-  - byte
-  - sort.Strings
-  - w.Write
-  - writeCanonicalJSON
-  - writeJSONString
+  references:
+  - io.Writer.Write
 - name: ToJSONImpl
   kind: var
   description: ToJSONImpl is the actual implementation of ToJSON that can be swapped

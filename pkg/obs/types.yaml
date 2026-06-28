@@ -13,177 +13,38 @@ objects:
     emitted it.
   implements: []
   references: []
-  position:
-    start_line: 4
-    end_line: 8
-  fields:
-  - name: RelayID
-    type: string
-    tag: json:"relay_id"
-  - name: Component
-    type: string
-    tag: json:"component"
-  - name: Attrs
-    type: map[string]string
-    tag: json:"attrs,omitempty"
 - name: ExecutionContext
   kind: struct
   description: ExecutionContext ties an observation to a specific workflow execution
     step.
   implements: []
   references: []
-  position:
-    start_line: 11
-    end_line: 15
-  fields:
-  - name: WorkflowID
-    type: string
-    tag: json:"workflow_id"
-  - name: StepName
-    type: string
-    tag: json:"step_name,omitempty"
-  - name: SourceDigest
-    type: string
-    tag: json:"source_digest,omitempty"
 - name: LogRecord
   kind: struct
   description: LogRecord is a structured log entry emitted by the relay.
   implements: []
   references: []
-  position:
-    start_line: 18
-    end_line: 25
-  fields:
-  - name: Timestamp
-    type: string
-    tag: json:"timestamp"
-  - name: Level
-    type: string
-    tag: json:"level"
-  - name: Message
-    type: string
-    tag: json:"message"
-  - name: Resource
-    type: Resource
-    tag: json:"resource"
-  - name: ExecCtx
-    type: '*ExecutionContext'
-    tag: json:"exec_ctx,omitempty"
-  - name: Attrs
-    type: map[string]string
-    tag: json:"attrs,omitempty"
 - name: TraceFrame
   kind: struct
   description: TraceFrame is a lightweight execution span — not OTel-compatible, but
     structurally similar for operational visibility.
   implements: []
   references: []
-  position:
-    start_line: 29
-    end_line: 38
-  fields:
-  - name: TraceID
-    type: string
-    tag: json:"trace_id"
-  - name: SpanID
-    type: string
-    tag: json:"span_id"
-  - name: Name
-    type: string
-    tag: json:"name"
-  - name: StartTime
-    type: string
-    tag: json:"start_time"
-  - name: EndTime
-    type: string
-    tag: json:"end_time"
-  - name: Resource
-    type: Resource
-    tag: json:"resource"
-  - name: ExecCtx
-    type: '*ExecutionContext'
-    tag: json:"exec_ctx,omitempty"
-  - name: Attrs
-    type: map[string]string
-    tag: json:"attrs,omitempty"
 - name: CounterPoint
   kind: struct
   description: CounterPoint is a monotonically increasing metric.
   implements: []
   references: []
-  position:
-    start_line: 41
-    end_line: 47
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name"
-  - name: Value
-    type: int64
-    tag: json:"value"
-  - name: Timestamp
-    type: string
-    tag: json:"timestamp"
-  - name: Resource
-    type: Resource
-    tag: json:"resource"
-  - name: Attrs
-    type: map[string]string
-    tag: json:"attrs,omitempty"
 - name: GaugePoint
   kind: struct
   description: GaugePoint is an instantaneous numeric reading.
   implements: []
   references: []
-  position:
-    start_line: 50
-    end_line: 56
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name"
-  - name: Value
-    type: float64
-    tag: json:"value"
-  - name: Timestamp
-    type: string
-    tag: json:"timestamp"
-  - name: Resource
-    type: Resource
-    tag: json:"resource"
-  - name: Attrs
-    type: map[string]string
-    tag: json:"attrs,omitempty"
 - name: HistogramPoint
   kind: struct
   description: HistogramPoint summarises a distribution of values.
   implements: []
   references: []
-  position:
-    start_line: 59
-    end_line: 67
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name"
-  - name: Sum
-    type: float64
-    tag: json:"sum"
-  - name: Count
-    type: int64
-    tag: json:"count"
-  - name: Buckets
-    type: '[]float64'
-    tag: json:"buckets,omitempty"
-  - name: Timestamp
-    type: string
-    tag: json:"timestamp"
-  - name: Resource
-    type: Resource
-    tag: json:"resource"
-  - name: Attrs
-    type: map[string]string
-    tag: json:"attrs,omitempty"
 - name: IntegrityEnvelope
   kind: struct
   description: IntegrityEnvelope links an observation record to the ProofTrace audit
@@ -191,13 +52,3 @@ objects:
     the ProofTrace.ChainHash of the execution that emitted it — optional.
   implements: []
   references: []
-  position:
-    start_line: 72
-    end_line: 75
-  fields:
-  - name: RecordHash
-    type: string
-    tag: json:"record_hash"
-  - name: ChainAnchor
-    type: string
-    tag: json:"chain_anchor,omitempty"

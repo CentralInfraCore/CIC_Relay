@@ -14,22 +14,6 @@ objects:
   implements: []
   references:
   - wazero.Runtime
-  position:
-    start_line: 24
-    end_line: 32
-  fields:
-  - name: DefaultTimeoutSeconds
-    type: uint32
-    tag: yaml:"default_timeout_seconds"
-  - name: DefaultMemoryPages
-    type: uint32
-    tag: yaml:"default_memory_pages"
-  - name: LRUCacheSize
-    type: int
-    tag: yaml:"lru_cache_size"
-  - name: HostSetupFn
-    type: func(ctx context.Context, r wazero.Runtime) error
-    tag: yaml:"-"
 - name: WasmManager
   kind: struct
   description: WasmManager is responsible for the entire WASM lifecycle management
@@ -43,34 +27,6 @@ objects:
   - singleflight.Group
   - obs.LogSink
   - obs.MetricSink
-  position:
-    start_line: 38
-    end_line: 47
-  fields:
-  - name: runtime
-    type: wazero.Runtime
-    tag: ''
-  - name: modules
-    type: ModuleStore
-    tag: ''
-  - name: config
-    type: WasmManagerConfig
-    tag: ''
-  - name: compiledModules
-    type: '*lru.Cache[string, wazero.CompiledModule]'
-    tag: ''
-  - name: sf
-    type: singleflight.Group
-    tag: ''
-  - name: closed
-    type: atomic.Bool
-    tag: ''
-  - name: logSink
-    type: obs.LogSink
-    tag: ''
-  - name: metricSink
-    type: obs.MetricSink
-    tag: ''
 - name: CicWasmHost
   kind: struct
   description: CicWasmHost provides a handle to a single live WASM module instance
@@ -81,43 +37,11 @@ objects:
   - api.Module
   - api.Function
   - obs.LogSink
-  position:
-    start_line: 237
-    end_line: 244
-  fields:
-  - name: instance
-    type: api.Module
-    tag: ''
-  - name: callFn
-    type: api.Function
-    tag: ''
-  - name: allocateFn
-    type: api.Function
-    tag: ''
-  - name: deallocateFn
-    type: api.Function
-    tag: ''
-  - name: timeout
-    type: time.Duration
-    tag: ''
-  - name: logSink
-    type: obs.LogSink
-    tag: ''
 - name: GuestResult
   kind: struct
   description: ''
   implements: []
   references: []
-  position:
-    start_line: 362
-    end_line: 366
-  fields:
-  - name: Data
-    type: json.RawMessage
-    tag: json:"data"
-  - name: Error
-    type: json.RawMessage
-    tag: json:"error"
 - name: SetObsSinks
   kind: method
   receiver: WasmManager
@@ -126,16 +50,6 @@ objects:
   references:
   - obs.LogSink
   - obs.MetricSink
-  position:
-    start_line: 51
-    end_line: 54
-  signature:
-    params:
-    - name: logSink
-      type: obs.LogSink
-    - name: metricSink
-      type: obs.MetricSink
-    returns: []
 - name: NewWasmManager
   kind: func
   description: NewWasmManager creates a new central WASM manager with the given configuration.
@@ -147,38 +61,7 @@ objects:
   - obs.LogRecord
   - obs.ResourceComponent
   - lru.NewWithEvict
-  position:
-    start_line: 57
-    end_line: 111
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: modules
-      type: ModuleStore
-    - name: config
-      type: WasmManagerConfig
-    returns:
-    - '*WasmManager'
-    - error
-  calls:
-  - Format
-  - UTC
-  - WithCloseOnContextDone
-  - config.HostSetupFn
-  - context.Background
-  - ctx.Err
-  - err.Error
-  - fmt.Errorf
-  - func
-  - logSink.RecordLog
-  - mod.Close
-  - modules
-  - r.Close
-  - time.Now
-  - wasi_snapshot_preview1.Instantiate
-  - wazero.NewRuntimeConfig
-  - wazero.NewRuntimeWithConfig
+  - context.Context.Err
 - name: PreCompileModule
   kind: method
   receiver: WasmManager
@@ -189,36 +72,6 @@ objects:
   - wazero.CompiledModule
   - obs.HistogramPoint
   - obs.ResourceComponent
-  position:
-    start_line: 115
-    end_line: 166
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: moduleID
-      type: string
-    returns:
-    - wazero.CompiledModule
-    - error
-  calls:
-  - Format
-  - Milliseconds
-  - UTC
-  - closed.Load
-  - compiledModules.Add
-  - compiledModules.Get
-  - errors.New
-  - float64
-  - fmt.Errorf
-  - func
-  - metricSink.RecordHistogram
-  - moduleDesc.Checksum
-  - modules.Get
-  - runtime.CompileModule
-  - sf.Do
-  - time.Now
-  - time.Since
 - name: NewHostInstance
   kind: method
   receiver: WasmManager
@@ -228,76 +81,17 @@ objects:
   - wazero.NewModuleConfig
   - obs.HistogramPoint
   - obs.ResourceComponent
-  position:
-    start_line: 169
-    end_line: 205
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: moduleID
-      type: string
-    returns:
-    - cicWasmHost
-    - error
-  calls:
-  - Format
-  - Milliseconds
-  - UTC
-  - WithName
-  - WithStartFunctions
-  - closed.Load
-  - errors.New
-  - float64
-  - fmt.Errorf
-  - instance.Close
-  - m.PreCompileModule
-  - metricSink.RecordHistogram
-  - newCicWasmHost
-  - runtime.InstantiateModule
-  - time.Duration
-  - time.Now
-  - time.Since
-  - wazero.NewModuleConfig
 - name: EvictModule
   kind: method
   receiver: WasmManager
   description: EvictModule removes all compiled versions of a module from the LRU
     cache by moduleID prefix matching.
   references: []
-  position:
-    start_line: 208
-    end_line: 223
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: moduleID
-      type: string
-    returns: []
-  calls:
-  - closed.Load
-  - compiledModules.Keys
-  - compiledModules.Remove
-  - strings.HasPrefix
 - name: Close
   kind: method
   receiver: WasmManager
   description: Close releases the underlying WASM module instance and its memory resources.
   references: []
-  position:
-    start_line: 226
-    end_line: 231
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    returns:
-    - error
-  calls:
-  - closed.Store
-  - compiledModules.Purge
-  - runtime.Close
 - name: newCicWasmHost
   kind: func
   description: newCicWasmHost creates a CicWasmHost from a wazero module instance
@@ -305,130 +99,37 @@ objects:
   references:
   - api.Module
   - obs.LogSink
-  position:
-    start_line: 248
-    end_line: 264
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: instance
-      type: api.Module
-    - name: timeout
-      type: time.Duration
-    - name: logSink
-      type: obs.LogSink
-    returns:
-    - '*CicWasmHost'
-    - error
-  calls:
-  - fmt.Errorf
-  - instance.ExportedFunction
-  - instance.Name
+  - api.Module.ExportedFunction
+  - api.Module.Name
 - name: Close
   kind: method
   receiver: CicWasmHost
   description: Close releases the underlying WASM module instance and its memory resources.
   references: []
-  position:
-    start_line: 267
-    end_line: 272
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    returns:
-    - error
-  calls:
-  - instance.Close
 - name: Process
   kind: method
   receiver: CicWasmHost
   description: Process invokes the "process" guest function with the given auth context
     and input JSON, returning the result data and error JSON as strings.
   references: []
-  position:
-    start_line: 276
-    end_line: 278
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: authContextJson
-    - name: inputJson
-      type: string
-    returns:
-    - string
-    - string
-  calls:
-  - h.callGuest
 - name: Get
   kind: method
   receiver: CicWasmHost
   description: Get invokes the "get" guest function with the given auth context and
     query JSON, returning the result data and error JSON as strings.
   references: []
-  position:
-    start_line: 282
-    end_line: 284
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: authContextJson
-    - name: queryJson
-      type: string
-    returns:
-    - string
-    - string
-  calls:
-  - h.callGuest
 - name: Init
   kind: method
   receiver: CicWasmHost
   description: Init invokes the "init" guest function with the given auth context
     and configuration JSON, returning the result data and error JSON as strings.
   references: []
-  position:
-    start_line: 288
-    end_line: 290
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: authContextJson
-    - name: configJson
-      type: string
-    returns:
-    - string
-    - string
-  calls:
-  - h.callGuest
 - name: Notify
   kind: method
   receiver: CicWasmHost
   description: Notify invokes the "notify" guest function with the given auth context
     and event JSON, returning the result data and error JSON as strings.
   references: []
-  position:
-    start_line: 294
-    end_line: 296
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: authContextJson
-    - name: eventJson
-      type: string
-    returns:
-    - string
-    - string
-  calls:
-  - h.callGuest
 - name: callGuest
   kind: method
   receiver: CicWasmHost
@@ -436,69 +137,12 @@ objects:
     JSON, handling memory allocation, timeout enforcement, and response parsing. It
     returns data and error JSON strings.
   references: []
-  position:
-    start_line: 300
-    end_line: 384
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: op
-    - name: ''
-      type: authContextJson
-    - name: inputJson
-      type: string
-    returns:
-    - string
-    - string
-  calls:
-  - '0'
-  - Read
-  - as
-  - byte
-  - callFn.Call
-  - cancel
-  - context.WithTimeout
-  - deallocateFn.Call
-  - errors.Is
-  - fmt.Sprintf
-  - formatErrorJson
-  - func
-  - h.emitDeallocWarn
-  - h.writeStringToWasm
-  - instance.Memory
-  - json.Unmarshal
-  - string
-  - uint32
-  - uint64
 - name: writeStringToWasm
   kind: method
   receiver: CicWasmHost
   description: writeStringToWasm allocates memory in the WASM module, writes the string
     bytes, and returns the pointer and length; the caller is responsible for deallocation.
   references: []
-  position:
-    start_line: 388
-    end_line: 404
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: s
-      type: string
-    returns:
-    - uint32
-    - uint32
-    - error
-  calls:
-  - Write
-  - allocateFn.Call
-  - byte
-  - fmt.Errorf
-  - instance.Memory
-  - uint32
-  - uint64
 - name: emitDeallocWarn
   kind: method
   receiver: CicWasmHost
@@ -507,40 +151,8 @@ objects:
   references:
   - obs.LogRecord
   - obs.ResourceComponent
-  position:
-    start_line: 408
-    end_line: 419
-  signature:
-    params:
-    - name: ptrType
-      type: string
-    - name: err
-      type: error
-    returns: []
-  calls:
-  - Format
-  - UTC
-  - err.Error
-  - logSink.RecordLog
-  - time.Now
 - name: formatErrorJson
   kind: func
   description: formatErrorJson constructs a JSON error object with code, message,
     and optional details fields.
   references: []
-  position:
-    start_line: 422
-    end_line: 436
-  signature:
-    params:
-    - name: ''
-      type: code
-    - name: message
-      type: string
-    - name: details
-      type: interface{}
-    returns:
-    - string
-  calls:
-  - json.Marshal
-  - string

@@ -13,161 +13,50 @@ objects:
   description: FieldError describes a validation error for a specific field.
   implements: []
   references: []
-  position:
-    start_line: 34
-    end_line: 37
-  fields:
-  - name: Field
-    type: string
-    tag: json:"field"
-  - name: Msg
-    type: string
-    tag: json:"msg"
 - name: ValidationError
   kind: struct
   description: ValidationError aggregates multiple field-level validation errors.
   implements: []
   references: []
-  position:
-    start_line: 40
-    end_line: 42
-  fields:
-  - name: Cause
-    type: '[]FieldError'
-    tag: json:"cause"
 - name: APIError
   kind: struct
   description: APIError represents a standardized error response for API consumers.
   implements: []
   references: []
-  position:
-    start_line: 62
-    end_line: 66
-  fields:
-  - name: Code
-    type: string
-    tag: json:"code"
-  - name: Message
-    type: string
-    tag: json:"message"
-  - name: Details
-    type: '[]FieldError'
-    tag: json:"details,omitempty"
 - name: IsInvalid
   kind: func
   description: IsInvalid checks if an error is an ErrInvalid validation or integrity
     failure.
   references: []
-  position:
-    start_line: 22
-    end_line: 22
-  signature:
-    params:
-    - name: err
-      type: error
-    returns:
-    - bool
-  calls:
-  - errors.Is
 - name: IsConflict
   kind: func
   description: IsConflict checks if an error is an ErrConflict resource state conflict.
   references: []
-  position:
-    start_line: 25
-    end_line: 25
-  signature:
-    params:
-    - name: err
-      type: error
-    returns:
-    - bool
-  calls:
-  - errors.Is
 - name: IsNotFound
   kind: func
   description: IsNotFound checks if an error is an ErrNotFound resource not found.
   references: []
-  position:
-    start_line: 28
-    end_line: 28
-  signature:
-    params:
-    - name: err
-      type: error
-    returns:
-    - bool
-  calls:
-  - errors.Is
 - name: IsTimeout
   kind: func
   description: IsTimeout checks if an error is an ErrTimeout execution exceeded time
     budget.
   references: []
-  position:
-    start_line: 31
-    end_line: 31
-  signature:
-    params:
-    - name: err
-      type: error
-    returns:
-    - bool
-  calls:
-  - errors.Is
 - name: Error
   kind: method
   receiver: ValidationError
   description: Error implements the error interface, returning a JSON-encoded list
     of field-level validation errors or a generic message if empty.
   references: []
-  position:
-    start_line: 45
-    end_line: 54
-  signature:
-    params: []
-    returns:
-    - string
-  calls:
-  - ErrInvalid.Error
-  - fmt.Sprintf
-  - jsonMarshal
-  - string
 - name: NewValidationError
   kind: func
   description: NewValidationError constructs a ValidationError from the provided field
     errors.
   references: []
-  position:
-    start_line: 57
-    end_line: 59
-  signature:
-    params:
-    - name: fields
-      type: '...FieldError'
-    returns:
-    - '*ValidationError'
 - name: NewAPIError
   kind: func
   description: NewAPIError converts a Go error into a standardized APIError response
     for API consumers.
   references: []
-  position:
-    start_line: 69
-    end_line: 98
-  signature:
-    params:
-    - name: err
-      type: error
-    returns:
-    - '*APIError'
-  calls:
-  - ErrConflict.Error
-  - ErrInvalid.Error
-  - ErrNotFound.Error
-  - err.Error
-  - errors.As
-  - errors.Is
 - name: jsonMarshal
   kind: var
   description: jsonMarshal is a variable that holds the json.Marshal function. It

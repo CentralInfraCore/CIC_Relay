@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -12,36 +13,10 @@ objects:
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 9
-    end_line: 27
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - CanonicalizeSetPayload
-  - string
-  - t.Fatalf
 - name: TestValidateSet_Required
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 28
-    end_line: 63
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - api.ValidateSet
-  - context.Background
-  - func
-  - t.Fatalf
-  - t.Run
 - name: TestValidateSet_NotFound
   kind: func
   description: ''
@@ -49,31 +24,3 @@ objects:
   - require.NoError
   - require.Error
   - require.True
-  position:
-    start_line: 64
-    end_line: 113
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - IsNotFound
-  - NewAPI
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NewModuleDescriptor
-  - NewWorkflow
-  - api.ValidateSet
-  - context.Background
-  - func
-  - modStore.Put
-  - require.Error
-  - require.NoError
-  - require.True
-  - t.Logf
-  - t.Run
-  - v
-  - wfStore.Put

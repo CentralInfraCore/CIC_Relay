@@ -1,0 +1,208 @@
+---
+package: obs_test
+description: ''
+tags:
+- metrics
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: newDiscardLogger
+  kind: func
+  description: ''
+  references:
+  - logrus.Logger
+  - logrus.New
+- name: TestRecordHash_Deterministic
+  kind: func
+  description: ''
+  references:
+  - obs.LogRecord
+  - obs.ResourceRelayID
+  - obs.RecordHash
+- name: TestRecordHash_ChangeSensitive
+  kind: func
+  description: ''
+  references:
+  - obs.LogRecordTimestamp
+  - obs.ResourceRelayID
+  - obs.RecordHash
+- name: TestGlobalChainHash_Stable
+  kind: func
+  description: ''
+  references:
+  - obs.LogRecordTimestamp
+  - obs.ResourceRelayID
+  - obs.CounterPointName
+  - obs.GlobalChainHash
+- name: TestGlobalChainHash_OrderSensitive
+  kind: func
+  description: ''
+  references:
+  - obs.LogRecordTimestamp
+  - obs.ResourceRelayID
+  - obs.GlobalChainHash
+- name: TestTypeChainHash_NamespaceIsolation
+  kind: func
+  description: ''
+  references:
+  - obs.LogRecordTimestamp
+  - obs.ResourceRelayID
+  - obs.TypeChainHash
+- name: TestRegistry_Register_ValidPrefix
+  kind: func
+  description: ''
+  references:
+  - obs.NewRegistry
+  - obs.MetricInstrumentName
+- name: TestRegistry_Register_InvalidPrefix
+  kind: func
+  description: ''
+  references:
+  - obs.NewRegistry
+  - obs.MetricInstrumentName
+- name: TestRegistry_Register_DuplicateSame
+  kind: func
+  description: ''
+  references:
+  - obs.NewRegistry
+  - obs.MetricInstrumentName
+- name: TestRegistry_Register_DuplicateDifferent
+  kind: func
+  description: ''
+  references:
+  - obs.NewRegistry
+  - obs.MetricInstrumentName
+- name: TestRegistry_Get
+  kind: func
+  description: ''
+  references:
+  - obs.NewRegistry
+  - obs.MetricInstrumentName
+- name: TestNoopSink_ImplementsAllSinks
+  kind: func
+  description: ''
+  references:
+  - obs.NoopSink
+  - obs.TraceSink
+  - obs.LogSink
+  - obs.MetricSink
+- name: TestLogrusSink_ImplementsAllSinks
+  kind: func
+  description: ''
+  references:
+  - obs.NewLogrusSink
+  - obs.TraceSink
+  - obs.LogSink
+  - obs.MetricSink
+- name: TestLogrusSink_RecordTrace_DoesNotPanic
+  kind: func
+  description: ''
+  references:
+  - obs.NewLogrusSink
+  - obs.TraceFrame
+  - obs.ResourceRelayID
+  - obs.ExecutionContextWorkflowID
+- name: TestLogrusSink_RecordLog_LevelMapping
+  kind: func
+  description: ''
+  references:
+  - obs.NewLogrusSink
+  - obs.LogRecord
+  - obs.ResourceRelayID
+  - obs.ExecutionContextWorkflowID
+- name: TestLogrusSink_Metrics_DoNotPanic
+  kind: func
+  description: ''
+  references:
+  - obs.NewLogrusSink
+  - obs.ResourceRelayID
+  - obs.CounterPointName
+  - obs.GaugePointName
+  - obs.HistogramPointName
+- name: TestCaptureSink_ImplementsAllSinks
+  kind: func
+  description: ''
+  references:
+  - obs.CaptureSink
+  - obs.TraceSink
+  - obs.LogSink
+  - obs.MetricSink
+- name: TestCaptureSink_CollectsRecords
+  kind: func
+  description: ''
+  references:
+  - obs.CaptureSink
+  - obs.ResourceRelayID
+  - obs.TraceFrameTraceID
+  - obs.LogRecordLevel
+  - obs.CounterPointName
+  - obs.GaugePointName
+  - obs.HistogramPointName
+- name: TestNoopSink_AllMethods
+  kind: func
+  description: ''
+  references:
+  - obs.NoopSink
+  - assert.NotPanics
+  - obs.TraceFrameTraceID
+  - obs.LogRecordLevel
+  - obs.CounterPointName
+  - obs.GaugePointName
+  - obs.HistogramPointName
+  - obs.RecordTrace
+  - obs.RecordLog
+  - obs.RecordCounter
+  - obs.RecordGauge
+  - obs.RecordHistogram
+- name: TestRegistry_Names
+  kind: func
+  description: ''
+  references:
+  - obs.NewRegistry
+  - assert.Empty
+  - require.NoError
+  - obs.MetricInstrumentName
+  - assert.Len
+  - assert.ElementsMatch
+- name: TestRecordHash_Error
+  kind: func
+  description: ''
+  references:
+  - obs.RecordHash
+  - assert.Error
+- name: TestGlobalChainHash_Error
+  kind: func
+  description: ''
+  references:
+  - obs.GlobalChainHash
+  - assert.Error
+- name: TestTypeChainHash_Error
+  kind: func
+  description: ''
+  references:
+  - obs.TypeChainHash
+  - assert.Error
+- name: TestLogrusSink_RecordGauge_WithAttrs
+  kind: func
+  description: ''
+  references:
+  - obs.NewLogrusSink
+  - assert.NotPanics
+  - obs.GaugePoint
+- name: TestLogrusSink_RecordHistogram_WithAttrs
+  kind: func
+  description: ''
+  references:
+  - obs.NewLogrusSink
+  - assert.NotPanics
+  - obs.HistogramPoint
+- name: TestLogrusSink_RecordLog_WithAttrs
+  kind: func
+  description: ''
+  references:
+  - obs.NewLogrusSink
+  - assert.NotPanics
+  - obs.LogRecord

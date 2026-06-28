@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []

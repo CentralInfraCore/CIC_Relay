@@ -16,16 +16,6 @@ objects:
     a map-based index.
   implements: []
   references: []
-  position:
-    start_line: 29
-    end_line: 32
-  fields:
-  - name: mu
-    type: sync.RWMutex
-    tag: ''
-  - name: byID
-    type: map[string]*Workflow
-    tag: ''
 - name: memModuleStore
   kind: struct
   description: 'memModuleStore implements a content-addressable storage (CAS) for
@@ -33,304 +23,86 @@ objects:
     and a content store for checksum to module mapping.'
   implements: []
   references: []
-  position:
-    start_line: 67
-    end_line: 71
-  fields:
-  - name: mu
-    type: sync.RWMutex
-    tag: ''
-  - name: byID
-    type: 'map[string]string            // Index: id -> checksum'
-    tag: ''
-  - name: byChecksum
-    type: 'map[string]*ModuleDescriptor // CAS: checksum -> module'
-    tag: ''
 - name: memSchemaStore
   kind: struct
   description: memSchemaStore is an in-memory implementation of SchemaStore using
     a map-based index.
   implements: []
   references: []
-  position:
-    start_line: 130
-    end_line: 133
-  fields:
-  - name: mu
-    type: sync.RWMutex
-    tag: ''
-  - name: byID
-    type: map[string]*Schema
-    tag: ''
 - name: WorkflowStore
   kind: interface
   description: WorkflowStore abstracts storage for Workflow entities.
   references: []
-  position:
-    start_line: 6
-    end_line: 10
-  methods:
-  - name: Get
-    params:
-    - id string
-    returns:
-    - (*Workflow, bool)
-  - name: Put
-    params:
-    - w *Workflow
-    returns:
-    - (prev *Workflow, existed bool)
-  - name: Exists
-    params:
-    - id string
-    returns:
-    - bool
 - name: ModuleStore
   kind: interface
   description: ModuleStore abstracts storage for ModuleDescriptor entities.
   references: []
-  position:
-    start_line: 13
-    end_line: 17
-  methods:
-  - name: Get
-    params:
-    - id string
-    returns:
-    - (*ModuleDescriptor, bool)
-  - name: Put
-    params:
-    - m *ModuleDescriptor
-    returns:
-    - (prev *ModuleDescriptor, existed bool)
-  - name: Exists
-    params:
-    - id string
-    returns:
-    - bool
 - name: SchemaStore
   kind: interface
   description: SchemaStore abstracts storage for Schema entities.
   references: []
-  position:
-    start_line: 20
-    end_line: 24
-  methods:
-  - name: Get
-    params:
-    - id string
-    returns:
-    - (*Schema, bool)
-  - name: Put
-    params:
-    - s *Schema
-    returns:
-    - (prev *Schema, existed bool)
-  - name: Exists
-    params:
-    - id string
-    returns:
-    - bool
 - name: NewMemWorkflowStore
   kind: func
   description: NewMemWorkflowStore creates and returns a new in-memory WorkflowStore
     instance.
   references: []
-  position:
-    start_line: 35
-    end_line: 37
-  signature:
-    params: []
-    returns:
-    - WorkflowStore
 - name: Get
   kind: method
   receiver: memWorkflowStore
   description: Get retrieves a Schema by its ID, returning the schema and a boolean
     indicating existence.
   references: []
-  position:
-    start_line: 40
-    end_line: 45
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*Workflow'
-    - bool
-  calls:
-  - mu.RLock
-  - mu.RUnlock
 - name: Put
   kind: method
   receiver: memWorkflowStore
   description: Put stores a Schema, returning the previous value (if any) and a boolean
     indicating prior existence.
   references: []
-  position:
-    start_line: 48
-    end_line: 54
-  signature:
-    params:
-    - name: w
-      type: '*Workflow'
-    returns:
-    - '*Workflow'
-    - bool
-  calls:
-  - mu.Lock
-  - mu.Unlock
-  - w.ID
 - name: Exists
   kind: method
   receiver: memWorkflowStore
   description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
-  position:
-    start_line: 57
-    end_line: 62
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - bool
-  calls:
-  - mu.RLock
-  - mu.RUnlock
 - name: NewMemModuleStore
   kind: func
   description: NewMemModuleStore creates and returns a new in-memory ModuleStore instance
     with CAS semantics.
   references: []
-  position:
-    start_line: 74
-    end_line: 79
-  signature:
-    params: []
-    returns:
-    - ModuleStore
 - name: Get
   kind: method
   receiver: memModuleStore
   description: Get retrieves a Schema by its ID, returning the schema and a boolean
     indicating existence.
   references: []
-  position:
-    start_line: 82
-    end_line: 95
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*ModuleDescriptor'
-    - bool
-  calls:
-  - mu.RLock
-  - mu.RUnlock
 - name: Put
   kind: method
   receiver: memModuleStore
   description: Put stores a Schema, returning the previous value (if any) and a boolean
     indicating prior existence.
   references: []
-  position:
-    start_line: 98
-    end_line: 119
-  signature:
-    params:
-    - name: m
-      type: '*ModuleDescriptor'
-    returns:
-    - '*ModuleDescriptor'
-    - bool
-  calls:
-  - m.ID
-  - mu.Lock
-  - mu.Unlock
 - name: Exists
   kind: method
   receiver: memModuleStore
   description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
-  position:
-    start_line: 122
-    end_line: 127
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - bool
-  calls:
-  - mu.RLock
-  - mu.RUnlock
 - name: NewMemSchemaStore
   kind: func
   description: NewMemSchemaStore creates and returns a new in-memory SchemaStore instance.
   references: []
-  position:
-    start_line: 136
-    end_line: 138
-  signature:
-    params: []
-    returns:
-    - SchemaStore
 - name: Get
   kind: method
   receiver: memSchemaStore
   description: Get retrieves a Schema by its ID, returning the schema and a boolean
     indicating existence.
   references: []
-  position:
-    start_line: 141
-    end_line: 146
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*Schema'
-    - bool
-  calls:
-  - mu.RLock
-  - mu.RUnlock
 - name: Put
   kind: method
   receiver: memSchemaStore
   description: Put stores a Schema, returning the previous value (if any) and a boolean
     indicating prior existence.
   references: []
-  position:
-    start_line: 149
-    end_line: 155
-  signature:
-    params:
-    - name: sc
-      type: '*Schema'
-    returns:
-    - '*Schema'
-    - bool
-  calls:
-  - mu.Lock
-  - mu.Unlock
-  - sc.ID
 - name: Exists
   kind: method
   receiver: memSchemaStore
   description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
-  position:
-    start_line: 158
-    end_line: 163
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - bool
-  calls:
-  - mu.RLock
-  - mu.RUnlock

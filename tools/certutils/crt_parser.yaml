@@ -13,68 +13,12 @@ objects:
   description: ''
   implements: []
   references: []
-  position:
-    start_line: 24
-    end_line: 31
-  fields:
-  - name: BuildID
-    type: string
-    tag: yaml:"build_id"
-  - name: CommitHash
-    type: string
-    tag: yaml:"commit"
-  - name: Timestamp
-    type: string
-    tag: yaml:"timestamp"
-  - name: GPGSignature
-    type: string
-    tag: yaml:"gpg_signature"
-  - name: CAFingerprint
-    type: string
-    tag: yaml:"ca_fingerprint"
 - name: printHelp
   kind: func
   description: printHelp prints the usage and command-line options for the certificate
     parser.
   references: []
-  position:
-    start_line: 34
-    end_line: 41
-  signature:
-    params: []
-    returns: []
-  calls:
-  - file
-  - filepath.Base
-  - fmt.Printf
-  - fmt.Println
 - name: main
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 42
-    end_line: 129
-  signature:
-    params: []
-    returns: []
-  calls:
-  - Curve.Params
-  - NotAfter.Format
-  - NotBefore.Format
-  - PublicKeyAlgorithm.String
-  - SerialNumber.String
-  - flag.Bool
-  - flag.Parse
-  - flag.String
-  - fmt.Fprintf
-  - fmt.Fprintln
-  - fmt.Println
-  - os.Exit
-  - os.ReadFile
-  - pem.Decode
-  - printHelp
-  - pub.Size
-  - string
-  - x509.ParseCertificate
-  - yaml.Marshal

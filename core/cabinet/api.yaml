@@ -13,35 +13,12 @@ objects:
   description: API provides the public interface for the Cabinet service.
   implements: []
   references: []
-  position:
-    start_line: 6
-    end_line: 8
 - name: NewAPI
   kind: func
   description: NewAPI creates a new API instance wrapping the given Cabinet service.
   references: []
-  position:
-    start_line: 11
-    end_line: 13
-  signature:
-    params:
-    - name: svc
-      type: Cabinet
-    returns:
-    - '*API'
 - name: Close
   kind: method
   receiver: API
   description: Close closes the underlying resources, like the WASM runtime.
   references: []
-  position:
-    start_line: 16
-    end_line: 18
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    returns:
-    - error
-  calls:
-  - Cabinet.Close

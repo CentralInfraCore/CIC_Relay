@@ -22,73 +22,13 @@ objects:
   - packages.NeedSyntax
   - packages.NeedTypes
   - packages.Load
-  position:
-    start_line: 30
-    end_line: 151
-  signature:
-    params:
-    - name: cfg
-      type: '*packages.Config'
-    - name: pkgPatterns
-      type: '[]string'
-    returns:
-    - '[]byte'
-    - error
-  calls:
-  - cancel
-  - contentBuffer.Bytes
-  - context.Background
-  - context.WithTimeout
-  - currentPkgOutput.WriteString
-  - doc.NewFromFiles
-  - finalOutput.Bytes
-  - finalOutput.Write
-  - finalOutput.WriteString
-  - fmt.Errorf
-  - fmt.Sprintf
-  - func
-  - packages.Load
-  - sort.Slice
-  - token.NewFileSet
 - name: run
   kind: func
   description: run reads a package allowlist, generates symbols documentation, and
     writes it to the output file.
   references:
   - packages.Config
-  position:
-    start_line: 154
-    end_line: 185
-  signature:
-    params:
-    - name: ''
-      type: allowFilePath
-    - name: outputFilePath
-      type: string
-    returns:
-    - error
-  calls:
-  - fmt.Errorf
-  - fmt.Printf
-  - generateSymbols
-  - os.ReadFile
-  - os.WriteFile
-  - output
-  - string
-  - strings.Split
-  - strings.TrimSpace
 - name: main
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 186
-    end_line: 202
-  signature:
-    params: []
-    returns: []
-  calls:
-  - exit
-  - fatalf
-  - log.Printf
-  - run

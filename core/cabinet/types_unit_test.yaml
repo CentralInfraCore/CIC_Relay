@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - schema
 - test
 category: []
@@ -14,168 +15,48 @@ objects:
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 9
-    end_line: 13
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchemaIdentity_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 14
-    end_line: 18
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchemaConfig_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 19
-    end_line: 23
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchemaSigning_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 24
-    end_line: 28
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestSchema_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 29
-    end_line: 33
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestModuleDescriptor_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 34
-    end_line: 39
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflowIdentity_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 40
-    end_line: 44
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflowConfig_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 45
-    end_line: 49
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflowSigning_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 50
-    end_line: 54
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField
 - name: TestWorkflow_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 55
-    end_line: 59
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - reflect.TypeOf
-  - typeOf.NumField

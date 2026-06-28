@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -12,49 +13,11 @@ objects:
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 9
-    end_line: 18
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
-  - t.Fatalf
-  - w.ID
 - name: TestWorkflow_ID_Empty
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 19
-    end_line: 25
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
-  - t.Fatalf
-  - w.ID
 - name: TestWorkflow_GetData_ReturnsConfig
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 28
-    end_line: 45
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - GetData
-  - reflect.DeepEqual
-  - string
-  - t.Fatalf
-  - w.GetData

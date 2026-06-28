@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -15,22 +16,6 @@ objects:
   - assert.Len
   - assert.NotEqual
   - assert.Equal
-  position:
-    start_line: 9
-    end_line: 56
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ComputeChainHashV1
-  - assert.Equal
-  - assert.Len
-  - assert.NotEqual
-  - func
-  - hash
-  - t.Run
 - name: TestHashValue
   kind: func
   description: ''
@@ -39,19 +24,3 @@ objects:
   - assert.Equal
   - assert.Len
   - assert.NotEqual
-  position:
-    start_line: 57
-    end_line: 82
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assert.Len
-  - assert.NotEqual
-  - func
-  - hashValue
-  - require.NoError
-  - t.Run

@@ -18,123 +18,42 @@ objects:
   implements: []
   references:
   - mock.Mock
-  position:
-    start_line: 12
-    end_line: 14
 - name: PutSchema
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.Schema
-  position:
-    start_line: 15
-    end_line: 19
-  signature:
-    params:
-    - name: s
-      type: '*cabinet.Schema'
-    returns:
-    - error
-  calls:
-  - args.Error
-  - m.Called
 - name: GetSchema
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.Schema
-  position:
-    start_line: 20
-    end_line: 27
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*cabinet.Schema'
-    - error
-  calls:
-  - args.Error
-  - args.Get
-  - m.Called
 - name: PutModule
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.ModuleDescriptor
-  position:
-    start_line: 28
-    end_line: 32
-  signature:
-    params:
-    - name: md
-      type: '*cabinet.ModuleDescriptor'
-    returns:
-    - error
-  calls:
-  - args.Error
-  - m.Called
 - name: GetModule
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.ModuleDescriptor
-  position:
-    start_line: 33
-    end_line: 40
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*cabinet.ModuleDescriptor'
-    - error
-  calls:
-  - args.Error
-  - args.Get
-  - m.Called
 - name: PutWorkflow
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.Workflow
-  position:
-    start_line: 41
-    end_line: 45
-  signature:
-    params:
-    - name: w
-      type: '*cabinet.Workflow'
-    returns:
-    - error
-  calls:
-  - args.Error
-  - m.Called
 - name: GetWorkflow
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.Workflow
-  position:
-    start_line: 46
-    end_line: 53
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*cabinet.Workflow'
-    - error
-  calls:
-  - args.Error
-  - args.Get
-  - m.Called
 - name: Setx
   kind: method
   receiver: mockCabinetService
@@ -142,36 +61,8 @@ objects:
   references:
   - cabinet.SetPayload
   - cabinet.SetResponse
-  position:
-    start_line: 54
-    end_line: 61
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: in
-      type: '*cabinet.SetPayload'
-    returns:
-    - '*cabinet.SetResponse'
-    - error
-  calls:
-  - args.Error
-  - args.Get
-  - m.Called
 - name: Close
   kind: method
   receiver: mockCabinetService
   description: ''
   references: []
-  position:
-    start_line: 62
-    end_line: 66
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    returns:
-    - error
-  calls:
-  - args.Error
-  - m.Called

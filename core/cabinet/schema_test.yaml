@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - schema
 - test
 category: []
@@ -16,19 +17,3 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.ErrorIs
-  position:
-    start_line: 9
-    end_line: 21
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewSchema
-  - assert.Error
-  - assert.ErrorIs
-  - assert.Nil
-  - context.Background
-  - func
-  - t.Run

@@ -15,16 +15,6 @@ objects:
     contains the data variables and the materialized (live) modules.
   implements: []
   references: []
-  position:
-    start_line: 35
-    end_line: 38
-  fields:
-  - name: variables
-    type: map[string]interface{}
-    tag: ''
-  - name: materializedModules
-    type: map[string]*ModuleDescriptor
-    tag: ''
 - name: cabinetService
   kind: struct
   description: cabinetService is the concrete implementation of the Cabinet interface,
@@ -32,236 +22,55 @@ objects:
     optional audit recording.
   implements: []
   references: []
-  position:
-    start_line: 93
-    end_line: 100
-  fields:
-  - name: schemas
-    type: SchemaStore
-    tag: ''
-  - name: modules
-    type: ModuleStore
-    tag: ''
-  - name: workflows
-    type: WorkflowStore
-    tag: ''
-  - name: wasmManager
-    type: wasmManager
-    tag: ''
-  - name: clock
-    type: func() string     // injected; returns UTC timestamp for ProofTrace
-    tag: ''
-  - name: recorder
-    type: ExecutionRecorder // optional; nil = skip recording
-    tag: ''
 - name: cicWasmHost
   kind: interface
   description: cicWasmHost defines the interface for interacting with a live WASM
     instance. This allows for mocking in unit tests.
   references: []
-  position:
-    start_line: 18
-    end_line: 24
-  methods:
-  - name: Process
-    params:
-    - ctx context.Context
-    - authContextJson
-    - inputJson string
-    returns:
-    - (string, string)
-  - name: Get
-    params:
-    - ctx context.Context
-    - authContextJson
-    - queryJson string
-    returns:
-    - (string, string)
-  - name: Init
-    params:
-    - ctx context.Context
-    - authContextJson
-    - configJson string
-    returns:
-    - (string, string)
-  - name: Notify
-    params:
-    - ctx context.Context
-    - authContextJson
-    - eventJson string
-    returns:
-    - (string, string)
-  - name: Close
-    params:
-    - ctx context.Context
-    returns:
-    - error
 - name: wasmManager
   kind: interface
   description: wasmManager defines the interface for a WASM lifecycle manager. This
     allows for mocking in unit tests.
   references: []
-  position:
-    start_line: 28
-    end_line: 31
-  methods:
-  - name: NewHostInstance
-    params:
-    - ctx context.Context
-    - moduleID string
-    returns:
-    - (cicWasmHost, error) // Use the interface type
-  - name: Close
-    params:
-    - ctx context.Context
-    returns:
-    - error
 - name: Cabinet
   kind: interface
   description: Cabinet defines the central API for schema/module/workflow management.
   references: []
-  position:
-    start_line: 74
-    end_line: 89
-  methods:
-  - name: PutSchema
-    params:
-    - s *Schema
-    returns:
-    - error
-  - name: GetSchema
-    params:
-    - id string
-    returns:
-    - (*Schema, error)
-  - name: PutModule
-    params:
-    - m *ModuleDescriptor
-    returns:
-    - error
-  - name: GetModule
-    params:
-    - id string
-    returns:
-    - (*ModuleDescriptor, error)
-  - name: PutWorkflow
-    params:
-    - w *Workflow
-    returns:
-    - error
-  - name: GetWorkflow
-    params:
-    - id string
-    returns:
-    - (*Workflow, error)
-  - name: Setx
-    params:
-    - ctx context.Context
-    - in *SetPayload
-    returns:
-    - (*SetResponse, error)
-  - name: Close
-    params:
-    - ctx context.Context
-    returns:
-    - error
 - name: CabinetOption
   kind: type
   description: CabinetOption is a functional option for configuring a cabinetService.
   references: []
-  position:
-    start_line: 103
-    end_line: 103
 - name: NewExecutionContext
   kind: func
   description: NewExecutionContext creates a new execution context and initializes
     it with the starting payload.
   references: []
-  position:
-    start_line: 41
-    end_line: 49
-  signature:
-    params:
-    - name: initialPayload
-      type: map[string]interface{}
-    returns:
-    - '*executionContext'
 - name: Get
   kind: method
   receiver: executionContext
   description: Get retrieves a value from the context's variable store.
   references: []
-  position:
-    start_line: 52
-    end_line: 52
-  signature:
-    params:
-    - name: key
-      type: string
-    returns:
-    - interface
 - name: Set
   kind: method
   receiver: executionContext
   description: Set stores a value in the context's variable store.
   references: []
-  position:
-    start_line: 58
-    end_line: 60
-  signature:
-    params:
-    - name: key
-      type: string
-    - name: value
-      type: interface{}
-    returns: []
 - name: GetModule
   kind: method
   receiver: executionContext
   description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
     if not present.
   references: []
-  position:
-    start_line: 63
-    end_line: 66
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*ModuleDescriptor'
-    - bool
 - name: StoreModule
   kind: method
   receiver: executionContext
   description: StoreModule stores a newly materialized module in the context.
   references: []
-  position:
-    start_line: 69
-    end_line: 71
-  signature:
-    params:
-    - name: mod
-      type: '*ModuleDescriptor'
-    returns: []
-  calls:
-  - mod.ID
 - name: WithRecorder
   kind: func
   description: WithRecorder sets an optional ExecutionRecorder on the service. If
     nil, ProofTrace recording is skipped silently.
   references: []
-  position:
-    start_line: 107
-    end_line: 111
-  signature:
-    params:
-    - name: r
-      type: ExecutionRecorder
-    returns:
-    - CabinetOption
-  calls:
-  - func
 - name: WithObsSinks
   kind: func
   description: 'WithObsSinks wires observability sinks into the underlying WasmManager.
@@ -269,53 +78,11 @@ objects:
   references:
   - obs.LogSink
   - obs.MetricSink
-  position:
-    start_line: 115
-    end_line: 121
-  signature:
-    params:
-    - name: logSink
-      type: obs.LogSink
-    - name: metricSink
-      type: obs.MetricSink
-    returns:
-    - CabinetOption
-  calls:
-  - func
-  - wm.SetObsSinks
 - name: NewCabinetService
   kind: func
   description: NewCabinetService creates a new Cabinet service with the given stores
     and WasmManager configuration.
   references: []
-  position:
-    start_line: 124
-    end_line: 141
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: schemas
-      type: SchemaStore
-    - name: modules
-      type: ModuleStore
-    - name: workflows
-      type: WorkflowStore
-    - name: wasmConfig
-      type: WasmManagerConfig
-    - name: opts
-      type: '...CabinetOption'
-    returns:
-    - Cabinet
-    - error
-  calls:
-  - Format
-  - NewWasmManager
-  - UTC
-  - fmt.Errorf
-  - func
-  - opt
-  - time.Now
 - name: Setx
   kind: method
   receiver: cabinetService
@@ -325,196 +92,45 @@ objects:
   references:
   - logrus.WithFields
   - logrus.Fields
-  position:
-    start_line: 145
-    end_line: 313
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: in
-      type: '*SetPayload'
-    returns:
-    - '*SetResponse'
-    - error
-  calls:
-  - ComputeChainHashV1
-  - Elem
-  - Format
-  - In
-  - Interface
-  - IsNil
-  - NewExecutionContext
-  - NumIn
-  - NumOut
-  - Out
-  - ParseExecutionGraph
-  - ProofTrace
-  - UTC
-  - Warn
-  - byte
-  - c.GetModule
-  - c.GetWorkflow
-  - clockFn
-  - execCtx.Get
-  - execCtx.Set
-  - execution
-  - fmt.Errorf
-  - func
-  - funcValue.Call
-  - funcValue.Kind
-  - funcValue.Type
-  - hashValue
-  - host.Close
-  - host.Get
-  - host.Init
-  - host.Notify
-  - host.Process
-  - implementation
-  - isWasmTimeout
-  - json.Marshal
-  - json.Unmarshal
-  - logrus.WithFields
-  - recorder.Record
-  - reflect.TypeOf
-  - reflect.ValueOf
-  - string
-  - strings.ToLower
-  - time.Now
-  - validateInputSchema
-  - wasmManager.NewHostInstance
-  - workflow.ID
 - name: Close
   kind: method
   receiver: cabinetService
   description: Close closes the underlying WASM runtime and frees all associated resources.
   references: []
-  position:
-    start_line: 316
-    end_line: 318
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    returns:
-    - error
-  calls:
-  - wasmManager.Close
 - name: isWasmTimeout
   kind: func
   description: isWasmTimeout checks whether a WASM errorResult string signals a timeout.
     The cicwasm layer encodes timeouts as {"code":"TIMEOUT",...}.
   references: []
-  position:
-    start_line: 322
-    end_line: 327
-  signature:
-    params:
-    - name: errorResult
-      type: string
-    returns:
-    - bool
-  calls:
-  - byte
-  - json.Unmarshal
 - name: PutSchema
   kind: method
   receiver: cabinetService
   description: PutSchema stores a Schema in the underlying SchemaStore.
   references: []
-  position:
-    start_line: 330
-    end_line: 334
-  signature:
-    params:
-    - name: s
-      type: '*Schema'
-    returns:
-    - error
-  calls:
-  - schemas.Put
 - name: GetSchema
   kind: method
   receiver: cabinetService
   description: GetSchema retrieves a Schema by ID, returning ErrNotFound if not present.
   references: []
-  position:
-    start_line: 337
-    end_line: 342
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*Schema'
-    - error
-  calls:
-  - schemas.Get
 - name: PutModule
   kind: method
   receiver: cabinetService
   description: PutModule stores a ModuleDescriptor in the underlying ModuleStore.
   references: []
-  position:
-    start_line: 345
-    end_line: 349
-  signature:
-    params:
-    - name: m
-      type: '*ModuleDescriptor'
-    returns:
-    - error
-  calls:
-  - modules.Put
 - name: GetModule
   kind: method
   receiver: cabinetService
   description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
     if not present.
   references: []
-  position:
-    start_line: 352
-    end_line: 357
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*ModuleDescriptor'
-    - error
-  calls:
-  - modules.Get
 - name: PutWorkflow
   kind: method
   receiver: cabinetService
   description: PutWorkflow stores a Workflow in the underlying WorkflowStore.
   references: []
-  position:
-    start_line: 360
-    end_line: 364
-  signature:
-    params:
-    - name: w
-      type: '*Workflow'
-    returns:
-    - error
-  calls:
-  - workflows.Put
 - name: GetWorkflow
   kind: method
   receiver: cabinetService
   description: GetWorkflow retrieves a Workflow by ID, returning ErrNotFound if not
     present.
   references: []
-  position:
-    start_line: 367
-    end_line: 372
-  signature:
-    params:
-    - name: id
-      type: string
-    returns:
-    - '*Workflow'
-    - error
-  calls:
-  - workflows.Get

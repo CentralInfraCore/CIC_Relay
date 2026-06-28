@@ -13,105 +13,28 @@ objects:
     TraceSink, LogSink, and MetricSink.
   implements: []
   references: []
-  position:
-    start_line: 7
-    end_line: 14
-  fields:
-  - name: mu
-    type: sync.Mutex
-    tag: ''
-  - name: Traces
-    type: '[]TraceFrame'
-    tag: ''
-  - name: Logs
-    type: '[]LogRecord'
-    tag: ''
-  - name: Counters
-    type: '[]CounterPoint'
-    tag: ''
-  - name: Gauges
-    type: '[]GaugePoint'
-    tag: ''
-  - name: Histos
-    type: '[]HistogramPoint'
-    tag: ''
 - name: RecordTrace
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
-  position:
-    start_line: 15
-    end_line: 20
-  signature:
-    params:
-    - name: f
-      type: TraceFrame
-    returns: []
-  calls:
-  - mu.Lock
-  - mu.Unlock
 - name: RecordLog
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
-  position:
-    start_line: 21
-    end_line: 26
-  signature:
-    params:
-    - name: r
-      type: LogRecord
-    returns: []
-  calls:
-  - mu.Lock
-  - mu.Unlock
 - name: RecordCounter
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
-  position:
-    start_line: 27
-    end_line: 32
-  signature:
-    params:
-    - name: p
-      type: CounterPoint
-    returns: []
-  calls:
-  - mu.Lock
-  - mu.Unlock
 - name: RecordGauge
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
-  position:
-    start_line: 33
-    end_line: 38
-  signature:
-    params:
-    - name: p
-      type: GaugePoint
-    returns: []
-  calls:
-  - mu.Lock
-  - mu.Unlock
 - name: RecordHistogram
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
-  position:
-    start_line: 39
-    end_line: 44
-  signature:
-    params:
-    - name: p
-      type: HistogramPoint
-    returns: []
-  calls:
-  - mu.Lock
-  - mu.Unlock

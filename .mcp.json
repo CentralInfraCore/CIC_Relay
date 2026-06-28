@@ -1,5 +1,15 @@
 {
   "mcpServers": {
+    "cic-relay": {
+      "command": "/home/sinkog/sync/git.partners/CentralInfraCore/MCPs/base/p_venv/bin/python",
+      "args": [
+        "/home/sinkog/sync/git.partners/CentralInfraCore/MCPs/base/mcp-server/server.py"
+      ],
+      "env": {
+        "KB_DATA_DIR": "/home/sinkog/sync/git.partners/CentralInfraCore/CIC-Relay/.mcp_data/kb_data",
+        "KB_WATCH_DIR": "/home/sinkog/sync/git.partners/CentralInfraCore/CIC-Relay"
+      }
+    },
     "cic-graph": {
       "command": "/home/sinkog/sync/git.partners/CentralInfraCore/MCPs/private/p_venv/bin/python",
       "args": [

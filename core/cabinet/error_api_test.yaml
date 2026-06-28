@@ -2,6 +2,7 @@
 package: cabinet_test
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -18,26 +19,6 @@ objects:
   - cabinet.ErrNotFound
   - cabinet.IsConflict
   - cabinet.IsNotFound
-  position:
-    start_line: 11
-    end_line: 47
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - IsConflict
-  - IsInvalid
-  - IsNotFound
-  - cabinet.IsConflict
-  - cabinet.IsInvalid
-  - cabinet.IsNotFound
-  - errors.New
-  - fmt.Errorf
-  - func
-  - t.Fatalf
-  - t.Run
 - name: TestValidationError_Error_EmptyReturnsErrInvalid_API
   kind: func
   description: ''
@@ -45,19 +26,6 @@ objects:
   - cabinet.ValidationError
   - cabinet.ErrInvalid
   - cabinet.Error
-  position:
-    start_line: 48
-    end_line: 54
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ErrInvalid.Error
-  - Error
-  - t.Fatalf
-  - ve.Error
 - name: TestValidationError_Error_WithCauses_JSONPrefixed_API
   kind: func
   description: ''
@@ -65,39 +33,12 @@ objects:
   - cabinet.ValidationError
   - cabinet.FieldError
   - cabinet.ErrInvalid
-  position:
-    start_line: 55
-    end_line: 74
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ErrInvalid.Error
-  - Error
-  - fmt.Sprintf
-  - json.Marshal
-  - string
-  - t.Fatalf
-  - ve.Error
 - name: TestNewValidationError_API
   kind: func
   description: ''
   references:
   - cabinet.FieldErrorField
   - cabinet.NewValidationError
-  position:
-    start_line: 75
-    end_line: 90
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - cabinet.NewValidationError
-  - t.Fatalf
 - name: TestValidationError_DoesNotMatchIsInvalid_API
   kind: func
   description: ''
@@ -105,32 +46,8 @@ objects:
   - cabinet.NewValidationError
   - cabinet.FieldErrorField
   - cabinet.IsInvalid
-  position:
-    start_line: 91
-    end_line: 97
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - IsInvalid
-  - cabinet.IsInvalid
-  - cabinet.NewValidationError
-  - 'false'
-  - t.Fatalf
 - name: TestValidationError_ImplementsError_API
   kind: func
   description: ''
   references:
-  - cabinet.NewValidationError
-  position:
-    start_line: 98
-    end_line: 102
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
   - cabinet.NewValidationError

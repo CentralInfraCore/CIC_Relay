@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - schema
 - test
 category: []
@@ -15,47 +17,23 @@ objects:
     files.
   implements: []
   references: []
-  position:
-    start_line: 37
-    end_line: 40
-  fields:
-  - name: failOnRead
-    type: map[string]bool
-    tag: ''
 - name: failingFile
   kind: struct
   description: failingFile is a wrapper around fs.File that can be configured to fail
     on Read.
   implements: []
   references: []
-  position:
-    start_line: 43
-    end_line: 46
-  fields:
-  - name: failRead
-    type: bool
-    tag: ''
 - name: failingReadDirFS
   kind: struct
   description: failingReadDirFS is a mock file system that fails on ReadDir.
   implements: []
   references: []
-  position:
-    start_line: 67
-    end_line: 69
 - name: failingStatFS
   kind: struct
   description: failingStatFS is a mock file system that fails on Stat for specific
     files.
   implements: []
   references: []
-  position:
-    start_line: 76
-    end_line: 79
-  fields:
-  - name: failOnStat
-    type: map[string]bool
-    tag: ''
 - name: Read
   kind: method
   receiver: failingFile
@@ -82,20 +60,6 @@ objects:
     embedded testdata.
   references:
   - require.NoError
-  position:
-    start_line: 99
-    end_line: 103
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    - name: subdir
-      type: string
-    returns:
-    - fs.FS
-  calls:
-  - fs.Sub
-  - require.NoError
 - name: TestLoadPKIAssets
   kind: func
   description: ''
@@ -107,36 +71,6 @@ objects:
   - assert.Contains
   - require.Error
   - assert.ErrorIs
-  position:
-    start_line: 104
-    end_line: 231
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Equal
-  - assert.ErrorIs
-  - assert.NotEqual
-  - assert.True
-  - byte
-  - filepath.Join
-  - fs.ReadFile
-  - func
-  - getSubFS
-  - loadPKIAssets
-  - logBuf.String
-  - logger.SetOutput
-  - newDiscardLogger
-  - os.DirFS
-  - os.WriteFile
-  - require.Error
-  - require.NoError
-  - t.Run
-  - t.TempDir
-  - x509.NewCertPool
 - name: TestLoadSchema
   kind: func
   description: ''
@@ -151,31 +85,6 @@ objects:
   - assert.Contains
   - logrus.StandardLogger
   - logrus.SetOutput
-  position:
-    start_line: 232
-    end_line: 275
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - err.Error
-  - func
-  - loadSchema
-  - logBuf.String
-  - logrus.SetOutput
-  - logrus.StandardLogger
-  - require.Error
-  - require.NoError
-  - t.Run
 - name: TestLoadWorkflow
   kind: func
   description: ''
@@ -190,31 +99,6 @@ objects:
   - assert.Contains
   - logrus.StandardLogger
   - logrus.SetOutput
-  position:
-    start_line: 276
-    end_line: 327
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - err.Error
-  - func
-  - loadWorkflow
-  - logBuf.String
-  - logrus.SetOutput
-  - logrus.StandardLogger
-  - require.Error
-  - require.NoError
-  - t.Run
 - name: TestLoadEmbeddedComponents
   kind: func
   description: ''
@@ -226,28 +110,6 @@ objects:
   - cabinet.NewMemWorkflowStore
   - require.NoError
   - assert.NoError
-  position:
-    start_line: 328
-    end_line: 348
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NoError
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - getSubFS
-  - int64
-  - loadEmbeddedComponents
-  - newDiscardLogger
-  - require.NoError
-  - svc.GetSchema
-  - svc.GetWorkflow
 - name: TestLoadEmbeddedComponents_Error
   kind: func
   description: ''
@@ -261,31 +123,6 @@ objects:
   - assert.Error
   - assert.Contains
   - assert.ErrorIs
-  position:
-    start_line: 349
-    end_line: 383
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.Error
-  - assert.ErrorIs
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - err.Error
-  - func
-  - getSubFS
-  - int64
-  - loadEmbeddedComponents
-  - newDiscardLogger
-  - require.NoError
-  - t.Run
 - name: TestLoadComponentsFromFS
   kind: func
   description: ''
@@ -298,37 +135,6 @@ objects:
   - require.NoError
   - assert.NoError
   - assert.Contains
-  position:
-    start_line: 384
-    end_line: 416
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.NoError
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - filepath.Join
-  - func
-  - getSubFS
-  - int64
-  - loadComponentsFromFS
-  - loadPKIAssets
-  - logBuf.String
-  - logger.SetOutput
-  - newDiscardLogger
-  - os.DirFS
-  - os.WriteFile
-  - require.NoError
-  - t.Run
-  - t.TempDir
 - name: TestLoadModule
   kind: func
   description: ''
@@ -349,56 +155,6 @@ objects:
   - logrus.ErrorLevel
   - mock.Anything
   - cabinet.ErrNotFound
-  position:
-    start_line: 417
-    end_line: 657
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Contains
-  - assert.Equal
-  - assert.Error
-  - assert.ErrorIs
-  - assert.NoError
-  - assert.True
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - err.Error
-  - filepath.Join
-  - fmt.Errorf
-  - fmt.Sprintf
-  - fs.ReadFile
-  - func
-  - getSubFS
-  - hasher.Sum
-  - hasher.Write
-  - hex.EncodeToString
-  - int64
-  - loadModule
-  - loadPKIAssets
-  - logBuf.String
-  - logger.SetLevel
-  - logger.SetOutput
-  - logrus.New
-  - mockSvc.AssertExpectations
-  - mockSvc.On
-  - new
-  - newDiscardLogger
-  - os.DirFS
-  - os.WriteFile
-  - require.NoError
-  - sha256.New
-  - svc.GetModule
-  - t.Run
-  - t.TempDir
 - name: TestLoadComponentsFromFS_WalkDirError
   kind: func
   description: ''
@@ -412,30 +168,6 @@ objects:
   - logrus.New
   - assert.Error
   - assert.ErrorIs
-  position:
-    start_line: 658
-    end_line: 687
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Error
-  - assert.ErrorIs
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - func
-  - getSubFS
-  - int64
-  - loadComponentsFromFS
-  - loadPKIAssets
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
 - name: TestLoadInstalledComponents_Success
   kind: func
   description: ''
@@ -449,32 +181,6 @@ objects:
   - logrus.New
   - logrus.DebugLevel
   - assert.Contains
-  position:
-    start_line: 688
-    end_line: 717
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - filepath.Abs
-  - int64
-  - loadInstalledComponents
-  - logBuf.String
-  - logger.SetLevel
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
-  - svc.GetSchema
-  - svc.GetWorkflow
 - name: TestLoadInstalledComponents_PathErrors
   kind: func
   description: ''
@@ -488,67 +194,17 @@ objects:
   - logrus.New
   - assert.Contains
   - require.Error
-  position:
-    start_line: 718
-    end_line: 745
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - func
-  - int64
-  - loadErr.Error
-  - loadInstalledComponents
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - newDiscardLogger
-  - os.CreateTemp
-  - require.Error
-  - require.NoError
-  - t.Run
-  - t.TempDir
-  - tempFile.Close
-  - tempFile.Name
 - name: newDiscardLogger
   kind: func
   description: Helper function to create a logrus logger that discards output
   references:
   - logrus.Logger
   - logrus.New
-  position:
-    start_line: 748
-    end_line: 752
-  signature:
-    params: []
-    returns:
-    - '*logrus.Logger'
-  calls:
-  - logger.SetOutput
-  - logrus.New
 - name: emptyPKIAssets
   kind: func
   description: emptyPKIAssets returns a PKIAssets with empty pools (TrustStoreLoaded=false).
     Use this in tests that focus on component loading, not PKI verification.
   references: []
-  position:
-    start_line: 756
-    end_line: 762
-  signature:
-    params: []
-    returns:
-    - '*PKIAssets'
-  calls:
-  - x509.NewCertPool
 - name: TestRegisterNativeComponents
   kind: func
   description: TestRegisterNativeComponents verifies that the native components are
@@ -564,38 +220,6 @@ objects:
   - assert.Equal
   - require.NotNil
   - assert.True
-  position:
-    start_line: 765
-    end_line: 849
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ID
-  - Return
-  - Run
-  - Times
-  - args.Get
-  - artifactSign.ID
-  - assert.Equal
-  - assert.True
-  - certSelfSigned.ID
-  - ciBuild.ID
-  - context.Background
-  - coreTest.ID
-  - func
-  - mockCabinet.AssertExpectations
-  - mockCabinet.On
-  - mod.ID
-  - new
-  - registerNativeComponents
-  - require.Len
-  - require.NoError
-  - require.NotNil
-  - schemaBuild.ID
-  - sourceAssert.ID
 - name: TestRegisterNativeComponents_Errors
   kind: func
   description: ''
@@ -606,31 +230,6 @@ objects:
   - assert.Contains
   - mock.Anything
   - assert.ErrorIs
-  position:
-    start_line: 850
-    end_line: 882
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Contains
-  - assert.ErrorIs
-  - canonicaljson.SetToJSONMock
-  - context.Background
-  - err.Error
-  - errors.New
-  - func
-  - mockCabinet.AssertExpectations
-  - mockCabinet.On
-  - new
-  - registerNativeComponents
-  - require.Error
-  - t.Cleanup
-  - t.Run
 - name: buildLoadedPKIAssets
   kind: func
   description: buildLoadedPKIAssets creates PKIAssets with TrustStoreLoaded=true using
@@ -638,50 +237,11 @@ objects:
   references:
   - require.NoError
   - require.True
-  position:
-    start_line: 886
-    end_line: 901
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns:
-    - '*PKIAssets'
-  calls:
-  - fs.ReadFile
-  - getSubFS
-  - loadPKIAssets
-  - newDiscardLogger
-  - require.NoError
-  - require.True
-  - t.Helper
 - name: buildModuleFS
   kind: func
   description: buildModuleFS builds a fstest.MapFS for a single module with an optional
     PEM cert.
   references: []
-  position:
-    start_line: 904
-    end_line: 926
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    - name: wasmCode
-      type: '[]byte'
-    - name: pemData
-      type: '[]byte'
-    returns:
-    - fstest.MapFS
-    - string
-  calls:
-  - byte
-  - fmt.Sprintf
-  - hasher.Sum
-  - hasher.Write
-  - hex.EncodeToString
-  - sha256.New
-  - t.Helper
 - name: TestLoadModule_PKIVerification_Valid
   kind: func
   description: ''
@@ -694,31 +254,6 @@ objects:
   - require.NoError
   - logrus.New
   - assert.Contains
-  position:
-    start_line: 927
-    end_line: 948
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - buildLoadedPKIAssets
-  - buildModuleFS
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - fs.ReadFile
-  - getSubFS
-  - int64
-  - loadModule
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
 - name: TestLoadModule_PKIVerification_WrongEKU
   kind: func
   description: ''
@@ -731,31 +266,6 @@ objects:
   - require.NoError
   - require.Error
   - assert.Contains
-  position:
-    start_line: 949
-    end_line: 967
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - buildLoadedPKIAssets
-  - buildModuleFS
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - err.Error
-  - fs.ReadFile
-  - getSubFS
-  - int64
-  - loadModule
-  - newDiscardLogger
-  - require.Error
-  - require.NoError
 - name: generateForeignLeafPEM
   kind: func
   description: generateForeignLeafPEM creates a leaf cert signed by a freshly-generated
@@ -763,26 +273,6 @@ objects:
     chain.
   references:
   - require.NoError
-  position:
-    start_line: 971
-    end_line: 1008
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns:
-    - '[]byte'
-  calls:
-  - Add
-  - big.NewInt
-  - ecdsa.GenerateKey
-  - elliptic.P256
-  - pem.EncodeToMemory
-  - require.NoError
-  - t.Helper
-  - time.Now
-  - x509.CreateCertificate
-  - x509.ParseCertificate
 - name: TestLoadModule_PKIVerification_WrongChain
   kind: func
   description: TestLoadModule_PKIVerification_WrongChain verifies that a cert signed
@@ -796,30 +286,6 @@ objects:
   - require.NoError
   - require.Error
   - assert.Contains
-  position:
-    start_line: 1012
-    end_line: 1029
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - buildLoadedPKIAssets
-  - buildModuleFS
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - err.Error
-  - generateForeignLeafPEM
-  - int64
-  - loadModule
-  - newDiscardLogger
-  - require.Error
-  - require.NoError
 - name: TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips
   kind: func
   description: ''
@@ -832,31 +298,6 @@ objects:
   - require.NoError
   - logrus.New
   - assert.Contains
-  position:
-    start_line: 1030
-    end_line: 1055
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - buildModuleFS
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - fs.ReadFile
-  - getSubFS
-  - int64
-  - loadModule
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
-  - x509.NewCertPool
 - name: TestLoadComponentsFromFS_UnknownKind
   kind: func
   description: ''
@@ -870,29 +311,6 @@ objects:
   - logrus.New
   - assert.NoError
   - assert.Contains
-  position:
-    start_line: 1056
-    end_line: 1073
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.NoError
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - loadComponentsFromFS
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
 - name: TestRegisterNativeComponents_SequentialPutModuleFailures
   kind: func
   description: ''
@@ -901,27 +319,6 @@ objects:
   - merkle.BuildContext
   - require.Error
   - assert.Contains
-  position:
-    start_line: 1074
-    end_line: 1122
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Contains
-  - context.Background
-  - err.Error
-  - errors.New
-  - func
-  - mc.On
-  - new
-  - registerNativeComponents
-  - require.Error
-  - t.Run
 - name: TestLoadComponentsFromFS_NonYAMLSkipped
   kind: func
   description: ''
@@ -933,26 +330,6 @@ objects:
   - cabinet.NewMemWorkflowStore
   - require.NoError
   - assert.NoError
-  position:
-    start_line: 1123
-    end_line: 1136
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.NoError
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - loadComponentsFromFS
-  - newDiscardLogger
-  - require.NoError
 - name: TestLoadComponentsFromFS_BadYAMLHeader
   kind: func
   description: ''
@@ -966,29 +343,6 @@ objects:
   - logrus.New
   - assert.NoError
   - assert.Contains
-  position:
-    start_line: 1137
-    end_line: 1155
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.NoError
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - loadComponentsFromFS
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
 - name: TestLoadComponentsFromFS_LoadErrorContinue
   kind: func
   description: ''
@@ -1002,29 +356,6 @@ objects:
   - logrus.New
   - assert.NoError
   - assert.Contains
-  position:
-    start_line: 1156
-    end_line: 1176
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.NoError
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - loadComponentsFromFS
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
 - name: TestRegisterNativeComponents_SubsequentNewModuleDescriptorFailures
   kind: func
   description: ''
@@ -1034,31 +365,6 @@ objects:
   - merkle.BuildContext
   - require.Error
   - assert.Contains
-  position:
-    start_line: 1177
-    end_line: 1214
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Once
-  - Return
-  - assert.Contains
-  - canonicaljson.SetToJSONMock
-  - context.Background
-  - err.Error
-  - errors.New
-  - func
-  - json.Marshal
-  - mc.On
-  - new
-  - registerNativeComponents
-  - require.Error
-  - succeed
-  - t.Cleanup
-  - t.Run
 - name: TestLoadModule_ZeroWasmSize
   kind: func
   description: ''
@@ -1071,28 +377,6 @@ objects:
   - require.NoError
   - require.Error
   - assert.Contains
-  position:
-    start_line: 1215
-    end_line: 1226
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - err.Error
-  - loadModule
-  - newDiscardLogger
-  - require.Error
-  - require.NoError
 - name: TestLoadComponentsFromFS_LoadErrorFailOnError
   kind: func
   description: ''
@@ -1105,29 +389,6 @@ objects:
   - require.NoError
   - require.Error
   - assert.Contains
-  position:
-    start_line: 1227
-    end_line: 1242
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - err.Error
-  - error
-  - loadComponentsFromFS
-  - newDiscardLogger
-  - require.Error
-  - require.NoError
 - name: TestLoadPKIAssets_FileWithNoPEMData
   kind: func
   description: ''
@@ -1136,23 +397,6 @@ objects:
   - require.NoError
   - assert.False
   - assert.Contains
-  position:
-    start_line: 1243
-    end_line: 1257
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.False
-  - byte
-  - loadPKIAssets
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
 - name: TestLoadComponentsFromFS_ReadFileError
   kind: func
   description: ''
@@ -1166,29 +410,6 @@ objects:
   - logrus.New
   - assert.NoError
   - assert.Contains
-  position:
-    start_line: 1258
-    end_line: 1276
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.NoError
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - loadComponentsFromFS
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - require.NoError
 - name: TestLoadModule_InvalidPEMSignature
   kind: func
   description: ''
@@ -1202,35 +423,6 @@ objects:
   - logrus.New
   - assert.NoError
   - assert.Contains
-  position:
-    start_line: 1277
-    end_line: 1302
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Contains
-  - assert.NoError
-  - block
-  - byte
-  - cabinet.NewCabinetService
-  - cabinet.NewMemModuleStore
-  - cabinet.NewMemSchemaStore
-  - cabinet.NewMemWorkflowStore
-  - context.Background
-  - emptyPKIAssets
-  - filepath.Join
-  - fmt.Sprintf
-  - loadModule
-  - logBuf.String
-  - logger.SetOutput
-  - logrus.New
-  - os.DirFS
-  - os.WriteFile
-  - require.NoError
-  - t.TempDir
 - name: embeddedTestdata
   kind: var
   description: go:embed testdata

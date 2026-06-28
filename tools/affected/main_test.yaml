@@ -1,0 +1,87 @@
+---
+package: main
+description: ''
+tags:
+- builder
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: newTestModule
+  kind: func
+  description: newTestModule builds a temporary module "testmod" with a dependency
+    chain pkgc -> pkgb -> pkga, plus an unrelated pkgd, and returns its root dir.
+    pkga (leaf) pkgb imports pkga pkgc imports pkgb pkgd imports nothing, is imported
+    by nothing
+  references:
+  - require.NoError
+- name: TestAffectedPackages_TransitiveImporters
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.NoError
+  - assert.Equal
+- name: TestAffectedPackages_LeafChange
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.NoError
+  - assert.Equal
+- name: TestAffectedPackages_UnrelatedPackage
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.NoError
+  - assert.Equal
+- name: TestAffectedPackages_MultipleChangedFiles
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.NoError
+  - assert.Equal
+- name: TestAffectedPackages_NoChangedFiles
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.NoError
+  - assert.Empty
+- name: TestAffectedPackages_NonGoFileIgnored
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.NoError
+  - assert.Empty
+- name: TestAffectedPackages_UnknownFileIgnored
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.NoError
+  - assert.Empty
+- name: TestAffectedPackages_LoadError
+  kind: func
+  description: ''
+  references:
+  - packages.ConfigDir
+  - require.Error
+  - assert.Contains
+- name: TestMain_PrintsAffectedPackages
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+- name: TestMain_FatalOnLoadError
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True

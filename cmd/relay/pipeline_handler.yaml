@@ -15,44 +15,12 @@ objects:
   description: PipelineRequest is the request body for POST /v1/schemas/pipeline.
   implements: []
   references: []
-  position:
-    start_line: 15
-    end_line: 22
-  fields:
-  - name: Schema
-    type: string `json:"schema"`            // e.g. "postgresql"
-    tag: ''
-  - name: Version
-    type: string `json:"version"`           // e.g. "v0.18.0"
-    tag: ''
-  - name: Branch
-    type: string `json:"branch"`            // e.g. "postgres/dev"
-    tag: ''
-  - name: RepoURL
-    type: string `json:"repo_url"`          // e.g. "file:///src/cic-schemas"
-    tag: ''
-  - name: BuildDir
-    type: string `json:"build_dir"`         // override config default
-    tag: ''
-  - name: BuilderContainer
-    type: string `json:"builder_container"` // override config default
-    tag: ''
 - name: PipelineResponse
   kind: struct
   description: PipelineResponse is the response body for POST /v1/schemas/pipeline.
   implements: []
   references:
   - cabinet.ProofTrace
-  position:
-    start_line: 25
-    end_line: 28
-  fields:
-  - name: Artifact
-    type: interface{}
-    tag: json:"artifact"
-  - name: ProofTrace
-    type: '*cabinet.ProofTrace'
-    tag: json:"proof_trace"
 - name: pipelineHandler
   kind: method
   receiver: relayServer
@@ -63,38 +31,5 @@ objects:
   - logrus.Fields
   - cabinet.SetPayload
   - cabinet.IsTimeout
-  position:
-    start_line: 31
-    end_line: 117
-  signature:
-    params:
-    - name: w
-      type: http.ResponseWriter
-    - name: r
-      type: '*http.Request'
-    returns: []
-  calls:
-  - Body.Close
-  - Encode
-  - Error
-  - Info
-  - Set
-  - String
-  - Warn
-  - WithError
-  - api.Setx
-  - cabinet.IsTimeout
-  - err.Error
-  - int64
-  - io.LimitReader
-  - io.ReadAll
-  - json.NewEncoder
-  - json.Unmarshal
-  - logEntry.Info
-  - logEntry.WithField
-  - logger.WithFields
-  - r.Context
-  - uuid.New
-  - w.Header
-  - w.WriteHeader
-  - writeError
+  - http.ResponseWriter.Header
+  - http.ResponseWriter.WriteHeader

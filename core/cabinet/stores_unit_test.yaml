@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -12,29 +13,6 @@ objects:
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 10
-    end_line: 56
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NewSchema
-  - context.Background
-  - sc.ID
-  - ss.Exists
-  - ss.Get
-  - ss.Put
-  - t.Fatal
-  - t.Fatalf
-  - wf.ID
-  - ws.Exists
-  - ws.Get
-  - ws.Put
 - name: TestMemModuleStore_OverwriteAndCAS
   kind: func
   description: ''
@@ -45,26 +23,3 @@ objects:
   - require.True
   - assert.Equal
   - require.NotNil
-  position:
-    start_line: 57
-    end_line: 131
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - '3'
-  - NewMemModuleStore
-  - assert.Equal
-  - assert.True
-  - module
-  - moduleV1.ID
-  - moduleV3.ID
-  - ms.Exists
-  - ms.Get
-  - ms.Put
-  - require.False
-  - require.Nil
-  - require.NotNil
-  - require.True

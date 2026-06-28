@@ -3,6 +3,7 @@ package: cabinet
 description: ''
 tags:
 - core
+- schema
 category: []
 used_in: []
 entrypoint: false
@@ -14,163 +15,38 @@ objects:
     fields from BaseBlock for checksum calculation.
   implements: []
   references: []
-  position:
-    start_line: 50
-    end_line: 56
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name"
-  - name: Version
-    type: string
-    tag: json:"version"
-  - name: Description
-    type: string
-    tag: json:"description,omitempty"
-  - name: CreatedBy
-    type: string
-    tag: json:"createdBy,omitempty"
-  - name: Timestamp
-    type: string
-    tag: json:"timestamp,omitempty"
 - name: SetStripWasmModuleFunc
   kind: func
   description: SetStripWasmModuleFunc allows overriding the default WASM stripping
     function for testing purposes.
   references: []
-  position:
-    start_line: 45
-    end_line: 47
-  signature:
-    params:
-    - name: f
-      type: func([]byte
-    returns:
-    - '[]byte'
-    - error)
 - name: computeChecksum
   kind: func
   description: computeChecksum is a private helper that calculates the canonical checksum.
     It now accepts a context to handle timeouts during long-running operations.
   references:
   - canonicaljson.ToJSON
-  position:
-    start_line: 60
-    end_line: 108
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: meta
-      type: '*BaseBlock'
-    - name: kind
-      type: string
-    - name: data
-      type: any
-    returns:
-    - string
-    - error
-  calls:
-  - byte
-  - canonicaljson.ToJSON
-  - ctx.Err
-  - data
-  - fmt.Errorf
-  - hasher.Sum
-  - hasher.Write
-  - hex.EncodeToString
-  - sha256.New
+  - context.Context.Err
 - name: validateAndChecksumSchema
   kind: func
   description: validateAndChecksumSchema validates Schema-specific invariants and
     computes the canonical checksum.
   references:
   - canonicaljson.ToJSON
-  position:
-    start_line: 111
-    end_line: 159
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: id
-      type: SchemaIdentity
-    - name: cfg
-      type: SchemaConfig
-    - name: sig
-      type: SchemaSigning
-    returns:
-    - string
-    - error
-  calls:
-  - byte
-  - canonicaljson.ToJSON
-  - ctx.Err
-  - fmt.Errorf
-  - hasher.Sum
-  - hasher.Write
-  - hex.EncodeToString
-  - mismatch
-  - sha256.New
+  - context.Context.Err
 - name: validateAndChecksumWorkflow
   kind: func
   description: validateAndChecksumWorkflow validates Workflow-specific invariants
     and computes the canonical checksum.
   references:
   - canonicaljson.ToJSON
-  position:
-    start_line: 162
-    end_line: 210
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: id
-      type: WorkflowIdentity
-    - name: cfg
-      type: WorkflowConfig
-    - name: sig
-      type: WorkflowSigning
-    returns:
-    - string
-    - error
-  calls:
-  - byte
-  - canonicaljson.ToJSON
-  - ctx.Err
-  - fmt.Errorf
-  - hasher.Sum
-  - hasher.Write
-  - hex.EncodeToString
-  - mismatch
-  - sha256.New
+  - context.Context.Err
 - name: validateAndChecksum
   kind: func
   description: validateAndChecksum is the single central entry point for validation
     and checksum calculation. It now accepts a context to handle timeouts.
-  references: []
-  position:
-    start_line: 214
-    end_line: 264
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: meta
-      type: '*BaseBlock'
-    - name: kind
-      type: string
-    - name: data
-      type: any
-    returns:
-    - string
-    - error
-  calls:
-  - computeChecksum
-  - ctx.Err
-  - fmt.Errorf
-  - mismatch
-  - stripWasmModuleFunc
+  references:
+  - context.Context.Err
 - name: stripWasmModuleFunc
   kind: var
   description: stripWasmModuleFunc uses wabin to strip all custom sections from a

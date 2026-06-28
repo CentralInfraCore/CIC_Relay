@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - schema
 - test
 category: []
@@ -15,34 +16,6 @@ objects:
     error propagation.
   implements: []
   references: []
-  position:
-    start_line: 13
-    end_line: 24
-  fields:
-  - name: getWorkflowErr
-    type: error
-    tag: ''
-  - name: getModuleErr
-    type: error
-    tag: ''
-  - name: getSchemaErr
-    type: error
-    tag: ''
-  - name: putWorkflowFunc
-    type: func(wf *Workflow) error
-    tag: ''
-  - name: putModuleFunc
-    type: func(md *ModuleDescriptor) error
-    tag: ''
-  - name: putSchemaFunc
-    type: func(s *Schema) error
-    tag: ''
-  - name: setFunc
-    type: func(ctx context.Context, in *SetPayload) (*SetResponse, error)
-    tag: ''
-  - name: closeFunc
-    type: func(ctx context.Context) error
-    tag: ''
 - name: GetWorkflow
   kind: method
   receiver: mockCabinet
@@ -90,21 +63,6 @@ objects:
   - assert.Error
   - assert.ErrorIs
   - assert.Contains
-  position:
-    start_line: 80
-    end_line: 87
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - api.Set
-  - assert.Contains
-  - assert.Error
-  - assert.ErrorIs
-  - context.Background
-  - err.Error
 - name: TestAPI_Set_ValidationError
   kind: func
   description: ''
@@ -112,25 +70,6 @@ objects:
   - require.NoError
   - assert.Error
   - assert.ErrorIs
-  position:
-    start_line: 88
-    end_line: 101
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewAPI
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - api.Set
-  - assert.Error
-  - assert.ErrorIs
-  - context.Background
-  - require.NoError
 - name: TestAPI_ValidateSet_NilPayload
   kind: func
   description: ''
@@ -138,21 +77,6 @@ objects:
   - assert.Error
   - assert.ErrorIs
   - assert.Contains
-  position:
-    start_line: 102
-    end_line: 109
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - api.ValidateSet
-  - assert.Contains
-  - assert.Error
-  - assert.ErrorIs
-  - context.Background
-  - err.Error
 - name: TestAPI_ValidateSet_StoreErrors
   kind: func
   description: ''
@@ -160,24 +84,6 @@ objects:
   - assert.Error
   - assert.NotErrorIs
   - assert.Equal
-  position:
-    start_line: 110
-    end_line: 144
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewAPI
-  - api.ValidateSet
-  - assert.Equal
-  - assert.Error
-  - assert.NotErrorIs
-  - context.Background
-  - errors.New
-  - func
-  - t.Run
 - name: TestAPI_ValidateSet_Options
   kind: func
   description: ''
@@ -186,22 +92,3 @@ objects:
   - assert.Error
   - assert.ErrorIs
   - assert.Contains
-  position:
-    start_line: 145
-    end_line: 196
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewAPI
-  - api.ValidateSet
-  - assert.Contains
-  - assert.Error
-  - assert.ErrorIs
-  - assert.NoError
-  - context.Background
-  - err.Error
-  - func
-  - t.Run

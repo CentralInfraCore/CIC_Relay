@@ -15,44 +15,12 @@ objects:
   description: PKIAssets holds the loaded public key infrastructure components.
   implements: []
   references: []
-  position:
-    start_line: 240
-    end_line: 247
-  fields:
-  - name: Roots
-    type: '*x509.CertPool'
-    tag: ''
-  - name: Intermediates
-    type: '*x509.CertPool'
-    tag: ''
-  - name: CRLs
-    type: '[]*x509.RevocationList'
-    tag: ''
-  - name: TrustStoreLoaded
-    type: bool   // true when at least one root CA was loaded
-    tag: ''
-  - name: CAFingerprint
-    type: string // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
-    tag: ''
-  - name: CertChainHash
-    type: string // sha256 of all loaded CA cert DER bytes concatenated, "sha256:<hex>"
-    tag: ''
 - name: ComponentHeader
   kind: struct
   description: ComponentHeader defines the common fields for identifying a component
     type.
   implements: []
   references: []
-  position:
-    start_line: 250
-    end_line: 253
-  fields:
-  - name: APIVersion
-    type: string
-    tag: yaml:"apiVersion"
-  - name: Kind
-    type: string
-    tag: yaml:"kind"
 - name: SchemaFile
   kind: struct
   description: SchemaFile defines the structure of a Schema YAML file.
@@ -61,19 +29,6 @@ objects:
   - cabinet.SchemaIdentity
   - cabinet.SchemaConfig
   - cabinet.SchemaSigning
-  position:
-    start_line: 256
-    end_line: 260
-  fields:
-  - name: Identity
-    type: cabinet.SchemaIdentity
-    tag: yaml:"identity"
-  - name: Config
-    type: cabinet.SchemaConfig
-    tag: yaml:"config"
-  - name: Signing
-    type: cabinet.SchemaSigning
-    tag: yaml:"signing"
 - name: WorkflowFile
   kind: struct
   description: WorkflowFile defines the structure of a Workflow YAML file.
@@ -82,47 +37,12 @@ objects:
   - cabinet.WorkflowIdentity
   - cabinet.WorkflowConfig
   - cabinet.WorkflowSigning
-  position:
-    start_line: 263
-    end_line: 267
-  fields:
-  - name: Identity
-    type: cabinet.WorkflowIdentity
-    tag: yaml:"identity"
-  - name: Config
-    type: cabinet.WorkflowConfig
-    tag: yaml:"config"
-  - name: Signing
-    type: cabinet.WorkflowSigning
-    tag: yaml:"signing"
 - name: ModuleFile
   kind: struct
   description: ModuleFile defines the structure of a Module YAML file.
   implements: []
   references:
   - cabinet.BaseBlock
-  position:
-    start_line: 270
-    end_line: 277
-  fields:
-  - name: Metadata
-    type: cabinet.BaseBlock
-    tag: yaml:"metadata"
-  - name: Type
-    type: string
-    tag: yaml:"type"
-  - name: Accepts
-    type: '[]string'
-    tag: yaml:"accepts"
-  - name: OutputKeys
-    type: '[]string'
-    tag: yaml:"outputKeys"
-  - name: WasmDigest
-    type: string
-    tag: yaml:"wasmDigest"
-  - name: WasmSize
-    type: int64
-    tag: yaml:"wasmSize"
 - name: registerNativeComponents
   kind: func
   description: registerNativeComponents creates and registers all built-in Go components
@@ -154,53 +74,8 @@ objects:
   - schemapipeline.PipelineConfig
   - cabinet.NativeFunctionsfuncName
   - logrus.Info
-  position:
-    start_line: 32
-    end_line: 237
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svc
-      type: cabinet.Cabinet
-    - name: pkiAssets
-      type: '*PKIAssets'
-    - name: bctx
-      type: merkle.BuildContext
-    - name: signer
-      type: schemacompile.ArtifactSigner
-    - name: cfg
-      type: '*config'
-    returns:
-    - error
-  calls:
-  - 0.assert
-  - 0.build
-  - 0.generate
-  - 0.release
-  - 0.sign
-  - 0.start
-  - 0.test
-  - 0.validate
-  - cabinet.NewModuleDescriptor
-  - cabinet.NewWorkflow
-  - cabinet.VerifyCertificateChain
-  - fmt.Errorf
-  - func
-  - logrus.Info
-  - module
-  - pipelineCfg.NewReleaseFunc
-  - pipelineCfg.NewStartFunc
-  - pipelineCfg.NewTestFunc
-  - pipelineCfg.NewValidateFunc
-  - schemacompile.NewAssertSourceFunc
-  - schemacompile.NewSignArtifactFunc
-  - strings.LastIndex
-  - svc.PutModule
-  - svc.PutWorkflow
-  - validator
-  - verification_root
-  - workflow
+  - cabinet.Cabinet.PutModule
+  - cabinet.Cabinet.PutWorkflow
 - name: loadEmbeddedComponents
   kind: func
   description: loadEmbeddedComponents loads schemas, workflows, and PKI assets from
@@ -209,34 +84,6 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
-  position:
-    start_line: 281
-    end_line: 294
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svc
-      type: cabinet.Cabinet
-    - name: schemas
-      type: fs.FS
-    - name: workflows
-      type: fs.FS
-    - name: pki
-      type: fs.FS
-    - name: pkiPath
-      type: string
-    - name: maxWasmModuleSize
-      type: int64
-    - name: logger
-      type: '*logrus.Logger'
-    returns:
-    - error
-  calls:
-  - fmt.Errorf
-  - loadComponentsFromFS
-  - loadPKIAssets
-  - logger.Info
 - name: loadInstalledComponents
   kind: func
   description: loadInstalledComponents loads components from a given filesystem path.
@@ -245,37 +92,6 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
-  position:
-    start_line: 298
-    end_line: 321
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svc
-      type: cabinet.Cabinet
-    - name: componentsPath
-      type: string
-    - name: pkiAssets
-      type: '*PKIAssets'
-    - name: maxWasmModuleSize
-      type: int64
-    - name: logger
-      type: '*logrus.Logger'
-    returns:
-    - error
-  calls:
-  - Error
-  - Info
-  - Warn
-  - err.Error
-  - fileInfo.IsDir
-  - fmt.Errorf
-  - loadComponentsFromFS
-  - logger.WithField
-  - os.DirFS
-  - os.IsNotExist
-  - os.Stat
 - name: loadComponentsFromFS
   kind: func
   description: loadComponentsFromFS walks a filesystem and loads all valid components.
@@ -283,43 +99,6 @@ objects:
   - cabinet.Cabinet
   - logrus.Logger
   - logrus.Fields
-  position:
-    start_line: 324
-    end_line: 371
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svc
-      type: cabinet.Cabinet
-    - name: fsys
-      type: fs.FS
-    - name: root
-      type: string
-    - name: failOnError
-      type: bool
-    - name: pkiAssets
-      type: '*PKIAssets'
-    - name: maxWasmModuleSize
-      type: int64
-    - name: logger
-      type: '*logrus.Logger'
-    returns:
-    - error
-  calls:
-  - Warn
-  - d.IsDir
-  - filepath.Ext
-  - fmt.Errorf
-  - fs.ReadFile
-  - fs.WalkDir
-  - func
-  - loadModule
-  - loadSchema
-  - loadWorkflow
-  - logger.WithField
-  - logger.WithFields
-  - yaml.Unmarshal
 - name: loadSchema
   kind: func
   description: loadSchema unmarshals a Schema from YAML content and registers it with
@@ -328,28 +107,8 @@ objects:
   - cabinet.Cabinet
   - cabinet.NewSchema
   - logrus.WithField
-  position:
-    start_line: 374
-    end_line: 387
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svc
-      type: cabinet.Cabinet
-    - name: content
-      type: '[]byte'
-    returns:
-    - error
-  calls:
-  - Info
-  - cabinet.NewSchema
-  - fmt.Errorf
-  - logrus.WithField
-  - schema.ID
-  - svc.GetSchema
-  - svc.PutSchema
-  - yaml.Unmarshal
+  - cabinet.Cabinet.GetSchema
+  - cabinet.Cabinet.PutSchema
 - name: loadWorkflow
   kind: func
   description: loadWorkflow unmarshals a Workflow from YAML content and registers
@@ -358,28 +117,8 @@ objects:
   - cabinet.Cabinet
   - cabinet.NewWorkflow
   - logrus.WithField
-  position:
-    start_line: 390
-    end_line: 403
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svc
-      type: cabinet.Cabinet
-    - name: content
-      type: '[]byte'
-    returns:
-    - error
-  calls:
-  - Info
-  - cabinet.NewWorkflow
-  - fmt.Errorf
-  - logrus.WithField
-  - svc.GetWorkflow
-  - svc.PutWorkflow
-  - workflow.ID
-  - yaml.Unmarshal
+  - cabinet.Cabinet.GetWorkflow
+  - cabinet.Cabinet.PutWorkflow
 - name: loadModule
   kind: func
   description: loadModule unmarshals a Module from YAML content, verifies its WASM
@@ -392,60 +131,8 @@ objects:
   - cabinet.VerifyCertificateChain
   - cabinet.NewModuleDescriptor
   - logrus.WithField
-  position:
-    start_line: 407
-    end_line: 497
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: svc
-      type: cabinet.Cabinet
-    - name: fsys
-      type: fs.FS
-    - name: yamlPath
-      type: string
-    - name: yamlContent
-      type: '[]byte'
-    - name: pkiAssets
-      type: '*PKIAssets'
-    - name: maxWasmModuleSize
-      type: int64
-    - name: logger
-      type: '*logrus.Logger'
-    returns:
-    - error
-  calls:
-  - Error
-  - Info
-  - Subject.String
-  - Warn
-  - WithError
-  - auditLogger.WithField
-  - auditLogger.WithFields
-  - bytes
-  - cabinet.NewModuleDescriptor
-  - cabinet.VerifyCertificateChain
-  - errors.Is
-  - fileInfo.Size
-  - filepath.Ext
-  - fmt.Errorf
-  - fs.ReadFile
-  - fs.Stat
-  - hasher.Sum
-  - hasher.Write
-  - hex.EncodeToString
-  - logger.WithFields
-  - logrus.WithField
-  - moduleDesc.ID
-  - pem.Decode
-  - q
-  - sha256.New
-  - strings.TrimSuffix
-  - svc.GetModule
-  - svc.PutModule
-  - x509.ParseCertificate
-  - yaml.Unmarshal
+  - cabinet.Cabinet.GetModule
+  - cabinet.Cabinet.PutModule
 - name: loadPKIAssets
   kind: func
   description: loadPKIAssets loads X.509 certificates and CRLs from a filesystem path
@@ -454,44 +141,3 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
-  position:
-    start_line: 501
-    end_line: 585
-  signature:
-    params:
-    - name: fsys
-      type: fs.FS
-    - name: path
-      type: string
-    - name: logger
-      type: '*logrus.Logger'
-    returns:
-    - '*PKIAssets'
-    - error
-  calls:
-  - Intermediates.AddCert
-  - Issuer.String
-  - Roots.AddCert
-  - Subject.String
-  - Warn
-  - chainHasher.Sum
-  - chainHasher.Write
-  - errors.Is
-  - file.IsDir
-  - file.Name
-  - filepath.Join
-  - fmt.Errorf
-  - fs.ReadDir
-  - fs.ReadFile
-  - hex.EncodeToString
-  - logger.Debug
-  - logger.Info
-  - logger.WithField
-  - logger.WithFields
-  - os.DirFS
-  - pem.Decode
-  - sha256.New
-  - sha256.Sum256
-  - x509.NewCertPool
-  - x509.ParseCertificate
-  - x509.ParseRevocationList

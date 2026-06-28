@@ -1,0 +1,60 @@
+---
+package: sourcedigest_test
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestComputeTreeHash_Determinism
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
+  - assert.NotEqual
+- name: TestComputeTreeHash_AddedFileSensitivity
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
+  - assert.NotEqual
+- name: TestComputeTreeHash_PathSensitivity
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
+  - assert.NotEqual
+- name: TestComputeTreeHash_ExcludesDir
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
+  - assert.NotEqual
+  - assert.Equal
+- name: TestComputeTreeHash_EmptyDir
+  kind: func
+  description: ''
+  references:
+  - sourcedigest.ComputeTreeHash
+  - require.NoError
+  - assert.Len
+- name: TestComputeTreeHash_SymlinksSkipped
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
+  - assert.Len
+- name: TestComputeTreeHash_UnreadableFile
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
+  - assert.Error

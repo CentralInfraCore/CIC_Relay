@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - interface
 - test
 category: []
@@ -14,16 +16,6 @@ objects:
   description: ''
   implements: []
   references: []
-  position:
-    start_line: 544
-    end_line: 549
-  fields:
-  - name: func
-    type: (e *errorReader) Read(_ []byte) (int, error) {
-    tag: ''
-  - name: return
-    type: 0, errors.New("read error")
-    tag: ''
 - name: assertErrorJSON
   kind: func
   description: assertErrorJSON checks that the response body is a valid error JSON
@@ -32,25 +24,6 @@ objects:
   - assert.NoError
   - assert.Equal
   - assert.NotEmpty
-  position:
-    start_line: 23
-    end_line: 30
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    - name: w
-      type: '*httptest.ResponseRecorder'
-    - name: expectedCode
-      type: string
-    returns: []
-  calls:
-  - Body.Bytes
-  - assert.Equal
-  - assert.NoError
-  - assert.NotEmpty
-  - json.Unmarshal
-  - t.Helper
 - name: TestSetHandler_Success
   kind: func
   description: TestSetHandler_Success tests the happy path for the /set endpoint.
@@ -63,31 +36,6 @@ objects:
   - assert.Equal
   - cabinet.SetResponse
   - assert.NoError
-  position:
-    start_line: 33
-    end_line: 84
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.Bytes
-  - Header.Set
-  - Return
-  - assert.Equal
-  - assert.NoError
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - json.Unmarshal
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.AssertExpectations
-  - mockAPI.On
-  - new
-  - server.setHandler
 - name: TestSetHandler_MethodNotAllowed
   kind: func
   description: TestSetHandler_MethodNotAllowed tests that the /set endpoint only accepts
@@ -95,26 +43,6 @@ objects:
   references:
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 87
-    end_line: 113
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Get
-  - assert.Equal
-  - assertErrorJSON
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.AssertNotCalled
-  - new
-  - server.setHandler
-  - w.Header
 - name: TestSetHandler_BodyTooLarge
   kind: func
   description: TestSetHandler_BodyTooLarge tests that the handler rejects bodies larger
@@ -122,29 +50,6 @@ objects:
   references:
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 116
-    end_line: 147
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Get
-  - Header.Set
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.AssertNotCalled
-  - new
-  - server.setHandler
-  - w.Header
 - name: TestSetHandler_InvalidJSON
   kind: func
   description: TestSetHandler_InvalidJSON tests that the handler returns a 400 error
@@ -152,67 +57,6 @@ objects:
   references:
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 150
-    end_line: 592
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.String
-  - Get
-  - Header.Set
-  - Read
-  - Return
-  - TestSetHandler_CabinetInternalError
-  - TestSetHandler_CabinetInvalidError
-  - TestSetHandler_ChainAnchor_Error
-  - TestSetHandler_ChainAnchor_Success
-  - TestSetHandler_ObsEmission_MethodNotAllowed
-  - TestSetHandler_ObsEmission_NilSinks
-  - TestSetHandler_ObsEmission_Success
-  - TestSetHandler_ObsEmission_Timeout
-  - TestSetHandler_ReadBodyError
-  - TestSetHandler_SourceDigestFromTreeHash
-  - TestSetHandler_Timeout
-  - TestSimpleHandlers
-  - TraceFrame
-  - assert.Empty
-  - assert.Equal
-  - assert.False
-  - assert.JSONEq
-  - assert.Len
-  - assert.NotEmpty
-  - assert.NotNil
-  - assert.NotPanics
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - errors.New
-  - fields
-  - fmt.Errorf
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - int64
-  - io.NopCloser
-  - json.Marshal
-  - logger.SetOutput
-  - logrus.New
-  - mock.MatchedBy
-  - mockAPI.AssertCalled
-  - mockAPI.AssertExpectations
-  - mockAPI.AssertNotCalled
-  - mockAPI.On
-  - new
-  - rejected
-  - require.Len
-  - server.setHandler
-  - t.Run
-  - tc.handler
-  - w.Header
 - name: TestSetHandler_CabinetInvalidError
   kind: func
   description: TestSetHandler_CabinetInvalidError tests the handler's response to
@@ -223,31 +67,6 @@ objects:
   - cabinet.ErrInvalid
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 182
-    end_line: 215
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Get
-  - Header.Set
-  - Return
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.AssertCalled
-  - mockAPI.On
-  - new
-  - server.setHandler
-  - w.Header
 - name: TestSetHandler_Timeout
   kind: func
   description: TestSetHandler_Timeout tests the handler's response to a timeout from
@@ -258,32 +77,6 @@ objects:
   - cabinet.ErrTimeout
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 218
-    end_line: 242
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Get
-  - Header.Set
-  - Return
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - fmt.Errorf
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.AssertCalled
-  - mockAPI.On
-  - new
-  - server.setHandler
-  - w.Header
 - name: TestSetHandler_CabinetInternalError
   kind: func
   description: TestSetHandler_CabinetInternalError tests the handler's response to
@@ -293,32 +86,6 @@ objects:
   - cabinet.Workflow
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 245
-    end_line: 279
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Get
-  - Header.Set
-  - Return
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - fmt.Errorf
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.AssertCalled
-  - mockAPI.On
-  - new
-  - server.setHandler
-  - w.Header
 - name: TestSetHandler_ObsEmission_Success
   kind: func
   description: TestSetHandler_ObsEmission_Success verifies that a successful /set
@@ -334,30 +101,6 @@ objects:
   - assert.Len
   - assert.NotEmpty
   - assert.NotNil
-  position:
-    start_line: 285
-    end_line: 334
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Equal
-  - assert.Len
-  - assert.NotEmpty
-  - assert.NotNil
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - int64
-  - json.Marshal
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.On
-  - new
-  - server.setHandler
 - name: TestSetHandler_ObsEmission_MethodNotAllowed
   kind: func
   description: TestSetHandler_ObsEmission_MethodNotAllowed verifies that a rejected
@@ -368,24 +111,6 @@ objects:
   - assert.Equal
   - assert.Len
   - assert.Empty
-  position:
-    start_line: 338
-    end_line: 365
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Empty
-  - assert.Equal
-  - assert.Len
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - server.setHandler
 - name: TestSetHandler_ObsEmission_Timeout
   kind: func
   description: TestSetHandler_ObsEmission_Timeout verifies that a timed-out request
@@ -398,28 +123,6 @@ objects:
   - obs.CaptureSink
   - assert.Equal
   - assert.Len
-  position:
-    start_line: 369
-    end_line: 399
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Equal
-  - assert.Len
-  - byte
-  - bytes.NewReader
-  - fmt.Errorf
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.On
-  - new
-  - server.setHandler
 - name: TestSetHandler_ObsEmission_NilSinks
   kind: func
   description: TestSetHandler_ObsEmission_NilSinks verifies that nil sinks do not
@@ -432,28 +135,6 @@ objects:
   - logrus.New
   - assert.NotPanics
   - assert.Equal
-  position:
-    start_line: 403
-    end_line: 427
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Equal
-  - assert.NotPanics
-  - bytes.NewReader
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.On
-  - new
-  - server.setHandler
 - name: TestSetHandler_ChainAnchor_Success
   kind: func
   description: TestSetHandler_ChainAnchor_Success verifies that when Setx returns
@@ -469,27 +150,6 @@ objects:
   - obs.CaptureSink
   - assert.Equal
   - require.Len
-  position:
-    start_line: 433
-    end_line: 467
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Equal
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.On
-  - new
-  - require.Len
-  - server.setHandler
 - name: TestSetHandler_ChainAnchor_Error
   kind: func
   description: TestSetHandler_ChainAnchor_Error verifies that when Setx returns an
@@ -502,29 +162,6 @@ objects:
   - assert.Equal
   - require.Len
   - assert.False
-  position:
-    start_line: 471
-    end_line: 499
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - assert.Equal
-  - assert.False
-  - bytes.NewReader
-  - fmt.Errorf
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - logger.SetOutput
-  - logrus.New
-  - mockAPI.On
-  - new
-  - require.Len
-  - server.setHandler
 - name: TestSimpleHandlers
   kind: func
   description: TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz,
@@ -533,26 +170,6 @@ objects:
   - logrus.New
   - assert.Equal
   - assert.JSONEq
-  position:
-    start_line: 502
-    end_line: 543
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.String
-  - assert.Equal
-  - assert.JSONEq
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Run
-  - tc.handler
 - name: Read
   kind: method
   receiver: errorReader
@@ -564,24 +181,6 @@ objects:
   references:
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 550
-    end_line: 564
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - io.NopCloser
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - server.setHandler
 - name: TestSetHandler_SourceDigestFromTreeHash
   kind: func
   description: ''
@@ -592,25 +191,3 @@ objects:
   - cabinet.SetPayload
   - cabinet.SetResponseResults
   - logrus.New
-  position:
-    start_line: 565
-    end_line: 591
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Return
-  - bytes.NewReader
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - logger.SetOutput
-  - logrus.New
-  - mock.MatchedBy
-  - mockAPI.AssertExpectations
-  - mockAPI.On
-  - new
-  - server.setHandler

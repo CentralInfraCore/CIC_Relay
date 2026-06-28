@@ -13,43 +13,16 @@ objects:
   description: MetricInstrument describes a named metric that a component may emit.
   implements: []
   references: []
-  position:
-    start_line: 12
-    end_line: 15
-  fields:
-  - name: Name
-    type: string
-    tag: ''
-  - name: Description
-    type: string
-    tag: ''
 - name: Registry
   kind: struct
   description: Registry holds the set of declared MetricInstruments. All instrument
     names must start with the "relay." prefix.
   implements: []
   references: []
-  position:
-    start_line: 19
-    end_line: 22
-  fields:
-  - name: mu
-    type: sync.RWMutex
-    tag: ''
-  - name: instruments
-    type: map[string]MetricInstrument
-    tag: ''
 - name: NewRegistry
   kind: func
   description: NewRegistry returns an empty Registry.
   references: []
-  position:
-    start_line: 25
-    end_line: 27
-  signature:
-    params: []
-    returns:
-    - '*Registry'
 - name: Register
   kind: method
   receiver: Registry
@@ -57,53 +30,16 @@ objects:
     not carry the required "relay." prefix or if a different instrument with the same
     name is already registered.
   references: []
-  position:
-    start_line: 32
-    end_line: 43
-  signature:
-    params:
-    - name: inst
-      type: MetricInstrument
-    returns:
-    - error
-  calls:
-  - fmt.Errorf
-  - mu.Lock
-  - mu.Unlock
-  - strings.HasPrefix
 - name: Get
   kind: method
   receiver: Registry
   description: Get returns the instrument registered under name, if any.
   references: []
-  position:
-    start_line: 46
-    end_line: 51
-  signature:
-    params:
-    - name: name
-      type: string
-    returns:
-    - MetricInstrument
-    - bool
-  calls:
-  - mu.RLock
-  - mu.RUnlock
 - name: Names
   kind: method
   receiver: Registry
   description: Names returns all registered instrument names in undefined order.
   references: []
-  position:
-    start_line: 54
-    end_line: 62
-  signature:
-    params: []
-    returns:
-    - '[]string'
-  calls:
-  - mu.RLock
-  - mu.RUnlock
 - name: requiredPrefix
   kind: const
   description: ''

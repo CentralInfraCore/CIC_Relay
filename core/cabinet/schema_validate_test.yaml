@@ -2,6 +2,7 @@
 package: cabinet
 description: ''
 tags:
+- core
 - schema
 - test
 category: []
@@ -13,38 +14,7 @@ objects:
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 8
-    end_line: 53
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - ValidateSchema
-  - errors.Is
-  - func
-  - t.Fatalf
-  - t.Run
 - name: TestValidateInputSchema
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 54
-    end_line: 115
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - NewModuleDescriptor
-  - context.Background
-  - errors.Is
-  - func
-  - mod
-  - t.Fatalf
-  - t.Run
-  - validateInputSchema

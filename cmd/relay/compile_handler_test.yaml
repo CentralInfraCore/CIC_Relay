@@ -2,6 +2,8 @@
 package: main
 description: ''
 tags:
+- core
+- gateway
 - interface
 - schema
 - test
@@ -15,165 +17,32 @@ objects:
   description: ''
   references:
   - logrus.New
-  position:
-    start_line: 19
-    end_line: 32
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    - name: mockAPI
-      type: '*mockCabinetService'
-    returns:
-    - '*relayServer'
-  calls:
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - t.Helper
 - name: TestCompileHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 33
-    end_line: 41
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - new
-  - newTestCompileServer
-  - server.compileHandler
 - name: TestCompileHandler_BodyTooLarge
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Equal
-  position:
-    start_line: 42
-    end_line: 58
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Header.Set
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - bytes.Repeat
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - logger.SetOutput
-  - logrus.New
-  - new
-  - server.compileHandler
 - name: TestCompileHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 59
-    end_line: 192
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.Bytes
-  - Get
-  - Header.Set
-  - Return
-  - TestCompileHandler_InternalError
-  - TestCompileHandler_MissingSchema
-  - TestCompileHandler_MissingVersion
-  - TestCompileHandler_ReadBodyError
-  - TestCompileHandler_Success
-  - TestCompileHandler_Timeout
-  - TestCompileHandler_WithSourceAssertion
-  - assert.Equal
-  - assertErrorJSON
-  - byte
-  - bytes.NewReader
-  - fmt.Errorf
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - io.NopCloser
-  - json.Marshal
-  - json.Unmarshal
-  - mock.MatchedBy
-  - mockAPI.AssertExpectations
-  - mockAPI.On
-  - new
-  - newTestCompileServer
-  - require.Equal
-  - require.NoError
-  - require.NotNil
-  - require.True
-  - server.compileHandler
-  - w.Header
 - name: TestCompileHandler_MissingSchema
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 69
-    end_line: 79
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Header.Set
-  - assert.Equal
-  - assertErrorJSON
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - new
-  - newTestCompileServer
-  - server.compileHandler
 - name: TestCompileHandler_MissingVersion
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 80
-    end_line: 90
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Header.Set
-  - assert.Equal
-  - assertErrorJSON
-  - bytes.NewReader
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - new
-  - newTestCompileServer
-  - server.compileHandler
 - name: TestCompileHandler_Success
   kind: func
   description: ''
@@ -188,37 +57,6 @@ objects:
   - require.NoError
   - require.True
   - require.NotNil
-  position:
-    start_line: 91
-    end_line: 128
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Body.Bytes
-  - Get
-  - Header.Set
-  - Return
-  - assert.Equal
-  - bytes.NewReader
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - json.Unmarshal
-  - mock.MatchedBy
-  - mockAPI.AssertExpectations
-  - mockAPI.On
-  - new
-  - newTestCompileServer
-  - require.Equal
-  - require.NoError
-  - require.NotNil
-  - require.True
-  - server.compileHandler
-  - w.Header
 - name: TestCompileHandler_WithSourceAssertion
   kind: func
   description: ''
@@ -228,29 +66,6 @@ objects:
   - cabinet.SetPayload
   - cabinet.SetResponse
   - assert.Equal
-  position:
-    start_line: 129
-    end_line: 152
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Header.Set
-  - Return
-  - assert.Equal
-  - bytes.NewReader
-  - func
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - mock.MatchedBy
-  - mockAPI.AssertExpectations
-  - mockAPI.On
-  - new
-  - newTestCompileServer
-  - server.compileHandler
 - name: TestCompileHandler_Timeout
   kind: func
   description: ''
@@ -258,75 +73,14 @@ objects:
   - mock.Anything
   - cabinet.ErrTimeout
   - assert.Equal
-  position:
-    start_line: 153
-    end_line: 167
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Header.Set
-  - Return
-  - assert.Equal
-  - assertErrorJSON
-  - bytes.NewReader
-  - fmt.Errorf
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - mockAPI.On
-  - new
-  - newTestCompileServer
-  - server.compileHandler
 - name: TestCompileHandler_InternalError
   kind: func
   description: ''
   references:
   - mock.Anything
   - assert.Equal
-  position:
-    start_line: 168
-    end_line: 182
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - Header.Set
-  - Return
-  - assert.Equal
-  - assertErrorJSON
-  - bytes.NewReader
-  - fmt.Errorf
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - json.Marshal
-  - mockAPI.On
-  - new
-  - newTestCompileServer
-  - server.compileHandler
 - name: TestCompileHandler_ReadBodyError
   kind: func
   description: ''
   references:
   - assert.Equal
-  position:
-    start_line: 183
-    end_line: 191
-  signature:
-    params:
-    - name: t
-      type: '*testing.T'
-    returns: []
-  calls:
-  - assert.Equal
-  - assertErrorJSON
-  - httptest.NewRecorder
-  - httptest.NewRequest
-  - io.NopCloser
-  - new
-  - newTestCompileServer
-  - server.compileHandler

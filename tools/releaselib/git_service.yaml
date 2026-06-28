@@ -1,0 +1,119 @@
+---
+module: tools.releaselib.git_service
+description: ''
+tags:
+- builder
+- executor
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: GitService
+  kind: class
+  decorators: []
+  description: A service class to abstract Git command operations. This makes the
+    core logic testable by allowing this service to be mocked.
+  implements: []
+  references: []
+- name: __init__
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: ''
+  references: []
+- name: _run_raw
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Runs a command and returns raw stdout bytes.
+  references:
+  - .exceptions.GitServiceError
+- name: run
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Runs a Git command and returns its stripped string output.
+  references: []
+- name: get_current_branch
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Returns the current active branch name.
+  references: []
+- name: get_status_porcelain
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Returns the output of 'git status --porcelain'.
+  references: []
+- name: is_dirty
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Returns True if there are uncommitted changes.
+  references: []
+- name: is_index_dirty
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Returns True if there are staged changes in the index.
+  references:
+  - .exceptions.GitServiceError
+- name: get_tags
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Returns a list of tags, optionally filtered by a pattern.
+  references: []
+- name: write_tree
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Runs 'git write-tree' and returns the tree ID.
+  references: []
+- name: add
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Stages a specific file.
+  references: []
+- name: archive_tree_bytes
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Runs 'git archive' and returns the raw bytes of the tar archive.
+  references: []
+- name: assert_clean_index
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Checks if the Git index is clean (no staged changes). Raises GitStateError
+    if staged changes are detected.
+  references:
+  - .exceptions.GitServiceError
+  - .exceptions.GitStateError
+- name: checkout
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Checks out a Git branch, optionally creating it.
+  references: []
+- name: create_branch
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Creates a new Git branch.
+  references: []
+- name: delete_branch
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Deletes a Git branch.
+  references: []
+- name: merge
+  kind: method
+  receiver: GitService
+  decorators: []
+  description: Merges a Git branch into the current branch.
+  references: []
