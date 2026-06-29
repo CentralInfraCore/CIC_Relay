@@ -30,6 +30,10 @@ objects:
     of v.
   references:
   - canonicaljson.ToJSON
+  calls:
+  - EncodeToString
+  - Sum256
+  - ToJSON
 - name: ComputeChainHashV1
   kind: func
   description: 'ComputeChainHashV1 returns SHA-256 over the full execution identity:
@@ -44,3 +48,9 @@ objects:
     executed. InputHash and step Name are included so that two different workflows
     producing the same outputs cannot share the same ChainHash.'
   references: []
+  calls:
+  - EncodeToString
+  - String
+  - Sum256
+  - WriteByte
+  - WriteString

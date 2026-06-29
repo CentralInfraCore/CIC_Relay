@@ -15,13 +15,25 @@ objects:
   references:
   - require.NoError
   - assert.False
+  calls:
+  - Cleanup
+  - 'False'
+  - NoError
+  - TempDir
+  - WriteFile
 - name: TestMain_Error
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Cleanup
+  - Equal
 - name: TestMain_DefaultRoot
   kind: func
   description: ''
   references:
   - assert.False
+  calls:
+  - Cleanup
+  - 'False'

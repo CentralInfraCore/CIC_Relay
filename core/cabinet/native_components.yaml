@@ -13,3 +13,4 @@ objects:
   description: CoreEcho is a simple native function for testing. It takes any data
     as input and returns it unmodified, acting as an echo.
   references: []
+  calls: []

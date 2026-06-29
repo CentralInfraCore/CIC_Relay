@@ -27,36 +27,58 @@ objects:
   description: NewHostInstance mocks the creation of a new host instance. It allows
     tests to specify what cicWasmHost instance (or error) should be returned.
   references: []
+  calls:
+  - Called
+  - Error
+  - Get
 - name: Close
   kind: method
   receiver: MockWasmManager
   description: Close mocks the closing of the WasmManager.
   references: []
+  calls:
+  - Called
+  - Error
 - name: Process
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  calls:
+  - Called
+  - String
 - name: Get
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  calls:
+  - Called
+  - String
 - name: Init
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  calls:
+  - Called
+  - String
 - name: Notify
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
+  calls:
+  - Called
+  - String
 - name: Close
   kind: method
   receiver: MockCicWasmHost
   description: Close mocks the closing of the WasmManager.
   references: []
+  calls:
+  - Called
+  - Error
 - name: _
   kind: var
   description: Ensure MockCicWasmHost implements the cicWasmHost interface.

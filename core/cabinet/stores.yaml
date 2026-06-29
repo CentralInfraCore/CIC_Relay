@@ -46,63 +46,96 @@ objects:
   description: NewMemWorkflowStore creates and returns a new in-memory WorkflowStore
     instance.
   references: []
+  calls: []
 - name: Get
   kind: method
   receiver: memWorkflowStore
   description: Get retrieves a Schema by its ID, returning the schema and a boolean
     indicating existence.
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: Put
   kind: method
   receiver: memWorkflowStore
   description: Put stores a Schema, returning the previous value (if any) and a boolean
     indicating prior existence.
   references: []
+  calls:
+  - ID
+  - Lock
+  - Unlock
 - name: Exists
   kind: method
   receiver: memWorkflowStore
   description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: NewMemModuleStore
   kind: func
   description: NewMemModuleStore creates and returns a new in-memory ModuleStore instance
     with CAS semantics.
   references: []
+  calls: []
 - name: Get
   kind: method
   receiver: memModuleStore
   description: Get retrieves a Schema by its ID, returning the schema and a boolean
     indicating existence.
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: Put
   kind: method
   receiver: memModuleStore
   description: Put stores a Schema, returning the previous value (if any) and a boolean
     indicating prior existence.
   references: []
+  calls:
+  - ID
+  - Lock
+  - Unlock
 - name: Exists
   kind: method
   receiver: memModuleStore
   description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: NewMemSchemaStore
   kind: func
   description: NewMemSchemaStore creates and returns a new in-memory SchemaStore instance.
   references: []
+  calls: []
 - name: Get
   kind: method
   receiver: memSchemaStore
   description: Get retrieves a Schema by its ID, returning the schema and a boolean
     indicating existence.
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: Put
   kind: method
   receiver: memSchemaStore
   description: Put stores a Schema, returning the previous value (if any) and a boolean
     indicating prior existence.
   references: []
+  calls:
+  - ID
+  - Lock
+  - Unlock
 - name: Exists
   kind: method
   receiver: memSchemaStore
   description: Exists checks whether a Schema with the given ID exists in the store.
   references: []
+  calls:
+  - RLock
+  - RUnlock

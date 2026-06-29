@@ -17,11 +17,17 @@ objects:
   - cabinet.Schema
   - cabinet.SchemaConfigName
   - cabinet.SchemaIdentityVersion
+  calls:
+  - Fatalf
+  - ID
 - name: TestSchema_ID_API_Empty
   kind: func
   description: ''
   references:
   - cabinet.Schema
+  calls:
+  - Fatalf
+  - ID
 - name: TestSchema_GetData_API_EqualsConfig
   kind: func
   description: ''
@@ -29,3 +35,7 @@ objects:
   - cabinet.SchemaConfig
   - cabinet.Schema
   - cabinet.SchemaIdentityVersion
+  calls:
+  - DeepEqual
+  - Fatalf
+  - GetData

@@ -13,11 +13,21 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - Fatalf
+  - ID
 - name: TestWorkflow_ID_Empty
   kind: func
   description: ''
   references: []
+  calls:
+  - Fatalf
+  - ID
 - name: TestWorkflow_GetData_ReturnsConfig
   kind: func
   description: ''
   references: []
+  calls:
+  - DeepEqual
+  - Fatalf
+  - GetData

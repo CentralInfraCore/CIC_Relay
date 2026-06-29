@@ -2,6 +2,7 @@
 package: isolation
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -15,6 +16,12 @@ objects:
     exits, instead of running the test suite. This enables the subprocess round-trip
     test without needing a separately compiled binary.
   references: []
+  calls:
+  - Background
+  - Exit
+  - Getenv
+  - Run
+  - RunWorkerLoop
 - name: TestRunWorkerLoop_Echo
   kind: func
   description: ''
@@ -22,6 +29,17 @@ objects:
   - require.NoError
   - assert.Empty
   - assert.Equal
+  calls:
+  - Background
+  - Decode
+  - DecodeString
+  - Empty
+  - EncodeToString
+  - Equal
+  - NewDecoder
+  - NewReader
+  - NoError
+  - RunWorkerLoop
 - name: TestRunWorkerLoop_MultipleRequests
   kind: func
   description: ''
@@ -29,6 +47,19 @@ objects:
   - require.NoError
   - assert.Empty
   - assert.Equal
+  calls:
+  - Background
+  - Decode
+  - DecodeString
+  - Empty
+  - EncodeToString
+  - Equal
+  - NewDecoder
+  - NewReader
+  - NoError
+  - RunWorkerLoop
+  - String
+  - WriteString
 - name: TestRunWorkerLoop_InvalidJSON
   kind: func
   description: ''
@@ -36,6 +67,15 @@ objects:
   - require.NoError
   - assert.NotEmpty
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Decode
+  - NewDecoder
+  - NewReader
+  - NoError
+  - NotEmpty
+  - RunWorkerLoop
 - name: TestRunWorkerLoop_InvalidBase64
   kind: func
   description: ''
@@ -43,11 +83,28 @@ objects:
   - require.NoError
   - assert.NotEmpty
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Decode
+  - NewDecoder
+  - NewReader
+  - NoError
+  - NotEmpty
+  - RunWorkerLoop
 - name: TestRunWorkerLoop_ContextCancelled
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Background
+  - EncodeToString
+  - Equal
+  - Len
+  - NewReader
+  - RunWorkerLoop
+  - WithCancel
 - name: TestRunWorkerLoop_WithWorker_Success
   kind: func
   description: ''
@@ -57,6 +114,20 @@ objects:
   - require.NoError
   - assert.Empty
   - assert.Equal
+  calls:
+  - Background
+  - Decode
+  - DecodeString
+  - Empty
+  - EncodeToString
+  - Equal
+  - MatchedBy
+  - NewDecoder
+  - NewReader
+  - NoError
+  - 'On'
+  - Return
+  - RunWorkerLoop
 - name: TestRunWorkerLoop_WithWorker_DecryptError
   kind: func
   description: ''
@@ -64,6 +135,18 @@ objects:
   - mock.Anything
   - require.NoError
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Decode
+  - EncodeToString
+  - New
+  - NewDecoder
+  - NewReader
+  - NoError
+  - 'On'
+  - Return
+  - RunWorkerLoop
 - name: TestRunWorkerLoop_WithWorker_ResponseError
   kind: func
   description: ''
@@ -71,9 +154,27 @@ objects:
   - mock.Anything
   - require.NoError
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Decode
+  - EncodeToString
+  - New
+  - NewDecoder
+  - NewReader
+  - NoError
+  - 'On'
+  - Return
+  - RunWorkerLoop
 - name: TestSubprocessWorker_RoundTrip
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Decrypt
+  - Environ
+  - Equal
+  - NoError

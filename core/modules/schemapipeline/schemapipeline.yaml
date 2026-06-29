@@ -20,97 +20,34 @@ objects:
   description: OSCommandRunner is the production CommandRunner using os/exec.
   implements: []
   references: []
-  position:
-    start_line: 38
-    end_line: 45
-  fields:
-  - name: func
-    type: (r *OSCommandRunner) Run(ctx context.Context, dir, name string, args ...string)
-      (string, int, error) {
-    tag: ''
-  - name: cmd
-    type: := exec.CommandContext(ctx, name, args...)
-    tag: ''
-  - name: if
-    type: dir != "" {
-    tag: ''
 - name: PipelineConfig
   kind: struct
   description: PipelineConfig holds the wiring needed by all pipeline steps. Construct
     once; each step function closes over it.
   implements: []
   references: []
-  position:
-    start_line: 61
-    end_line: 72
-  fields:
-  - name: BuildDir
-    type: string
-    tag: ''
-  - name: BuilderContainer
-    type: string
-    tag: ''
-  - name: Runner
-    type: CommandRunner
-    tag: ''
 - name: CommandRunner
   kind: interface
   description: CommandRunner executes an external command and returns combined output,
     the process exit code, and any execution-level error (not a non-zero exit). A
     non-zero exit is reported via exitCode, not err.
   references: []
-  position:
-    start_line: 33
-    end_line: 35
-  methods:
-  - name: Run
-    params:
-    - ctx context.Context
-    - dir
-    - name string
-    - args ...string
-    returns:
-    - (output string, exitCode int, err error)
 - name: Run
   kind: method
   receiver: OSCommandRunner
   description: Run executes name with args in dir (empty = caller's cwd).
   references: []
-  position:
-    start_line: 41
-    end_line: 57
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: dir
-    - name: name
-      type: string
-    - name: args
-      type: '...string'
-    returns:
-    - string
-    - int
-    - error
   calls:
-  - cmd.CombinedOutput
-  - errors.As
-  - exec.CommandContext
-  - exitErr.ExitCode
-  - string
+  - As
+  - CombinedOutput
+  - CommandContext
+  - ExitCode
 - name: runner
   kind: method
   receiver: PipelineConfig
   description: ''
   references: []
-  position:
-    start_line: 73
-    end_line: 79
-  signature:
-    params: []
-    returns:
-    - CommandRunner
+  calls: []
 - name: NewStartFunc
   kind: method
   receiver: PipelineConfig
@@ -120,26 +57,14 @@ objects:
     branch, schema, version. Optional: build_dir (overrides PipelineConfig.BuildDir
     per-request).'
   references: []
-  position:
-    start_line: 89
-    end_line: 89
-  signature:
-    params: []
-    returns:
-    - func(context.Context, interface
+  calls: []
 - name: NewTestFunc
   kind: method
   receiver: PipelineConfig
   description: NewTestFunc returns the cic.pipeline.test@1.0 native function. Runs
     `docker exec <builder_container> make test` and records stdout_digest + exit_code.
   references: []
-  position:
-    start_line: 190
-    end_line: 190
-  signature:
-    params: []
-    returns:
-    - func(context.Context, interface
+  calls: []
 - name: NewValidateFunc
   kind: method
   receiver: PipelineConfig
@@ -147,34 +72,14 @@ objects:
     Runs `docker exec <builder_container> make validate` and records stdout_digest
     + exit_code.
   references: []
-  position:
-    start_line: 200
-    end_line: 200
-  signature:
-    params: []
-    returns:
-    - func(context.Context, interface
+  calls: []
 - name: runMakeStep
   kind: method
   receiver: PipelineConfig
   description: runMakeStep is the shared implementation for test and validate steps.
     It runs `make <target>` inside the builder container and records the result.
   references: []
-  position:
-    start_line: 208
-    end_line: 208
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: input
-      type: interface{}
-    - name: ''
-      type: makeTarget
-    - name: moduleName
-      type: string
-    returns:
-    - interface
+  calls: []
 - name: NewReleaseFunc
   kind: method
   receiver: PipelineConfig
@@ -183,13 +88,7 @@ objects:
     the signed artifact from <build_dir>/source/<schema>.yaml and returns it as source_assertion
     for cic.source.assert.
   references: []
-  position:
-    start_line: 259
-    end_line: 259
-  signature:
-    params: []
-    returns:
-    - func(context.Context, interface
+  calls: []
 - name: computeStepHash
   kind: func
   description: computeStepHash returns a Merkle root over the step's named leaves.
@@ -197,21 +96,9 @@ objects:
   references:
   - merkle.LeafHash
   - merkle.HexMerkleRoot
-  position:
-    start_line: 343
-    end_line: 354
-  signature:
-    params:
-    - name: step
-      type: string
-    - name: leaves
-      type: map[string]string
-    returns:
-    - string
   calls:
-  - merkle.HexMerkleRoot
-  - merkle.LeafHash
-  - sortedKeys
+  - HexMerkleRoot
+  - LeafHash
 - name: computeTreeDigest
   kind: func
   description: 'computeTreeDigest returns a content-addressable digest of the source
@@ -230,73 +117,33 @@ objects:
     entries differently from Linux ext4. It is suitable for Docker-based pipelines
     where the build directory always lives on the same host filesystem.'
   references: []
-  position:
-    start_line: 376
-    end_line: 406
-  signature:
-    params:
-    - name: buildDir
-      type: string
-    returns:
-    - string
-    - error
   calls:
-  - byte
-  - d.IsDir
-  - d.Name
-  - filepath.Rel
-  - filepath.WalkDir
-  - func
-  - h.Sum
-  - h.Write
-  - hex.EncodeToString
-  - os.IsNotExist
-  - os.ReadFile
-  - os.Stat
-  - sha256.New
-  - sha256.Sum256
+  - EncodeToString
+  - IsDir
+  - IsNotExist
+  - Name
+  - New
+  - ReadFile
+  - Rel
+  - Stat
+  - Sum
+  - Sum256
+  - WalkDir
+  - Write
 - name: digestString
   kind: func
   description: digestString returns the lowercase hex SHA-256 of s.
   references: []
-  position:
-    start_line: 409
-    end_line: 412
-  signature:
-    params:
-    - name: s
-      type: string
-    returns:
-    - string
   calls:
-  - byte
-  - hex.EncodeToString
-  - sha256.Sum256
+  - EncodeToString
+  - Sum256
 - name: copyMap
   kind: func
   description: copyMap shallow-copies a map[string]interface{}.
   references: []
-  position:
-    start_line: 415
-    end_line: 415
-  signature:
-    params:
-    - name: m
-      type: map[string]interface{}
-    returns:
-    - map[string]interface
+  calls: []
 - name: sortedKeys
   kind: func
   description: sortedKeys returns the keys of m in sorted order.
   references: []
-  position:
-    start_line: 424
-    end_line: 436
-  signature:
-    params:
-    - name: m
-      type: map[string]string
-    returns:
-    - '[]string'
-  calls:
-  - small
+  calls: []

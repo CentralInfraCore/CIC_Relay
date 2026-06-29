@@ -1,0 +1,63 @@
+---
+module: tools.compiler
+description: ''
+tags:
+- builder
+- core
+- loader
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: LOG_FORMAT
+  kind: const
+  description: ''
+  references: []
+- name: COLOR_CODES
+  kind: const
+  description: ''
+  references: []
+- name: RESET_CODE
+  kind: const
+  description: ''
+  references: []
+- name: ColoredFormatter
+  kind: class
+  decorators: []
+  description: ''
+  implements:
+  - logging.Formatter
+  references: []
+- name: format
+  kind: method
+  receiver: ColoredFormatter
+  decorators: []
+  description: ''
+  references: []
+- name: setup_logging
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+- name: logger
+  kind: const
+  description: ''
+  references: []
+- name: load_project_config
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - yaml.YAMLError
+  - yaml.safe_load
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - .releaselib.exceptions.ReleaseError
+  - .releaselib.exceptions.ManualInterventionRequired
+  - .infra.ReleaseManager
+  - .releaselib.vault_service.VaultService
+  - .releaselib.git_service.GitService

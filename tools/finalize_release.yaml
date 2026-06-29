@@ -1,0 +1,72 @@
+---
+module: tools.finalize_release
+description: ''
+tags:
+- builder
+- core
+- loader
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: LOG_FORMAT
+  kind: const
+  description: ''
+  references: []
+- name: COLOR_CODES
+  kind: const
+  description: ''
+  references: []
+- name: RESET_CODE
+  kind: const
+  description: ''
+  references: []
+- name: ColoredFormatter
+  kind: class
+  decorators: []
+  description: ''
+  implements:
+  - logging.Formatter
+  references: []
+- name: format
+  kind: method
+  receiver: ColoredFormatter
+  decorators: []
+  description: ''
+  references: []
+- name: setup_logging
+  kind: function
+  decorators: []
+  description: Sets up colored logging.
+  references: []
+- name: logger
+  kind: const
+  description: ''
+  references: []
+- name: load_yaml
+  kind: function
+  decorators: []
+  description: Loads a YAML file with error handling.
+  references:
+  - yaml.YAMLError
+  - yaml.safe_load
+- name: write_yaml
+  kind: function
+  decorators: []
+  description: Writes data to a YAML file with error handling.
+  references:
+  - yaml.dump
+- name: get_canonical_hash
+  kind: function
+  decorators: []
+  description: Creates a reproducible, base64-encoded SHA256 hash of a dictionary.
+  references: []
+- name: main
+  kind: function
+  decorators: []
+  description: Main execution logic.
+  references:
+  - .releaselib.exceptions.VaultServiceError
+  - yaml.dump
+  - .releaselib.vault_service.VaultService

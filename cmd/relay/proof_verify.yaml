@@ -42,13 +42,19 @@ objects:
   references:
   - cabinet.ProofTraceStep
   - cabinet.ComputeChainHashV1
+  calls:
+  - ComputeChainHashV1
+  - Sprintf
 - name: ProofArtifactFromTrace
   kind: func
   description: ProofArtifactFromTrace converts a cabinet.ProofTrace to a ProofArtifact.
   references:
   - cabinet.ProofTrace
+  calls: []
 - name: MarshalProofArtifact
   kind: func
   description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON format
     for transport or storage.
   references: []
+  calls:
+  - Marshal

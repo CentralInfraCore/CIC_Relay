@@ -2,6 +2,7 @@
 package: crypto
 description: ''
 tags:
+- core
 - interface
 - test
 category: []
@@ -15,7 +16,17 @@ objects:
   references:
   - require.NoError
   - require.NotNil
+  calls:
+  - Cleanup
+  - NewServer
+  - NewVaultCryptoService
+  - NoError
+  - NotNil
+  - Setenv
 - name: TestNewVaultCryptoService_Errors
   kind: func
   description: ''
   references: []
+  calls:
+  - Run
+  - Setenv

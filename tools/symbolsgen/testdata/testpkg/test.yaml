@@ -13,16 +13,6 @@ objects:
   description: PublicStruct is a public type.
   implements: []
   references: []
-  position:
-    start_line: 16
-    end_line: 20
-  fields:
-  - name: PublicField
-    type: string
-    tag: ''
-  - name: privateField
-    type: string
-    tag: ''
 - name: privateStruct
   kind: struct
   description: privateStruct is a private type.
@@ -32,24 +22,12 @@ objects:
   kind: func
   description: PublicFunc is a public function.
   references: []
-  position:
-    start_line: 26
-    end_line: 26
-  signature:
-    params:
-    - name: p
-      type: PublicStruct
-    returns: []
+  calls: []
 - name: privateFunc
   kind: func
   description: privateFunc is a private function.
   references: []
-  position:
-    start_line: 29
-    end_line: 29
-  signature:
-    params: []
-    returns: []
+  calls: []
 - name: PublicVar
   kind: var
   description: PublicVar is a public variable.

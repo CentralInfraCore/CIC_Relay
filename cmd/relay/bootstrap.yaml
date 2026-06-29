@@ -76,6 +76,21 @@ objects:
   - logrus.Info
   - cabinet.Cabinet.PutModule
   - cabinet.Cabinet.PutWorkflow
+  calls:
+  - Errorf
+  - Info
+  - LastIndex
+  - NewAssertSourceFunc
+  - NewModuleDescriptor
+  - NewReleaseFunc
+  - NewSignArtifactFunc
+  - NewStartFunc
+  - NewTestFunc
+  - NewValidateFunc
+  - NewWorkflow
+  - PutModule
+  - PutWorkflow
+  - VerifyCertificateChain
 - name: loadEmbeddedComponents
   kind: func
   description: loadEmbeddedComponents loads schemas, workflows, and PKI assets from
@@ -84,6 +99,9 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
+  calls:
+  - Errorf
+  - Info
 - name: loadInstalledComponents
   kind: func
   description: loadInstalledComponents loads components from a given filesystem path.
@@ -92,6 +110,16 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
+  calls:
+  - DirFS
+  - Error
+  - Errorf
+  - Info
+  - IsDir
+  - IsNotExist
+  - Stat
+  - Warn
+  - WithField
 - name: loadComponentsFromFS
   kind: func
   description: loadComponentsFromFS walks a filesystem and loads all valid components.
@@ -99,6 +127,16 @@ objects:
   - cabinet.Cabinet
   - logrus.Logger
   - logrus.Fields
+  calls:
+  - Errorf
+  - Ext
+  - IsDir
+  - ReadFile
+  - Unmarshal
+  - WalkDir
+  - Warn
+  - WithField
+  - WithFields
 - name: loadSchema
   kind: func
   description: loadSchema unmarshals a Schema from YAML content and registers it with
@@ -109,6 +147,15 @@ objects:
   - logrus.WithField
   - cabinet.Cabinet.GetSchema
   - cabinet.Cabinet.PutSchema
+  calls:
+  - Errorf
+  - GetSchema
+  - ID
+  - Info
+  - NewSchema
+  - PutSchema
+  - Unmarshal
+  - WithField
 - name: loadWorkflow
   kind: func
   description: loadWorkflow unmarshals a Workflow from YAML content and registers
@@ -119,6 +166,15 @@ objects:
   - logrus.WithField
   - cabinet.Cabinet.GetWorkflow
   - cabinet.Cabinet.PutWorkflow
+  calls:
+  - Errorf
+  - GetWorkflow
+  - ID
+  - Info
+  - NewWorkflow
+  - PutWorkflow
+  - Unmarshal
+  - WithField
 - name: loadModule
   kind: func
   description: loadModule unmarshals a Module from YAML content, verifies its WASM
@@ -133,6 +189,33 @@ objects:
   - logrus.WithField
   - cabinet.Cabinet.GetModule
   - cabinet.Cabinet.PutModule
+  calls:
+  - Decode
+  - EncodeToString
+  - Error
+  - Errorf
+  - Ext
+  - GetModule
+  - ID
+  - Info
+  - Is
+  - New
+  - NewModuleDescriptor
+  - ParseCertificate
+  - PutModule
+  - ReadFile
+  - Size
+  - Stat
+  - String
+  - Sum
+  - TrimSuffix
+  - Unmarshal
+  - VerifyCertificateChain
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
+  - Write
 - name: loadPKIAssets
   kind: func
   description: loadPKIAssets loads X.509 certificates and CRLs from a filesystem path
@@ -141,3 +224,27 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  calls:
+  - AddCert
+  - Debug
+  - Decode
+  - EncodeToString
+  - Errorf
+  - Info
+  - Is
+  - IsDir
+  - Join
+  - Name
+  - New
+  - NewCertPool
+  - ParseCertificate
+  - ParseRevocationList
+  - ReadDir
+  - ReadFile
+  - String
+  - Sum
+  - Sum256
+  - Warn
+  - WithField
+  - WithFields
+  - Write

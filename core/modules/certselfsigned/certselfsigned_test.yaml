@@ -2,6 +2,7 @@
 package: certselfsigned
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -19,56 +20,127 @@ objects:
   - require.NotNil
   - assert.Contains
   - assert.False
+  calls:
+  - Background
+  - Contains
+  - Decode
+  - Equal
+  - 'False'
+  - Generate
+  - NoError
+  - NotEmpty
+  - NotNil
+  - ParseCertificate
+  - 'True'
 - name: TestGenerate_DefaultValidity
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.InDelta
+  calls:
+  - Background
+  - Decode
+  - Generate
+  - Hours
+  - InDelta
+  - NoError
+  - ParseCertificate
+  - Sub
 - name: TestGenerate_NoCN_Error
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - Generate
 - name: TestGenerate_InvalidInput_Error
   kind: func
   description: ''
   references:
   - require.Error
+  calls:
+  - Background
+  - Error
+  - Generate
 - name: TestGenerate_SelfSigned
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Decode
+  - Equal
+  - Generate
+  - NoError
+  - ParseCertificate
+  - String
 - name: TestGenerate_MarshalError
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - Generate
 - name: TestGenerate_KeyGenError
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Cleanup
+  - Contains
+  - Error
+  - Errorf
+  - Generate
 - name: TestGenerate_SerialError
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Cleanup
+  - Contains
+  - Error
+  - Errorf
+  - Generate
 - name: TestGenerate_CertCreateError
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Cleanup
+  - Contains
+  - Error
+  - Errorf
+  - Generate
 - name: TestGenerate_MarshalKeyError
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Cleanup
+  - Contains
+  - Error
+  - Errorf
+  - Generate

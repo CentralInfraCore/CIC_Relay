@@ -2,6 +2,7 @@
 package: git
 description: ''
 tags:
+- core
 - metrics
 - test
 category: []
@@ -15,6 +16,15 @@ objects:
     its path.
   references:
   - require.NoError
+  calls:
+  - CombinedOutput
+  - Command
+  - Environ
+  - Helper
+  - Join
+  - NoError
+  - TempDir
+  - WriteFile
 - name: TestExecGitOps_CloneAndStatus
   kind: func
   description: TestExecGitOps_CloneAndStatus clones a local repo and checks that Status
@@ -22,6 +32,17 @@ objects:
   references:
   - require.NoError
   - assert.Empty
+  calls:
+  - Background
+  - Clone
+  - Empty
+  - Join
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NoError
+  - Register
+  - Status
+  - TempDir
 - name: TestExecGitOps_UnknownRepo
   kind: func
   description: TestExecGitOps_UnknownRepo verifies that any operation with an unregistered
@@ -29,6 +50,13 @@ objects:
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Status
 - name: TestHardenedEnv
   kind: func
   description: TestHardenedEnv verifies that git commands are executed with the required
@@ -36,12 +64,31 @@ objects:
   references:
   - require.NoError
   - assert.True
+  calls:
+  - Background
+  - Contains
+  - Getenv
+  - Join
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NoError
+  - ReadFile
+  - Register
+  - Setenv
+  - Sprintf
+  - Status
+  - TempDir
+  - 'True'
+  - WriteFile
 - name: TestParsePortcelainStatus
   kind: func
   description: TestParsePortcelainStatus validates the porcelain output parser.
   references:
   - require.Len
   - assert.Equal
+  calls:
+  - Equal
+  - Len
 - name: TestExecGitOps_SetObsSinks_MetricEmission
   kind: func
   description: TestExecGitOps_SetObsSinks_MetricEmission verifies that after SetObsSinks,
@@ -52,6 +99,19 @@ objects:
   - require.NotEmpty
   - assert.Equal
   - assert.True
+  calls:
+  - Background
+  - Clone
+  - Equal
+  - Join
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NoError
+  - NotEmpty
+  - Register
+  - SetObsSinks
+  - TempDir
+  - 'True'
 - name: TestExecGitOps_SetObsSinks_ErrorLog
   kind: func
   description: TestExecGitOps_SetObsSinks_ErrorLog verifies that a failed git op emits
@@ -60,50 +120,141 @@ objects:
   - obs.CaptureSink
   - require.NotEmpty
   - assert.Equal
+  calls:
+  - Background
+  - Equal
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NotEmpty
+  - Register
+  - SetObsSinks
+  - Status
+  - TempDir
 - name: TestExecGitOps_SetObsSinks_NilSafe
   kind: func
   description: TestExecGitOps_SetObsSinks_NilSafe verifies that nil sinks don't cause
     panics. (M31)
   references:
   - assert.NotPanics
+  calls:
+  - Background
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NotPanics
+  - Register
+  - SetObsSinks
+  - Status
+  - TempDir
 - name: TestExecGitOps_Fetch_UnknownRepo
   kind: func
   description: ''
   references:
   - require.Error
+  calls:
+  - Background
+  - Error
+  - Fetch
+  - NewExecGitOps
+  - NewRepoRegistry
 - name: TestExecGitOps_Checkout_UnknownRepo
   kind: func
   description: ''
   references:
   - require.Error
+  calls:
+  - Background
+  - Checkout
+  - Error
+  - NewExecGitOps
+  - NewRepoRegistry
 - name: TestExecGitOps_Commit_UnknownRepo
   kind: func
   description: ''
   references:
   - require.Error
+  calls:
+  - Background
+  - Commit
+  - Error
+  - NewExecGitOps
+  - NewRepoRegistry
 - name: TestExecGitOps_Push_UnknownRepo
   kind: func
   description: ''
   references:
   - require.Error
+  calls:
+  - Background
+  - Error
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Push
 - name: TestExecGitOps_Fetch_Success
   kind: func
   description: ''
   references:
   - require.NoError
+  calls:
+  - Background
+  - Clone
+  - Fetch
+  - Join
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NoError
+  - Register
+  - TempDir
 - name: TestExecGitOps_Checkout_Success
   kind: func
   description: ''
   references:
   - require.NoError
+  calls:
+  - Background
+  - Checkout
+  - Clone
+  - Join
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NoError
+  - Register
+  - TempDir
 - name: TestExecGitOps_Commit_Success
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Len
+  calls:
+  - Background
+  - Clone
+  - Commit
+  - Join
+  - Len
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NoError
+  - Register
+  - TempDir
+  - WriteFile
 - name: TestExecGitOps_Push_Success
   kind: func
   description: ''
   references:
   - require.NoError
+  calls:
+  - Background
+  - Clone
+  - CombinedOutput
+  - Command
+  - Commit
+  - Environ
+  - Helper
+  - Join
+  - NewExecGitOps
+  - NewRepoRegistry
+  - NoError
+  - Push
+  - Register
+  - TempDir
+  - WriteFile

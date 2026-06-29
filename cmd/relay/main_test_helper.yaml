@@ -24,36 +24,57 @@ objects:
   description: ''
   references:
   - cabinet.Schema
+  calls:
+  - Called
+  - Error
 - name: GetSchema
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.Schema
+  calls:
+  - Called
+  - Error
+  - Get
 - name: PutModule
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.ModuleDescriptor
+  calls:
+  - Called
+  - Error
 - name: GetModule
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.ModuleDescriptor
+  calls:
+  - Called
+  - Error
+  - Get
 - name: PutWorkflow
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.Workflow
+  calls:
+  - Called
+  - Error
 - name: GetWorkflow
   kind: method
   receiver: mockCabinetService
   description: ''
   references:
   - cabinet.Workflow
+  calls:
+  - Called
+  - Error
+  - Get
 - name: Setx
   kind: method
   receiver: mockCabinetService
@@ -61,8 +82,15 @@ objects:
   references:
   - cabinet.SetPayload
   - cabinet.SetResponse
+  calls:
+  - Called
+  - Error
+  - Get
 - name: Close
   kind: method
   receiver: mockCabinetService
   description: ''
   references: []
+  calls:
+  - Called
+  - Error

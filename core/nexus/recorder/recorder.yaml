@@ -14,73 +14,30 @@ objects:
   implements: []
   references:
   - crypto.CryptoService
-  position:
-    start_line: 26
-    end_line: 29
-  fields:
-  - name: RepoPath
-    type: string
-    tag: ''
-  - name: CryptoService
-    type: crypto.CryptoService
-    tag: ''
 - name: StateRecorder
   kind: interface
   description: StateRecorder defines the interface for persisting state snapshots.
   references:
   - types.ExpectedState
-  position:
-    start_line: 21
-    end_line: 23
-  methods:
-  - name: RecordState
-    params:
-    - ctx context.Context
-    - expected types.ExpectedState
-    - actual interface{}
-    returns:
-    - (commitHash string, err error)
 - name: NewGitStateRecorder
   kind: func
   description: NewGitStateRecorder creates a new recorder that operates on the given
     repository path.
   references:
   - crypto.CryptoService
-  position:
-    start_line: 32
-    end_line: 43
-  signature:
-    params:
-    - name: repoPath
-      type: string
-    - name: cryptoSvc
-      type: crypto.CryptoService
-    returns:
-    - '*GitStateRecorder'
-    - error
   calls:
-  - fmt.Errorf
-  - recorder.init
+  - Errorf
 - name: init
   kind: method
   receiver: GitStateRecorder
   description: init ensures the repository directory and the git repository exist.
   references: []
-  position:
-    start_line: 46
-    end_line: 83
-  signature:
-    params: []
-    returns:
-    - error
   calls:
-  - byte
-  - filepath.Join
-  - fmt.Errorf
-  - os.MkdirAll
-  - os.Stat
-  - os.WriteFile
-  - r.runGit
+  - Errorf
+  - Join
+  - MkdirAll
+  - Stat
+  - WriteFile
 - name: RecordState
   kind: method
   receiver: GitStateRecorder
@@ -88,90 +45,43 @@ objects:
     a git commit.
   references:
   - types.ExpectedState
-  position:
-    start_line: 86
-    end_line: 150
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: expected
-      type: types.ExpectedState
-    - name: actual
-      type: interface{}
-    returns:
-    - string
-    - error
   calls:
-  - CryptoService.Sign
+  - Errorf
   - Format
+  - Join
+  - MarshalIndent
+  - Now
+  - Sign
+  - Sprintf
+  - Sum256
   - UTC
-  - filepath.Join
-  - fmt.Errorf
-  - fmt.Sprintf
-  - json.MarshalIndent
-  - os.WriteFile
-  - r.createManifest
-  - r.getHeadHash
-  - r.runGit
-  - sha256.Sum256
-  - time.Now
+  - WriteFile
 - name: createManifest
   kind: method
   receiver: GitStateRecorder
   description: createManifest generates a sorted list of files and their SHA256 hashes.
   references: []
-  position:
-    start_line: 153
-    end_line: 166
-  signature:
-    params:
-    - name: files
-      type: map[string][]byte
-    returns:
-    - map[string]string
-    - error
   calls:
-  - hex.EncodeToString
-  - sha256.Sum256
-  - sort.Strings
+  - EncodeToString
+  - Strings
+  - Sum256
 - name: runGit
   kind: method
   receiver: GitStateRecorder
   description: runGit executes a git command in the repo directory.
   references: []
-  position:
-    start_line: 169
-    end_line: 177
-  signature:
-    params:
-    - name: args
-      type: '...string'
-    returns:
-    - error
   calls:
-  - cmd.CombinedOutput
-  - exec.Command
-  - fmt.Errorf
-  - s
-  - string
-  - strings.Join
+  - CombinedOutput
+  - Command
+  - Errorf
+  - Join
 - name: getHeadHash
   kind: method
   receiver: GitStateRecorder
   description: getHeadHash returns the full hash of the current HEAD commit.
   references: []
-  position:
-    start_line: 180
-    end_line: 188
-  signature:
-    params: []
-    returns:
-    - string
-    - error
   calls:
-  - cmd.Output
-  - exec.Command
-  - fmt.Errorf
-  - string
-  - strings.TrimSpace
+  - Command
+  - Errorf
+  - Output
+  - TrimSpace

@@ -20,6 +20,7 @@ objects:
   description: SetStripWasmModuleFunc allows overriding the default WASM stripping
     function for testing purposes.
   references: []
+  calls: []
 - name: computeChecksum
   kind: func
   description: computeChecksum is a private helper that calculates the canonical checksum.
@@ -27,6 +28,14 @@ objects:
   references:
   - canonicaljson.ToJSON
   - context.Context.Err
+  calls:
+  - EncodeToString
+  - Err
+  - Errorf
+  - New
+  - Sum
+  - ToJSON
+  - Write
 - name: validateAndChecksumSchema
   kind: func
   description: validateAndChecksumSchema validates Schema-specific invariants and
@@ -34,6 +43,14 @@ objects:
   references:
   - canonicaljson.ToJSON
   - context.Context.Err
+  calls:
+  - EncodeToString
+  - Err
+  - Errorf
+  - New
+  - Sum
+  - ToJSON
+  - Write
 - name: validateAndChecksumWorkflow
   kind: func
   description: validateAndChecksumWorkflow validates Workflow-specific invariants
@@ -41,12 +58,23 @@ objects:
   references:
   - canonicaljson.ToJSON
   - context.Context.Err
+  calls:
+  - EncodeToString
+  - Err
+  - Errorf
+  - New
+  - Sum
+  - ToJSON
+  - Write
 - name: validateAndChecksum
   kind: func
   description: validateAndChecksum is the single central entry point for validation
     and checksum calculation. It now accepts a context to handle timeouts.
   references:
   - context.Context.Err
+  calls:
+  - Err
+  - Errorf
 - name: stripWasmModuleFunc
   kind: var
   description: stripWasmModuleFunc uses wabin to strip all custom sections from a

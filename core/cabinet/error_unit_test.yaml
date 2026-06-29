@@ -13,27 +13,63 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - Errorf
+  - Fatalf
+  - IsConflict
+  - IsInvalid
+  - IsNotFound
+  - IsTimeout
+  - New
+  - Run
 - name: TestValidationError_Error_EmptyReturnsErrInvalid
   kind: func
   description: ''
   references: []
+  calls:
+  - Error
+  - Fatalf
 - name: TestValidationError_Error_WithCauses_JSONPrefixed
   kind: func
   description: ''
   references: []
+  calls:
+  - Error
+  - Fatalf
+  - Marshal
+  - Sprintf
 - name: TestNewValidationError_ConstructsAsExpected
   kind: func
   description: ''
   references: []
+  calls:
+  - Fatalf
+  - NewValidationError
 - name: TestValidationError_IsInvalidPredicateDoesNotMatch
   kind: func
   description: ''
   references: []
+  calls:
+  - Fatalf
+  - IsInvalid
 - name: TestValidationError_Error_MarshalFails
   kind: func
   description: ''
   references: []
+  calls:
+  - Cleanup
+  - Error
+  - Fatalf
+  - New
+  - Sprintf
 - name: TestNewAPIError
   kind: func
   description: ''
   references: []
+  calls:
+  - Error
+  - Errorf
+  - New
+  - NewAPIError
+  - NewValidationError
+  - Run

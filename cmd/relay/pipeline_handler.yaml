@@ -33,3 +33,24 @@ objects:
   - cabinet.IsTimeout
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
+  calls:
+  - Close
+  - Context
+  - Encode
+  - Error
+  - Header
+  - Info
+  - IsTimeout
+  - LimitReader
+  - New
+  - NewEncoder
+  - ReadAll
+  - Set
+  - Setx
+  - String
+  - Unmarshal
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
+  - WriteHeader

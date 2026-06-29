@@ -17,6 +17,10 @@ objects:
   - assert.NotEqual
   - require.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
+  - NotEqual
 - name: TestHashingTimeout
   kind: func
   description: TestHashingTimeout verifies that the checksum calculation respects
@@ -24,3 +28,10 @@ objects:
   references:
   - require.Error
   - assert.ErrorIs
+  calls:
+  - Background
+  - Error
+  - ErrorIs
+  - NewSchema
+  - Sleep
+  - WithTimeout

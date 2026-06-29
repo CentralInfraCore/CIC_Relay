@@ -28,35 +28,51 @@ objects:
   description: IsInvalid checks if an error is an ErrInvalid validation or integrity
     failure.
   references: []
+  calls:
+  - Is
 - name: IsConflict
   kind: func
   description: IsConflict checks if an error is an ErrConflict resource state conflict.
   references: []
+  calls:
+  - Is
 - name: IsNotFound
   kind: func
   description: IsNotFound checks if an error is an ErrNotFound resource not found.
   references: []
+  calls:
+  - Is
 - name: IsTimeout
   kind: func
   description: IsTimeout checks if an error is an ErrTimeout execution exceeded time
     budget.
   references: []
+  calls:
+  - Is
 - name: Error
   kind: method
   receiver: ValidationError
   description: Error implements the error interface, returning a JSON-encoded list
     of field-level validation errors or a generic message if empty.
   references: []
+  calls:
+  - Error
+  - Sprintf
 - name: NewValidationError
   kind: func
   description: NewValidationError constructs a ValidationError from the provided field
     errors.
   references: []
+  calls: []
 - name: NewAPIError
   kind: func
   description: NewAPIError converts a Go error into a standardized APIError response
     for API consumers.
   references: []
+  calls:
+  - As
+  - Error
+  - Is
 - name: jsonMarshal
   kind: var
   description: jsonMarshal is a variable that holds the json.Marshal function. It

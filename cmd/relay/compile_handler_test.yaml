@@ -17,32 +17,69 @@ objects:
   description: ''
   references:
   - logrus.New
+  calls:
+  - Helper
+  - New
+  - SetOutput
 - name: TestCompileHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewRecorder
+  - NewRequest
 - name: TestCompileHandler_BodyTooLarge
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Equal
+  calls:
+  - Equal
+  - New
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - Repeat
+  - Set
+  - SetOutput
 - name: TestCompileHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - Set
 - name: TestCompileHandler_MissingSchema
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Marshal
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - Set
 - name: TestCompileHandler_MissingVersion
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Marshal
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - Set
 - name: TestCompileHandler_Success
   kind: func
   description: ''
@@ -57,6 +94,24 @@ objects:
   - require.NoError
   - require.True
   - require.NotNil
+  calls:
+  - AssertExpectations
+  - Bytes
+  - Equal
+  - Get
+  - Header
+  - Marshal
+  - MatchedBy
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - NoError
+  - NotNil
+  - 'On'
+  - Return
+  - Set
+  - 'True'
+  - Unmarshal
 - name: TestCompileHandler_WithSourceAssertion
   kind: func
   description: ''
@@ -66,6 +121,17 @@ objects:
   - cabinet.SetPayload
   - cabinet.SetResponse
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - Marshal
+  - MatchedBy
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - 'On'
+  - Return
+  - Set
 - name: TestCompileHandler_Timeout
   kind: func
   description: ''
@@ -73,14 +139,39 @@ objects:
   - mock.Anything
   - cabinet.ErrTimeout
   - assert.Equal
+  calls:
+  - Equal
+  - Errorf
+  - Marshal
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - 'On'
+  - Return
+  - Set
 - name: TestCompileHandler_InternalError
   kind: func
   description: ''
   references:
   - mock.Anything
   - assert.Equal
+  calls:
+  - Equal
+  - Errorf
+  - Marshal
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - 'On'
+  - Return
+  - Set
 - name: TestCompileHandler_ReadBodyError
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewRecorder
+  - NewRequest
+  - NopCloser

@@ -13,3 +13,17 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - Background
+  - NewAPI
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewSchema
+  - NewWorkflow
+  - Printf
+  - Println
+  - Put
+  - Set

@@ -15,3 +15,12 @@ objects:
     for all domain types correctly calculate and assign the deterministic checksum
     based on the central validateAndChecksum function.
   references: []
+  calls:
+  - Background
+  - Checksum
+  - Errorf
+  - Fatalf
+  - NewModuleDescriptor
+  - NewSchema
+  - NewWorkflow
+  - Run

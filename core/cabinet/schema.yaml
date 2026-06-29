@@ -14,19 +14,23 @@ objects:
   description: NewSchema constructs a ManagedEntity-conformant Schema with validated
     checksum.
   references: []
+  calls: []
 - name: ID
   kind: method
   receiver: Schema
   description: ID returns the unique schema identifier in the form "name@version".
     This is used for lookups in the schema store.
   references: []
+  calls: []
 - name: GetData
   kind: method
   receiver: Schema
   description: GetData returns the schema's config surface for checksum purposes.
   references: []
+  calls: []
 - name: Checksum
   kind: method
   receiver: Schema
   description: Checksum returns the pre-computed checksum from the Signing block.
   references: []
+  calls: []

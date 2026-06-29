@@ -2,6 +2,7 @@
 package: iac
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -23,32 +24,81 @@ objects:
   - require.True
   - assert.Equal
   - require.Len
+  calls:
+  - Background
+  - Equal
+  - Len
+  - Load
+  - NewFileSource
+  - NewLoader
+  - NoError
+  - NotNil
+  - 'True'
 - name: TestLoader_Load_RelativePaths
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Join
+  - Load
+  - MkdirAll
+  - NewFileSource
+  - NewLoader
+  - NoError
+  - TempDir
+  - WriteFile
 - name: TestLoader_Load_Errors
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - Join
+  - Load
+  - NewFileSource
+  - NewLoader
+  - Run
+  - TempDir
+  - WriteFile
 - name: FetchConfig
   kind: method
   receiver: mockErrorSource
   description: ''
   references:
   - assert.AnError
+  calls: []
 - name: TestFileSource_FetchConfig_BrokenSymlink
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Background
+  - Error
+  - FetchConfig
+  - Join
+  - NewFileSource
+  - Skip
+  - Symlink
+  - TempDir
 - name: TestFileSource_FetchConfig_EmptyDir
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Empty
+  calls:
+  - Background
+  - Empty
+  - FetchConfig
+  - NewFileSource
+  - NoError
+  - TempDir

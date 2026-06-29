@@ -22,13 +22,34 @@ objects:
   - packages.NeedSyntax
   - packages.NeedTypes
   - packages.Load
+  calls:
+  - Background
+  - Bytes
+  - Errorf
+  - Load
+  - NewFileSet
+  - NewFromFiles
+  - Slice
+  - Sprintf
+  - WithTimeout
+  - Write
+  - WriteString
 - name: run
   kind: func
   description: run reads a package allowlist, generates symbols documentation, and
     writes it to the output file.
   references:
   - packages.Config
+  calls:
+  - Errorf
+  - Printf
+  - ReadFile
+  - Split
+  - TrimSpace
+  - WriteFile
 - name: main
   kind: func
   description: ''
   references: []
+  calls:
+  - Printf

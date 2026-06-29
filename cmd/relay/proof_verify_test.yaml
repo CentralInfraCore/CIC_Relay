@@ -15,30 +15,48 @@ objects:
   description: ''
   references:
   - cabinet.ComputeChainHashV1
+  calls:
+  - ComputeChainHashV1
 - name: TestVerifyProofArtifact_Valid
   kind: func
   description: ''
   references:
   - assert.True
   - assert.Empty
+  calls:
+  - Empty
+  - 'True'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_MissingWorkflowID
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  calls:
+  - Contains
+  - 'False'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_MissingChainHash
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  calls:
+  - Contains
+  - 'False'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_MissingTimestamp
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  calls:
+  - Contains
+  - 'False'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_EmptySourceDigest_Warns
   kind: func
   description: ''
@@ -47,12 +65,23 @@ objects:
   - assert.True
   - require.NotEmpty
   - assert.Contains
+  calls:
+  - ComputeChainHashV1
+  - Contains
+  - NotEmpty
+  - 'True'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_ChainHashMismatch
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  calls:
+  - Contains
+  - 'False'
+  - Repeat
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_StepMissingFields
   kind: func
   description: ''
@@ -62,30 +91,52 @@ objects:
   - cabinet.ProofTraceStepempty
   - assert.False
   - assert.Contains
+  calls:
+  - ComputeChainHashV1
+  - Contains
+  - 'False'
+  - Join
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_ValidPoSEResults
   kind: func
   description: ''
   references:
   - assert.True
   - assert.Empty
+  calls:
+  - Empty
+  - 'True'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_InvalidPoSEResult
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  calls:
+  - Contains
+  - 'False'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_CommitRecord_Consistent
   kind: func
   description: ''
   references:
   - assert.True
   - assert.Empty
+  calls:
+  - Empty
+  - 'True'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_CommitRecord_IDMismatch
   kind: func
   description: ''
   references:
   - assert.False
   - assert.Contains
+  calls:
+  - Contains
+  - 'False'
+  - VerifyProofArtifact
 - name: TestVerifyProofArtifact_CommitRecord_PoseNotVerified_Warns
   kind: func
   description: ''
@@ -93,6 +144,11 @@ objects:
   - assert.True
   - require.NotEmpty
   - assert.Contains
+  calls:
+  - Contains
+  - NotEmpty
+  - 'True'
+  - VerifyProofArtifact
 - name: TestProofArtifactFromTrace
   kind: func
   description: ''
@@ -101,18 +157,29 @@ objects:
   - cabinet.ProofTraceStep
   - assert.Equal
   - require.Len
+  calls:
+  - Equal
+  - Len
+  - ProofArtifactFromTrace
 - name: TestProofArtifactFromTrace_EmptySteps
   kind: func
   description: ''
   references:
   - cabinet.ProofTrace
   - assert.Empty
+  calls:
+  - Empty
+  - ProofArtifactFromTrace
 - name: TestMarshalProofArtifact
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Contains
+  calls:
+  - Contains
+  - MarshalProofArtifact
+  - NoError
 - name: testSteps
   kind: var
   description: ''

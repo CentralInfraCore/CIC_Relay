@@ -23,6 +23,7 @@ objects:
   kind: func
   description: NewRegistry returns an empty Registry.
   references: []
+  calls: []
 - name: Register
   kind: method
   receiver: Registry
@@ -30,16 +31,27 @@ objects:
     not carry the required "relay." prefix or if a different instrument with the same
     name is already registered.
   references: []
+  calls:
+  - Errorf
+  - HasPrefix
+  - Lock
+  - Unlock
 - name: Get
   kind: method
   receiver: Registry
   description: Get returns the instrument registered under name, if any.
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: Names
   kind: method
   receiver: Registry
   description: Names returns all registered instrument names in undefined order.
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: requiredPrefix
   kind: const
   description: ''

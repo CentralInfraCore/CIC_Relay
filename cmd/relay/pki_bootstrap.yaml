@@ -17,6 +17,11 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  calls:
+  - Getenv
+  - TrimSpace
+  - Warn
+  - WithFields
 - name: bootstrapPKI
   kind: func
   description: 'bootstrapPKI loads the CA trust store based on trustMode. dev  → loads
@@ -26,3 +31,12 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  calls:
+  - AppendCertsFromPEM
+  - Errorf
+  - Getenv
+  - Info
+  - NewCertPool
+  - ReadFile
+  - TrimSpace
+  - WithFields

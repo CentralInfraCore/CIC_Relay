@@ -13,30 +13,103 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - EncodeToMemory
+  - Fatalf
+  - Helper
+  - Join
+  - TempDir
+  - WriteFile
 - name: Test_printHelp_DoesNotPanic
   kind: func
   description: ''
   references: []
+  calls:
+  - Close
+  - Fatal
+  - Pipe
+  - ReadFrom
+  - String
 - name: Test_main_VerboseYAML
   kind: func
   description: ''
   references: []
+  calls:
+  - Close
+  - Fatalf
+  - NewFlagSet
+  - Pipe
+  - ReadFrom
+  - String
+  - TrimSpace
 - name: Test_main_CertPath_YAML
   kind: func
   description: ''
   references: []
+  calls:
+  - Add
+  - Close
+  - Contains
+  - CreateCertificate
+  - EncodeToMemory
+  - Fatalf
+  - GenerateKey
+  - Join
+  - NewFlagSet
+  - NewInt
+  - Now
+  - Pipe
+  - ReadFrom
+  - String
+  - TempDir
+  - TrimSpace
+  - WriteFile
 - name: Test_main_Help_LongFlag
   kind: func
   description: ''
   references:
   - assert.Contains
+  calls:
+  - Close
+  - Contains
+  - NewFlagSet
+  - Pipe
+  - ReadFrom
+  - String
 - name: Test_main_CertPath_ECDSACert
   kind: func
   description: ''
   references:
   - assert.Contains
+  calls:
+  - Add
+  - Close
+  - Contains
+  - CreateCertificate
+  - Fatalf
+  - GenerateKey
+  - NewFlagSet
+  - NewInt
+  - Now
+  - P256
+  - Pipe
+  - ReadFrom
+  - String
 - name: Test_main_CertPath_Ed25519Cert
   kind: func
   description: ''
   references:
   - assert.NotEmpty
+  calls:
+  - Add
+  - Close
+  - CreateCertificate
+  - Fatalf
+  - GenerateKey
+  - NewFlagSet
+  - NewInt
+  - NotEmpty
+  - Now
+  - Pipe
+  - ReadFrom
+  - String

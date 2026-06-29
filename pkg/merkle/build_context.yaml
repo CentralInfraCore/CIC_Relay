@@ -26,9 +26,21 @@ objects:
     only runtime.Version() would miss CGO mode and build-tag variation that can materially
     change binary behavior while keeping the same version string.'
   references: []
+  calls:
+  - EncodeToString
+  - ReadBuildInfo
+  - String
+  - Sum256
+  - Version
+  - WriteByte
+  - WriteString
 - name: GoSumDigest
   kind: func
   description: GoSumDigest reads the go.sum file at path and returns its lowercase
     SHA-256 hex digest prefixed with "sha256:". Returns NullMarker if path is empty
     or the file cannot be read.
   references: []
+  calls:
+  - EncodeToString
+  - ReadFile
+  - Sum256

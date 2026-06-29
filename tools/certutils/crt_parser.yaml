@@ -18,7 +18,26 @@ objects:
   description: printHelp prints the usage and command-line options for the certificate
     parser.
   references: []
+  calls:
+  - Base
+  - Printf
+  - Println
 - name: main
   kind: func
   description: ''
   references: []
+  calls:
+  - Bool
+  - Decode
+  - Exit
+  - Format
+  - Fprintf
+  - Fprintln
+  - Marshal
+  - Params
+  - Parse
+  - ParseCertificate
+  - Println
+  - ReadFile
+  - Size
+  - String

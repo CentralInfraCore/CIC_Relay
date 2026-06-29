@@ -14,12 +14,21 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - Fprintf
+  - RunFunc
 - name: Run
   kind: func
   description: Run reads JSON from input, canonicalizes it, and writes the result
     to output.
   references:
   - canonicaljson.ToJSON
+  calls:
+  - Errorf
+  - Fprintln
+  - ReadAll
+  - ToJSON
+  - Unmarshal
 - name: RunFunc
   kind: var
   description: RunFunc is a variable that holds the actual run function. It can be

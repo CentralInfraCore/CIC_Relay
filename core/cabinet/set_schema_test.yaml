@@ -13,10 +13,18 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - CanonicalizeSetPayload
+  - Fatalf
 - name: TestValidateSet_Required
   kind: func
   description: ''
   references: []
+  calls:
+  - Background
+  - Fatalf
+  - Run
+  - ValidateSet
 - name: TestValidateSet_NotFound
   kind: func
   description: ''
@@ -24,3 +32,20 @@ objects:
   - require.NoError
   - require.Error
   - require.True
+  calls:
+  - Background
+  - Error
+  - IsNotFound
+  - Logf
+  - NewAPI
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - NoError
+  - Put
+  - Run
+  - 'True'
+  - ValidateSet

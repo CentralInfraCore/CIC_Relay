@@ -16,88 +16,32 @@ objects:
   description: Input is the expected input structure for the ci.build module.
   implements: []
   references: []
-  position:
-    start_line: 19
-    end_line: 23
-  fields:
-  - name: BuildTarget
-    type: string `json:"build_target"`    // working directory for make (optional)
-    tag: ''
-  - name: MakeTarget
-    type: 'string `json:"make_target"`     // make target to run (default: "build")'
-    tag: ''
-  - name: ArtifactOutput
-    type: string `json:"artifact_output"` // path to the produced artifact (required)
-    tag: ''
 - name: Output
   kind: struct
   description: Output is the result returned by Execute.
   implements: []
   references: []
-  position:
-    start_line: 26
-    end_line: 30
-  fields:
-  - name: ArtifactPath
-    type: string
-    tag: json:"artifact_path"
-  - name: ArtifactDigest
-    type: string
-    tag: json:"artifact_digest"
-  - name: ExitCode
-    type: int
-    tag: json:"exit_code"
 - name: Execute
   kind: func
   description: 'Execute runs the build and returns an Output. Satisfies the cabinet
     NativeFunc signature: func(context.Context, interface{}) (interface{}, error)'
   references: []
-  position:
-    start_line: 38
-    end_line: 38
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: input
-      type: interface{}
-    returns:
-    - interface
+  calls: []
 - name: fileDigest
   kind: func
   description: fileDigest returns the hex-encoded SHA-256 digest of a file.
   references: []
-  position:
-    start_line: 82
-    end_line: 89
-  signature:
-    params:
-    - name: path
-      type: string
-    returns:
-    - string
-    - error
   calls:
-  - hex.EncodeToString
-  - os.ReadFile
-  - sha256.Sum256
+  - EncodeToString
+  - ReadFile
+  - Sum256
 - name: parseInput
   kind: func
   description: parseInput extracts Input from the raw interface{} value passed by
     the cabinet.
   references: []
-  position:
-    start_line: 92
-    end_line: 111
-  signature:
-    params:
-    - name: raw
-      type: interface{}
-    returns:
-    - '*Input'
-    - error
   calls:
-  - fmt.Errorf
+  - Errorf
 - name: buildTimeout
   kind: const
   description: buildTimeout is the maximum time a single make invocation may run.
