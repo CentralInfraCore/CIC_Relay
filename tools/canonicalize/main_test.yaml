@@ -40,12 +40,8 @@ objects:
   - assert.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NewReader
-  - NoError
-  - Run
-  - String
-  - TrimSpace
+  - assert.Equal
+  - assert.NoError
 - name: TestRun_ReadError
   kind: func
   description: ''
@@ -53,9 +49,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Contains
-  - Error
-  - Run
+  - assert.Contains
+  - assert.Error
 - name: TestRun_EmptyInput
   kind: func
   description: ''
@@ -63,10 +58,8 @@ objects:
   - assert.Error
   - assert.Equal
   calls:
-  - Equal
-  - Error
-  - NewReader
-  - Run
+  - assert.Equal
+  - assert.Error
 - name: TestRun_UnmarshalError
   kind: func
   description: ''
@@ -74,10 +67,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Contains
-  - Error
-  - NewReader
-  - Run
+  - assert.Contains
+  - assert.Error
 - name: TestRun_WriteError
   kind: func
   description: ''
@@ -85,10 +76,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Contains
-  - Error
-  - NewReader
-  - Run
+  - assert.Contains
+  - assert.Error
 - name: TestRun_CanonicalJsonError
   kind: func
   description: ''
@@ -97,21 +86,16 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Contains
-  - Error
-  - New
-  - NewReader
-  - Run
-  - SetToJSONMock
+  - assert.Contains
+  - assert.Error
+  - canonicaljson.SetToJSONMock
 - name: TestMain_ErrorPath
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Cleanup
-  - Equal
-  - New
+  - assert.Equal
 - name: TestMain_SuccessPath
   kind: func
   description: ''

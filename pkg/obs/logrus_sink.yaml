@@ -16,7 +16,10 @@ objects:
     if Status is "error" or "timeout") - LogRecord   → mapped from LogRecord.Level
     (info/warn/error; unknown → info) - CounterPoint / GaugePoint / HistogramPoint
     → Debug ("relay.metric" event)'
-  implements: []
+  implements:
+  - LogSink
+  - MetricSink
+  - TraceSink
   references:
   - logrus.Logger
 - name: NewLogrusSink

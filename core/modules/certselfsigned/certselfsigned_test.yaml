@@ -21,17 +21,13 @@ objects:
   - assert.Contains
   - assert.False
   calls:
-  - Background
-  - Contains
-  - Decode
-  - Equal
-  - 'False'
-  - Generate
-  - NoError
-  - NotEmpty
-  - NotNil
-  - ParseCertificate
-  - 'True'
+  - assert.Contains
+  - assert.Equal
+  - assert.False
+  - assert.NotEmpty
+  - require.NoError
+  - require.NotNil
+  - require.True
 - name: TestGenerate_DefaultValidity
   kind: func
   description: ''
@@ -39,14 +35,8 @@ objects:
   - require.NoError
   - assert.InDelta
   calls:
-  - Background
-  - Decode
-  - Generate
-  - Hours
-  - InDelta
-  - NoError
-  - ParseCertificate
-  - Sub
+  - assert.InDelta
+  - require.NoError
 - name: TestGenerate_NoCN_Error
   kind: func
   description: ''
@@ -54,19 +44,15 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - Generate
+  - assert.Contains
+  - require.Error
 - name: TestGenerate_InvalidInput_Error
   kind: func
   description: ''
   references:
   - require.Error
   calls:
-  - Background
-  - Error
-  - Generate
+  - require.Error
 - name: TestGenerate_SelfSigned
   kind: func
   description: ''
@@ -74,13 +60,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Decode
-  - Equal
-  - Generate
-  - NoError
-  - ParseCertificate
-  - String
+  - assert.Equal
+  - require.NoError
 - name: TestGenerate_MarshalError
   kind: func
   description: ''
@@ -88,10 +69,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - Generate
+  - assert.Contains
+  - require.Error
 - name: TestGenerate_KeyGenError
   kind: func
   description: ''
@@ -99,12 +78,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Cleanup
-  - Contains
-  - Error
-  - Errorf
-  - Generate
+  - assert.Contains
+  - require.Error
 - name: TestGenerate_SerialError
   kind: func
   description: ''
@@ -112,12 +87,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Cleanup
-  - Contains
-  - Error
-  - Errorf
-  - Generate
+  - assert.Contains
+  - require.Error
 - name: TestGenerate_CertCreateError
   kind: func
   description: ''
@@ -125,12 +96,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Cleanup
-  - Contains
-  - Error
-  - Errorf
-  - Generate
+  - assert.Contains
+  - require.Error
 - name: TestGenerate_MarshalKeyError
   kind: func
   description: ''
@@ -138,9 +105,5 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Cleanup
-  - Contains
-  - Error
-  - Errorf
-  - Generate
+  - assert.Contains
+  - require.Error

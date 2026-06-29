@@ -18,13 +18,7 @@ objects:
   references:
   - require.NoError
   calls:
-  - Dir
-  - Helper
-  - Join
-  - MkdirAll
-  - NoError
-  - TempDir
-  - WriteFile
+  - require.NoError
 - name: TestAffectedPackages_TransitiveImporters
   kind: func
   description: ''
@@ -33,8 +27,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NoError
+  - assert.Equal
+  - require.NoError
 - name: TestAffectedPackages_LeafChange
   kind: func
   description: ''
@@ -43,8 +37,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NoError
+  - assert.Equal
+  - require.NoError
 - name: TestAffectedPackages_UnrelatedPackage
   kind: func
   description: ''
@@ -53,8 +47,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NoError
+  - assert.Equal
+  - require.NoError
 - name: TestAffectedPackages_MultipleChangedFiles
   kind: func
   description: ''
@@ -63,8 +57,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NoError
+  - assert.Equal
+  - require.NoError
 - name: TestAffectedPackages_NoChangedFiles
   kind: func
   description: ''
@@ -73,8 +67,8 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Empty
-  - NoError
+  - assert.Empty
+  - require.NoError
 - name: TestAffectedPackages_NonGoFileIgnored
   kind: func
   description: ''
@@ -83,8 +77,8 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Empty
-  - NoError
+  - assert.Empty
+  - require.NoError
 - name: TestAffectedPackages_UnknownFileIgnored
   kind: func
   description: ''
@@ -93,8 +87,8 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Empty
-  - NoError
+  - assert.Empty
+  - require.NoError
 - name: TestAffectedPackages_LoadError
   kind: func
   description: ''
@@ -103,10 +97,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Contains
-  - Error
-  - Join
-  - TempDir
+  - assert.Contains
+  - require.Error
 - name: TestMain_PrintsAffectedPackages
   kind: func
   description: ''
@@ -114,15 +106,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - CombinedOutput
-  - Command
-  - Equal
-  - Join
-  - NewBufferString
-  - NoError
-  - Run
-  - String
-  - TempDir
+  - assert.Equal
+  - require.NoError
 - name: TestMain_FatalOnLoadError
   kind: func
   description: ''
@@ -130,12 +115,5 @@ objects:
   - require.NoError
   - assert.True
   calls:
-  - Chdir
-  - Cleanup
-  - Close
-  - Getwd
-  - NoError
-  - Pipe
-  - TempDir
-  - 'True'
-  - WriteString
+  - assert.True
+  - require.NoError

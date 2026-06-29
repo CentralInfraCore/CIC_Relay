@@ -12,7 +12,8 @@ objects:
   kind: struct
   description: VaultCryptoService implements CryptoService using HashiCorp Vault's
     Transit engine.
-  implements: []
+  implements:
+  - CryptoService
   references:
   - api.Client
 - name: CryptoService
@@ -20,6 +21,10 @@ objects:
   description: CryptoService defines the interface for cryptographic operations like
     signing and decrypting.
   references: []
+  methods:
+  - Decrypt
+  - HealthCheck
+  - Sign
 - name: NewVaultCryptoService
   kind: func
   description: NewVaultCryptoService creates and configures a new service for signing.

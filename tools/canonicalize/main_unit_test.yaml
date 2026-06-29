@@ -17,7 +17,6 @@ objects:
   - require.NoError
   - assert.JSONEq
   calls:
-  - JSONEq
-  - NoError
-  - Run
-  - ToJSON
+  - assert.JSONEq
+  - canonicaljson.ToJSON
+  - require.NoError

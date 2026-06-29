@@ -17,7 +17,8 @@ objects:
 - name: mockStateRecorder
   kind: struct
   description: mockStateRecorder is a test double for StateRecorder.
-  implements: []
+  implements:
+  - StateRecorder
   references:
   - types.ExpectedState
 - name: Sign

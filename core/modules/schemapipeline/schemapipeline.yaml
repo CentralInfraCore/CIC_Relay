@@ -97,8 +97,8 @@ objects:
   - merkle.LeafHash
   - merkle.HexMerkleRoot
   calls:
-  - HexMerkleRoot
-  - LeafHash
+  - merkle.HexMerkleRoot
+  - merkle.LeafHash
 - name: computeTreeDigest
   kind: func
   description: 'computeTreeDigest returns a content-addressable digest of the source

@@ -13,7 +13,8 @@ objects:
   description: ExecGitOps implements GitOps using os/exec("git", ...). All commands
     run with a hardened environment (no system config, no interactive prompts, no
     hooks).
-  implements: []
+  implements:
+  - GitOps
   references:
   - obs.LogSink
   - obs.MetricSink

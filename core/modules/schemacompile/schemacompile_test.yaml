@@ -22,41 +22,21 @@ objects:
   references:
   - canonicaljson.ToJSON
   calls:
-  - EncodeToString
-  - Error
-  - Sum256
-  - ToJSON
+  - canonicaljson.ToJSON
 - name: makeCACert
   kind: func
   description: ''
   references:
   - require.NoError
   calls:
-  - Add
-  - CreateCertificate
-  - GenerateKey
-  - Helper
-  - NewInt
-  - NoError
-  - Now
-  - P256
-  - ParseCertificate
+  - require.NoError
 - name: makeLeafCert
   kind: func
   description: ''
   references:
   - require.NoError
   calls:
-  - Add
-  - CreateCertificate
-  - EncodeToMemory
-  - GenerateKey
-  - Helper
-  - NewInt
-  - NoError
-  - Now
-  - P256
-  - ParseCertificate
+  - require.NoError
 - name: makeVerifier
   kind: func
   description: ''
@@ -88,10 +68,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewAssertSourceFunc
-  - NoError
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_WithVerifier_ValidChain
   kind: func
   description: ''
@@ -100,12 +79,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - AddCert
-  - Background
-  - Equal
-  - NewAssertSourceFunc
-  - NewCertPool
-  - NoError
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_WithVerifier_UntrustedCA
   kind: func
   description: ''
@@ -114,12 +90,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - AddCert
-  - Background
-  - Contains
-  - Error
-  - NewAssertSourceFunc
-  - NewCertPool
+  - assert.Contains
+  - require.Error
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_WithVerifier_InvalidPEM
   kind: func
   description: ''
@@ -128,11 +101,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewAssertSourceFunc
-  - Sprintf
+  - assert.Contains
+  - require.Error
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_MissingRequiredField
   kind: func
   description: ''
@@ -141,10 +112,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewAssertSourceFunc
+  - assert.Contains
+  - require.Error
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_SchemaMismatch
   kind: func
   description: ''
@@ -153,10 +123,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewAssertSourceFunc
+  - assert.Contains
+  - require.Error
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_VersionMismatch
   kind: func
   description: ''
@@ -165,10 +134,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewAssertSourceFunc
+  - assert.Contains
+  - require.Error
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_NilVerifier_SkipsCertCheck
   kind: func
   description: ''
@@ -177,11 +145,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewAssertSourceFunc
-  - NoError
-  - Sprintf
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
 - name: minimalAssertion
   kind: func
   description: ''
@@ -196,10 +162,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewAssertSourceFunc
+  - assert.Contains
+  - require.Error
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_L04_ChecksumValid_EmptySpec
   kind: func
   description: ''
@@ -208,11 +173,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewAssertSourceFunc
-  - NoError
-  - Sprintf
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_L04_ChecksumValid_NonEmptySpec
   kind: func
   description: ''
@@ -221,11 +184,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewAssertSourceFunc
-  - NoError
-  - Sprintf
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_L04_NilSpec_SkipsChecksumCheck
   kind: func
   description: ''
@@ -234,10 +195,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewAssertSourceFunc
-  - NoError
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
 - name: TestNewSignArtifactFunc_VerificationRoot_Present
   kind: func
   description: ''
@@ -249,12 +209,11 @@ objects:
   - assert.Len
   - assert.NoError
   calls:
-  - Background
-  - DecodeString
-  - Len
-  - NewSignArtifactFunc
-  - NoError
-  - 'True'
+  - assert.Len
+  - assert.NoError
+  - require.NoError
+  - require.True
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_VerificationRoot_Determinism
   kind: func
   description: ''
@@ -263,9 +222,8 @@ objects:
   - schemacompile.NewSignArtifactFunc
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewSignArtifactFunc
+  - assert.Equal
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_VerificationRoot_SensitiveToArtifact
   kind: func
   description: ''
@@ -274,9 +232,8 @@ objects:
   - merkle.BuildContext
   - assert.NotEqual
   calls:
-  - Background
-  - NewSignArtifactFunc
-  - NotEqual
+  - assert.NotEqual
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_VerificationRoot_SensitiveToBuildContext
   kind: func
   description: ''
@@ -285,9 +242,8 @@ objects:
   - merkle.BuildContextSourceRef
   - assert.NotEqual
   calls:
-  - Background
-  - NewSignArtifactFunc
-  - NotEqual
+  - assert.NotEqual
+  - schemacompile.NewSignArtifactFunc
 - name: TestSignArtifact_StillEmitsVerificationRoot
   kind: func
   description: ''
@@ -297,11 +253,10 @@ objects:
   - assert.True
   - assert.Len
   calls:
-  - Background
-  - Len
-  - NoError
-  - SignArtifact
-  - 'True'
+  - assert.Len
+  - assert.True
+  - require.NoError
+  - schemacompile.SignArtifact
 - name: Sign
   kind: method
   receiver: mockSigner
@@ -317,10 +272,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewSignArtifactFunc
-  - NoError
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_WithSigner_CicSignSet
   kind: func
   description: ''
@@ -331,11 +285,10 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   calls:
-  - Background
-  - Equal
-  - NewSignArtifactFunc
-  - NoError
-  - NotEmpty
+  - assert.Equal
+  - assert.NotEmpty
+  - require.NoError
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_CicSignedCA_StubWhenNoPKI
   kind: func
   description: ''
@@ -345,10 +298,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewSignArtifactFunc
-  - NoError
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_CicSignedCA_FingerprintWhenPKILoaded
   kind: func
   description: ''
@@ -358,10 +310,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewSignArtifactFunc
-  - NoError
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_CicSignedCA_PresentInVerificationManifest
   kind: func
   description: ''
@@ -370,9 +321,8 @@ objects:
   - schemacompile.NewSignArtifactFunc
   - assert.NotEqual
   calls:
-  - Background
-  - NewSignArtifactFunc
-  - NotEqual
+  - assert.NotEqual
+  - schemacompile.NewSignArtifactFunc
 - name: TestNewSignArtifactFunc_SignerError_ReturnsError
   kind: func
   description: ''
@@ -382,11 +332,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - Errorf
-  - NewSignArtifactFunc
+  - assert.Contains
+  - require.Error
+  - schemacompile.NewSignArtifactFunc
 - name: TestAssertSource_StubMode_NoInput
   kind: func
   description: ''
@@ -395,10 +343,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - AssertSource
-  - Background
-  - Equal
-  - NoError
+  - assert.Equal
+  - require.NoError
+  - schemacompile.AssertSource
 - name: TestAssertSource_WrongInputType
   kind: func
   description: ''
@@ -406,9 +353,8 @@ objects:
   - schemacompile.AssertSource
   - require.Error
   calls:
-  - AssertSource
-  - Background
-  - Error
+  - require.Error
+  - schemacompile.AssertSource
 - name: TestBuildSchema_StubMode
   kind: func
   description: ''
@@ -418,11 +364,10 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   calls:
-  - Background
-  - BuildSchema
-  - Equal
-  - NoError
-  - NotEmpty
+  - assert.Equal
+  - assert.NotEmpty
+  - require.NoError
+  - schemacompile.BuildSchema
 - name: TestBuildSchema_MissingSchema
   kind: func
   description: ''
@@ -431,10 +376,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - BuildSchema
-  - Contains
-  - Error
+  - assert.Contains
+  - require.Error
+  - schemacompile.BuildSchema
 - name: TestBuildSchema_MissingVersion
   kind: func
   description: ''
@@ -443,10 +387,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - BuildSchema
-  - Contains
-  - Error
+  - assert.Contains
+  - require.Error
+  - schemacompile.BuildSchema
 - name: TestBuildSchema_WrongInputType
   kind: func
   description: ''
@@ -454,9 +397,8 @@ objects:
   - schemacompile.BuildSchema
   - require.Error
   calls:
-  - Background
-  - BuildSchema
-  - Error
+  - require.Error
+  - schemacompile.BuildSchema
 - name: TestBuildSchema_FromAssertedMetadata
   kind: func
   description: ''
@@ -466,8 +408,7 @@ objects:
   - assert.Equal
   - assert.NotNil
   calls:
-  - Background
-  - BuildSchema
-  - Equal
-  - NoError
-  - NotNil
+  - assert.Equal
+  - assert.NotNil
+  - require.NoError
+  - schemacompile.BuildSchema

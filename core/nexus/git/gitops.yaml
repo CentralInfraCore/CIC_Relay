@@ -19,3 +19,10 @@ objects:
     All operations are scoped to registered repositories — arbitrary paths are not
     accepted.
   references: []
+  methods:
+  - Checkout
+  - Clone
+  - Commit
+  - Fetch
+  - Push
+  - Status

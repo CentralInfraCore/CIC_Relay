@@ -12,13 +12,15 @@ objects:
   kind: struct
   description: MockWasmManager is a mock implementation of the wasmManager interface
     for unit testing.
-  implements: []
+  implements:
+  - wasmManager
   references:
   - mock.Mock
 - name: MockCicWasmHost
   kind: struct
   description: MockCicWasmHost is a mock for the cicWasmHost interface.
-  implements: []
+  implements:
+  - cicWasmHost
   references:
   - mock.Mock
 - name: NewHostInstance

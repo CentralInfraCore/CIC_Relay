@@ -12,7 +12,8 @@ objects:
   kind: struct
   description: LocalWorker is a simple in-process implementation of the Worker interface.
     It uses a CryptoService to perform the actual decryption.
-  implements: []
+  implements:
+  - Worker
   references:
   - crypto.CryptoService
 - name: NewLocalWorker

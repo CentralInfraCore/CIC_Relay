@@ -15,7 +15,8 @@ objects:
     HTTP endpoint. The endpoint must return a JSON or YAML object mapping relative
     file paths to content strings. On error it logs WARN and propagates a wrapped
     error (degraded mode — non-fatal to callers).
-  implements: []
+  implements:
+  - IaCSource
   references:
   - logrus.Logger
 - name: NewUpstreamSource

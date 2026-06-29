@@ -18,6 +18,8 @@ objects:
   kind: interface
   description: IaCSource defines the interface for retrieving raw configuration data.
   references: []
+  methods:
+  - FetchConfig
 - name: NewLoader
   kind: func
   description: NewLoader creates a new Loader instance.

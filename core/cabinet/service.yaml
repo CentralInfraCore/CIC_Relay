@@ -20,22 +20,41 @@ objects:
   description: cabinetService is the concrete implementation of the Cabinet interface,
     managing schemas, modules, workflows, and their execution via a WASM runtime with
     optional audit recording.
-  implements: []
+  implements:
+  - Cabinet
   references: []
 - name: cicWasmHost
   kind: interface
   description: cicWasmHost defines the interface for interacting with a live WASM
     instance. This allows for mocking in unit tests.
   references: []
+  methods:
+  - Close
+  - Get
+  - Init
+  - Notify
+  - Process
 - name: wasmManager
   kind: interface
   description: wasmManager defines the interface for a WASM lifecycle manager. This
     allows for mocking in unit tests.
   references: []
+  methods:
+  - Close
+  - NewHostInstance
 - name: Cabinet
   kind: interface
   description: Cabinet defines the central API for schema/module/workflow management.
   references: []
+  methods:
+  - Close
+  - GetModule
+  - GetSchema
+  - GetWorkflow
+  - PutModule
+  - PutSchema
+  - PutWorkflow
+  - Setx
 - name: CabinetOption
   kind: type
   description: CabinetOption is a functional option for configuring a cabinetService.
