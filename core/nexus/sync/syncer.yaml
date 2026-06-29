@@ -16,13 +16,16 @@ objects:
 - name: GitSyncer
   kind: struct
   description: GitSyncer implements the Syncer interface using git commands.
-  implements: []
+  implements:
+  - Syncer
   references: []
 - name: Syncer
   kind: interface
   description: Syncer defines the interface for synchronizing local state to a central
     repository.
   references: []
+  methods:
+  - SyncDaily
 - name: NewGitSyncer
   kind: func
   description: NewGitSyncer creates a new GitSyncer.

@@ -14,7 +14,8 @@ objects:
   kind: struct
   description: mockCabinet is a mock implementation of the Cabinet interface for testing
     error propagation.
-  implements: []
+  implements:
+  - Cabinet
   references: []
 - name: GetWorkflow
   kind: method

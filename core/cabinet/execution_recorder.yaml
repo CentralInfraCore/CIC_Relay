@@ -14,3 +14,5 @@ objects:
     by Setx. If nil, recording is silently skipped. Errors from recording are non-fatal:
     the caller logs a WARN and continues.'
   references: []
+  methods:
+  - Record

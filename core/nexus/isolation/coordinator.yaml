@@ -27,6 +27,8 @@ objects:
   kind: interface
   description: Worker defines the interface for an isolated decryption component.
   references: []
+  methods:
+  - Decrypt
 - name: NewCoordinator
   kind: func
   description: NewCoordinator creates a new Coordinator with the given workers.

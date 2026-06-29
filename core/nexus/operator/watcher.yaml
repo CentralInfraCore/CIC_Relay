@@ -25,18 +25,23 @@ objects:
   kind: struct
   description: PollingWatcher implements Watcher by periodically scanning a directory.
     A simple implementation for now; production usage might prefer fsnotify.
-  implements: []
+  implements:
+  - Watcher
   references: []
 - name: Watcher
   kind: interface
   description: Watcher defines the interface for monitoring infrastructure changes.
   references: []
+  methods:
+  - Watch
 - name: ResourceValidator
   kind: interface
   description: ResourceValidator validates a single resource against an external schema
     registry.
   references:
   - types.ResourceSpec
+  methods:
+  - ValidateResource
 - name: ResourceActivator
   kind: interface
   description: ResourceActivator executes the lifecycle action for a validated, desired-present
@@ -44,6 +49,8 @@ objects:
     direct import.
   references:
   - types.ResourceSpec
+  methods:
+  - Activate
 - name: EventType
   kind: type
   description: EventType defines the type of change detected in the infrastructure

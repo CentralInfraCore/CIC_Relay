@@ -11,7 +11,8 @@ objects:
 - name: GitStateRecorder
   kind: struct
   description: GitStateRecorder implements StateRecorder using a local Git repository.
-  implements: []
+  implements:
+  - StateRecorder
   references:
   - crypto.CryptoService
 - name: StateRecorder
@@ -19,6 +20,8 @@ objects:
   description: StateRecorder defines the interface for persisting state snapshots.
   references:
   - types.ExpectedState
+  methods:
+  - RecordState
 - name: NewGitStateRecorder
   kind: func
   description: NewGitStateRecorder creates a new recorder that operates on the given

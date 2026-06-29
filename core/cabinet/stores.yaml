@@ -14,33 +14,54 @@ objects:
   kind: struct
   description: memWorkflowStore is an in-memory implementation of WorkflowStore using
     a map-based index.
-  implements: []
+  implements:
+  - ModuleStore
+  - SchemaStore
+  - WorkflowStore
   references: []
 - name: memModuleStore
   kind: struct
   description: 'memModuleStore implements a content-addressable storage (CAS) for
     modules. It uses a two-level map: an index for name/version to checksum mapping,
     and a content store for checksum to module mapping.'
-  implements: []
+  implements:
+  - ModuleStore
+  - SchemaStore
+  - WorkflowStore
   references: []
 - name: memSchemaStore
   kind: struct
   description: memSchemaStore is an in-memory implementation of SchemaStore using
     a map-based index.
-  implements: []
+  implements:
+  - ModuleStore
+  - SchemaStore
+  - WorkflowStore
   references: []
 - name: WorkflowStore
   kind: interface
   description: WorkflowStore abstracts storage for Workflow entities.
   references: []
+  methods:
+  - Exists
+  - Get
+  - Put
 - name: ModuleStore
   kind: interface
   description: ModuleStore abstracts storage for ModuleDescriptor entities.
   references: []
+  methods:
+  - Exists
+  - Get
+  - Put
 - name: SchemaStore
   kind: interface
   description: SchemaStore abstracts storage for Schema entities.
   references: []
+  methods:
+  - Exists
+  - Get
+  - Put
 - name: NewMemWorkflowStore
   kind: func
   description: NewMemWorkflowStore creates and returns a new in-memory WorkflowStore

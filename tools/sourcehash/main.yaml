@@ -20,9 +20,7 @@ objects:
   references:
   - sourcedigest.ComputeTreeHash
   calls:
-  - ComputeTreeHash
-  - Fprintf
-  - Print
+  - sourcedigest.ComputeTreeHash
 - name: osExit
   kind: var
   description: ''

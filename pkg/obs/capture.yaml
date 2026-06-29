@@ -11,7 +11,10 @@ objects:
   kind: struct
   description: CaptureSink is a thread-safe, in-memory sink for use in tests. It satisfies
     TraceSink, LogSink, and MetricSink.
-  implements: []
+  implements:
+  - LogSink
+  - MetricSink
+  - TraceSink
   references: []
 - name: RecordTrace
   kind: method

@@ -11,7 +11,8 @@ objects:
 - name: FileSource
   kind: struct
   description: FileSource implements IaCSource for the local file system.
-  implements: []
+  implements:
+  - IaCSource
   references: []
 - name: NewFileSource
   kind: func

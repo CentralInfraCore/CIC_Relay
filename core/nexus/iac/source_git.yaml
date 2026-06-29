@@ -20,7 +20,8 @@ objects:
     hardened environment: - GIT_CONFIG_NOSYSTEM=1  (no /etc/gitconfig) - GIT_TERMINAL_PROMPT=0  (no
     interactive prompts) - GIT_ASKPASS=/bin/false (credential prompts fail fast) -
     -c core.hooksPath=/dev/null (no hooks)'
-  implements: []
+  implements:
+  - IaCSource
   references: []
 - name: NewGitSource
   kind: func

@@ -16,7 +16,8 @@ objects:
     one response, and waits. This is intentionally simple — no connection pooling,
     no persistent worker process. Activation: set CIC_ISOLATION_MODE=subprocess. Without
     it the existing LocalWorker (in-process) is used, preserving backward compatibility.'
-  implements: []
+  implements:
+  - Worker
   references: []
 - name: NewSubprocessWorker
   kind: func

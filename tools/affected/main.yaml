@@ -25,15 +25,8 @@ objects:
   - packages.Load
   - packages.PrintErrors
   calls:
-  - Abs
-  - Dir
-  - Errorf
-  - HasSuffix
-  - Join
-  - Load
-  - PrintErrors
-  - Strings
-  - TrimSpace
+  - packages.Load
+  - packages.PrintErrors
 - name: main
   kind: func
   description: ''

@@ -13,18 +13,21 @@ objects:
 - name: MockWatcher
   kind: struct
   description: MockWatcher is a mock implementation of the Watcher interface.
-  implements: []
+  implements:
+  - Watcher
   references:
   - mock.Mock
 - name: mockValidator
   kind: struct
   description: mockValidator is a stub ResourceValidator for testing WithValidator.
-  implements: []
+  implements:
+  - ResourceValidator
   references: []
 - name: mockActivator
   kind: struct
   description: mockActivator records Activate calls for assertion in tests.
-  implements: []
+  implements:
+  - ResourceActivator
   references: []
 - name: Watch
   kind: method

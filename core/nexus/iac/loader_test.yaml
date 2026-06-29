@@ -12,7 +12,8 @@ objects:
 - name: mockErrorSource
   kind: struct
   description: mockErrorSource always returns an error.
-  implements: []
+  implements:
+  - IaCSource
   references: []
 - name: TestLoader_Load_Success
   kind: func

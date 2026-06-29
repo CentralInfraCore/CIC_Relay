@@ -12,13 +12,15 @@ objects:
 - name: MockWorker
   kind: struct
   description: MockWorker is a mock implementation of the Worker interface.
-  implements: []
+  implements:
+  - Worker
   references:
   - mock.Mock
 - name: MockCryptoService
   kind: struct
   description: MockCryptoService for LocalWorker testing
-  implements: []
+  implements:
+  - Worker
   references:
   - mock.Mock
 - name: Decrypt

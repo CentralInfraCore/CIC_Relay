@@ -70,46 +70,18 @@ objects:
   references:
   - assert.Contains
   calls:
-  - Close
-  - Contains
-  - NewFlagSet
-  - Pipe
-  - ReadFrom
-  - String
+  - assert.Contains
 - name: Test_main_CertPath_ECDSACert
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Add
-  - Close
-  - Contains
-  - CreateCertificate
-  - Fatalf
-  - GenerateKey
-  - NewFlagSet
-  - NewInt
-  - Now
-  - P256
-  - Pipe
-  - ReadFrom
-  - String
+  - assert.Contains
 - name: Test_main_CertPath_Ed25519Cert
   kind: func
   description: ''
   references:
   - assert.NotEmpty
   calls:
-  - Add
-  - Close
-  - CreateCertificate
-  - Fatalf
-  - GenerateKey
-  - NewFlagSet
-  - NewInt
-  - NotEmpty
-  - Now
-  - Pipe
-  - ReadFrom
-  - String
+  - assert.NotEmpty

@@ -24,11 +24,7 @@ objects:
   references:
   - canonicaljson.ToJSON
   calls:
-  - Errorf
-  - Fprintln
-  - ReadAll
-  - ToJSON
-  - Unmarshal
+  - canonicaljson.ToJSON
 - name: RunFunc
   kind: var
   description: RunFunc is a variable that holds the actual run function. It can be

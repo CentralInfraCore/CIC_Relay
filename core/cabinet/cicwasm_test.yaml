@@ -15,7 +15,10 @@ objects:
   kind: struct
   description: mockModuleStore is a mock implementation of the ModuleStore interface
     for testing.
-  implements: []
+  implements:
+  - ModuleStore
+  - SchemaStore
+  - WorkflowStore
   references: []
 - name: loadWasmFile
   kind: func

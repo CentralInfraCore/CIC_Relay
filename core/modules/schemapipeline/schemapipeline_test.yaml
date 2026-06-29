@@ -50,10 +50,7 @@ objects:
   - schemapipeline.PipelineConfig
   - require.ErrorContains
   calls:
-  - Background
-  - ErrorContains
-  - NewStartFunc
-  - TempDir
+  - require.ErrorContains
 - name: TestStart_CloneFailure
   kind: func
   description: ''
@@ -63,15 +60,9 @@ objects:
   - assert.True
   - assert.NotEqual
   calls:
-  - Background
-  - EncodeToString
-  - HasPrefix
-  - NewStartFunc
-  - NoError
-  - NotEqual
-  - Sum256
-  - TempDir
-  - 'True'
+  - assert.NotEqual
+  - assert.True
+  - require.NoError
 - name: TestStart_ComputesTreeDigest_GitDirSkipped
   kind: func
   description: ''
@@ -79,13 +70,7 @@ objects:
   - schemapipeline.PipelineConfig
   - require.ErrorContains
   calls:
-  - Background
-  - ErrorContains
-  - Join
-  - MkdirAll
-  - NewStartFunc
-  - TempDir
-  - WriteFile
+  - require.ErrorContains
 - name: TestStart_MissingVersion
   kind: func
   description: ''
@@ -93,10 +78,7 @@ objects:
   - schemapipeline.PipelineConfigBuildDir
   - require.ErrorContains
   calls:
-  - Background
-  - ErrorContains
-  - NewStartFunc
-  - TempDir
+  - require.ErrorContains
 - name: TestStart_RevParseError
   kind: func
   description: ''
@@ -105,12 +87,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - Errorf
-  - NewStartFunc
-  - TempDir
+  - assert.Contains
+  - require.Error
 - name: Run
   kind: method
   receiver: gitAndRealFileRunner
@@ -131,8 +109,5 @@ objects:
   - assert.Equal
   - assert.Error
   calls:
-  - Background
-  - Equal
-  - Error
-  - NewStartFunc
-  - TempDir
+  - assert.Equal
+  - assert.Error

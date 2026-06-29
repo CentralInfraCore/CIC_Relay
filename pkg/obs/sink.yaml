@@ -18,11 +18,19 @@ objects:
   kind: interface
   description: TraceSink receives TraceFrame records.
   references: []
+  methods:
+  - RecordTrace
 - name: LogSink
   kind: interface
   description: LogSink receives LogRecord entries.
   references: []
+  methods:
+  - RecordLog
 - name: MetricSink
   kind: interface
   description: MetricSink receives metric data points.
   references: []
+  methods:
+  - RecordCounter
+  - RecordGauge
+  - RecordHistogram
