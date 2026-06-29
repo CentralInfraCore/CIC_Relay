@@ -15,24 +15,14 @@ objects:
   references:
   - require.NoError
   calls:
-  - Command
-  - Join
-  - NoError
-  - Run
-  - TempDir
-  - WriteFile
+  - require.NoError
 - name: createCommitsOnBranch
   kind: func
   description: ''
   references:
   - require.NoError
   calls:
-  - Command
-  - Join
-  - NoError
-  - Run
-  - Sprintf
-  - WriteFile
+  - require.NoError
 - name: TestGitSyncer_SyncDaily_Success
   kind: func
   description: ''
@@ -42,34 +32,17 @@ objects:
   - assert.Contains
   - assert.Error
   calls:
-  - Background
-  - Command
-  - Contains
-  - Date
-  - Equal
-  - Error
-  - Format
-  - NewGitSyncer
-  - NoError
-  - Output
-  - Run
-  - Sprintf
-  - SyncDaily
+  - assert.Contains
+  - assert.Equal
+  - assert.Error
+  - require.NoError
 - name: TestGitSyncer_SyncDaily_NoChanges
   kind: func
   description: ''
   references:
   - require.NoError
   calls:
-  - Background
-  - Command
-  - Date
-  - Format
-  - NewGitSyncer
-  - NoError
-  - Run
-  - Sprintf
-  - SyncDaily
+  - require.NoError
 - name: TestGitSyncer_SyncDaily_WithRemote
   kind: func
   description: ''
@@ -77,18 +50,8 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
-  - Background
-  - Command
-  - Contains
-  - Date
-  - Format
-  - NewGitSyncer
-  - NoError
-  - Output
-  - Run
-  - Sprintf
-  - SyncDaily
-  - TempDir
+  - assert.Contains
+  - require.NoError
 - name: TestGitSyncer_SyncDaily_Errors
   kind: func
   description: ''
@@ -96,15 +59,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Date
-  - Error
-  - Format
-  - NewGitSyncer
-  - Run
-  - Sprintf
-  - SyncDaily
+  - assert.Contains
+  - assert.Error
 - name: TestGitSyncer_SyncDaily_FallbackBranch
   kind: func
   description: ''
@@ -122,12 +78,7 @@ objects:
   references:
   - assert.Error
   calls:
-  - Background
-  - Date
-  - Error
-  - NewGitSyncer
-  - SyncDaily
-  - TempDir
+  - assert.Error
 - name: TestGitSyncer_SyncDaily_PruneFails
   kind: func
   description: ''
@@ -135,11 +86,5 @@ objects:
   - require.NoError
   - assert.Error
   calls:
-  - Background
-  - Date
-  - Error
-  - Format
-  - NewGitSyncer
-  - NoError
-  - Sprintf
-  - SyncDaily
+  - assert.Error
+  - require.NoError

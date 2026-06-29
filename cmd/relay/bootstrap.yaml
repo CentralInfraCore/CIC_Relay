@@ -77,20 +77,14 @@ objects:
   - cabinet.Cabinet.PutModule
   - cabinet.Cabinet.PutWorkflow
   calls:
-  - Errorf
-  - Info
-  - LastIndex
-  - NewAssertSourceFunc
-  - NewModuleDescriptor
-  - NewReleaseFunc
-  - NewSignArtifactFunc
-  - NewStartFunc
-  - NewTestFunc
-  - NewValidateFunc
-  - NewWorkflow
-  - PutModule
-  - PutWorkflow
-  - VerifyCertificateChain
+  - cabinet.Cabinet.PutModule
+  - cabinet.Cabinet.PutWorkflow
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWorkflow
+  - cabinet.VerifyCertificateChain
+  - logrus.Info
+  - schemacompile.NewAssertSourceFunc
+  - schemacompile.NewSignArtifactFunc
 - name: loadEmbeddedComponents
   kind: func
   description: loadEmbeddedComponents loads schemas, workflows, and PKI assets from
@@ -148,14 +142,10 @@ objects:
   - cabinet.Cabinet.GetSchema
   - cabinet.Cabinet.PutSchema
   calls:
-  - Errorf
-  - GetSchema
-  - ID
-  - Info
-  - NewSchema
-  - PutSchema
-  - Unmarshal
-  - WithField
+  - cabinet.Cabinet.GetSchema
+  - cabinet.Cabinet.PutSchema
+  - cabinet.NewSchema
+  - logrus.WithField
 - name: loadWorkflow
   kind: func
   description: loadWorkflow unmarshals a Workflow from YAML content and registers
@@ -167,14 +157,10 @@ objects:
   - cabinet.Cabinet.GetWorkflow
   - cabinet.Cabinet.PutWorkflow
   calls:
-  - Errorf
-  - GetWorkflow
-  - ID
-  - Info
-  - NewWorkflow
-  - PutWorkflow
-  - Unmarshal
-  - WithField
+  - cabinet.Cabinet.GetWorkflow
+  - cabinet.Cabinet.PutWorkflow
+  - cabinet.NewWorkflow
+  - logrus.WithField
 - name: loadModule
   kind: func
   description: loadModule unmarshals a Module from YAML content, verifies its WASM
@@ -190,32 +176,11 @@ objects:
   - cabinet.Cabinet.GetModule
   - cabinet.Cabinet.PutModule
   calls:
-  - Decode
-  - EncodeToString
-  - Error
-  - Errorf
-  - Ext
-  - GetModule
-  - ID
-  - Info
-  - Is
-  - New
-  - NewModuleDescriptor
-  - ParseCertificate
-  - PutModule
-  - ReadFile
-  - Size
-  - Stat
-  - String
-  - Sum
-  - TrimSuffix
-  - Unmarshal
-  - VerifyCertificateChain
-  - Warn
-  - WithError
-  - WithField
-  - WithFields
-  - Write
+  - cabinet.Cabinet.GetModule
+  - cabinet.Cabinet.PutModule
+  - cabinet.NewModuleDescriptor
+  - cabinet.VerifyCertificateChain
+  - logrus.WithField
 - name: loadPKIAssets
   kind: func
   description: loadPKIAssets loads X.509 certificates and CRLs from a filesystem path

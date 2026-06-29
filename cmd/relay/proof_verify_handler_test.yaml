@@ -17,9 +17,7 @@ objects:
   references:
   - logrus.New
   calls:
-  - Helper
-  - New
-  - SetOutput
+  - logrus.New
 - name: validProofVerifyBody
   kind: func
   description: ''
@@ -28,19 +26,15 @@ objects:
   - cabinet.ComputeChainHashV1
   - require.NoError
   calls:
-  - ComputeChainHashV1
-  - Helper
-  - Marshal
-  - NoError
+  - cabinet.ComputeChainHashV1
+  - require.NoError
 - name: TestProofVerifyHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NewRecorder
-  - NewRequest
+  - assert.Equal
 - name: TestProofVerifyHandler_BodyTooLarge
   kind: func
   description: ''
@@ -48,44 +42,29 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - Equal
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - Repeat
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestProofVerifyHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NewReader
-  - NewRecorder
-  - NewRequest
+  - assert.Equal
 - name: TestProofVerifyHandler_MissingProofArtifact
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - Marshal
-  - NewReader
-  - NewRecorder
-  - NewRequest
+  - assert.Equal
 - name: TestProofVerifyHandler_ReadBodyError
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NewRecorder
-  - NewRequest
-  - NopCloser
+  - assert.Equal
 - name: TestProofVerifyHandler_ValidArtifact
   kind: func
   description: ''
@@ -96,18 +75,11 @@ objects:
   - assert.True
   - assert.Empty
   calls:
-  - Bytes
-  - Empty
-  - Equal
-  - Get
-  - Header
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - NoError
-  - Set
-  - 'True'
-  - Unmarshal
+  - assert.Empty
+  - assert.Equal
+  - assert.True
+  - require.Equal
+  - require.NoError
 - name: TestProofVerifyHandler_InvalidChainHash
   kind: func
   description: ''
@@ -118,16 +90,8 @@ objects:
   - require.NotEmpty
   - assert.Contains
   calls:
-  - Bytes
-  - Contains
-  - Equal
-  - 'False'
-  - Marshal
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - NoError
-  - NotEmpty
-  - Repeat
-  - Set
-  - Unmarshal
+  - assert.Contains
+  - assert.False
+  - require.Equal
+  - require.NoError
+  - require.NotEmpty

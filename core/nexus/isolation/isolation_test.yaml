@@ -64,14 +64,8 @@ objects:
   - assert.NoError
   - assert.Equal
   calls:
-  - AssertExpectations
-  - Background
-  - Equal
-  - NewCoordinator
-  - NoError
-  - 'On'
-  - Return
-  - Unwrap
+  - assert.Equal
+  - assert.NoError
 - name: TestCoordinator_Unwrap_Errors
   kind: func
   description: ''
@@ -80,15 +74,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - New
-  - NewCoordinator
-  - 'On'
-  - Return
-  - Run
-  - Unwrap
+  - assert.Contains
+  - assert.Error
 - name: TestCoordinator_Unwrap_WorkerResponseErrors
   kind: func
   description: ''
@@ -97,15 +84,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - New
-  - NewCoordinator
-  - 'On'
-  - Return
-  - Run
-  - Unwrap
+  - assert.Contains
+  - assert.Error
 - name: TestLocalWorker_Decrypt
   kind: func
   description: ''
@@ -117,18 +97,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decrypt
-  - Equal
-  - Error
-  - New
-  - NewLocalWorker
-  - Nil
-  - NoError
-  - 'On'
-  - Return
-  - Run
+  - assert.Contains
+  - assert.Equal
+  - assert.Error
+  - assert.Nil
+  - assert.NoError
 - name: TestNewSubprocessWorker_Success
   kind: func
   description: ''
@@ -136,18 +109,15 @@ objects:
   - require.NoError
   - require.NotNil
   calls:
-  - NewSubprocessWorker
-  - NoError
-  - NotNil
+  - require.NoError
+  - require.NotNil
 - name: TestSubprocessWorker_Decrypt_BadExecutable
   kind: func
   description: ''
   references:
   - require.Error
   calls:
-  - Background
-  - Decrypt
-  - Error
+  - require.Error
 - name: TestSubprocessWorker_Decrypt_NoResponse
   kind: func
   description: ''
@@ -155,10 +125,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decrypt
-  - Error
+  - assert.Contains
+  - require.Error
 - name: TestSubprocessWorker_Decrypt_BadJSON
   kind: func
   description: ''
@@ -166,10 +134,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decrypt
-  - Error
+  - assert.Contains
+  - require.Error
 - name: TestSubprocessWorker_Decrypt_WorkerError
   kind: func
   description: ''
@@ -178,12 +144,9 @@ objects:
   - require.NotNil
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decrypt
-  - Error
-  - NoError
-  - NotNil
+  - assert.Contains
+  - require.NoError
+  - require.NotNil
 - name: TestSubprocessWorker_Decrypt_WithEnv
   kind: func
   description: ''
@@ -191,7 +154,5 @@ objects:
   - require.NoError
   - assert.Nil
   calls:
-  - Background
-  - Decrypt
-  - Nil
-  - NoError
+  - assert.Nil
+  - require.NoError

@@ -29,13 +29,8 @@ objects:
   - canonicaljson.ToJSON
   - context.Context.Err
   calls:
-  - EncodeToString
-  - Err
-  - Errorf
-  - New
-  - Sum
-  - ToJSON
-  - Write
+  - canonicaljson.ToJSON
+  - context.Context.Err
 - name: validateAndChecksumSchema
   kind: func
   description: validateAndChecksumSchema validates Schema-specific invariants and
@@ -44,13 +39,8 @@ objects:
   - canonicaljson.ToJSON
   - context.Context.Err
   calls:
-  - EncodeToString
-  - Err
-  - Errorf
-  - New
-  - Sum
-  - ToJSON
-  - Write
+  - canonicaljson.ToJSON
+  - context.Context.Err
 - name: validateAndChecksumWorkflow
   kind: func
   description: validateAndChecksumWorkflow validates Workflow-specific invariants
@@ -59,13 +49,8 @@ objects:
   - canonicaljson.ToJSON
   - context.Context.Err
   calls:
-  - EncodeToString
-  - Err
-  - Errorf
-  - New
-  - Sum
-  - ToJSON
-  - Write
+  - canonicaljson.ToJSON
+  - context.Context.Err
 - name: validateAndChecksum
   kind: func
   description: validateAndChecksum is the single central entry point for validation
@@ -73,8 +58,7 @@ objects:
   references:
   - context.Context.Err
   calls:
-  - Err
-  - Errorf
+  - context.Context.Err
 - name: stripWasmModuleFunc
   kind: var
   description: stripWasmModuleFunc uses wabin to strip all custom sections from a

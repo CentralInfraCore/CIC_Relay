@@ -49,5 +49,4 @@ objects:
   - types.ResourceSpec
   - cabinet.GetSchema
   calls:
-  - Errorf
-  - GetSchema
+  - cabinet.GetSchema

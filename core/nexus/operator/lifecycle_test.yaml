@@ -27,12 +27,11 @@ objects:
   - assert.True
   - assert.Equal
   calls:
-  - Background
-  - BootstrapHost
-  - Equal
-  - NoError
-  - OnboardHost
-  - 'True'
+  - assert.Equal
+  - assert.NoError
+  - assert.True
+  - require.NoError
+  - require.True
 - name: TestOnboardHost_ExpiredToken
   kind: func
   description: ''
@@ -40,25 +39,15 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Add
-  - Background
-  - Contains
-  - Error
-  - Now
-  - OnboardHost
-  - UTC
+  - assert.Contains
+  - assert.Error
 - name: TestOnboardHost_InvalidHMAC
   kind: func
   description: ''
   references:
   - assert.Error
   calls:
-  - Add
-  - Background
-  - Error
-  - Now
-  - OnboardHost
-  - UTC
+  - assert.Error
 - name: TestOffboardHost_Active
   kind: func
   description: ''
@@ -69,14 +58,11 @@ objects:
   - assert.False
   - assert.NotNil
   calls:
-  - Background
-  - BootstrapHost
-  - 'False'
-  - NoError
-  - NotNil
-  - OffboardHost
-  - OnboardHost
-  - 'True'
+  - assert.False
+  - assert.NoError
+  - assert.NotNil
+  - require.NoError
+  - require.True
 - name: TestOffboardHost_NotFound
   kind: func
   description: ''
@@ -84,10 +70,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - OffboardHost
+  - assert.Contains
+  - assert.Error
 - name: TestOffboardHost_RecorderError_NonFatal
   kind: func
   description: ''
@@ -96,11 +80,8 @@ objects:
   - require.NoError
   - assert.NoError
   calls:
-  - Background
-  - BootstrapHost
-  - NoError
-  - OffboardHost
-  - OnboardHost
+  - assert.NoError
+  - require.NoError
 - name: TestHostRegistry_IsolatesHosts
   kind: func
   description: ''
@@ -109,13 +90,6 @@ objects:
   - assert.True
   - assert.False
   calls:
-  - Background
-  - BootstrapHost
-  - 'False'
-  - NewBootstrapper
-  - NewHostRegistry
-  - NewLifecycleManager
-  - NoError
-  - OffboardHost
-  - OnboardHost
-  - 'True'
+  - assert.False
+  - assert.True
+  - require.NoError

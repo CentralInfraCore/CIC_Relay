@@ -140,24 +140,21 @@ objects:
   references:
   - assert.Equal
   calls:
-  - Cleanup
-  - Equal
+  - assert.Equal
 - name: TestMain_RunError
   kind: func
   description: ''
   references:
   - assert.True
   calls:
-  - Cleanup
-  - 'True'
+  - assert.True
 - name: TestRun_EmptyAllowlist
   kind: func
   description: ''
   references:
   - assert.NoError
   calls:
-  - NoError
-  - Remove
+  - assert.NoError
 - name: TestRun_WriteError
   kind: func
   description: ''
@@ -165,6 +162,5 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Contains
-  - Error
-  - Remove
+  - assert.Contains
+  - assert.Error

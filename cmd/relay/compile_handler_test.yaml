@@ -18,18 +18,14 @@ objects:
   references:
   - logrus.New
   calls:
-  - Helper
-  - New
-  - SetOutput
+  - logrus.New
 - name: TestCompileHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NewRecorder
-  - NewRequest
+  - assert.Equal
 - name: TestCompileHandler_BodyTooLarge
   kind: func
   description: ''
@@ -37,49 +33,29 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - Equal
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - Repeat
-  - Set
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestCompileHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - Set
+  - assert.Equal
 - name: TestCompileHandler_MissingSchema
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - Marshal
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - Set
+  - assert.Equal
 - name: TestCompileHandler_MissingVersion
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - Marshal
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - Set
+  - assert.Equal
 - name: TestCompileHandler_Success
   kind: func
   description: ''
@@ -95,23 +71,12 @@ objects:
   - require.True
   - require.NotNil
   calls:
-  - AssertExpectations
-  - Bytes
-  - Equal
-  - Get
-  - Header
-  - Marshal
-  - MatchedBy
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - NoError
-  - NotNil
-  - 'On'
-  - Return
-  - Set
-  - 'True'
-  - Unmarshal
+  - assert.Equal
+  - mock.MatchedBy
+  - require.Equal
+  - require.NoError
+  - require.NotNil
+  - require.True
 - name: TestCompileHandler_WithSourceAssertion
   kind: func
   description: ''
@@ -122,16 +87,8 @@ objects:
   - cabinet.SetResponse
   - assert.Equal
   calls:
-  - AssertExpectations
-  - Equal
-  - Marshal
-  - MatchedBy
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - Set
+  - assert.Equal
+  - mock.MatchedBy
 - name: TestCompileHandler_Timeout
   kind: func
   description: ''
@@ -140,15 +97,7 @@ objects:
   - cabinet.ErrTimeout
   - assert.Equal
   calls:
-  - Equal
-  - Errorf
-  - Marshal
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - Set
+  - assert.Equal
 - name: TestCompileHandler_InternalError
   kind: func
   description: ''
@@ -156,22 +105,11 @@ objects:
   - mock.Anything
   - assert.Equal
   calls:
-  - Equal
-  - Errorf
-  - Marshal
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - Set
+  - assert.Equal
 - name: TestCompileHandler_ReadBodyError
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NewRecorder
-  - NewRequest
-  - NopCloser
+  - assert.Equal

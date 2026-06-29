@@ -14,10 +14,7 @@ objects:
   references:
   - canonicaljson.ToJSON
   calls:
-  - EncodeToString
-  - Errorf
-  - Sum256
-  - ToJSON
+  - canonicaljson.ToJSON
 - name: GlobalChainHash
   kind: func
   description: GlobalChainHash returns a single SHA-256 over all records in emission

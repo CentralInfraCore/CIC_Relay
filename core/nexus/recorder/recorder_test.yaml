@@ -48,17 +48,9 @@ objects:
   - assert.NotEmpty
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - Join
-  - NewGitStateRecorder
-  - NoError
-  - NotEmpty
-  - Now
-  - ReadFile
-  - RecordState
-  - TempDir
-  - Unmarshal
+  - assert.Equal
+  - assert.NotEmpty
+  - require.NoError
 - name: TestWorkflowRecorder_Record_Success
   kind: func
   description: ''
@@ -66,15 +58,8 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Join
-  - NewGitStateRecorder
-  - NewWorkflowRecorder
-  - NoError
-  - ReadFile
-  - Record
-  - TempDir
+  - assert.Contains
+  - require.NoError
 - name: TestWorkflowRecorder_Record_NilStateRecorder
   kind: func
   description: ''
@@ -82,11 +67,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewWorkflowRecorder
-  - Record
+  - assert.Contains
+  - require.Error
 - name: TestWorkflowRecorder_Record_VaultUnavailable
   kind: func
   description: ''
@@ -95,15 +77,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - New
-  - NewGitStateRecorder
-  - NewWorkflowRecorder
-  - NoError
-  - Record
-  - TempDir
+  - assert.Contains
+  - require.Error
+  - require.NoError
 - name: TestWorkflowRecorder_RunID_Is_WorkflowID
   kind: func
   description: ''
@@ -112,11 +88,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - NewWorkflowRecorder
-  - NoError
-  - Record
+  - assert.Equal
+  - require.NoError
 - name: RecordState
   kind: method
   receiver: mockStateRecorder
@@ -134,17 +107,9 @@ objects:
   - assert.Contains
   - assert.AnError
   calls:
-  - Background
-  - Contains
-  - Error
-  - Inf
-  - Join
-  - NewGitStateRecorder
-  - NoError
-  - RecordState
-  - RemoveAll
-  - Run
-  - TempDir
+  - assert.Contains
+  - assert.Error
+  - require.NoError
 - name: TestGitStateRecorder_GetHeadHash_NoCommits
   kind: func
   description: ''
@@ -153,20 +118,16 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Command
-  - Contains
-  - Error
-  - NoError
-  - Run
-  - TempDir
+  - assert.Contains
+  - assert.Error
+  - require.NoError
 - name: TestGitStateRecorder_Init_AlreadyInitialized
   kind: func
   description: ''
   references:
   - require.NoError
   calls:
-  - NoError
-  - TempDir
+  - require.NoError
 - name: TestGitStateRecorder_RecordState_WriteFileFails
   kind: func
   description: ''
@@ -176,12 +137,6 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - Join
-  - MkdirAll
-  - NewGitStateRecorder
-  - NoError
-  - RecordState
-  - TempDir
+  - assert.Contains
+  - require.Error
+  - require.NoError

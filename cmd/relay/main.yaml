@@ -75,11 +75,8 @@ objects:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
   calls:
-  - Encode
-  - Header
-  - NewEncoder
-  - Set
-  - WriteHeader
+  - http.ResponseWriter.Header
+  - http.ResponseWriter.WriteHeader
 - name: newMux
   kind: func
   description: newMux creates a new HTTP multiplexer and registers all relay API routes.
@@ -96,13 +93,8 @@ objects:
   - logrus.Fields
   - http.ResponseWriter.Header
   calls:
-  - Fprintln
-  - Header
-  - Info
-  - New
-  - Set
-  - String
-  - WithFields
+  - http.ResponseWriter.Header
+  - uuid.New
 - name: healthzHandler
   kind: method
   receiver: relayServer
@@ -111,11 +103,8 @@ objects:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
   calls:
-  - Encode
-  - Header
-  - NewEncoder
-  - Set
-  - WriteHeader
+  - http.ResponseWriter.Header
+  - http.ResponseWriter.WriteHeader
 - name: readyzHandler
   kind: method
   receiver: relayServer
@@ -124,11 +113,8 @@ objects:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
   calls:
-  - Encode
-  - Header
-  - NewEncoder
-  - Set
-  - WriteHeader
+  - http.ResponseWriter.Header
+  - http.ResponseWriter.WriteHeader
 - name: setHandler
   kind: method
   receiver: relayServer
@@ -147,31 +133,12 @@ objects:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
   calls:
-  - Close
-  - Context
-  - Encode
-  - Error
-  - Format
-  - Header
-  - Info
-  - IsInvalid
-  - IsTimeout
-  - LimitReader
-  - New
-  - NewAPI
-  - NewEncoder
-  - Now
-  - ReadAll
-  - Set
-  - Sprintf
-  - String
-  - UTC
-  - Unmarshal
-  - Warn
-  - WithError
-  - WithField
-  - WithFields
-  - WriteHeader
+  - cabinet.IsInvalid
+  - cabinet.IsTimeout
+  - cabinet.NewAPI
+  - http.ResponseWriter.Header
+  - http.ResponseWriter.WriteHeader
+  - uuid.New
 - name: validateConfig
   kind: func
   description: 'validateConfig validates the loaded configuration using the cabinet
@@ -182,9 +149,7 @@ objects:
   references:
   - cabinet.ValidateSchema
   calls:
-  - Errorf
-  - String
-  - ValidateSchema
+  - cabinet.ValidateSchema
 - name: loadSecretsFromVault
   kind: func
   description: 'loadSecretsFromVault reads Vault-related parameters from environment
@@ -209,12 +174,8 @@ objects:
   - recorder.NewWorkflowRecorder
   - logrus.Fields
   calls:
-  - Info
-  - NewWorkflowRecorder
-  - Warn
-  - WithError
-  - WithFields
-  - WithRecorder
+  - cabinet.WithRecorder
+  - recorder.NewWorkflowRecorder
 - name: buildOperatorIfConfigured
   kind: func
   description: 'buildOperatorIfConfigured constructs and returns an Operator if CIC_INFRA_REPO_PATH
@@ -241,27 +202,16 @@ objects:
   - iac.NewIaCValidator
   - logrus.Fields
   calls:
-  - Fatal
-  - Getenv
-  - Info
-  - Load
-  - NewBootstrapper
-  - NewCabinetActivator
-  - NewFileSource
-  - NewGitSource
-  - NewHostRegistry
-  - NewIaCValidator
-  - NewLifecycleManager
-  - NewLoader
-  - NewOperatorWithLifecycle
-  - NewPollingWatcher
-  - NewUpstreamSourceFromEnv
-  - Warn
-  - WithActivator
-  - WithError
-  - WithFields
-  - WithGraph
-  - WithValidator
+  - iac.NewFileSource
+  - iac.NewGitSource
+  - iac.NewIaCValidator
+  - iac.NewLoader
+  - iac.NewUpstreamSourceFromEnv
+  - operator.NewBootstrapper
+  - operator.NewHostRegistry
+  - operator.NewLifecycleManager
+  - operator.NewOperatorWithLifecycle
+  - operator.NewPollingWatcher
 - name: run
   kind: func
   description: run is a separate function to avoid calling main() in unit tests
@@ -294,36 +244,20 @@ objects:
   - merkle.GoRuntimeDigest
   - obs.Resource
   calls:
-  - Background
-  - Close
-  - Debug
-  - Fatal
-  - Getenv
-  - GoRuntimeDigest
-  - GoSumDigest
-  - Info
-  - New
-  - NewCabinetService
-  - NewExecGitOps
-  - NewLogrusSink
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NewRepoRegistry
-  - NewVaultCryptoService
-  - Register
-  - Run
-  - RunWorkerLoop
-  - SetFormatter
-  - SetObsSinks
-  - String
-  - Warn
-  - WithCancel
-  - WithError
-  - WithField
-  - WithFields
-  - WithObsSinks
-  - WithTimeout
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WithObsSinks
+  - crypto.NewVaultCryptoService
+  - git.NewExecGitOps
+  - git.NewRepoRegistry
+  - isolation.RunWorkerLoop
+  - logrus.New
+  - merkle.GoRuntimeDigest
+  - merkle.GoSumDigest
+  - obs.NewLogrusSink
+  - uuid.New
 - name: listenAndServe
   kind: var
   description: 'test seam: can be overridden in unit tests'

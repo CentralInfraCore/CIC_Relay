@@ -29,11 +29,8 @@ objects:
   - api.DefaultConfig
   - api.NewClient
   calls:
-  - DefaultConfig
-  - Errorf
-  - NewClient
-  - ReadEnvironment
-  - Token
+  - api.DefaultConfig
+  - api.NewClient
 - name: Sign
   kind: method
   receiver: VaultCryptoService

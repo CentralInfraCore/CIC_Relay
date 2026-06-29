@@ -36,34 +36,28 @@ objects:
   references:
   - io.Writer.Write
   calls:
-  - Errorf
-  - Marshal
-  - Sprintf
-  - Unmarshal
-  - Write
+  - io.Writer.Write
 - name: writeJSONString
   kind: func
   description: ''
   references:
   - io.Writer.Write
   calls:
-  - Marshal
-  - Write
+  - io.Writer.Write
 - name: writeJSONArray
   kind: func
   description: ''
   references:
   - io.Writer.Write
   calls:
-  - Write
+  - io.Writer.Write
 - name: writeJSONMap
   kind: func
   description: ''
   references:
   - io.Writer.Write
   calls:
-  - Strings
-  - Write
+  - io.Writer.Write
 - name: ToJSONImpl
   kind: var
   description: ToJSONImpl is the actual implementation of ToJSON that can be swapped

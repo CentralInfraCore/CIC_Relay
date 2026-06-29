@@ -17,28 +17,23 @@ objects:
   - assert.Nil
   - assert.ErrorIs
   calls:
-  - Background
-  - Error
-  - ErrorIs
-  - NewModuleDescriptor
-  - Nil
-  - Run
+  - assert.Error
+  - assert.ErrorIs
+  - assert.Nil
 - name: TestModuleDescriptor_ID_Basic
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - ID
+  - assert.Equal
 - name: TestModuleDescriptor_ID_EmptyParts
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - ID
+  - assert.Equal
 - name: TestModuleDescriptor_GetData_ReturnsCompositeStruct
   kind: func
   description: ''
@@ -49,9 +44,8 @@ objects:
   - require.True
   - assert.Equal
   calls:
-  - Equal
-  - GetData
-  - JSONEq
-  - NoError
-  - ToJSON
-  - 'True'
+  - assert.Equal
+  - assert.JSONEq
+  - canonicaljson.ToJSON
+  - require.NoError
+  - require.True

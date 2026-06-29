@@ -25,21 +25,16 @@ objects:
   - testify_assert.NoError
   - require.Error
   calls:
-  - Background
-  - Cleanup
-  - Contains
-  - Equal
-  - Error
-  - ErrorIs
-  - 'False'
-  - New
-  - NoError
-  - Run
-  - SetStripWasmModuleFunc
-  - SetToJSONMock
-  - Sprintf
-  - 'True'
-  - WithCancel
+  - canonicaljson.SetToJSONMock
+  - require.Error
+  - require.NoError
+  - testify_assert.Contains
+  - testify_assert.Equal
+  - testify_assert.Error
+  - testify_assert.ErrorIs
+  - testify_assert.False
+  - testify_assert.NoError
+  - testify_assert.True
 - name: TestComputeChecksum_ErrorCases
   kind: func
   description: ''
@@ -50,16 +45,11 @@ objects:
   - testify_assert.Contains
   - testify_assert.NoError
   calls:
-  - Background
-  - Cleanup
-  - Contains
-  - Error
-  - NaN
-  - New
-  - NoError
-  - Run
-  - SetToJSONMock
-  - ToJSONOriginal
+  - canonicaljson.SetToJSONMock
+  - canonicaljson.ToJSONOriginal
+  - testify_assert.Contains
+  - testify_assert.Error
+  - testify_assert.NoError
 - name: TestStripWasmModuleFunc_Error
   kind: func
   description: ''
@@ -67,9 +57,8 @@ objects:
   - require.Error
   - testify_assert.Contains
   calls:
-  - Contains
-  - Error
-  - Run
+  - require.Error
+  - testify_assert.Contains
 - name: TestComputeChecksum_ContextCancelled
   kind: func
   description: ''
@@ -77,10 +66,8 @@ objects:
   - require.Error
   - testify_assert.ErrorIs
   calls:
-  - Background
-  - Error
-  - ErrorIs
-  - WithCancel
+  - require.Error
+  - testify_assert.ErrorIs
 - name: TestNewModuleDescriptor_ContextCancelled
   kind: func
   description: ''
@@ -88,11 +75,8 @@ objects:
   - require.Error
   - testify_assert.ErrorIs
   calls:
-  - Background
-  - Error
-  - ErrorIs
-  - NewModuleDescriptor
-  - WithCancel
+  - require.Error
+  - testify_assert.ErrorIs
 - name: TestNewWorkflow_ContextCancelled
   kind: func
   description: ''
@@ -100,11 +84,8 @@ objects:
   - require.Error
   - testify_assert.ErrorIs
   calls:
-  - Background
-  - Error
-  - ErrorIs
-  - NewWorkflow
-  - WithCancel
+  - require.Error
+  - testify_assert.ErrorIs
 - name: TestNewSchema_ContextCancelled
   kind: func
   description: ''
@@ -112,11 +93,8 @@ objects:
   - require.Error
   - testify_assert.ErrorIs
   calls:
-  - Background
-  - Error
-  - ErrorIs
-  - NewSchema
-  - WithCancel
+  - require.Error
+  - testify_assert.ErrorIs
 - name: TestValidateAndChecksumSchema_Validation
   kind: func
   description: ''
@@ -125,12 +103,9 @@ objects:
   - testify_assert.ErrorIs
   - testify_assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - ErrorIs
-  - NewSchema
-  - Run
+  - testify_assert.Contains
+  - testify_assert.Error
+  - testify_assert.ErrorIs
 - name: TestValidateAndChecksumWorkflow_Validation
   kind: func
   description: ''
@@ -139,12 +114,9 @@ objects:
   - testify_assert.ErrorIs
   - testify_assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - ErrorIs
-  - NewWorkflow
-  - Run
+  - testify_assert.Contains
+  - testify_assert.Error
+  - testify_assert.ErrorIs
 - name: wasmBase
   kind: var
   description: 'wasmBase is the binary representation of a simple WASM module that

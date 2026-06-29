@@ -30,7 +30,7 @@ objects:
   - rate.Limiter
   - rate.Limit
   calls:
-  - Limit
+  - rate.Limit
 - name: getLimiter
   kind: method
   receiver: ipRateLimiter
@@ -39,9 +39,7 @@ objects:
   - rate.Limiter
   - rate.NewLimiter
   calls:
-  - Lock
-  - NewLimiter
-  - Unlock
+  - rate.NewLimiter
 - name: Middleware
   kind: method
   receiver: ipRateLimiter
@@ -50,10 +48,7 @@ objects:
   references:
   - http.Handler.ServeHTTP
   calls:
-  - Allow
-  - HandlerFunc
-  - ServeHTTP
-  - SplitHostPort
+  - http.Handler.ServeHTTP
 - name: newConcurrentLimiter
   kind: func
   description: newConcurrentLimiter creates a new limiter that caps the number of
@@ -68,8 +63,7 @@ objects:
   references:
   - http.Handler.ServeHTTP
   calls:
-  - HandlerFunc
-  - ServeHTTP
+  - http.Handler.ServeHTTP
 - name: buildHandler
   kind: func
   description: buildHandler wraps the request multiplexer with per-IP rate limiting

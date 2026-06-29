@@ -44,17 +44,9 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - New
-  - NewOperator
-  - NoError
-  - 'On'
-  - Return
-  - Run
-  - Sleep
-  - WithTimeout
+  - assert.Contains
+  - assert.Error
+  - assert.NoError
 - name: TestOperator_handleEvent
   kind: func
   description: ''
@@ -62,11 +54,8 @@ objects:
   - assert.NoError
   - assert.Error
   calls:
-  - Background
-  - Error
-  - NewOperator
-  - NoError
-  - Run
+  - assert.Error
+  - assert.NoError
 - name: TestOperatorWithLifecycle_OnApply_Host
   kind: func
   description: ''
@@ -75,13 +64,9 @@ objects:
   - require.True
   - assert.True
   calls:
-  - Background
-  - NewBootstrapper
-  - NewHostRegistry
-  - NewLifecycleManager
-  - NewOperatorWithLifecycle
-  - NoError
-  - 'True'
+  - assert.NoError
+  - assert.True
+  - require.True
 - name: TestOperatorWithLifecycle_OnApply_NonHost_Skipped
   kind: func
   description: ''
@@ -89,13 +74,8 @@ objects:
   - assert.NoError
   - assert.False
   calls:
-  - Background
-  - 'False'
-  - NewBootstrapper
-  - NewHostRegistry
-  - NewLifecycleManager
-  - NewOperatorWithLifecycle
-  - NoError
+  - assert.False
+  - assert.NoError
 - name: TestOperatorWithLifecycle_OnDelete
   kind: func
   description: ''
@@ -105,16 +85,10 @@ objects:
   - require.True
   - assert.False
   calls:
-  - Background
-  - BootstrapHost
-  - 'False'
-  - NewBootstrapper
-  - NewHostRegistry
-  - NewLifecycleManager
-  - NewOperatorWithLifecycle
-  - NoError
-  - OnboardHost
-  - 'True'
+  - assert.False
+  - assert.NoError
+  - require.NoError
+  - require.True
 - name: TestOperatorWithLifecycle_OnDelete_NotFound
   kind: func
   description: ''
@@ -122,26 +96,15 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewBootstrapper
-  - NewHostRegistry
-  - NewLifecycleManager
-  - NewOperatorWithLifecycle
+  - assert.Contains
+  - assert.Error
 - name: TestPollingWatcher_Watch
   kind: func
   description: ''
   references:
   - require.NoError
   calls:
-  - Background
-  - NewPollingWatcher
-  - NoError
-  - Sleep
-  - TempDir
-  - Watch
-  - WithTimeout
+  - require.NoError
 - name: collectEvents
   kind: func
   description: ''
@@ -158,17 +121,10 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   calls:
-  - Background
-  - Equal
-  - Join
-  - Len
-  - NewPollingWatcher
-  - NoError
-  - NotEmpty
-  - TempDir
-  - Watch
-  - WithCancel
-  - WriteFile
+  - assert.Equal
+  - assert.NotEmpty
+  - require.Len
+  - require.NoError
 - name: TestPollingWatcher_StateDiff_Update
   kind: func
   description: ''
@@ -177,17 +133,9 @@ objects:
   - require.Len
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - Join
-  - Len
-  - NewPollingWatcher
-  - NoError
-  - Rename
-  - TempDir
-  - Watch
-  - WithCancel
-  - WriteFile
+  - assert.Equal
+  - require.Len
+  - require.NoError
 - name: TestPollingWatcher_StateDiff_Delete
   kind: func
   description: ''
@@ -197,18 +145,10 @@ objects:
   - assert.Equal
   - assert.Nil
   calls:
-  - Background
-  - Equal
-  - Join
-  - Len
-  - NewPollingWatcher
-  - Nil
-  - NoError
-  - Remove
-  - TempDir
-  - Watch
-  - WithCancel
-  - WriteFile
+  - assert.Equal
+  - assert.Nil
+  - require.Len
+  - require.NoError
 - name: ValidateResource
   kind: method
   receiver: mockValidator
@@ -236,12 +176,9 @@ objects:
   - require.Len
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - Len
-  - NewOperator
-  - NoError
-  - WithActivator
+  - assert.Equal
+  - require.Len
+  - require.NoError
 - name: TestOnApplyService_DesiredAbsent_NotActivated
   kind: func
   description: ''
@@ -249,11 +186,8 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Background
-  - Empty
-  - NewOperator
-  - NoError
-  - WithActivator
+  - assert.Empty
+  - require.NoError
 - name: TestOnApplyService_DepsNotInGraph_Skipped
   kind: func
   description: ''
@@ -263,12 +197,8 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Background
-  - Empty
-  - NewOperator
-  - NoError
-  - WithActivator
-  - WithGraph
+  - assert.Empty
+  - require.NoError
 - name: TestOnApplyService_DepsReady_Activated
   kind: func
   description: ''
@@ -282,13 +212,9 @@ objects:
   - require.Len
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - Len
-  - NewOperator
-  - NoError
-  - WithActivator
-  - WithGraph
+  - assert.Equal
+  - require.Len
+  - require.NoError
 - name: TestOnApplyService_ActivatorError_ContinuesNextResource
   kind: func
   description: ''
@@ -296,12 +222,8 @@ objects:
   - require.NoError
   - assert.Len
   calls:
-  - Background
-  - Len
-  - New
-  - NewOperator
-  - NoError
-  - WithActivator
+  - assert.Len
+  - require.NoError
 - name: TestPollingWatcher_EmptyDir_NoEvents
   kind: func
   description: ''
@@ -309,22 +231,15 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Background
-  - Empty
-  - NewPollingWatcher
-  - NoError
-  - TempDir
-  - Watch
-  - WithTimeout
+  - assert.Empty
+  - require.NoError
 - name: TestWithValidator_SetsValidator
   kind: func
   description: ''
   references:
   - assert.Same
   calls:
-  - NewOperator
-  - Same
-  - WithValidator
+  - assert.Same
 - name: TestOnApplyService_ValidatorError_SkipsActivation
   kind: func
   description: ''
@@ -332,13 +247,8 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Background
-  - Empty
-  - New
-  - NewOperator
-  - NoError
-  - WithActivator
-  - WithValidator
+  - assert.Empty
+  - require.NoError
 - name: TestOnApplyService_ValidatorPass_Activated
   kind: func
   description: ''
@@ -346,9 +256,5 @@ objects:
   - require.NoError
   - require.Len
   calls:
-  - Background
-  - Len
-  - NewOperator
-  - NoError
-  - WithActivator
-  - WithValidator
+  - require.Len
+  - require.NoError

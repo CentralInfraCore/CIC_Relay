@@ -68,11 +68,7 @@ objects:
   references:
   - time.Time.Format
   calls:
-  - EncodeToString
-  - Format
-  - New
-  - Sum
-  - Write
+  - time.Time.Format
 - name: recordIssuance
   kind: method
   receiver: Bootstrapper
@@ -82,9 +78,7 @@ objects:
   - types.ExpectedState
   - recorder.RecordState
   calls:
-  - RecordState
-  - Warn
-  - WithError
+  - recorder.RecordState
 - name: bootstrapTokenTTL
   kind: const
   description: ''

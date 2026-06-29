@@ -14,134 +14,105 @@ objects:
   references:
   - assert.NotEqual
   calls:
-  - LeafHash
-  - NodeHash
-  - NotEqual
+  - assert.NotEqual
 - name: TestLeafHash_NullMarker
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
+  - assert.Equal
 - name: TestLeafHash_Determinism
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
+  - assert.Equal
 - name: TestLeafHash_NameAndValueBothMatter
   kind: func
   description: ''
   references:
   - assert.NotEqual
   calls:
-  - LeafHash
-  - NotEqual
+  - assert.NotEqual
 - name: TestNodeHash_NotCommutative
   kind: func
   description: ''
   references:
   - assert.NotEqual
   calls:
-  - LeafHash
-  - NodeHash
-  - NotEqual
+  - assert.NotEqual
 - name: TestMerkleRoot_Empty
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - MerkleRoot
-  - Sum256
+  - assert.Equal
 - name: TestMerkleRoot_Single
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
-  - MerkleRoot
+  - assert.Equal
 - name: TestMerkleRoot_Two
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
-  - MerkleRoot
-  - NodeHash
+  - assert.Equal
 - name: TestMerkleRoot_OddCount_DuplicatesLast
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
-  - MerkleRoot
-  - NodeHash
+  - assert.Equal
 - name: TestMerkleRoot_EvenCount
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
-  - MerkleRoot
-  - NodeHash
+  - assert.Equal
 - name: TestMerkleRoot_OrderMatters
   kind: func
   description: ''
   references:
   - assert.NotEqual
   calls:
-  - LeafHash
-  - MerkleRoot
-  - NotEqual
+  - assert.NotEqual
 - name: TestMerkleRoot_Determinism
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
-  - MerkleRoot
+  - assert.Equal
 - name: TestSizeLeaf_DecimalEncoding
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
-  - SizeLeaf
+  - assert.Equal
 - name: TestSizeLeaf_NoLeadingZeros
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - LeafHash
-  - SizeLeaf
+  - assert.Equal
 - name: TestBuildVerificationRoot_Determinism
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - BuildVerificationRoot
-  - Equal
+  - assert.Equal
 - name: TestBuildVerificationRoot_HexOutput
   kind: func
   description: ''
@@ -149,26 +120,22 @@ objects:
   - require.NoError
   - assert.Len
   calls:
-  - BuildVerificationRoot
-  - DecodeString
-  - Len
-  - NoError
+  - assert.Len
+  - require.NoError
 - name: TestBuildVerificationRoot_SensitiveToLeafChange
   kind: func
   description: ''
   references:
   - assert.NotEqual
   calls:
-  - BuildVerificationRoot
-  - NotEqual
+  - assert.NotEqual
 - name: TestBuildVerificationRoot_SensitiveToSubtreePosition
   kind: func
   description: ''
   references:
   - assert.NotEqual
   calls:
-  - BuildVerificationRoot
-  - NotEqual
+  - assert.NotEqual
 - name: TestBuildVerificationRoot_EmptyManifestIsStable
   kind: func
   description: ''
@@ -176,17 +143,15 @@ objects:
   - assert.Equal
   - assert.Len
   calls:
-  - BuildVerificationRoot
-  - Equal
-  - Len
+  - assert.Equal
+  - assert.Len
 - name: TestBuildVerificationRoot_ArtifactSizeZeroVsNonZero
   kind: func
   description: ''
   references:
   - assert.NotEqual
   calls:
-  - BuildVerificationRoot
-  - NotEqual
+  - assert.NotEqual
 - name: TestGoRuntimeDigest_Format
   kind: func
   description: ''
@@ -195,27 +160,23 @@ objects:
   - require.NoError
   - assert.Len
   calls:
-  - DecodeString
-  - GoRuntimeDigest
-  - Len
-  - NoError
-  - 'True'
+  - assert.Len
+  - assert.True
+  - require.NoError
 - name: TestGoRuntimeDigest_Determinism
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - GoRuntimeDigest
+  - assert.Equal
 - name: TestGoSumDigest_MissingFile
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - GoSumDigest
+  - assert.Equal
 - name: TestGoSumDigest_File
   kind: func
   description: ''
@@ -224,12 +185,6 @@ objects:
   - assert.True
   - assert.Len
   calls:
-  - Close
-  - CreateTemp
-  - GoSumDigest
-  - Len
-  - Name
-  - NoError
-  - TempDir
-  - 'True'
-  - WriteString
+  - assert.Len
+  - assert.True
+  - require.NoError

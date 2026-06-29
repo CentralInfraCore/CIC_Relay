@@ -64,20 +64,10 @@ objects:
   - lru.NewWithEvict
   - context.Context.Err
   calls:
-  - Background
-  - Close
-  - Err
-  - Error
-  - Errorf
-  - Format
-  - HostSetupFn
-  - Instantiate
-  - NewRuntimeConfig
-  - NewRuntimeWithConfig
-  - Now
-  - RecordLog
-  - UTC
-  - WithCloseOnContextDone
+  - context.Context.Err
+  - wasi_snapshot_preview1.Instantiate
+  - wazero.NewRuntimeConfig
+  - wazero.NewRuntimeWithConfig
 - name: PreCompileModule
   kind: method
   receiver: WasmManager
@@ -113,22 +103,7 @@ objects:
   - obs.HistogramPoint
   - obs.ResourceComponent
   calls:
-  - Close
-  - Duration
-  - Errorf
-  - Format
-  - InstantiateModule
-  - Load
-  - Milliseconds
-  - New
-  - NewModuleConfig
-  - Now
-  - PreCompileModule
-  - RecordHistogram
-  - Since
-  - UTC
-  - WithName
-  - WithStartFunctions
+  - wazero.NewModuleConfig
 - name: EvictModule
   kind: method
   receiver: WasmManager
@@ -159,9 +134,8 @@ objects:
   - api.Module.ExportedFunction
   - api.Module.Name
   calls:
-  - Errorf
-  - ExportedFunction
-  - Name
+  - api.Module.ExportedFunction
+  - api.Module.Name
 - name: Close
   kind: method
   receiver: CicWasmHost

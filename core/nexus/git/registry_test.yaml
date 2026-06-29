@@ -17,11 +17,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NewRepoRegistry
-  - NoError
-  - Register
-  - Resolve
+  - assert.Equal
+  - require.NoError
 - name: TestRepoRegistry_WhitelistEnforce
   kind: func
   description: TestRepoRegistry_WhitelistEnforce verifies that an unknown repoID is
@@ -30,10 +27,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Contains
-  - Error
-  - NewRepoRegistry
-  - Resolve
+  - assert.Contains
+  - require.Error
 - name: TestRepoRegistry_Overwrite
   kind: func
   description: TestRepoRegistry_Overwrite verifies that re-registering a repoID replaces
@@ -42,8 +37,5 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NewRepoRegistry
-  - NoError
-  - Register
-  - Resolve
+  - assert.Equal
+  - require.NoError

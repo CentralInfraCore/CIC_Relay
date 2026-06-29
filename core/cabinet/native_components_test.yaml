@@ -17,9 +17,6 @@ objects:
   - assert.Equal
   - assert.Nil
   calls:
-  - Background
-  - CoreEcho
-  - Equal
-  - Nil
-  - NoError
-  - Run
+  - assert.Equal
+  - assert.Nil
+  - require.NoError

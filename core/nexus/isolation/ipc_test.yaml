@@ -30,16 +30,9 @@ objects:
   - assert.Empty
   - assert.Equal
   calls:
-  - Background
-  - Decode
-  - DecodeString
-  - Empty
-  - EncodeToString
-  - Equal
-  - NewDecoder
-  - NewReader
-  - NoError
-  - RunWorkerLoop
+  - assert.Empty
+  - assert.Equal
+  - require.NoError
 - name: TestRunWorkerLoop_MultipleRequests
   kind: func
   description: ''
@@ -48,18 +41,9 @@ objects:
   - assert.Empty
   - assert.Equal
   calls:
-  - Background
-  - Decode
-  - DecodeString
-  - Empty
-  - EncodeToString
-  - Equal
-  - NewDecoder
-  - NewReader
-  - NoError
-  - RunWorkerLoop
-  - String
-  - WriteString
+  - assert.Empty
+  - assert.Equal
+  - require.NoError
 - name: TestRunWorkerLoop_InvalidJSON
   kind: func
   description: ''
@@ -68,14 +52,9 @@ objects:
   - assert.NotEmpty
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decode
-  - NewDecoder
-  - NewReader
-  - NoError
-  - NotEmpty
-  - RunWorkerLoop
+  - assert.Contains
+  - assert.NotEmpty
+  - require.NoError
 - name: TestRunWorkerLoop_InvalidBase64
   kind: func
   description: ''
@@ -84,27 +63,16 @@ objects:
   - assert.NotEmpty
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decode
-  - NewDecoder
-  - NewReader
-  - NoError
-  - NotEmpty
-  - RunWorkerLoop
+  - assert.Contains
+  - assert.NotEmpty
+  - require.NoError
 - name: TestRunWorkerLoop_ContextCancelled
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Background
-  - EncodeToString
-  - Equal
-  - Len
-  - NewReader
-  - RunWorkerLoop
-  - WithCancel
+  - assert.Equal
 - name: TestRunWorkerLoop_WithWorker_Success
   kind: func
   description: ''
@@ -115,19 +83,10 @@ objects:
   - assert.Empty
   - assert.Equal
   calls:
-  - Background
-  - Decode
-  - DecodeString
-  - Empty
-  - EncodeToString
-  - Equal
-  - MatchedBy
-  - NewDecoder
-  - NewReader
-  - NoError
-  - 'On'
-  - Return
-  - RunWorkerLoop
+  - assert.Empty
+  - assert.Equal
+  - mock.MatchedBy
+  - require.NoError
 - name: TestRunWorkerLoop_WithWorker_DecryptError
   kind: func
   description: ''
@@ -136,17 +95,8 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decode
-  - EncodeToString
-  - New
-  - NewDecoder
-  - NewReader
-  - NoError
-  - 'On'
-  - Return
-  - RunWorkerLoop
+  - assert.Contains
+  - require.NoError
 - name: TestRunWorkerLoop_WithWorker_ResponseError
   kind: func
   description: ''
@@ -155,17 +105,8 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Decode
-  - EncodeToString
-  - New
-  - NewDecoder
-  - NewReader
-  - NoError
-  - 'On'
-  - Return
-  - RunWorkerLoop
+  - assert.Contains
+  - require.NoError
 - name: TestSubprocessWorker_RoundTrip
   kind: func
   description: ''
@@ -173,8 +114,5 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Background
-  - Decrypt
-  - Environ
-  - Equal
-  - NoError
+  - assert.Equal
+  - require.NoError

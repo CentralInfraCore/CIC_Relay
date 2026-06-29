@@ -50,14 +50,8 @@ objects:
   - context.Context.Done
   - context.Context.Err
   calls:
-  - After
-  - Done
-  - Err
-  - Errorf
-  - Warn
-  - WithError
-  - WithField
-  - WithFields
+  - context.Context.Done
+  - context.Context.Err
 - name: fetchOnce
   kind: method
   receiver: UpstreamSource

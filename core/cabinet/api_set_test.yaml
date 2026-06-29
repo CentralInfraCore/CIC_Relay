@@ -72,11 +72,9 @@ objects:
   - assert.ErrorIs
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - ErrorIs
-  - Set
+  - assert.Contains
+  - assert.Error
+  - assert.ErrorIs
 - name: TestAPI_Set_ValidationError
   kind: func
   description: ''
@@ -85,16 +83,9 @@ objects:
   - assert.Error
   - assert.ErrorIs
   calls:
-  - Background
-  - Error
-  - ErrorIs
-  - NewAPI
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - Set
+  - assert.Error
+  - assert.ErrorIs
+  - require.NoError
 - name: TestAPI_ValidateSet_NilPayload
   kind: func
   description: ''
@@ -103,11 +94,9 @@ objects:
   - assert.ErrorIs
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - ErrorIs
-  - ValidateSet
+  - assert.Contains
+  - assert.Error
+  - assert.ErrorIs
 - name: TestAPI_ValidateSet_StoreErrors
   kind: func
   description: ''
@@ -116,14 +105,9 @@ objects:
   - assert.NotErrorIs
   - assert.Equal
   calls:
-  - Background
-  - Equal
-  - Error
-  - New
-  - NewAPI
-  - NotErrorIs
-  - Run
-  - ValidateSet
+  - assert.Equal
+  - assert.Error
+  - assert.NotErrorIs
 - name: TestAPI_ValidateSet_Options
   kind: func
   description: ''
@@ -133,11 +117,7 @@ objects:
   - assert.ErrorIs
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - ErrorIs
-  - NewAPI
-  - NoError
-  - Run
-  - ValidateSet
+  - assert.Contains
+  - assert.Error
+  - assert.ErrorIs
+  - assert.NoError

@@ -70,8 +70,7 @@ objects:
   references:
   - require.NoError
   calls:
-  - NoError
-  - Sub
+  - require.NoError
 - name: TestLoadPKIAssets
   kind: func
   description: ''
@@ -84,22 +83,13 @@ objects:
   - require.Error
   - assert.ErrorIs
   calls:
-  - Contains
-  - DirFS
-  - Equal
-  - Error
-  - ErrorIs
-  - Join
-  - NewCertPool
-  - NoError
-  - NotEqual
-  - ReadFile
-  - Run
-  - SetOutput
-  - String
-  - TempDir
-  - 'True'
-  - WriteFile
+  - assert.Contains
+  - assert.Equal
+  - assert.ErrorIs
+  - assert.NotEqual
+  - assert.True
+  - require.Error
+  - require.NoError
 - name: TestLoadSchema
   kind: func
   description: ''
@@ -115,18 +105,15 @@ objects:
   - logrus.StandardLogger
   - logrus.SetOutput
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - Run
-  - SetOutput
-  - StandardLogger
-  - String
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.SetOutput
+  - logrus.StandardLogger
+  - require.Error
+  - require.NoError
 - name: TestLoadWorkflow
   kind: func
   description: ''
@@ -142,18 +129,15 @@ objects:
   - logrus.StandardLogger
   - logrus.SetOutput
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - Run
-  - SetOutput
-  - StandardLogger
-  - String
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.SetOutput
+  - logrus.StandardLogger
+  - require.Error
+  - require.NoError
 - name: TestLoadEmbeddedComponents
   kind: func
   description: ''
@@ -166,14 +150,12 @@ objects:
   - require.NoError
   - assert.NoError
   calls:
-  - Background
-  - GetSchema
-  - GetWorkflow
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
 - name: TestLoadEmbeddedComponents_Error
   kind: func
   description: ''
@@ -188,16 +170,14 @@ objects:
   - assert.Contains
   - assert.ErrorIs
   calls:
-  - Background
-  - Contains
-  - Error
-  - ErrorIs
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - Run
+  - assert.Contains
+  - assert.Error
+  - assert.ErrorIs
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
 - name: TestLoadComponentsFromFS
   kind: func
   description: ''
@@ -211,20 +191,13 @@ objects:
   - assert.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - DirFS
-  - Join
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - Run
-  - SetOutput
-  - String
-  - TempDir
-  - WriteFile
+  - assert.Contains
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
 - name: TestLoadModule
   kind: func
   description: ''
@@ -246,36 +219,18 @@ objects:
   - mock.Anything
   - cabinet.ErrNotFound
   calls:
-  - AssertExpectations
-  - Background
-  - Contains
-  - DirFS
-  - EncodeToString
-  - Equal
-  - Error
-  - ErrorIs
-  - Errorf
-  - GetModule
-  - Join
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - 'On'
-  - ReadFile
-  - Return
-  - Run
-  - SetLevel
-  - SetOutput
-  - Sprintf
-  - String
-  - Sum
-  - TempDir
-  - 'True'
-  - Write
-  - WriteFile
+  - assert.Contains
+  - assert.Equal
+  - assert.Error
+  - assert.ErrorIs
+  - assert.NoError
+  - assert.True
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestLoadComponentsFromFS_WalkDirError
   kind: func
   description: ''
@@ -290,16 +245,14 @@ objects:
   - assert.Error
   - assert.ErrorIs
   calls:
-  - Background
-  - Error
-  - ErrorIs
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - SetOutput
+  - assert.Error
+  - assert.ErrorIs
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestLoadInstalledComponents_Success
   kind: func
   description: ''
@@ -314,20 +267,13 @@ objects:
   - logrus.DebugLevel
   - assert.Contains
   calls:
-  - Abs
-  - Background
-  - Contains
-  - GetSchema
-  - GetWorkflow
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - SetLevel
-  - SetOutput
-  - String
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestLoadInstalledComponents_PathErrors
   kind: func
   description: ''
@@ -342,22 +288,14 @@ objects:
   - assert.Contains
   - require.Error
   calls:
-  - Background
-  - Close
-  - Contains
-  - CreateTemp
-  - Error
-  - Name
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - Run
-  - SetOutput
-  - String
-  - TempDir
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.Error
+  - require.NoError
 - name: newDiscardLogger
   kind: func
   description: Helper function to create a logrus logger that discards output
@@ -365,8 +303,7 @@ objects:
   - logrus.Logger
   - logrus.New
   calls:
-  - New
-  - SetOutput
+  - logrus.New
 - name: emptyPKIAssets
   kind: func
   description: emptyPKIAssets returns a PKIAssets with empty pools (TrustStoreLoaded=false).
@@ -390,19 +327,11 @@ objects:
   - require.NotNil
   - assert.True
   calls:
-  - AssertExpectations
-  - Background
-  - Equal
-  - Get
-  - ID
-  - Len
-  - NoError
-  - NotNil
-  - 'On'
-  - Return
-  - Run
-  - Times
-  - 'True'
+  - assert.Equal
+  - assert.True
+  - require.Len
+  - require.NoError
+  - require.NotNil
 - name: TestRegisterNativeComponents_Errors
   kind: func
   description: ''
@@ -414,18 +343,10 @@ objects:
   - mock.Anything
   - assert.ErrorIs
   calls:
-  - AssertExpectations
-  - Background
-  - Cleanup
-  - Contains
-  - Error
-  - ErrorIs
-  - New
-  - 'On'
-  - Once
-  - Return
-  - Run
-  - SetToJSONMock
+  - assert.Contains
+  - assert.ErrorIs
+  - canonicaljson.SetToJSONMock
+  - require.Error
 - name: buildLoadedPKIAssets
   kind: func
   description: buildLoadedPKIAssets creates PKIAssets with TrustStoreLoaded=true using
@@ -434,10 +355,8 @@ objects:
   - require.NoError
   - require.True
   calls:
-  - Helper
-  - NoError
-  - ReadFile
-  - 'True'
+  - require.NoError
+  - require.True
 - name: buildModuleFS
   kind: func
   description: buildModuleFS builds a fstest.MapFS for a single module with an optional
@@ -463,17 +382,13 @@ objects:
   - logrus.New
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - ReadFile
-  - SetOutput
-  - String
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestLoadModule_PKIVerification_WrongEKU
   kind: func
   description: ''
@@ -487,15 +402,13 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - ReadFile
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.Error
+  - require.NoError
 - name: generateForeignLeafPEM
   kind: func
   description: generateForeignLeafPEM creates a leaf cert signed by a freshly-generated
@@ -504,16 +417,7 @@ objects:
   references:
   - require.NoError
   calls:
-  - Add
-  - CreateCertificate
-  - EncodeToMemory
-  - GenerateKey
-  - Helper
-  - NewInt
-  - NoError
-  - Now
-  - P256
-  - ParseCertificate
+  - require.NoError
 - name: TestLoadModule_PKIVerification_WrongChain
   kind: func
   description: TestLoadModule_PKIVerification_WrongChain verifies that a cert signed
@@ -528,14 +432,13 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.Error
+  - require.NoError
 - name: TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips
   kind: func
   description: ''
@@ -549,18 +452,13 @@ objects:
   - logrus.New
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - NewCabinetService
-  - NewCertPool
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - ReadFile
-  - SetOutput
-  - String
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestLoadComponentsFromFS_UnknownKind
   kind: func
   description: ''
@@ -575,16 +473,14 @@ objects:
   - assert.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - SetOutput
-  - String
+  - assert.Contains
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestRegisterNativeComponents_SequentialPutModuleFailures
   kind: func
   description: ''
@@ -594,14 +490,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - New
-  - 'On'
-  - Once
-  - Return
-  - Run
+  - assert.Contains
+  - require.Error
 - name: TestLoadComponentsFromFS_NonYAMLSkipped
   kind: func
   description: ''
@@ -614,12 +504,12 @@ objects:
   - require.NoError
   - assert.NoError
   calls:
-  - Background
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
 - name: TestLoadComponentsFromFS_BadYAMLHeader
   kind: func
   description: ''
@@ -634,16 +524,14 @@ objects:
   - assert.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - SetOutput
-  - String
+  - assert.Contains
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestLoadComponentsFromFS_LoadErrorContinue
   kind: func
   description: ''
@@ -658,16 +546,14 @@ objects:
   - assert.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - SetOutput
-  - String
+  - assert.Contains
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestRegisterNativeComponents_SubsequentNewModuleDescriptorFailures
   kind: func
   description: ''
@@ -678,17 +564,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Cleanup
-  - Contains
-  - Error
-  - Marshal
-  - New
-  - 'On'
-  - Once
-  - Return
-  - Run
-  - SetToJSONMock
+  - assert.Contains
+  - canonicaljson.SetToJSONMock
+  - require.Error
 - name: TestLoadModule_ZeroWasmSize
   kind: func
   description: ''
@@ -702,14 +580,13 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.Error
+  - require.NoError
 - name: TestLoadComponentsFromFS_LoadErrorFailOnError
   kind: func
   description: ''
@@ -723,14 +600,13 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
+  - assert.Contains
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.Error
+  - require.NoError
 - name: TestLoadPKIAssets_FileWithNoPEMData
   kind: func
   description: ''
@@ -740,12 +616,10 @@ objects:
   - assert.False
   - assert.Contains
   calls:
-  - Contains
-  - 'False'
-  - New
-  - NoError
-  - SetOutput
-  - String
+  - assert.Contains
+  - assert.False
+  - logrus.New
+  - require.NoError
 - name: TestLoadComponentsFromFS_ReadFileError
   kind: func
   description: ''
@@ -760,16 +634,14 @@ objects:
   - assert.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - SetOutput
-  - String
+  - assert.Contains
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: TestLoadModule_InvalidPEMSignature
   kind: func
   description: ''
@@ -784,21 +656,14 @@ objects:
   - assert.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - DirFS
-  - Join
-  - New
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NoError
-  - SetOutput
-  - Sprintf
-  - String
-  - TempDir
-  - WriteFile
+  - assert.Contains
+  - assert.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
 - name: embeddedTestdata
   kind: var
   description: go:embed testdata
