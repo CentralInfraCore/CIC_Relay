@@ -45,32 +45,39 @@ objects:
   description: NewExecutionContext creates a new execution context and initializes
     it with the starting payload.
   references: []
+  calls: []
 - name: Get
   kind: method
   receiver: executionContext
   description: Get retrieves a value from the context's variable store.
   references: []
+  calls: []
 - name: Set
   kind: method
   receiver: executionContext
   description: Set stores a value in the context's variable store.
   references: []
+  calls: []
 - name: GetModule
   kind: method
   receiver: executionContext
   description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
     if not present.
   references: []
+  calls: []
 - name: StoreModule
   kind: method
   receiver: executionContext
   description: StoreModule stores a newly materialized module in the context.
   references: []
+  calls:
+  - ID
 - name: WithRecorder
   kind: func
   description: WithRecorder sets an optional ExecutionRecorder on the service. If
     nil, ProofTrace recording is skipped silently.
   references: []
+  calls: []
 - name: WithObsSinks
   kind: func
   description: 'WithObsSinks wires observability sinks into the underlying WasmManager.
@@ -78,11 +85,19 @@ objects:
   references:
   - obs.LogSink
   - obs.MetricSink
+  calls:
+  - SetObsSinks
 - name: NewCabinetService
   kind: func
   description: NewCabinetService creates a new Cabinet service with the given stores
     and WasmManager configuration.
   references: []
+  calls:
+  - Errorf
+  - Format
+  - NewWasmManager
+  - Now
+  - UTC
 - name: Setx
   kind: method
   receiver: cabinetService
@@ -92,45 +107,97 @@ objects:
   references:
   - logrus.WithFields
   - logrus.Fields
+  calls:
+  - Call
+  - Close
+  - ComputeChainHashV1
+  - Elem
+  - Errorf
+  - Format
+  - Get
+  - GetModule
+  - GetWorkflow
+  - ID
+  - In
+  - Init
+  - Interface
+  - IsNil
+  - Kind
+  - Marshal
+  - NewExecutionContext
+  - NewHostInstance
+  - Notify
+  - Now
+  - NumIn
+  - NumOut
+  - Out
+  - ParseExecutionGraph
+  - Process
+  - Record
+  - Set
+  - ToLower
+  - Type
+  - TypeOf
+  - UTC
+  - Unmarshal
+  - ValueOf
+  - Warn
+  - WithFields
 - name: Close
   kind: method
   receiver: cabinetService
   description: Close closes the underlying WASM runtime and frees all associated resources.
   references: []
+  calls:
+  - Close
 - name: isWasmTimeout
   kind: func
   description: isWasmTimeout checks whether a WASM errorResult string signals a timeout.
     The cicwasm layer encodes timeouts as {"code":"TIMEOUT",...}.
   references: []
+  calls:
+  - Unmarshal
 - name: PutSchema
   kind: method
   receiver: cabinetService
   description: PutSchema stores a Schema in the underlying SchemaStore.
   references: []
+  calls:
+  - Put
 - name: GetSchema
   kind: method
   receiver: cabinetService
   description: GetSchema retrieves a Schema by ID, returning ErrNotFound if not present.
   references: []
+  calls:
+  - Get
 - name: PutModule
   kind: method
   receiver: cabinetService
   description: PutModule stores a ModuleDescriptor in the underlying ModuleStore.
   references: []
+  calls:
+  - Put
 - name: GetModule
   kind: method
   receiver: cabinetService
   description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
     if not present.
   references: []
+  calls:
+  - Get
 - name: PutWorkflow
   kind: method
   receiver: cabinetService
   description: PutWorkflow stores a Workflow in the underlying WorkflowStore.
   references: []
+  calls:
+  - Put
 - name: GetWorkflow
   kind: method
   receiver: cabinetService
   description: GetWorkflow retrieves a Workflow by ID, returning ErrNotFound if not
     present.
   references: []
+  calls:
+  - Get

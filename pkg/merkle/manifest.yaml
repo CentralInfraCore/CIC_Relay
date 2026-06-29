@@ -58,3 +58,8 @@ objects:
     1. Call BuildVerificationRoot → root 2. Sign(root) externally → signature 3. Publish
     { final_verification_hash: root, signature: ... } as separate object'
   references: []
+  calls:
+  - EncodeToString
+  - LeafHash
+  - MerkleRoot
+  - SizeLeaf

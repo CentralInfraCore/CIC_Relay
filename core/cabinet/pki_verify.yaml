@@ -20,13 +20,24 @@ objects:
   description: checkRevocation checks if any certificate in the provided chains is
     in the revocation list.
   references: []
+  calls:
+  - Cmp
+  - Errorf
+  - String
 - name: checkSPKIPinning
   kind: func
   description: checkSPKIPinning checks if any certificate in the chains matches the
     pinned SPKI hashes.
   references: []
+  calls:
+  - EncodeToString
+  - Errorf
+  - Sum256
 - name: VerifyCertificateChain
   kind: func
   description: VerifyCertificateChain checks a certificate against a trust store and
     specific key usages. This is the core function for M3 - Private PKI verification.
   references: []
+  calls:
+  - Errorf
+  - Verify

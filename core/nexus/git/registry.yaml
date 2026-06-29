@@ -15,46 +15,20 @@ objects:
     strings, enforcing the capability boundary.
   implements: []
   references: []
-  position:
-    start_line: 11
-    end_line: 14
-  fields:
-  - name: mu
-    type: sync.RWMutex
-    tag: ''
-  - name: repos
-    type: map[string]string
-    tag: ''
 - name: NewRepoRegistry
   kind: func
   description: NewRepoRegistry creates an empty RepoRegistry.
   references: []
-  position:
-    start_line: 17
-    end_line: 19
-  signature:
-    params: []
-    returns:
-    - '*RepoRegistry'
+  calls: []
 - name: Register
   kind: method
   receiver: RepoRegistry
   description: Register associates repoID with localPath. Subsequent calls with the
     same repoID overwrite the previous mapping.
   references: []
-  position:
-    start_line: 23
-    end_line: 27
-  signature:
-    params:
-    - name: ''
-      type: repoID
-    - name: localPath
-      type: string
-    returns: []
   calls:
-  - mu.Lock
-  - mu.Unlock
+  - Lock
+  - Unlock
 - name: Resolve
   kind: method
   receiver: RepoRegistry
@@ -62,17 +36,7 @@ objects:
     is not registered. Unknown repoIDs are rejected so WASM modules cannot access
     arbitrary filesystem paths.
   references: []
-  position:
-    start_line: 32
-    end_line: 40
-  signature:
-    params:
-    - name: repoID
-      type: string
-    returns:
-    - string
-    - error
   calls:
-  - fmt.Errorf
-  - mu.RLock
-  - mu.RUnlock
+  - Errorf
+  - RLock
+  - RUnlock

@@ -15,35 +15,12 @@ objects:
     JSON.
   implements: []
   references: []
-  position:
-    start_line: 14
-    end_line: 18
-  fields:
-  - name: Op
-    type: string `json:"op"`      // currently only "decrypt"
-    tag: ''
-  - name: Payload
-    type: string `json:"payload"` // base64-encoded ciphertext
-    tag: ''
-  - name: KeyID
-    type: string
-    tag: json:"key_id"
 - name: IPCResponse
   kind: struct
   description: IPCResponse is the JSON message sent from the worker to the coordinator
     via stdout.
   implements: []
   references: []
-  position:
-    start_line: 21
-    end_line: 24
-  fields:
-  - name: Result
-    type: string `json:"result"` // base64-encoded plaintext; empty on error
-    tag: ''
-  - name: Error
-    type: string `json:"error"`  // non-empty on failure
-    tag: ''
 - name: RunWorkerLoop
   kind: func
   description: 'RunWorkerLoop reads newline-delimited JSON IPCRequests from in, processes
@@ -51,33 +28,18 @@ objects:
     or ctx is cancelled. If worker is nil the loop operates in echo mode: the payload
     is returned unchanged. Echo mode is used for testing and for subprocess startup
     before a crypto service is wired in.'
-  references: []
-  position:
-    start_line: 31
-    end_line: 75
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: in
-      type: io.Reader
-    - name: out
-      type: io.Writer
-    - name: worker
-      type: Worker
-    returns: []
+  references:
+  - context.Context.Done
   calls:
-  - Error.Error
-  - StdEncoding.DecodeString
-  - StdEncoding.EncodeToString
-  - bufio.NewScanner
-  - ctx.Done
-  - enc.Encode
-  - err.Error
-  - fmt.Sprintf
-  - json.NewEncoder
-  - json.Unmarshal
-  - scanner.Bytes
-  - scanner.Scan
-  - unchanged
-  - worker.Decrypt
+  - Bytes
+  - DecodeString
+  - Decrypt
+  - Done
+  - Encode
+  - EncodeToString
+  - Error
+  - NewEncoder
+  - NewScanner
+  - Scan
+  - Sprintf
+  - Unmarshal

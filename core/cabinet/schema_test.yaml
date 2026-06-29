@@ -17,3 +17,10 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.ErrorIs
+  calls:
+  - Background
+  - Error
+  - ErrorIs
+  - NewSchema
+  - Nil
+  - Run

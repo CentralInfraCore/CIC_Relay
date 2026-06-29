@@ -13,80 +13,25 @@ objects:
   description: DecryptRequest represents a request to decrypt a payload.
   implements: []
   references: []
-  position:
-    start_line: 9
-    end_line: 12
-  fields:
-  - name: Payload
-    type: '[]byte'
-    tag: ''
-  - name: KeyID
-    type: string
-    tag: ''
 - name: DecryptResponse
   kind: struct
   description: DecryptResponse represents the result of a decryption operation.
   implements: []
   references: []
-  position:
-    start_line: 15
-    end_line: 18
-  fields:
-  - name: Payload
-    type: '[]byte'
-    tag: ''
-  - name: Error
-    type: error
-    tag: ''
 - name: Coordinator
   kind: struct
   description: Coordinator manages the 3-step decryption process.
   implements: []
   references: []
-  position:
-    start_line: 26
-    end_line: 30
-  fields:
-  - name: HostWorker
-    type: Worker
-    tag: ''
-  - name: RelayWorker
-    type: Worker
-    tag: ''
-  - name: ModuleWorker
-    type: Worker
-    tag: ''
 - name: Worker
   kind: interface
   description: Worker defines the interface for an isolated decryption component.
   references: []
-  position:
-    start_line: 21
-    end_line: 23
-  methods:
-  - name: Decrypt
-    params:
-    - ctx context.Context
-    - req DecryptRequest
-    returns:
-    - (*DecryptResponse, error)
 - name: NewCoordinator
   kind: func
   description: NewCoordinator creates a new Coordinator with the given workers.
   references: []
-  position:
-    start_line: 33
-    end_line: 39
-  signature:
-    params:
-    - name: ''
-      type: host
-    - name: ''
-      type: relay
-    - name: module
-      type: Worker
-    returns:
-    - '*Coordinator'
+  calls: []
 - name: Unwrap
   kind: method
   receiver: Coordinator
@@ -94,20 +39,6 @@ objects:
     The order depends on how the data was wrapped. Assuming standard onion routing:
     Outer layer = Relay, Middle = Module, Inner = Host.'
   references: []
-  position:
-    start_line: 44
-    end_line: 73
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: encryptedData
-      type: '[]byte'
-    returns:
-    - '[]byte'
-    - error
   calls:
-  - HostWorker.Decrypt
-  - ModuleWorker.Decrypt
-  - RelayWorker.Decrypt
-  - fmt.Errorf
+  - Decrypt
+  - Errorf

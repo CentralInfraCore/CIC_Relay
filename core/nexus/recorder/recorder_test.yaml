@@ -2,6 +2,7 @@
 package: recorder
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -24,16 +25,20 @@ objects:
   receiver: MockCryptoService
   description: ''
   references: []
+  calls:
+  - SignFunc
 - name: Decrypt
   kind: method
   receiver: MockCryptoService
   description: ''
   references: []
+  calls: []
 - name: HealthCheck
   kind: method
   receiver: MockCryptoService
   description: ''
   references: []
+  calls: []
 - name: TestGitStateRecorder_RecordState_Success
   kind: func
   description: ''
@@ -42,18 +47,46 @@ objects:
   - types.ExpectedState
   - assert.NotEmpty
   - assert.Equal
+  calls:
+  - Background
+  - Equal
+  - Join
+  - NewGitStateRecorder
+  - NoError
+  - NotEmpty
+  - Now
+  - ReadFile
+  - RecordState
+  - TempDir
+  - Unmarshal
 - name: TestWorkflowRecorder_Record_Success
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Join
+  - NewGitStateRecorder
+  - NewWorkflowRecorder
+  - NoError
+  - ReadFile
+  - Record
+  - TempDir
 - name: TestWorkflowRecorder_Record_NilStateRecorder
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - NewWorkflowRecorder
+  - Record
 - name: TestWorkflowRecorder_Record_VaultUnavailable
   kind: func
   description: ''
@@ -61,6 +94,16 @@ objects:
   - require.NoError
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - New
+  - NewGitStateRecorder
+  - NewWorkflowRecorder
+  - NoError
+  - Record
+  - TempDir
 - name: TestWorkflowRecorder_RunID_Is_WorkflowID
   kind: func
   description: ''
@@ -68,12 +111,19 @@ objects:
   - types.ExpectedState
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Equal
+  - NewWorkflowRecorder
+  - NoError
+  - Record
 - name: RecordState
   kind: method
   receiver: mockStateRecorder
   description: ''
   references:
   - types.ExpectedState
+  calls: []
 - name: TestGitStateRecorder_RecordState_Errors
   kind: func
   description: ''
@@ -83,6 +133,18 @@ objects:
   - types.ExpectedState
   - assert.Contains
   - assert.AnError
+  calls:
+  - Background
+  - Contains
+  - Error
+  - Inf
+  - Join
+  - NewGitStateRecorder
+  - NoError
+  - RecordState
+  - RemoveAll
+  - Run
+  - TempDir
 - name: TestGitStateRecorder_GetHeadHash_NoCommits
   kind: func
   description: ''
@@ -90,11 +152,21 @@ objects:
   - require.NoError
   - assert.Error
   - assert.Contains
+  calls:
+  - Command
+  - Contains
+  - Error
+  - NoError
+  - Run
+  - TempDir
 - name: TestGitStateRecorder_Init_AlreadyInitialized
   kind: func
   description: ''
   references:
   - require.NoError
+  calls:
+  - NoError
+  - TempDir
 - name: TestGitStateRecorder_RecordState_WriteFileFails
   kind: func
   description: ''
@@ -103,3 +175,13 @@ objects:
   - types.ExpectedStateRunID
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - Join
+  - MkdirAll
+  - NewGitStateRecorder
+  - NoError
+  - RecordState
+  - TempDir

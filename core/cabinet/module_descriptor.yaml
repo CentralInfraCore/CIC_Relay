@@ -18,12 +18,16 @@ objects:
     by compilers. The stripped bytes are also stored in the descriptor so that stored
     and executed bytes always match the checksummed form.'
   references: []
+  calls:
+  - Errorf
+  - GetData
 - name: ID
   kind: method
   receiver: ModuleDescriptor
   description: ID returns the unique module identifier in the form "name@version".
     This is used for lookups in the module store.
   references: []
+  calls: []
 - name: GetData
   kind: method
   receiver: ModuleDescriptor
@@ -31,8 +35,10 @@ objects:
     calculation. It now always returns a composite structure including policy fields
     and optional WASM code.
   references: []
+  calls: []
 - name: Checksum
   kind: method
   receiver: ModuleDescriptor
   description: Checksum returns the pre-computed checksum from the Meta block.
   references: []
+  calls: []

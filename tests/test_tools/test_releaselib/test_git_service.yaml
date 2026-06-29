@@ -1,0 +1,235 @@
+---
+module: test_tools.test_releaselib.test_git_service
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: git_service
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: Fixture to create a GitService instance.
+  references:
+  - pytest.fixture
+  - tools.releaselib.git_service.GitService
+- name: test_run_success
+  kind: function
+  decorators:
+  - patch
+  description: Test a successful run of a git command.
+  references: []
+- name: test_run_called_process_error
+  kind: function
+  decorators:
+  - patch
+  description: Test that CalledProcessError is wrapped in GitServiceError.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_run_file_not_found_error
+  kind: function
+  decorators:
+  - patch
+  description: Test that FileNotFoundError is wrapped in GitServiceError.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_run_timeout_expired
+  kind: function
+  decorators:
+  - patch
+  description: Test that TimeoutExpired is wrapped in GitServiceError.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_get_current_branch
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_get_status_porcelain
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_is_dirty_true
+  kind: function
+  decorators:
+  - patch.object
+  description: Test is_dirty when there are uncommitted changes.
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_is_dirty_false
+  kind: function
+  decorators:
+  - patch.object
+  description: Test is_dirty when there are no uncommitted changes.
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_is_index_dirty_true
+  kind: function
+  decorators:
+  - patch
+  description: Test is_index_dirty when there are staged changes.
+  references: []
+- name: test_is_index_dirty_false
+  kind: function
+  decorators:
+  - patch
+  description: Test is_index_dirty when there are no staged changes.
+  references: []
+- name: test_is_index_dirty_file_not_found
+  kind: function
+  decorators:
+  - patch
+  description: Test is_index_dirty raises GitServiceError on FileNotFoundError.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_is_index_dirty_timeout_expired
+  kind: function
+  decorators:
+  - patch
+  description: Test is_index_dirty raises GitServiceError on TimeoutExpired.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_get_tags
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_get_tags_with_pattern
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_write_tree
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_add
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_archive_tree_bytes
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_assert_clean_index_is_clean
+  kind: function
+  decorators:
+  - patch
+  description: Test assert_clean_index when index is clean.
+  references:
+  - pytest.fail
+  - tools.releaselib.git_service.GitStateError
+- name: test_assert_clean_index_is_dirty
+  kind: function
+  decorators:
+  - patch
+  description: Test assert_clean_index when index has staged changes.
+  references:
+  - tools.releaselib.git_service.GitStateError
+  - pytest.raises
+- name: test_assert_clean_index_git_error
+  kind: function
+  decorators:
+  - patch
+  description: Test assert_clean_index with a generic git error.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_assert_clean_index_timeout
+  kind: function
+  decorators:
+  - patch
+  description: Test assert_clean_index with a timeout.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_assert_clean_index_file_not_found
+  kind: function
+  decorators:
+  - patch
+  description: Test assert_clean_index raises GitServiceError on FileNotFoundError.
+  references:
+  - tools.releaselib.git_service.GitServiceError
+  - pytest.raises
+- name: test_checkout
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_checkout_new_branch
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_create_branch
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_delete_branch
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_delete_branch_force
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_merge
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_merge_no_ff
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService
+- name: test_merge_with_message
+  kind: function
+  decorators:
+  - patch.object
+  description: ''
+  references:
+  - tools.releaselib.git_service.GitService

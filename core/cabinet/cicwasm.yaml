@@ -50,6 +50,7 @@ objects:
   references:
   - obs.LogSink
   - obs.MetricSink
+  calls: []
 - name: NewWasmManager
   kind: func
   description: NewWasmManager creates a new central WASM manager with the given configuration.
@@ -62,6 +63,21 @@ objects:
   - obs.ResourceComponent
   - lru.NewWithEvict
   - context.Context.Err
+  calls:
+  - Background
+  - Close
+  - Err
+  - Error
+  - Errorf
+  - Format
+  - HostSetupFn
+  - Instantiate
+  - NewRuntimeConfig
+  - NewRuntimeWithConfig
+  - Now
+  - RecordLog
+  - UTC
+  - WithCloseOnContextDone
 - name: PreCompileModule
   kind: method
   receiver: WasmManager
@@ -72,6 +88,21 @@ objects:
   - wazero.CompiledModule
   - obs.HistogramPoint
   - obs.ResourceComponent
+  calls:
+  - Add
+  - Checksum
+  - CompileModule
+  - Do
+  - Errorf
+  - Format
+  - Get
+  - Load
+  - Milliseconds
+  - New
+  - Now
+  - RecordHistogram
+  - Since
+  - UTC
 - name: NewHostInstance
   kind: method
   receiver: WasmManager
@@ -81,17 +112,43 @@ objects:
   - wazero.NewModuleConfig
   - obs.HistogramPoint
   - obs.ResourceComponent
+  calls:
+  - Close
+  - Duration
+  - Errorf
+  - Format
+  - InstantiateModule
+  - Load
+  - Milliseconds
+  - New
+  - NewModuleConfig
+  - Now
+  - PreCompileModule
+  - RecordHistogram
+  - Since
+  - UTC
+  - WithName
+  - WithStartFunctions
 - name: EvictModule
   kind: method
   receiver: WasmManager
   description: EvictModule removes all compiled versions of a module from the LRU
     cache by moduleID prefix matching.
   references: []
+  calls:
+  - HasPrefix
+  - Keys
+  - Load
+  - Remove
 - name: Close
   kind: method
   receiver: WasmManager
   description: Close releases the underlying WASM module instance and its memory resources.
   references: []
+  calls:
+  - Close
+  - Purge
+  - Store
 - name: newCicWasmHost
   kind: func
   description: newCicWasmHost creates a CicWasmHost from a wazero module instance
@@ -101,35 +158,45 @@ objects:
   - obs.LogSink
   - api.Module.ExportedFunction
   - api.Module.Name
+  calls:
+  - Errorf
+  - ExportedFunction
+  - Name
 - name: Close
   kind: method
   receiver: CicWasmHost
   description: Close releases the underlying WASM module instance and its memory resources.
   references: []
+  calls:
+  - Close
 - name: Process
   kind: method
   receiver: CicWasmHost
   description: Process invokes the "process" guest function with the given auth context
     and input JSON, returning the result data and error JSON as strings.
   references: []
+  calls: []
 - name: Get
   kind: method
   receiver: CicWasmHost
   description: Get invokes the "get" guest function with the given auth context and
     query JSON, returning the result data and error JSON as strings.
   references: []
+  calls: []
 - name: Init
   kind: method
   receiver: CicWasmHost
   description: Init invokes the "init" guest function with the given auth context
     and configuration JSON, returning the result data and error JSON as strings.
   references: []
+  calls: []
 - name: Notify
   kind: method
   receiver: CicWasmHost
   description: Notify invokes the "notify" guest function with the given auth context
     and event JSON, returning the result data and error JSON as strings.
   references: []
+  calls: []
 - name: callGuest
   kind: method
   receiver: CicWasmHost
@@ -137,12 +204,25 @@ objects:
     JSON, handling memory allocation, timeout enforcement, and response parsing. It
     returns data and error JSON strings.
   references: []
+  calls:
+  - Call
+  - Is
+  - Memory
+  - Read
+  - Sprintf
+  - Unmarshal
+  - WithTimeout
 - name: writeStringToWasm
   kind: method
   receiver: CicWasmHost
   description: writeStringToWasm allocates memory in the WASM module, writes the string
     bytes, and returns the pointer and length; the caller is responsible for deallocation.
   references: []
+  calls:
+  - Call
+  - Errorf
+  - Memory
+  - Write
 - name: emitDeallocWarn
   kind: method
   receiver: CicWasmHost
@@ -151,8 +231,16 @@ objects:
   references:
   - obs.LogRecord
   - obs.ResourceComponent
+  calls:
+  - Error
+  - Format
+  - Now
+  - RecordLog
+  - UTC
 - name: formatErrorJson
   kind: func
   description: formatErrorJson constructs a JSON error object with code, message,
     and optional details fields.
   references: []
+  calls:
+  - Marshal

@@ -14,3 +14,8 @@ objects:
   description: ''
   references:
   - assert.Panics
+  calls:
+  - Background
+  - Close
+  - NewAPI
+  - Panics

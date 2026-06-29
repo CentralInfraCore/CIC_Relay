@@ -13,41 +13,12 @@ objects:
   description: HostState holds the lifecycle state of a registered host.
   implements: []
   references: []
-  position:
-    start_line: 16
-    end_line: 22
-  fields:
-  - name: HostID
-    type: string
-    tag: ''
-  - name: Active
-    type: bool
-    tag: ''
-  - name: Token
-    type: '*BootstrapToken'
-    tag: ''
-  - name: OnboardAt
-    type: time.Time
-    tag: ''
-  - name: OffboardAt
-    type: '*time.Time // nil while active'
-    tag: ''
 - name: HostRegistry
   kind: struct
   description: HostRegistry is a thread-safe in-memory store of host lifecycle states.
     Production deployments should replace this with a persistent store.
   implements: []
   references: []
-  position:
-    start_line: 26
-    end_line: 29
-  fields:
-  - name: mu
-    type: sync.Mutex
-    tag: ''
-  - name: hosts
-    type: map[string]*HostState
-    tag: ''
 - name: LifecycleManager
   kind: struct
   description: LifecycleManager handles host onboard and offboard operations.
@@ -55,67 +26,27 @@ objects:
   references:
   - recorder.StateRecorder
   - logrus.Logger
-  position:
-    start_line: 50
-    end_line: 55
-  fields:
-  - name: bootstrapper
-    type: '*Bootstrapper'
-    tag: ''
-  - name: registry
-    type: '*HostRegistry'
-    tag: ''
-  - name: recorder
-    type: recorder.StateRecorder // nil = recording disabled
-    tag: ''
-  - name: logger
-    type: '*logrus.Logger'
-    tag: ''
 - name: NewHostRegistry
   kind: func
   description: NewHostRegistry returns an empty HostRegistry.
   references: []
-  position:
-    start_line: 32
-    end_line: 34
-  signature:
-    params: []
-    returns:
-    - '*HostRegistry'
+  calls: []
 - name: get
   kind: method
   receiver: HostRegistry
   description: ''
   references: []
-  position:
-    start_line: 35
-    end_line: 41
-  signature:
-    params:
-    - name: hostID
-      type: string
-    returns:
-    - '*HostState'
-    - bool
   calls:
-  - mu.Lock
-  - mu.Unlock
+  - Lock
+  - Unlock
 - name: set
   kind: method
   receiver: HostRegistry
   description: ''
   references: []
-  position:
-    start_line: 42
-    end_line: 47
-  signature:
-    params:
-    - name: h
-      type: '*HostState'
-    returns: []
   calls:
-  - mu.Lock
-  - mu.Unlock
+  - Lock
+  - Unlock
 - name: NewLifecycleManager
   kind: func
   description: NewLifecycleManager creates a LifecycleManager. rec may be nil — recording
@@ -123,21 +54,7 @@ objects:
   references:
   - recorder.StateRecorder
   - logrus.Logger
-  position:
-    start_line: 59
-    end_line: 61
-  signature:
-    params:
-    - name: b
-      type: '*Bootstrapper'
-    - name: reg
-      type: '*HostRegistry'
-    - name: rec
-      type: recorder.StateRecorder
-    - name: logger
-      type: '*logrus.Logger'
-    returns:
-    - '*LifecycleManager'
+  calls: []
 - name: OnboardHost
   kind: method
   receiver: LifecycleManager
@@ -145,28 +62,15 @@ objects:
     Returns an error if the token is invalid or expired.
   references:
   - logrus.Fields
-  position:
-    start_line: 65
-    end_line: 94
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: token
-      type: '*BootstrapToken'
-    returns:
-    - error
   calls:
+  - Errorf
   - Info
+  - Now
   - UTC
+  - ValidateToken
   - Warn
   - WithError
-  - bootstrapper.ValidateToken
-  - fmt.Errorf
-  - lm.record
-  - logger.WithFields
-  - registry.set
-  - time.Now
+  - WithFields
 - name: OffboardHost
   kind: method
   receiver: LifecycleManager
@@ -174,26 +78,12 @@ objects:
     audit log. Returns an error if the host is not found.
   references:
   - logrus.Fields
-  position:
-    start_line: 98
-    end_line: 120
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: hostID
-      type: string
-    returns:
-    - error
   calls:
+  - Errorf
   - Info
+  - Now
   - UTC
-  - fmt.Errorf
-  - lm.record
-  - logger.WithFields
-  - registry.get
-  - registry.set
-  - time.Now
+  - WithFields
 - name: record
   kind: method
   receiver: LifecycleManager
@@ -202,22 +92,7 @@ objects:
   references:
   - types.ExpectedStateRunID
   - recorder.RecordState
-  position:
-    start_line: 124
-    end_line: 133
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: runID
-      type: string
-    - name: ts
-      type: time.Time
-    - name: actual
-      type: interface{}
-    returns: []
   calls:
+  - RecordState
   - Warn
-  - logger.Warn
-  - logger.WithError
-  - recorder.RecordState
+  - WithError

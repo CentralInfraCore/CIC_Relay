@@ -16,22 +16,43 @@ objects:
   description: ''
   references:
   - logrus.New
+  calls:
+  - Helper
+  - New
+  - SetOutput
 - name: TestPipelineHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewRecorder
+  - NewRequest
 - name: TestPipelineHandler_BodyTooLarge
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Equal
+  calls:
+  - Equal
+  - New
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - Repeat
+  - SetOutput
 - name: TestPipelineHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewReader
+  - NewRecorder
+  - NewRequest
 - name: TestPipelineHandler_MissingFields
   kind: func
   description: ''
@@ -43,6 +64,19 @@ objects:
   - mock.MatchedBy
   - cabinet.SetPayload
   - cabinet.SetResponseResults
+  calls:
+  - AssertExpectations
+  - Equal
+  - Errorf
+  - Marshal
+  - MatchedBy
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - 'On'
+  - Return
+  - TestPipelineHandler_ConfigDefaultsUsed
+  - TestPipelineHandler_InternalError
 - name: TestPipelineHandler_ConfigDefaultsUsed
   kind: func
   description: ''
@@ -52,8 +86,22 @@ objects:
   - cabinet.SetPayload
   - cabinet.SetResponseResults
   - assert.Equal
+  calls:
+  - Equal
+  - Marshal
+  - MatchedBy
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - 'On'
+  - Return
 - name: TestPipelineHandler_InternalError
   kind: func
   description: ''
   references:
   - mock.Anything
+  calls:
+  - Errorf
+  - Marshal
+  - 'On'
+  - Return

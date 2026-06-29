@@ -16,6 +16,12 @@ objects:
   - assert.Len
   - assert.NotEqual
   - assert.Equal
+  calls:
+  - ComputeChainHashV1
+  - Equal
+  - Len
+  - NotEqual
+  - Run
 - name: TestHashValue
   kind: func
   description: ''
@@ -24,3 +30,9 @@ objects:
   - assert.Equal
   - assert.Len
   - assert.NotEqual
+  calls:
+  - Equal
+  - Len
+  - NoError
+  - NotEqual
+  - Run

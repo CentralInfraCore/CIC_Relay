@@ -15,6 +15,9 @@ objects:
   references:
   - logrus.Logger
   - logrus.New
+  calls:
+  - New
+  - SetOutput
 - name: TestRecordHash_Deterministic
   kind: func
   description: ''
@@ -22,6 +25,10 @@ objects:
   - obs.LogRecord
   - obs.ResourceRelayID
   - obs.RecordHash
+  calls:
+  - Errorf
+  - Fatal
+  - RecordHash
 - name: TestRecordHash_ChangeSensitive
   kind: func
   description: ''
@@ -29,6 +36,9 @@ objects:
   - obs.LogRecordTimestamp
   - obs.ResourceRelayID
   - obs.RecordHash
+  calls:
+  - Error
+  - RecordHash
 - name: TestGlobalChainHash_Stable
   kind: func
   description: ''
@@ -37,6 +47,10 @@ objects:
   - obs.ResourceRelayID
   - obs.CounterPointName
   - obs.GlobalChainHash
+  calls:
+  - Error
+  - Fatal
+  - GlobalChainHash
 - name: TestGlobalChainHash_OrderSensitive
   kind: func
   description: ''
@@ -44,6 +58,9 @@ objects:
   - obs.LogRecordTimestamp
   - obs.ResourceRelayID
   - obs.GlobalChainHash
+  calls:
+  - Error
+  - GlobalChainHash
 - name: TestTypeChainHash_NamespaceIsolation
   kind: func
   description: ''
@@ -51,36 +68,64 @@ objects:
   - obs.LogRecordTimestamp
   - obs.ResourceRelayID
   - obs.TypeChainHash
+  calls:
+  - Error
+  - TypeChainHash
 - name: TestRegistry_Register_ValidPrefix
   kind: func
   description: ''
   references:
   - obs.NewRegistry
   - obs.MetricInstrumentName
+  calls:
+  - Errorf
+  - NewRegistry
+  - Register
 - name: TestRegistry_Register_InvalidPrefix
   kind: func
   description: ''
   references:
   - obs.NewRegistry
   - obs.MetricInstrumentName
+  calls:
+  - Error
+  - NewRegistry
+  - Register
 - name: TestRegistry_Register_DuplicateSame
   kind: func
   description: ''
   references:
   - obs.NewRegistry
   - obs.MetricInstrumentName
+  calls:
+  - Errorf
+  - Fatal
+  - NewRegistry
+  - Register
 - name: TestRegistry_Register_DuplicateDifferent
   kind: func
   description: ''
   references:
   - obs.NewRegistry
   - obs.MetricInstrumentName
+  calls:
+  - Error
+  - Fatal
+  - NewRegistry
+  - Register
 - name: TestRegistry_Get
   kind: func
   description: ''
   references:
   - obs.NewRegistry
   - obs.MetricInstrumentName
+  calls:
+  - Error
+  - Errorf
+  - Fatal
+  - Get
+  - NewRegistry
+  - Register
 - name: TestNoopSink_ImplementsAllSinks
   kind: func
   description: ''
@@ -89,6 +134,7 @@ objects:
   - obs.TraceSink
   - obs.LogSink
   - obs.MetricSink
+  calls: []
 - name: TestLogrusSink_ImplementsAllSinks
   kind: func
   description: ''
@@ -97,6 +143,8 @@ objects:
   - obs.TraceSink
   - obs.LogSink
   - obs.MetricSink
+  calls:
+  - NewLogrusSink
 - name: TestLogrusSink_RecordTrace_DoesNotPanic
   kind: func
   description: ''
@@ -105,6 +153,9 @@ objects:
   - obs.TraceFrame
   - obs.ResourceRelayID
   - obs.ExecutionContextWorkflowID
+  calls:
+  - NewLogrusSink
+  - RecordTrace
 - name: TestLogrusSink_RecordLog_LevelMapping
   kind: func
   description: ''
@@ -113,6 +164,9 @@ objects:
   - obs.LogRecord
   - obs.ResourceRelayID
   - obs.ExecutionContextWorkflowID
+  calls:
+  - NewLogrusSink
+  - RecordLog
 - name: TestLogrusSink_Metrics_DoNotPanic
   kind: func
   description: ''
@@ -122,6 +176,11 @@ objects:
   - obs.CounterPointName
   - obs.GaugePointName
   - obs.HistogramPointName
+  calls:
+  - NewLogrusSink
+  - RecordCounter
+  - RecordGauge
+  - RecordHistogram
 - name: TestCaptureSink_ImplementsAllSinks
   kind: func
   description: ''
@@ -130,6 +189,7 @@ objects:
   - obs.TraceSink
   - obs.LogSink
   - obs.MetricSink
+  calls: []
 - name: TestCaptureSink_CollectsRecords
   kind: func
   description: ''
@@ -141,6 +201,13 @@ objects:
   - obs.CounterPointName
   - obs.GaugePointName
   - obs.HistogramPointName
+  calls:
+  - Errorf
+  - RecordCounter
+  - RecordGauge
+  - RecordHistogram
+  - RecordLog
+  - RecordTrace
 - name: TestNoopSink_AllMethods
   kind: func
   description: ''
@@ -157,6 +224,13 @@ objects:
   - obs.RecordCounter
   - obs.RecordGauge
   - obs.RecordHistogram
+  calls:
+  - NotPanics
+  - RecordCounter
+  - RecordGauge
+  - RecordHistogram
+  - RecordLog
+  - RecordTrace
 - name: TestRegistry_Names
   kind: func
   description: ''
@@ -167,24 +241,41 @@ objects:
   - obs.MetricInstrumentName
   - assert.Len
   - assert.ElementsMatch
+  calls:
+  - ElementsMatch
+  - Empty
+  - Len
+  - Names
+  - NewRegistry
+  - NoError
+  - Register
 - name: TestRecordHash_Error
   kind: func
   description: ''
   references:
   - obs.RecordHash
   - assert.Error
+  calls:
+  - Error
+  - RecordHash
 - name: TestGlobalChainHash_Error
   kind: func
   description: ''
   references:
   - obs.GlobalChainHash
   - assert.Error
+  calls:
+  - Error
+  - GlobalChainHash
 - name: TestTypeChainHash_Error
   kind: func
   description: ''
   references:
   - obs.TypeChainHash
   - assert.Error
+  calls:
+  - Error
+  - TypeChainHash
 - name: TestLogrusSink_RecordGauge_WithAttrs
   kind: func
   description: ''
@@ -192,6 +283,10 @@ objects:
   - obs.NewLogrusSink
   - assert.NotPanics
   - obs.GaugePoint
+  calls:
+  - NewLogrusSink
+  - NotPanics
+  - RecordGauge
 - name: TestLogrusSink_RecordHistogram_WithAttrs
   kind: func
   description: ''
@@ -199,6 +294,10 @@ objects:
   - obs.NewLogrusSink
   - assert.NotPanics
   - obs.HistogramPoint
+  calls:
+  - NewLogrusSink
+  - NotPanics
+  - RecordHistogram
 - name: TestLogrusSink_RecordLog_WithAttrs
   kind: func
   description: ''
@@ -206,3 +305,7 @@ objects:
   - obs.NewLogrusSink
   - assert.NotPanics
   - obs.LogRecord
+  calls:
+  - NewLogrusSink
+  - NotPanics
+  - RecordLog

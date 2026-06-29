@@ -16,57 +16,97 @@ objects:
   references:
   - cabinet.BaseBlock
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestSchemaIdentity_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.SchemaIdentity
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestSchemaConfig_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.SchemaConfig
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestSchemaSigning_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.SchemaSigning
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestSchema_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.Schema
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestModuleDescriptor_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.ModuleDescriptor
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestWorkflowIdentity_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.WorkflowIdentity
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestWorkflowConfig_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.WorkflowConfig
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestWorkflowSigning_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.WorkflowSigning
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf
 - name: TestWorkflow_API_Shape
   kind: func
   description: ''
   references:
   - cabinet.Workflow
   - assert.Equal
+  calls:
+  - Equal
+  - NumField
+  - TypeOf

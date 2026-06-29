@@ -15,45 +15,11 @@ objects:
   implements: []
   references:
   - api.Client
-  position:
-    start_line: 22
-    end_line: 26
-  fields:
-  - name: client
-    type: '*api.Client'
-    tag: ''
-  - name: keyName
-    type: string
-    tag: ''
-  - name: mountPath
-    type: string
-    tag: ''
 - name: CryptoService
   kind: interface
   description: CryptoService defines the interface for cryptographic operations like
     signing and decrypting.
   references: []
-  position:
-    start_line: 12
-    end_line: 19
-  methods:
-  - name: Sign
-    params:
-    - ctx context.Context
-    - data []byte
-    returns:
-    - (string, error)
-  - name: Decrypt
-    params:
-    - ctx context.Context
-    - ciphertext []byte
-    returns:
-    - ([]byte, error)
-  - name: HealthCheck
-    params:
-    - ctx context.Context
-    returns:
-    - error
 - name: NewVaultCryptoService
   kind: func
   description: NewVaultCryptoService creates and configures a new service for signing.
@@ -62,24 +28,12 @@ objects:
   references:
   - api.DefaultConfig
   - api.NewClient
-  position:
-    start_line: 30
-    end_line: 51
-  signature:
-    params:
-    - name: ''
-      type: mountPath
-    - name: keyName
-      type: string
-    returns:
-    - '*VaultCryptoService'
-    - error
   calls:
-  - api.DefaultConfig
-  - api.NewClient
-  - client.Token
-  - config.ReadEnvironment
-  - fmt.Errorf
+  - DefaultConfig
+  - Errorf
+  - NewClient
+  - ReadEnvironment
+  - Token
 - name: Sign
   kind: method
   receiver: VaultCryptoService
@@ -87,64 +41,30 @@ objects:
     the data to be a hash (or raw data depending on Vault config), but typically for
     signing commits we sign the hash.
   references: []
-  position:
-    start_line: 56
-    end_line: 79
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: data
-      type: '[]byte'
-    returns:
-    - string
-    - error
   calls:
-  - StdEncoding.EncodeToString
+  - EncodeToString
+  - Errorf
+  - Logical
+  - Sprintf
   - WriteWithContext
-  - client.Logical
-  - fmt.Errorf
-  - fmt.Sprintf
 - name: Decrypt
   kind: method
   receiver: VaultCryptoService
   description: Decrypt uses the Vault Transit engine to decrypt the given ciphertext.
     The ciphertext must be a valid Vault ciphertext string (e.g., "vault:v1:...").
   references: []
-  position:
-    start_line: 83
-    end_line: 109
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ciphertext
-      type: '[]byte'
-    returns:
-    - '[]byte'
-    - error
   calls:
-  - StdEncoding.DecodeString
+  - DecodeString
+  - Errorf
+  - Logical
+  - Sprintf
   - WriteWithContext
-  - client.Logical
-  - fmt.Errorf
-  - fmt.Sprintf
-  - string
 - name: HealthCheck
   kind: method
   receiver: VaultCryptoService
   description: HealthCheck pings the Vault server's health endpoint.
   references: []
-  position:
-    start_line: 112
-    end_line: 118
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    returns:
-    - error
   calls:
+  - Errorf
   - Health
-  - client.Sys
-  - fmt.Errorf
+  - Sys

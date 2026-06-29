@@ -17,8 +17,11 @@ objects:
   kind: func
   description: NewAPI creates a new API instance wrapping the given Cabinet service.
   references: []
+  calls: []
 - name: Close
   kind: method
   receiver: API
   description: Close closes the underlying resources, like the WASM runtime.
   references: []
+  calls:
+  - Close

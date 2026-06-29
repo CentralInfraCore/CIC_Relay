@@ -16,36 +16,83 @@ objects:
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Middleware
+  - NewRecorder
+  - NewRequest
+  - ServeHTTP
 - name: TestIPRateLimiter_BlocksWhenExhausted
   kind: func
   description: ''
   references:
   - assert.True
+  calls:
+  - Middleware
+  - NewRecorder
+  - NewRequest
+  - ServeHTTP
+  - 'True'
 - name: TestIPRateLimiter_IsolatesPerIP
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Middleware
+  - NewRecorder
+  - NewRequest
+  - ServeHTTP
 - name: TestConcurrentLimiter_AllowsUnderCap
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Middleware
+  - NewRecorder
+  - NewRequest
+  - ServeHTTP
 - name: TestConcurrentLimiter_BlocksWhenFull
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Add
+  - Done
+  - Equal
+  - HandlerFunc
+  - Middleware
+  - NewRecorder
+  - NewRequest
+  - ServeHTTP
+  - Wait
+  - WriteHeader
 - name: TestIPRateLimiter_InvalidRemoteAddr
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Middleware
+  - NewRecorder
+  - NewRequest
+  - ServeHTTP
 - name: TestConcurrentLimiter_ReleasesSlotAfterRequest
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Middleware
+  - NewRecorder
+  - NewRequest
+  - ServeHTTP
 - name: okHandler
   kind: var
   description: ''

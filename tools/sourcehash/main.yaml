@@ -19,6 +19,10 @@ objects:
   description: ''
   references:
   - sourcedigest.ComputeTreeHash
+  calls:
+  - ComputeTreeHash
+  - Fprintf
+  - Print
 - name: osExit
   kind: var
   description: ''

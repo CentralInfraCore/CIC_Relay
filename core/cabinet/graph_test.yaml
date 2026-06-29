@@ -14,3 +14,9 @@ objects:
   description: ''
   references:
   - cabinet.ParseExecutionGraph
+  calls:
+  - Errorf
+  - Fatal
+  - Fatalf
+  - ParseExecutionGraph
+  - Run

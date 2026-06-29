@@ -23,25 +23,41 @@ objects:
     testdata directory.
   references:
   - require.NoError
+  calls:
+  - Helper
+  - Join
+  - NoError
+  - ReadFile
 - name: newMockModuleStore
   kind: func
   description: ''
   references: []
+  calls: []
 - name: Get
   kind: method
   receiver: mockModuleStore
   description: ''
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: Put
   kind: method
   receiver: mockModuleStore
   description: ''
   references: []
+  calls:
+  - ID
+  - Lock
+  - Unlock
 - name: Exists
   kind: method
   receiver: mockModuleStore
   description: ''
   references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: TestWasmManager_NewAndClose
   kind: func
   description: TestWasmManager_NewAndClose tests the basic creation and destruction
@@ -53,6 +69,17 @@ objects:
   - assert.Error
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Close
+  - Contains
+  - Error
+  - NewHostInstance
+  - NewWasmManager
+  - NoError
+  - NotNil
+  - Run
+  - WithCancel
 - name: TestWasmManager_PreCompile_Simple
   kind: func
   description: TestWasmManager_PreCompile_Simple tests a single, successful compilation
@@ -62,6 +89,20 @@ objects:
   - require.NotNil
   - assert.True
   - assert.Same
+  calls:
+  - Background
+  - Checksum
+  - Close
+  - Get
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - NotNil
+  - PreCompileModule
+  - Put
+  - Same
+  - 'True'
 - name: TestWasmManager_NewHostInstance
   kind: func
   description: TestWasmManager_NewHostInstance tests creating a new host instance.
@@ -70,6 +111,18 @@ objects:
   - assert.Error
   - require.NotNil
   - assert.NoError
+  calls:
+  - Background
+  - Close
+  - Error
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - NotNil
+  - PreCompileModule
+  - Put
 - name: TestWasmManager_EvictModule
   kind: func
   description: TestWasmManager_EvictModule tests evicting a module from the cache.
@@ -77,6 +130,20 @@ objects:
   - require.NoError
   - assert.True
   - assert.False
+  calls:
+  - Background
+  - Checksum
+  - Close
+  - EvictModule
+  - 'False'
+  - Get
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - PreCompileModule
+  - Put
+  - 'True'
 - name: TestCicWasmHost_Process
   kind: func
   description: TestCicWasmHost_Process tests the Process method of a host instance.
@@ -84,24 +151,69 @@ objects:
   - require.NoError
   - require.NotNil
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - NotNil
+  - Process
+  - Put
 - name: TestCicWasmHost_Get
   kind: func
   description: TestCicWasmHost_Get tests the Get method of a host instance.
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - Get
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Put
 - name: TestCicWasmHost_Init
   kind: func
   description: TestCicWasmHost_Init tests the Init method of a host instance.
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - ID
+  - Init
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Put
 - name: TestCicWasmHost_Notify
   kind: func
   description: TestCicWasmHost_Notify tests the Notify method of a host instance.
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Notify
+  - Put
 - name: TestWasmManager_NewHostInstance_MissingABI
   kind: func
   description: TestWasmManager_NewHostInstance_MissingABI tests creating an instance
@@ -110,6 +222,17 @@ objects:
   - require.NoError
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Close
+  - Contains
+  - Error
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Put
 - name: TestWasmManager_PreCompile_NilCode
   kind: func
   description: TestWasmManager_PreCompile_NilCode tests pre-compiling a module with
@@ -118,6 +241,17 @@ objects:
   - require.NoError
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Close
+  - Contains
+  - Error
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - PreCompileModule
+  - Put
 - name: TestCicWasmHost_Process_BadRead
   kind: func
   description: TestCicWasmHost_Process_BadRead tests when the guest returns a pointer
@@ -126,6 +260,18 @@ objects:
   - require.NoError
   - assert.Equal
   - assert.Contains
+  calls:
+  - Background
+  - Close
+  - Contains
+  - Equal
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Process
+  - Put
 - name: TestCicWasmHost_Process_TrapDealloc
   kind: func
   description: TestCicWasmHost_Process_TrapDealloc tests that a trap in deallocate
@@ -133,6 +279,17 @@ objects:
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Process
+  - Put
 - name: TestCicWasmHost_Process_Timeout
   kind: func
   description: TestCicWasmHost_Process_Timeout tests the timeout functionality.
@@ -140,22 +297,42 @@ objects:
   - require.NoError
   - assert.Equal
   - assert.Contains
+  calls:
+  - Background
+  - Close
+  - Contains
+  - Equal
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Process
+  - Put
 - name: TestFormatErrorJson_WithDetails
   kind: func
   description: TestFormatErrorJson_WithDetails tests that the details field is correctly
     included.
   references:
   - assert.Contains
+  calls:
+  - Contains
 - name: TestFormatErrorJson_MarshalError
   kind: func
   description: TestFormatErrorJson_MarshalError tests the error path of formatErrorJson.
   references:
   - assert.Equal
+  calls:
+  - Equal
 - name: TestCicWasmHost_Close_NilInstance
   kind: func
   description: TestCicWasmHost_Close_NilInstance tests closing a nil instance.
   references:
   - assert.NoError
+  calls:
+  - Background
+  - Close
+  - NoError
 - name: TestWasmManager_EvictModule_Prefix
   kind: func
   description: TestWasmManager_EvictModule_Prefix tests that EvictModule evicts all
@@ -163,6 +340,19 @@ objects:
   references:
   - require.NoError
   - assert.False
+  calls:
+  - Background
+  - Checksum
+  - Close
+  - EvictModule
+  - 'False'
+  - Get
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - PreCompileModule
+  - Put
 - name: TestCicWasmHost_callGuest_Errors
   kind: func
   description: TestCicWasmHost_callGuest_Errors covers various error scenarios in
@@ -173,6 +363,21 @@ objects:
   - assert.Contains
   - assert.Equal
   - assert.JSONEq
+  calls:
+  - Background
+  - Close
+  - Contains
+  - Equal
+  - ID
+  - JSONEq
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Put
+  - Run
+  - 'True'
+  - WithCancel
 - name: TestWasmManager_SetObsSinks_CompileMetric
   kind: func
   description: TestWasmManager_SetObsSinks_CompileMetric verifies that after SetObsSinks,
@@ -182,6 +387,18 @@ objects:
   - obs.CaptureSink
   - require.Len
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - ID
+  - Len
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - PreCompileModule
+  - Put
+  - SetObsSinks
 - name: TestWasmManager_SetObsSinks_InstantiateMetric
   kind: func
   description: TestWasmManager_SetObsSinks_InstantiateMetric verifies that NewHostInstance
@@ -192,6 +409,18 @@ objects:
   - obs.CaptureSink
   - require.Len
   - assert.Contains
+  calls:
+  - Background
+  - Close
+  - Contains
+  - ID
+  - Len
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Put
+  - SetObsSinks
 - name: TestCicWasmHost_Process_NoSpuriousDeallocWarn
   kind: func
   description: TestCicWasmHost_Process_NoSpuriousDeallocWarn verifies that no WARN
@@ -200,6 +429,18 @@ objects:
   references:
   - require.NoError
   - obs.CaptureSink
+  calls:
+  - Background
+  - Close
+  - Errorf
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - NoError
+  - Process
+  - Put
+  - SetObsSinks
 - name: TestCicWasmHost_EmitDeallocWarn_NilSafe
   kind: func
   description: TestCicWasmHost_EmitDeallocWarn_NilSafe verifies that emitDeallocWarn
@@ -207,6 +448,8 @@ objects:
   references:
   - assert.NotPanics
   - assert.AnError
+  calls:
+  - NotPanics
 - name: TestCicWasmHost_EmitDeallocWarn_RecordsLog
   kind: func
   description: TestCicWasmHost_EmitDeallocWarn_RecordsLog verifies that emitDeallocWarn
@@ -216,6 +459,9 @@ objects:
   - assert.AnError
   - require.Len
   - assert.Equal
+  calls:
+  - Equal
+  - Len
 - name: TestNewWasmManager_HostSetupFn_Error
   kind: func
   description: ''
@@ -223,3 +469,9 @@ objects:
   - wazero.Runtime
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - Errorf
+  - NewWasmManager

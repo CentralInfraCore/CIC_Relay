@@ -15,6 +15,13 @@ objects:
   - require.NoError
   - sourcedigest.ComputeTreeHash
   - assert.NotEqual
+  calls:
+  - ComputeTreeHash
+  - Join
+  - NoError
+  - NotEqual
+  - TempDir
+  - WriteFile
 - name: TestComputeTreeHash_AddedFileSensitivity
   kind: func
   description: ''
@@ -22,6 +29,13 @@ objects:
   - require.NoError
   - sourcedigest.ComputeTreeHash
   - assert.NotEqual
+  calls:
+  - ComputeTreeHash
+  - Join
+  - NoError
+  - NotEqual
+  - TempDir
+  - WriteFile
 - name: TestComputeTreeHash_PathSensitivity
   kind: func
   description: ''
@@ -29,6 +43,13 @@ objects:
   - require.NoError
   - sourcedigest.ComputeTreeHash
   - assert.NotEqual
+  calls:
+  - ComputeTreeHash
+  - Join
+  - NoError
+  - NotEqual
+  - TempDir
+  - WriteFile
 - name: TestComputeTreeHash_ExcludesDir
   kind: func
   description: ''
@@ -37,6 +58,15 @@ objects:
   - sourcedigest.ComputeTreeHash
   - assert.NotEqual
   - assert.Equal
+  calls:
+  - ComputeTreeHash
+  - Equal
+  - Join
+  - MkdirAll
+  - NoError
+  - NotEqual
+  - TempDir
+  - WriteFile
 - name: TestComputeTreeHash_EmptyDir
   kind: func
   description: ''
@@ -44,6 +74,11 @@ objects:
   - sourcedigest.ComputeTreeHash
   - require.NoError
   - assert.Len
+  calls:
+  - ComputeTreeHash
+  - Len
+  - NoError
+  - TempDir
 - name: TestComputeTreeHash_SymlinksSkipped
   kind: func
   description: ''
@@ -51,6 +86,14 @@ objects:
   - require.NoError
   - sourcedigest.ComputeTreeHash
   - assert.Len
+  calls:
+  - ComputeTreeHash
+  - Join
+  - Len
+  - NoError
+  - Symlink
+  - TempDir
+  - WriteFile
 - name: TestComputeTreeHash_UnreadableFile
   kind: func
   description: ''
@@ -58,3 +101,14 @@ objects:
   - require.NoError
   - sourcedigest.ComputeTreeHash
   - assert.Error
+  calls:
+  - Chmod
+  - Cleanup
+  - ComputeTreeHash
+  - Error
+  - Getuid
+  - Join
+  - NoError
+  - Skip
+  - TempDir
+  - WriteFile

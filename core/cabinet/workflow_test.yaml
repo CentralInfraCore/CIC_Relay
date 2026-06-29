@@ -18,3 +18,11 @@ objects:
   - assert.ErrorIs
   - require.Error
   - assert.EqualError
+  calls:
+  - Background
+  - EqualError
+  - Error
+  - ErrorIs
+  - NewWorkflow
+  - Nil
+  - Run

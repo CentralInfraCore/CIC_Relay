@@ -22,28 +22,40 @@ objects:
   receiver: mockCryptoService
   description: ''
   references: []
+  calls: []
 - name: Decrypt
   kind: method
   receiver: mockCryptoService
   description: ''
   references: []
+  calls: []
 - name: HealthCheck
   kind: method
   receiver: mockCryptoService
   description: ''
   references: []
+  calls: []
 - name: TestMain
   kind: func
   description: ''
   references:
   - logrus.StandardLogger
   - logrus.SetOutput
+  calls:
+  - Exit
+  - Run
+  - SetOutput
+  - StandardLogger
 - name: TestRun_ServerStart
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NoError
+  calls:
+  - New
+  - NoError
+  - SetOutput
 - name: TestLoadConfig_Defaults
   kind: func
   description: ''
@@ -51,6 +63,11 @@ objects:
   - assert.NoError
   - assert.NotNil
   - assert.Equal
+  calls:
+  - Clearenv
+  - Equal
+  - NoError
+  - NotNil
 - name: TestLoadConfig_AllEnvSet
   kind: func
   description: ''
@@ -58,6 +75,11 @@ objects:
   - assert.NoError
   - assert.NotNil
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
+  - NotNil
+  - Setenv
 - name: TestLoadConfig_InvalidJSONSize
   kind: func
   description: ''
@@ -65,6 +87,11 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_InvalidWASMSize
   kind: func
   description: ''
@@ -72,6 +99,11 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_InvalidHashingTimeout
   kind: func
   description: ''
@@ -79,6 +111,11 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_WasmExecTimeout_Custom
   kind: func
   description: ''
@@ -86,6 +123,11 @@ objects:
   - assert.NoError
   - assert.NotNil
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
+  - NotNil
+  - Setenv
 - name: TestLoadConfig_WasmExecTimeout_InvalidNotNumber
   kind: func
   description: ''
@@ -93,6 +135,11 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_WasmExecTimeout_InvalidZero
   kind: func
   description: ''
@@ -100,12 +147,21 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_RateLimitRPS_Custom
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
+  - Setenv
 - name: TestLoadConfig_RateLimitRPS_Invalid
   kind: func
   description: ''
@@ -113,6 +169,11 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_RateLimitRPS_InvalidNotNumber
   kind: func
   description: ''
@@ -120,12 +181,21 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_MaxConcurrent_Custom
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
+  - Setenv
 - name: TestLoadConfig_MaxConcurrent_Invalid
   kind: func
   description: ''
@@ -133,6 +203,11 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestLoadConfig_MaxConcurrent_InvalidNotNumber
   kind: func
   description: ''
@@ -140,52 +215,80 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Nil
+  - Setenv
 - name: TestNewMux
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Handler
+  - NewRequest
 - name: TestValidateConfig_Valid
   kind: func
   description: ''
   references:
   - assert.NoError
+  calls:
+  - NoError
 - name: TestValidateConfig_RangeViolation_JSONSize
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
 - name: TestValidateConfig_RangeViolation_WASMSize
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
 - name: TestValidateConfig_RangeViolation_HashingTimeout
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
 - name: TestValidateConfig_RangeViolation_WasmExecTimeout
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
 - name: TestValidateConfig_RangeViolation_RateLimitRPS
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
 - name: TestValidateConfig_RangeViolation_MaxConcurrent
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
 - name: TestLoadSecretsFromVault_NoToken
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Nil
+  calls:
+  - New
+  - Nil
+  - SetOutput
+  - Setenv
 - name: TestLoadSecretsFromVault_WithToken_Defaults
   kind: func
   description: ''
@@ -193,6 +296,12 @@ objects:
   - logrus.New
   - assert.NotNil
   - assert.Equal
+  calls:
+  - Equal
+  - New
+  - NotNil
+  - SetOutput
+  - Setenv
 - name: TestLoadSecretsFromVault_WithToken_CustomValues
   kind: func
   description: ''
@@ -200,6 +309,12 @@ objects:
   - logrus.New
   - assert.NotNil
   - assert.Equal
+  calls:
+  - Equal
+  - New
+  - NotNil
+  - SetOutput
+  - Setenv
 - name: TestBuildRecorderOption_NoVaultToken
   kind: func
   description: ''
@@ -212,6 +327,17 @@ objects:
   - cabinet.NewMemModuleStore
   - cabinet.NewMemWorkflowStore
   - assert.NoError
+  calls:
+  - Background
+  - Close
+  - New
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NoError
+  - NotNil
+  - SetOutput
 - name: TestBuildRecorderOption_WithVaultToken_ValidPath
   kind: func
   description: ''
@@ -224,6 +350,18 @@ objects:
   - cabinet.NewMemModuleStore
   - cabinet.NewMemWorkflowStore
   - assert.NoError
+  calls:
+  - Background
+  - Close
+  - New
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NoError
+  - NotNil
+  - SetOutput
+  - TempDir
 - name: TestBuildRecorderOption_WithVaultToken_InvalidPath
   kind: func
   description: ''
@@ -236,6 +374,17 @@ objects:
   - cabinet.NewMemModuleStore
   - cabinet.NewMemWorkflowStore
   - assert.NoError
+  calls:
+  - Background
+  - Close
+  - New
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NoError
+  - NotNil
+  - SetOutput
 - name: TestMockCabinetService_PutSchema
   kind: func
   description: ''
@@ -244,6 +393,13 @@ objects:
   - cabinet.SchemaConfigName
   - cabinet.SchemaIdentityVersion
   - assert.NoError
+  calls:
+  - AssertExpectations
+  - NoError
+  - 'On'
+  - Once
+  - PutSchema
+  - Return
 - name: TestMockCabinetService_PutSchema_Error
   kind: func
   description: ''
@@ -253,6 +409,15 @@ objects:
   - cabinet.SchemaIdentityVersion
   - assert.Error
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - Error
+  - New
+  - 'On'
+  - Once
+  - PutSchema
+  - Return
 - name: TestMockCabinetService_GetSchema
   kind: func
   description: ''
@@ -262,12 +427,28 @@ objects:
   - cabinet.SchemaIdentityVersion
   - assert.NoError
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - GetSchema
+  - NoError
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_GetSchema_NotFound
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Nil
+  calls:
+  - AssertExpectations
+  - GetSchema
+  - Nil
+  - NoError
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_GetSchema_Error
   kind: func
   description: ''
@@ -275,6 +456,16 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - Error
+  - GetSchema
+  - New
+  - Nil
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_PutModule
   kind: func
   description: ''
@@ -282,6 +473,13 @@ objects:
   - cabinet.ModuleDescriptorMeta
   - cabinet.BaseBlockName
   - assert.NoError
+  calls:
+  - AssertExpectations
+  - NoError
+  - 'On'
+  - Once
+  - PutModule
+  - Return
 - name: TestMockCabinetService_PutModule_Error
   kind: func
   description: ''
@@ -290,6 +488,15 @@ objects:
   - cabinet.BaseBlockName
   - assert.Error
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - Error
+  - New
+  - 'On'
+  - Once
+  - PutModule
+  - Return
 - name: TestMockCabinetService_GetModule
   kind: func
   description: ''
@@ -298,12 +505,28 @@ objects:
   - cabinet.BaseBlockName
   - assert.NoError
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - GetModule
+  - NoError
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_GetModule_NotFound
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Nil
+  calls:
+  - AssertExpectations
+  - GetModule
+  - Nil
+  - NoError
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_GetModule_Error
   kind: func
   description: ''
@@ -311,6 +534,16 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - Error
+  - GetModule
+  - New
+  - Nil
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_PutWorkflow
   kind: func
   description: ''
@@ -319,6 +552,13 @@ objects:
   - cabinet.WorkflowConfigName
   - cabinet.WorkflowIdentityVersion
   - assert.NoError
+  calls:
+  - AssertExpectations
+  - NoError
+  - 'On'
+  - Once
+  - PutWorkflow
+  - Return
 - name: TestMockCabinetService_PutWorkflow_Error
   kind: func
   description: ''
@@ -328,6 +568,15 @@ objects:
   - cabinet.WorkflowIdentityVersion
   - assert.Error
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - Error
+  - New
+  - 'On'
+  - Once
+  - PutWorkflow
+  - Return
 - name: TestMockCabinetService_GetWorkflow
   kind: func
   description: ''
@@ -337,12 +586,28 @@ objects:
   - cabinet.WorkflowIdentityVersion
   - assert.NoError
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - GetWorkflow
+  - NoError
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_GetWorkflow_NotFound
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Nil
+  calls:
+  - AssertExpectations
+  - GetWorkflow
+  - Nil
+  - NoError
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_GetWorkflow_Error
   kind: func
   description: ''
@@ -350,6 +615,16 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Equal
+  - Error
+  - GetWorkflow
+  - New
+  - Nil
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_Set
   kind: func
   description: ''
@@ -358,6 +633,15 @@ objects:
   - cabinet.SetResponse
   - assert.NoError
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Background
+  - Equal
+  - NoError
+  - 'On'
+  - Once
+  - Return
+  - Setx
 - name: TestMockCabinetService_Set_Error
   kind: func
   description: ''
@@ -366,29 +650,66 @@ objects:
   - assert.Error
   - assert.Nil
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Background
+  - Equal
+  - Error
+  - New
+  - Nil
+  - 'On'
+  - Once
+  - Return
+  - Setx
 - name: TestMockCabinetService_Close
   kind: func
   description: ''
   references:
   - assert.NoError
+  calls:
+  - AssertExpectations
+  - Background
+  - Close
+  - NoError
+  - 'On'
+  - Once
+  - Return
 - name: TestMockCabinetService_Close_Error
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Equal
+  calls:
+  - AssertExpectations
+  - Background
+  - Close
+  - Equal
+  - Error
+  - New
+  - 'On'
+  - Once
+  - Return
 - name: TestBuildOperatorIfConfigured_NilWhenEnvUnset
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Nil
+  calls:
+  - Background
+  - New
+  - Nil
+  - Setenv
 - name: TestBuildRecorderOption_NilSecrets
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NotNil
+  calls:
+  - New
+  - NotNil
 - name: TestBuildRecorderOption_CryptoInitFails
   kind: func
   description: ''
@@ -396,6 +717,11 @@ objects:
   - crypto.CryptoService
   - logrus.New
   - assert.NotNil
+  calls:
+  - New
+  - NotNil
+  - SetOutput
+  - TempDir
 - name: TestBuildRecorderOption_FullSuccess
   kind: func
   description: ''
@@ -404,6 +730,11 @@ objects:
   - crypto.CryptoService
   - logrus.New
   - assert.NotNil
+  calls:
+  - New
+  - NotNil
+  - SetOutput
+  - TempDir
 - name: TestBuildRecorderOption_RecorderInitFails
   kind: func
   description: ''
@@ -412,6 +743,10 @@ objects:
   - recorder.GitStateRecorder
   - logrus.New
   - assert.NotNil
+  calls:
+  - New
+  - NotNil
+  - SetOutput
 - name: TestBuildOperatorIfConfigured_MissingSecret
   kind: func
   description: ''
@@ -419,18 +754,41 @@ objects:
   - logrus.New
   - assert.True
   - assert.Nil
+  calls:
+  - Background
+  - New
+  - Nil
+  - SetOutput
+  - Setenv
+  - TempDir
+  - 'True'
 - name: TestBuildOperatorIfConfigured_WithFileSource
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NotNil
+  calls:
+  - Background
+  - New
+  - NotNil
+  - SetOutput
+  - Setenv
+  - TempDir
 - name: TestBuildOperatorIfConfigured_MissingGitLocalPath
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.NotNil
+  calls:
+  - Background
+  - New
+  - NotNil
+  - SetOutput
+  - Setenv
+  - TempDir
+  - WithTimeout
 - name: TestBuildOperatorIfConfigured_WithUpstreamSource
   kind: func
   description: ''
@@ -438,6 +796,14 @@ objects:
   - logrus.New
   - assert.True
   - assert.Nil
+  calls:
+  - Background
+  - New
+  - Nil
+  - SetOutput
+  - Setenv
+  - TempDir
+  - 'True'
 - name: _
   kind: var
   description: ''

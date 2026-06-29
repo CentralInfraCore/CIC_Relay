@@ -2,6 +2,7 @@
 package: operator
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -12,6 +13,10 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - NewBootstrapper
+  - NewHostRegistry
+  - NewLifecycleManager
 - name: TestOnboardHost_Valid
   kind: func
   description: ''
@@ -21,17 +26,39 @@ objects:
   - require.True
   - assert.True
   - assert.Equal
+  calls:
+  - Background
+  - BootstrapHost
+  - Equal
+  - NoError
+  - OnboardHost
+  - 'True'
 - name: TestOnboardHost_ExpiredToken
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Add
+  - Background
+  - Contains
+  - Error
+  - Now
+  - OnboardHost
+  - UTC
 - name: TestOnboardHost_InvalidHMAC
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Add
+  - Background
+  - Error
+  - Now
+  - OnboardHost
+  - UTC
 - name: TestOffboardHost_Active
   kind: func
   description: ''
@@ -41,12 +68,26 @@ objects:
   - require.True
   - assert.False
   - assert.NotNil
+  calls:
+  - Background
+  - BootstrapHost
+  - 'False'
+  - NoError
+  - NotNil
+  - OffboardHost
+  - OnboardHost
+  - 'True'
 - name: TestOffboardHost_NotFound
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - OffboardHost
 - name: TestOffboardHost_RecorderError_NonFatal
   kind: func
   description: ''
@@ -54,6 +95,12 @@ objects:
   - assert.AnError
   - require.NoError
   - assert.NoError
+  calls:
+  - Background
+  - BootstrapHost
+  - NoError
+  - OffboardHost
+  - OnboardHost
 - name: TestHostRegistry_IsolatesHosts
   kind: func
   description: ''
@@ -61,3 +108,14 @@ objects:
   - require.NoError
   - assert.True
   - assert.False
+  calls:
+  - Background
+  - BootstrapHost
+  - 'False'
+  - NewBootstrapper
+  - NewHostRegistry
+  - NewLifecycleManager
+  - NoError
+  - OffboardHost
+  - OnboardHost
+  - 'True'

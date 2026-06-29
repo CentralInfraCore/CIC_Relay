@@ -2,6 +2,7 @@
 package: git
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -15,6 +16,12 @@ objects:
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NewRepoRegistry
+  - NoError
+  - Register
+  - Resolve
 - name: TestRepoRegistry_WhitelistEnforce
   kind: func
   description: TestRepoRegistry_WhitelistEnforce verifies that an unknown repoID is
@@ -22,6 +29,11 @@ objects:
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - NewRepoRegistry
+  - Resolve
 - name: TestRepoRegistry_Overwrite
   kind: func
   description: TestRepoRegistry_Overwrite verifies that re-registering a repoID replaces
@@ -29,3 +41,9 @@ objects:
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NewRepoRegistry
+  - NoError
+  - Register
+  - Resolve

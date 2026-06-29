@@ -2,6 +2,7 @@
 package: iac
 description: ''
 tags:
+- core
 - interface
 - test
 category: []
@@ -15,41 +16,108 @@ objects:
   references:
   - logrus.Logger
   - logrus.New
+  calls:
+  - New
+  - SetOutput
 - name: jsonServer
   kind: func
   description: jsonServer returns an httptest.Server that responds with the given
     body and status.
   references: []
+  calls:
+  - HandlerFunc
+  - Header
+  - Helper
+  - NewServer
+  - Set
+  - Write
+  - WriteHeader
 - name: TestFetchConfig_JSONResponse
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - FetchConfig
+  - NewUpstreamSource
+  - NoError
 - name: TestFetchConfig_YAMLResponse
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - FetchConfig
+  - HandlerFunc
+  - Header
+  - NewServer
+  - NewUpstreamSource
+  - NoError
+  - Set
+  - Write
+  - WriteHeader
 - name: TestFetchConfig_BearerTokenSent
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Close
+  - Equal
+  - FetchConfig
+  - Get
+  - HandlerFunc
+  - Header
+  - NewServer
+  - NewUpstreamSource
+  - NoError
+  - Set
+  - Write
+  - WriteHeader
 - name: TestFetchConfig_HTTP404_Error
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Background
+  - Close
+  - Contains
+  - Error
+  - FetchConfig
+  - NewUpstreamSource
 - name: TestFetchConfig_Retry_SucceedsOnThirdAttempt
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - AddInt32
+  - Background
+  - Close
+  - Equal
+  - FetchConfig
+  - HandlerFunc
+  - Header
+  - LoadInt32
+  - NewServer
+  - NewUpstreamSource
+  - NoError
+  - Set
+  - Write
+  - WriteHeader
 - name: TestFetchConfig_AllRetriesExhausted
   kind: func
   description: ''
@@ -57,47 +125,93 @@ objects:
   - assert.Error
   - assert.Contains
   - assert.Equal
+  calls:
+  - AddInt32
+  - Background
+  - Close
+  - Contains
+  - Equal
+  - Error
+  - FetchConfig
+  - HandlerFunc
+  - LoadInt32
+  - NewServer
+  - NewUpstreamSource
+  - WriteHeader
 - name: TestFetchConfig_ContextCancelled
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Background
+  - Close
+  - Context
+  - Done
+  - Error
+  - FetchConfig
+  - HandlerFunc
+  - NewServer
+  - NewUpstreamSource
+  - WithTimeout
 - name: TestParseUpstreamResponse_JSON
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
 - name: TestParseUpstreamResponse_YAML
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
 - name: TestParseUpstreamResponse_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
 - name: TestParseUpstreamResponse_EmptyBody
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Empty
+  calls:
+  - Empty
+  - NoError
 - name: TestNewUpstreamSourceFromEnv_NoURL
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Nil
+  calls:
+  - NewUpstreamSourceFromEnv
+  - Nil
+  - NoError
+  - Setenv
 - name: TestNewUpstreamSourceFromEnv_WithURL
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Setenv
 - name: TestNewUpstreamSourceFromEnv_InvalidTimeout
   kind: func
   description: ''
   references:
   - assert.NotNil
+  calls:
+  - NotNil
+  - Setenv

@@ -15,11 +15,22 @@ objects:
     for testing.
   references:
   - require.NoError
+  calls:
+  - CreateCertificate
+  - NoError
+  - ParseCertificate
 - name: generateCACert
   kind: func
   description: generateCACert generates a self-signed CA certificate.
   references:
   - require.NoError
+  calls:
+  - Add
+  - GenerateKey
+  - NewInt
+  - NoError
+  - Now
+  - P256
 - name: TestVerifyCertificateChain
   kind: func
   description: ''
@@ -29,3 +40,21 @@ objects:
   - assert.Error
   - assert.Contains
   - assert.NoError
+  calls:
+  - Add
+  - AddCert
+  - Contains
+  - CreateRevocationList
+  - EncodeToString
+  - Error
+  - GenerateKey
+  - NewCertPool
+  - NewInt
+  - NoError
+  - NotEmpty
+  - Now
+  - P256
+  - ParseRevocationList
+  - Run
+  - Sum256
+  - VerifyCertificateChain

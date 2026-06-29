@@ -37,24 +37,36 @@ objects:
     with sensible defaults.
   references:
   - cabinet.MaxWASMModuleSize
+  calls:
+  - Atoi
+  - Errorf
+  - Getenv
+  - ParseDuration
+  - ParseInt
 - name: emitTrace
   kind: method
   receiver: relayServer
   description: emitTrace emits a TraceFrame if a TraceSink is configured.
   references:
   - obs.TraceFrame
+  calls:
+  - RecordTrace
 - name: emitLog
   kind: method
   receiver: relayServer
   description: emitLog emits a LogRecord if a LogSink is configured.
   references:
   - obs.LogRecord
+  calls:
+  - RecordLog
 - name: emitCounter
   kind: method
   receiver: relayServer
   description: emitCounter emits a CounterPoint if a MetricSink is configured.
   references:
   - obs.CounterPoint
+  calls:
+  - RecordCounter
 - name: writeError
   kind: func
   description: 'writeError writes a uniform JSON error response with the specified
@@ -62,10 +74,19 @@ objects:
   references:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
+  calls:
+  - Encode
+  - Header
+  - NewEncoder
+  - Set
+  - WriteHeader
 - name: newMux
   kind: func
   description: newMux creates a new HTTP multiplexer and registers all relay API routes.
   references: []
+  calls:
+  - HandleFunc
+  - NewServeMux
 - name: rootHandler
   kind: method
   receiver: relayServer
@@ -74,6 +95,14 @@ objects:
   - uuid.New
   - logrus.Fields
   - http.ResponseWriter.Header
+  calls:
+  - Fprintln
+  - Header
+  - Info
+  - New
+  - Set
+  - String
+  - WithFields
 - name: healthzHandler
   kind: method
   receiver: relayServer
@@ -81,6 +110,12 @@ objects:
   references:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
+  calls:
+  - Encode
+  - Header
+  - NewEncoder
+  - Set
+  - WriteHeader
 - name: readyzHandler
   kind: method
   receiver: relayServer
@@ -88,6 +123,12 @@ objects:
   references:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
+  calls:
+  - Encode
+  - Header
+  - NewEncoder
+  - Set
+  - WriteHeader
 - name: setHandler
   kind: method
   receiver: relayServer
@@ -105,6 +146,32 @@ objects:
   - obs.ExecutionContextWorkflowID
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
+  calls:
+  - Close
+  - Context
+  - Encode
+  - Error
+  - Format
+  - Header
+  - Info
+  - IsInvalid
+  - IsTimeout
+  - LimitReader
+  - New
+  - NewAPI
+  - NewEncoder
+  - Now
+  - ReadAll
+  - Set
+  - Sprintf
+  - String
+  - UTC
+  - Unmarshal
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
+  - WriteHeader
 - name: validateConfig
   kind: func
   description: 'validateConfig validates the loaded configuration using the cabinet
@@ -114,6 +181,10 @@ objects:
     check.'
   references:
   - cabinet.ValidateSchema
+  calls:
+  - Errorf
+  - String
+  - ValidateSchema
 - name: loadSecretsFromVault
   kind: func
   description: 'loadSecretsFromVault reads Vault-related parameters from environment
@@ -123,6 +194,9 @@ objects:
     (default "cic-dev-sign-key"), CIC_AUDIT_REPO_PATH (default "/var/lib/cic-relay/audit").'
   references:
   - logrus.Logger
+  calls:
+  - Getenv
+  - Warn
 - name: buildRecorderOption
   kind: func
   description: buildRecorderOption constructs a cabinet.WithRecorder option from the
@@ -134,6 +208,13 @@ objects:
   - cabinet.WithRecorder
   - recorder.NewWorkflowRecorder
   - logrus.Fields
+  calls:
+  - Info
+  - NewWorkflowRecorder
+  - Warn
+  - WithError
+  - WithFields
+  - WithRecorder
 - name: buildOperatorIfConfigured
   kind: func
   description: 'buildOperatorIfConfigured constructs and returns an Operator if CIC_INFRA_REPO_PATH
@@ -159,11 +240,35 @@ objects:
   - operator.NewOperatorWithLifecycle
   - iac.NewIaCValidator
   - logrus.Fields
+  calls:
+  - Fatal
+  - Getenv
+  - Info
+  - Load
+  - NewBootstrapper
+  - NewCabinetActivator
+  - NewFileSource
+  - NewGitSource
+  - NewHostRegistry
+  - NewIaCValidator
+  - NewLifecycleManager
+  - NewLoader
+  - NewOperatorWithLifecycle
+  - NewPollingWatcher
+  - NewUpstreamSourceFromEnv
+  - Warn
+  - WithActivator
+  - WithError
+  - WithFields
+  - WithGraph
+  - WithValidator
 - name: run
   kind: func
   description: run is a separate function to avoid calling main() in unit tests
   references:
   - logrus.Logger
+  calls:
+  - Printf
 - name: main
   kind: func
   description: ''
@@ -188,6 +293,37 @@ objects:
   - merkle.GoSumDigest
   - merkle.GoRuntimeDigest
   - obs.Resource
+  calls:
+  - Background
+  - Close
+  - Debug
+  - Fatal
+  - Getenv
+  - GoRuntimeDigest
+  - GoSumDigest
+  - Info
+  - New
+  - NewCabinetService
+  - NewExecGitOps
+  - NewLogrusSink
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewRepoRegistry
+  - NewVaultCryptoService
+  - Register
+  - Run
+  - RunWorkerLoop
+  - SetFormatter
+  - SetObsSinks
+  - String
+  - Warn
+  - WithCancel
+  - WithError
+  - WithField
+  - WithFields
+  - WithObsSinks
+  - WithTimeout
 - name: listenAndServe
   kind: var
   description: 'test seam: can be overridden in unit tests'

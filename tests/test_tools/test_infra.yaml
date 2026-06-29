@@ -1,0 +1,221 @@
+---
+module: test_tools.test_infra
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: mock_services
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: Provides a dictionary of mocked services and configs.
+  references:
+  - pytest.fixture
+  - tools.releaselib.vault_service.VaultService
+  - tools.releaselib.git_service.GitService
+- name: TestHelperFunctions
+  kind: class
+  decorators: []
+  description: ''
+  implements: []
+  references: []
+- name: test_load_yaml_file_not_found
+  kind: method
+  receiver: TestHelperFunctions
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.load_yaml
+  - tools.releaselib.exceptions.ConfigurationError
+  - pytest.raises
+- name: test_load_yaml_invalid_yaml
+  kind: method
+  receiver: TestHelperFunctions
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.load_yaml
+  - tools.releaselib.exceptions.ConfigurationError
+  - pytest.raises
+- name: test_load_yaml_empty_file
+  kind: method
+  receiver: TestHelperFunctions
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.load_yaml
+- name: test_write_yaml_io_error
+  kind: method
+  receiver: TestHelperFunctions
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.write_yaml
+  - tools.releaselib.exceptions.ReleaseError
+  - pytest.raises
+- name: test_write_yaml_cleanup_on_error
+  kind: method
+  receiver: TestHelperFunctions
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.write_yaml
+  - tools.releaselib.exceptions.ReleaseError
+  - pytest.raises
+- name: test_get_reproducible_repo_hash_error
+  kind: method
+  receiver: TestHelperFunctions
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.get_reproducible_repo_hash
+  - tools.releaselib.exceptions.ReleaseError
+  - pytest.raises
+  - tools.releaselib.git_service.GitService
+- name: TestRunValidation
+  kind: class
+  decorators: []
+  description: ''
+  implements: []
+  references: []
+- name: _make_manager
+  kind: method
+  receiver: TestRunValidation
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.ReleaseManager
+- name: test_validation_success_with_signature
+  kind: method
+  receiver: TestRunValidation
+  decorators: []
+  description: 'Full happy path: schema valid, checksum matches, signature valid.'
+  references: []
+- name: test_validation_success_no_signature
+  kind: method
+  receiver: TestRunValidation
+  decorators: []
+  description: Passes when no signature field — signature step is skipped.
+  references: []
+- name: test_validation_checksum_mismatch
+  kind: method
+  receiver: TestRunValidation
+  decorators: []
+  description: Fails when stored checksum differs from computed.
+  references:
+  - pytest.raises
+- name: test_validation_signature_invalid
+  kind: method
+  receiver: TestRunValidation
+  decorators: []
+  description: Fails when Vault returns valid=False.
+  references:
+  - pytest.raises
+- name: test_validation_vault_unavailable_is_warning
+  kind: method
+  receiver: TestRunValidation
+  decorators: []
+  description: Vault error during verify is non-fatal — logged as warning.
+  references:
+  - tools.releaselib.exceptions.VaultServiceError
+- name: TestReleaseManagerPhases
+  kind: class
+  decorators: []
+  description: ''
+  implements: []
+  references: []
+- name: test_developer_preparation_phase_success
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.ReleaseManager
+- name: test_finalization_phase_success
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.ReleaseManager
+- name: test_dry_run_developer_phase
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.write_yaml.assert_not_called
+  - tools.infra.write_yaml
+  - tools.infra.ReleaseManager
+- name: test_invalid_branch
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.releaselib.exceptions.GitStateError
+  - pytest.raises
+  - tools.infra.ReleaseManager
+- name: test_api_accessibility_check_failure
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.ReleaseManager
+  - requests.exceptions
+- name: test_finalization_phase_validation_failure
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.releaselib.exceptions.ReleaseError
+  - pytest.raises
+  - tools.infra.ReleaseManager
+  - jsonschema.ValidationError
+- name: test_finalization_phase_dirty_repo_commit
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.ReleaseManager
+- name: test_validate_final_project_yaml_generic_exception
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.releaselib.exceptions.ReleaseError
+  - pytest.raises
+  - tools.infra.ReleaseManager
+- name: test_developer_preparation_phase_cleanup_on_error
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.releaselib.exceptions.ReleaseError
+  - pytest.raises
+  - tools.infra.ReleaseManager
+- name: test_finalization_phase_no_dirty_repo_commit
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.infra.ReleaseManager
+- name: test_run_release_close_vault_service_not_initialized
+  kind: method
+  receiver: TestReleaseManagerPhases
+  decorators: []
+  description: ''
+  references:
+  - tools.releaselib.exceptions.VaultServiceError
+  - pytest.raises
+  - tools.infra.ReleaseManager

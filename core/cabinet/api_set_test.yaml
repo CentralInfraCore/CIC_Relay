@@ -21,41 +21,49 @@ objects:
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: GetModule
   kind: method
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: GetSchema
   kind: method
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: PutWorkflow
   kind: method
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: PutModule
   kind: method
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: PutSchema
   kind: method
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: Setx
   kind: method
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: Close
   kind: method
   receiver: mockCabinet
   description: ''
   references: []
+  calls: []
 - name: TestAPI_Set_NilPayload
   kind: func
   description: ''
@@ -63,6 +71,12 @@ objects:
   - assert.Error
   - assert.ErrorIs
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - ErrorIs
+  - Set
 - name: TestAPI_Set_ValidationError
   kind: func
   description: ''
@@ -70,6 +84,17 @@ objects:
   - require.NoError
   - assert.Error
   - assert.ErrorIs
+  calls:
+  - Background
+  - Error
+  - ErrorIs
+  - NewAPI
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NoError
+  - Set
 - name: TestAPI_ValidateSet_NilPayload
   kind: func
   description: ''
@@ -77,6 +102,12 @@ objects:
   - assert.Error
   - assert.ErrorIs
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - ErrorIs
+  - ValidateSet
 - name: TestAPI_ValidateSet_StoreErrors
   kind: func
   description: ''
@@ -84,6 +115,15 @@ objects:
   - assert.Error
   - assert.NotErrorIs
   - assert.Equal
+  calls:
+  - Background
+  - Equal
+  - Error
+  - New
+  - NewAPI
+  - NotErrorIs
+  - Run
+  - ValidateSet
 - name: TestAPI_ValidateSet_Options
   kind: func
   description: ''
@@ -92,3 +132,12 @@ objects:
   - assert.Error
   - assert.ErrorIs
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - ErrorIs
+  - NewAPI
+  - NoError
+  - Run
+  - ValidateSet

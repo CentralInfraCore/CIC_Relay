@@ -18,6 +18,8 @@ objects:
   receiver: failingWriter
   description: ''
   references: []
+  calls:
+  - New
 - name: TestToJSON_DataTypes
   kind: func
   description: ''
@@ -25,15 +27,35 @@ objects:
   - assert.Error
   - require.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - Error
+  - NaN
+  - NoError
+  - Run
+  - ToJSON
 - name: TestToJSON_ErrorCases
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Equal
+  calls:
+  - Equal
+  - Error
+  - Inf
+  - NaN
+  - Run
+  - String
 - name: TestSetToJSONMock
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NoError
+  - SetToJSONMock
+  - ToJSON
+  - ToJSONOriginal

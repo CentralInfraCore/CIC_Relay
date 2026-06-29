@@ -19,41 +19,18 @@ objects:
     Used for parsing the source_assertion YAML in AssertSource.
   implements: []
   references: []
-  position:
-    start_line: 37
-    end_line: 40
-  fields:
-  - name: Metadata
-    type: map[string]interface{}
-    tag: yaml:"metadata"
-  - name: Spec
-    type: interface{}
-    tag: yaml:"spec"
 - name: ArtifactSigner
   kind: interface
   description: ArtifactSigner signs raw bytes and returns a signature string. Implementations
     must be context-aware and respect cancellation. Pass nil to NewSignArtifactFunc
     to run without signing (cic_sign will be "unavailable").
   references: []
-  position:
-    start_line: 26
-    end_line: 28
-  methods:
-  - name: Sign
-    params:
-    - ctx context.Context
-    - data []byte
-    returns:
-    - (string, error)
 - name: CertVerifyFunc
   kind: type
   description: CertVerifyFunc is called with the parsed developer certificate from
     source_assertion. Return a non-nil error to reject the assertion. If nil is passed
     as the verifier, certificate chain verification is skipped (stub mode).
   references: []
-  position:
-    start_line: 33
-    end_line: 33
 - name: NewAssertSourceFunc
   kind: func
   description: 'NewAssertSourceFunc returns a native function for cic.source.assert@1.0
@@ -63,79 +40,31 @@ objects:
     - parses and verifies the PEM certificate in metadata.createdBy.certificate via
     verify'
   references: []
-  position:
-    start_line: 49
-    end_line: 49
-  signature:
-    params:
-    - name: verify
-      type: CertVerifyFunc
-    returns:
-    - func(context.Context, interface
+  calls: []
 - name: AssertSource
   kind: func
   description: AssertSource is the legacy no-verifier entry point (stub mode, Layer
     1 not yet wired). Use NewAssertSourceFunc to inject a real PKI verifier.
   references: []
-  position:
-    start_line: 57
-    end_line: 57
-  signature:
-    params:
-    - name: _
-      type: context.Context
-    - name: input
-      type: interface{}
-    returns:
-    - interface
+  calls: []
 - name: assertSourceImpl
   kind: func
   description: ''
   references: []
-  position:
-    start_line: 60
-    end_line: 61
-  signature:
-    params:
-    - name: input
-      type: interface{}
-    - name: verify
-      type: CertVerifyFunc
-    returns:
-    - interface
+  calls: []
 - name: BuildSchema
   kind: func
   description: BuildSchema is the native function for cic.schema.build@1.0. If the
     input contains a parsed artifact (from AssertSource), it returns it as the artifact
     to be signed. Otherwise it generates a stub artifact for testing.
   references: []
-  position:
-    start_line: 161
-    end_line: 161
-  signature:
-    params:
-    - name: _
-      type: context.Context
-    - name: input
-      type: interface{}
-    returns:
-    - interface
+  calls: []
 - name: SignArtifact
   kind: func
   description: SignArtifact is the legacy no-signer entry point (stub mode, no Vault
     signing). Use NewSignArtifactFunc to inject a real signer.
   references: []
-  position:
-    start_line: 200
-    end_line: 200
-  signature:
-    params:
-    - name: _
-      type: context.Context
-    - name: input
-      type: interface{}
-    returns:
-    - interface
+  calls: []
 - name: NewSignArtifactFunc
   kind: func
   description: 'NewSignArtifactFunc returns a cic.artifact.sign@1.0 native function
@@ -151,17 +80,7 @@ objects:
     hash is always valid regardless of signing availability.'
   references:
   - merkle.BuildContext
-  position:
-    start_line: 219
-    end_line: 219
-  signature:
-    params:
-    - name: bctx
-      type: merkle.BuildContext
-    - name: signer
-      type: ArtifactSigner
-    returns:
-    - func(context.Context, interface
+  calls: []
 - name: newSignArtifactResult
   kind: func
   description: newSignArtifactResult is the shared implementation for both SignArtifact
@@ -169,18 +88,4 @@ objects:
     computes verification_root.
   references:
   - merkle.BuildContext
-  position:
-    start_line: 228
-    end_line: 228
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: input
-      type: interface{}
-    - name: bctx
-      type: merkle.BuildContext
-    - name: signer
-      type: ArtifactSigner
-    returns:
-    - interface
+  calls: []

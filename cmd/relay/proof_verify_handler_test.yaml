@@ -16,6 +16,10 @@ objects:
   description: ''
   references:
   - logrus.New
+  calls:
+  - Helper
+  - New
+  - SetOutput
 - name: validProofVerifyBody
   kind: func
   description: ''
@@ -23,32 +27,65 @@ objects:
   - cabinet.ProofTraceStep
   - cabinet.ComputeChainHashV1
   - require.NoError
+  calls:
+  - ComputeChainHashV1
+  - Helper
+  - Marshal
+  - NoError
 - name: TestProofVerifyHandler_MethodNotAllowed
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewRecorder
+  - NewRequest
 - name: TestProofVerifyHandler_BodyTooLarge
   kind: func
   description: ''
   references:
   - logrus.New
   - assert.Equal
+  calls:
+  - Equal
+  - New
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - Repeat
+  - SetOutput
 - name: TestProofVerifyHandler_InvalidJSON
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewReader
+  - NewRecorder
+  - NewRequest
 - name: TestProofVerifyHandler_MissingProofArtifact
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Marshal
+  - NewReader
+  - NewRecorder
+  - NewRequest
 - name: TestProofVerifyHandler_ReadBodyError
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - NewRecorder
+  - NewRequest
+  - NopCloser
 - name: TestProofVerifyHandler_ValidArtifact
   kind: func
   description: ''
@@ -58,6 +95,19 @@ objects:
   - require.NoError
   - assert.True
   - assert.Empty
+  calls:
+  - Bytes
+  - Empty
+  - Equal
+  - Get
+  - Header
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - NoError
+  - Set
+  - 'True'
+  - Unmarshal
 - name: TestProofVerifyHandler_InvalidChainHash
   kind: func
   description: ''
@@ -67,3 +117,17 @@ objects:
   - assert.False
   - require.NotEmpty
   - assert.Contains
+  calls:
+  - Bytes
+  - Contains
+  - Equal
+  - 'False'
+  - Marshal
+  - NewReader
+  - NewRecorder
+  - NewRequest
+  - NoError
+  - NotEmpty
+  - Repeat
+  - Set
+  - Unmarshal

@@ -24,33 +24,55 @@ objects:
   description: NewLogrusSink wraps logger in a LogrusSink. logger must not be nil.
   references:
   - logrus.Logger
+  calls: []
 - name: RecordTrace
   kind: method
   receiver: LogrusSink
   description: RecordTrace emits a logrus entry for a TraceFrame.
   references:
   - logrus.Fields
+  calls:
+  - Info
+  - Warn
+  - WithFields
 - name: RecordLog
   kind: method
   receiver: LogrusSink
   description: RecordLog emits a logrus entry for a LogRecord.
   references:
   - logrus.Fields
+  calls:
+  - Error
+  - Info
+  - Warn
+  - WithFields
 - name: RecordCounter
   kind: method
   receiver: LogrusSink
   description: RecordCounter emits a logrus Debug entry for a CounterPoint.
   references:
   - logrus.Fields
+  calls:
+  - Debug
+  - Sprintf
+  - WithFields
 - name: RecordGauge
   kind: method
   receiver: LogrusSink
   description: RecordGauge emits a logrus Debug entry for a GaugePoint.
   references:
   - logrus.Fields
+  calls:
+  - Debug
+  - Sprintf
+  - WithFields
 - name: RecordHistogram
   kind: method
   receiver: LogrusSink
   description: RecordHistogram emits a logrus Debug entry for a HistogramPoint.
   references:
   - logrus.Fields
+  calls:
+  - Debug
+  - Sprintf
+  - WithFields

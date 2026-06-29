@@ -16,21 +16,38 @@ objects:
   description: LeafHash computes a domain-separated hash for a named leaf. An empty
     value is silently replaced with NullMarker.
   references: []
+  calls:
+  - New
+  - Sum
+  - Write
 - name: NodeHash
   kind: func
   description: NodeHash combines two child hashes into a parent inner-node hash.
   references: []
+  calls:
+  - New
+  - Sum
+  - Write
 - name: MerkleRoot
   kind: func
   description: MerkleRoot computes the root of a binary Merkle tree over items. Returns
     SHA256("empty") when items is empty or nil. Odd-count levels duplicate the last
     element.
   references: []
+  calls:
+  - NodeHash
+  - Sum256
 - name: HexMerkleRoot
   kind: func
   description: HexMerkleRoot returns the lowercase hex-encoded Merkle root.
   references: []
+  calls:
+  - EncodeToString
+  - MerkleRoot
 - name: SizeLeaf
   kind: func
   description: SizeLeaf encodes an int64 as a decimal string leaf (no leading zeros).
   references: []
+  calls:
+  - FormatInt
+  - LeafHash

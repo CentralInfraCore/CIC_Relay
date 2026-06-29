@@ -16,6 +16,14 @@ objects:
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
 - name: TestWithRecorder
   kind: func
   description: TestWithRecorder verifies that WithRecorder sets the recorder field
@@ -23,6 +31,15 @@ objects:
   references:
   - require.NoError
   - require.NotNil
+  calls:
+  - Background
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NoError
+  - NotNil
+  - WithRecorder
 - name: TestExecutionContext
   kind: func
   description: TestExecutionContext verifies the functionality of the executionContext
@@ -33,6 +50,20 @@ objects:
   - assert.Equal
   - assert.False
   - require.NoError
+  calls:
+  - Background
+  - Equal
+  - 'False'
+  - Get
+  - GetModule
+  - NewExecutionContext
+  - NewModuleDescriptor
+  - NoError
+  - NotNil
+  - Run
+  - Set
+  - StoreModule
+  - 'True'
 - name: TestSetx_Wasm_Unit
   kind: func
   description: TestSetx_Wasm_Unit provides unit tests for the WASM execution path
@@ -43,6 +74,27 @@ objects:
   - require.Error
   - assert.Contains
   - assert.ErrorIs
+  calls:
+  - AssertExpectations
+  - Background
+  - Close
+  - Contains
+  - Equal
+  - Error
+  - ErrorIs
+  - Errorf
+  - ID
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - NoError
+  - 'On'
+  - Once
+  - Put
+  - Return
+  - Run
+  - Setx
 - name: TestCabinetService_PutAndGet_Success
   kind: func
   description: TestCabinetService_PutAndGet_Success verifies the core Put/Get functionality
@@ -51,12 +103,43 @@ objects:
   - require.NoError
   - assert.NoError
   - assert.Equal
+  calls:
+  - Background
+  - Checksum
+  - Equal
+  - GetModule
+  - GetSchema
+  - GetWorkflow
+  - ID
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewSchema
+  - NewWorkflow
+  - NoError
+  - PutModule
+  - PutSchema
+  - PutWorkflow
+  - Run
 - name: TestCabinetService_Get_NotFound
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.ErrorIs
+  calls:
+  - Background
+  - ErrorIs
+  - GetModule
+  - GetSchema
+  - GetWorkflow
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NoError
 - name: TestSetx_ProofTrace
   kind: func
   description: TestSetx_ProofTrace verifies that Setx produces a correct ProofTrace.
@@ -66,9 +149,37 @@ objects:
   - assert.Equal
   - require.Len
   - assert.NotEmpty
+  calls:
+  - Background
+  - ComputeChainHashV1
+  - Equal
+  - ID
+  - Len
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - NoError
+  - NotEmpty
+  - NotNil
+  - Put
+  - Setx
 - name: TestCabinetService_Close
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.NoError
+  calls:
+  - AssertExpectations
+  - Background
+  - Close
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NoError
+  - 'On'
+  - Once
+  - Return
+  - Run

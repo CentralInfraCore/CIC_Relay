@@ -1,0 +1,69 @@
+---
+module: tools.go_ast_extract
+description: 'Go AST extractor — augments go.meta.gen.py with precise AST metadata.
+  Extracts: - position (start_line, end_line) - signature (params, returns) for funcs/methods
+  - calls (functions called within a func/method body) - fields (struct field names,
+  types, tags) - methods (interface method signatures) - interfaces (interfaces implemented
+  by a type — via Named.Interface pattern) - exported (whether the symbol is exported)
+  Output is a JSON object suitable for merging into go.meta.gen.py object dicts.'
+tags:
+- builder
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: extract_ast
+  kind: function
+  decorators: []
+  description: 'Extract AST metadata from a Go source file. Returns {object_key: ObjectMeta,
+    ...} where object_key is: - "FuncName" for functions - "TypeName" for types/structs/interfaces
+    - "ReceiverType.MethodName" for methods (matched to go.meta.gen.py''s receiver
+    field) Returns empty dict if file doesn''t exist or can''t be read.'
+  references: []
+- name: _make_key
+  kind: function
+  decorators: []
+  description: Make a key for a function/method matching go.meta.gen.py's object_key
+    format.
+  references: []
+- name: _extract_funcs
+  kind: function
+  decorators: []
+  description: Extract all function and method declarations with positions and signatures.
+  references: []
+- name: _extract_types
+  kind: function
+  decorators: []
+  description: Extract all type/struct/interface declarations.
+  references: []
+- name: _parse_params
+  kind: function
+  decorators: []
+  description: 'Parse function parameters into [{''name'': ..., ''type'': ...}, ...]'
+  references: []
+- name: _parse_returns
+  kind: function
+  decorators: []
+  description: Parse function return types into ['type1', 'type2', ...]
+  references: []
+- name: _split_params
+  kind: function
+  decorators: []
+  description: Split parameters by comma, respecting nested brackets/parens.
+  references: []
+- name: _extract_calls
+  kind: function
+  decorators: []
+  description: Extract function calls from a function body.
+  references: []
+- name: _parse_struct_fields
+  kind: function
+  decorators: []
+  description: Extract struct fields from struct body.
+  references: []
+- name: _parse_interface_methods
+  kind: function
+  decorators: []
+  description: Extract interface methods from interface body.
+  references: []

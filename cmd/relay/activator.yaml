@@ -26,6 +26,7 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
+  calls: []
 - name: Activate
   kind: method
   receiver: CabinetActivator
@@ -39,3 +40,11 @@ objects:
   - cabinet.CanonicalizeSetPayload
   - cabinet.Setx
   - logrus.Fields
+  calls:
+  - CanonicalizeSetPayload
+  - Errorf
+  - Info
+  - ModuleID
+  - Setx
+  - WithField
+  - WithFields

@@ -13,15 +13,36 @@ objects:
     v. Use this to fill IntegrityEnvelope.RecordHash.
   references:
   - canonicaljson.ToJSON
+  calls:
+  - EncodeToString
+  - Errorf
+  - Sum256
+  - ToJSON
 - name: GlobalChainHash
   kind: func
   description: GlobalChainHash returns a single SHA-256 over all records in emission
     order. It concatenates individual RecordHashes with \x00 separators so that adjacent
     record hashes cannot collide.
   references: []
+  calls:
+  - EncodeToString
+  - Errorf
+  - RecordHash
+  - String
+  - Sum256
+  - WriteByte
+  - WriteString
 - name: TypeChainHash
   kind: func
   description: TypeChainHash returns a SHA-256 scoped to a named record type. The
     typeName is prepended (with a \x00 separator) before the record hashes, so chains
     from different types cannot collide even if they contain identical records.
   references: []
+  calls:
+  - EncodeToString
+  - Errorf
+  - RecordHash
+  - String
+  - Sum256
+  - WriteByte
+  - WriteString

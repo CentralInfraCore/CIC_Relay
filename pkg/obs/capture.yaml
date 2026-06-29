@@ -18,23 +18,38 @@ objects:
   receiver: CaptureSink
   description: ''
   references: []
+  calls:
+  - Lock
+  - Unlock
 - name: RecordLog
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
+  calls:
+  - Lock
+  - Unlock
 - name: RecordCounter
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
+  calls:
+  - Lock
+  - Unlock
 - name: RecordGauge
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
+  calls:
+  - Lock
+  - Unlock
 - name: RecordHistogram
   kind: method
   receiver: CaptureSink
   description: ''
   references: []
+  calls:
+  - Lock
+  - Unlock

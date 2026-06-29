@@ -15,16 +15,25 @@ objects:
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Setenv
 - name: TestResolveTrustMode_Dev
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Setenv
 - name: TestResolveTrustMode_Prod
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Equal
+  - Setenv
 - name: TestBootstrapPKI_DevMode_TrustStoreLoaded
   kind: func
   description: ''
@@ -32,12 +41,20 @@ objects:
   - require.NoError
   - assert.True
   - assert.NotNil
+  calls:
+  - NoError
+  - NotNil
+  - 'True'
 - name: TestBootstrapPKI_ProdMode_NoBundleEnv_Error
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Setenv
 - name: TestBootstrapPKI_ProdMode_WithBundle
   kind: func
   description: ''
@@ -45,21 +62,40 @@ objects:
   - require.NoError
   - assert.True
   - assert.NotNil
+  calls:
+  - Join
+  - NoError
+  - NotNil
+  - ReadFile
+  - Setenv
+  - TempDir
+  - 'True'
+  - WriteFile
 - name: TestBootstrapPKI_ProdMode_InvalidPath_Error
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Setenv
 - name: TestBootstrapPKI_UnknownMode_Error
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
 - name: TestBootstrapPKI_DevMode_LoadError
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error

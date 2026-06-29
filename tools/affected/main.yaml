@@ -24,8 +24,24 @@ objects:
   - packages.NeedDeps
   - packages.Load
   - packages.PrintErrors
+  calls:
+  - Abs
+  - Dir
+  - Errorf
+  - HasSuffix
+  - Join
+  - Load
+  - PrintErrors
+  - Strings
+  - TrimSpace
 - name: main
   kind: func
   description: ''
   references:
   - packages.Config
+  calls:
+  - Err
+  - NewScanner
+  - Println
+  - Scan
+  - Text

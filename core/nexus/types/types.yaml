@@ -3,6 +3,7 @@ package: types
 description: ''
 tags:
 - core
+- schema
 category: []
 used_in: []
 entrypoint: false
@@ -14,310 +15,85 @@ objects:
     Based on the structure seen in postgresql-v0.18.0_2025.yaml.
   implements: []
   references: []
-  position:
-    start_line: 9
-    end_line: 21
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name" yaml:"name"
-  - name: Version
-    type: string
-    tag: json:"version,omitempty" yaml:"version,omitempty"
-  - name: Description
-    type: string
-    tag: json:"description,omitempty" yaml:"description,omitempty"
-  - name: Owner
-    type: string
-    tag: json:"owner,omitempty" yaml:"owner,omitempty"
-  - name: Tags
-    type: '[]string'
-    tag: json:"tags,omitempty" yaml:"tags,omitempty"
-  - name: Validity
-    type: '*Validity'
-    tag: json:"validity,omitempty" yaml:"validity,omitempty"
-  - name: Checksum
-    type: string
-    tag: json:"checksum,omitempty" yaml:"checksum,omitempty"
-  - name: Sign
-    type: string
-    tag: json:"sign,omitempty" yaml:"sign,omitempty"
-  - name: BuildTimestamp
-    type: '*time.Time'
-    tag: json:"build_timestamp,omitempty" yaml:"build_timestamp,omitempty"
-  - name: CreatedBy
-    type: '*EntityIdentity'
-    tag: json:"createdBy,omitempty" yaml:"createdBy,omitempty"
-  - name: ValidatedBy
-    type: '*ValidationReceipt'
-    tag: json:"validatedBy,omitempty" yaml:"validatedBy,omitempty"
 - name: Validity
   kind: struct
   description: Validity defines the time range for which a component is valid.
   implements: []
   references: []
-  position:
-    start_line: 24
-    end_line: 27
-  fields:
-  - name: From
-    type: time.Time
-    tag: json:"from" yaml:"from"
-  - name: Until
-    type: time.Time
-    tag: json:"until" yaml:"until"
 - name: EntityIdentity
   kind: struct
   description: EntityIdentity represents the creator of a component (signed).
   implements: []
   references: []
-  position:
-    start_line: 30
-    end_line: 35
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name" yaml:"name"
-  - name: Email
-    type: string
-    tag: json:"email" yaml:"email"
-  - name: Certificate
-    type: string
-    tag: json:"certificate" yaml:"certificate"
-  - name: IssuerCertificate
-    type: string
-    tag: json:"issuer_certificate" yaml:"issuer_certificate"
 - name: ValidationReceipt
   kind: struct
   description: ValidationReceipt proves that the component was validated by a specific
     meta-schema.
   implements: []
   references: []
-  position:
-    start_line: 38
-    end_line: 42
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name" yaml:"name"
-  - name: Version
-    type: string
-    tag: json:"version" yaml:"version"
-  - name: Checksum
-    type: string
-    tag: json:"checksum" yaml:"checksum"
 - name: BaseComponent
   kind: struct
   description: BaseComponent is the common interface for Relay, Host, and Service
     definitions.
   implements: []
   references: []
-  position:
-    start_line: 45
-    end_line: 49
-  fields:
-  - name: APIVersion
-    type: string
-    tag: json:"apiVersion" yaml:"apiVersion"
-  - name: Kind
-    type: string
-    tag: json:"kind" yaml:"kind"
-  - name: Metadata
-    type: Metadata
-    tag: json:"metadata" yaml:"metadata"
 - name: Relay
   kind: struct
   description: Relay represents a Relay node in the infrastructure graph.
   implements: []
   references: []
-  position:
-    start_line: 52
-    end_line: 55
-  fields:
-  - name: BaseComponent
-    type: '`yaml:",inline"`'
-    tag: ''
-  - name: Spec
-    type: RelaySpec
-    tag: json:"spec" yaml:"spec"
 - name: RelaySpec
   kind: struct
   description: ''
   implements: []
   references: []
-  position:
-    start_line: 56
-    end_line: 60
-  fields:
-  - name: Hosts
-    type: '[]string'
-    tag: json:"hosts" yaml:"hosts"
 - name: Host
   kind: struct
   description: Host represents a Host node (execution environment).
   implements: []
   references: []
-  position:
-    start_line: 63
-    end_line: 66
-  fields:
-  - name: BaseComponent
-    type: '`yaml:",inline"`'
-    tag: ''
-  - name: Spec
-    type: HostSpec
-    tag: json:"spec" yaml:"spec"
 - name: HostSpec
   kind: struct
   description: ''
   implements: []
   references: []
-  position:
-    start_line: 67
-    end_line: 71
-  fields:
-  - name: OS
-    type: string
-    tag: json:"os" yaml:"os"
-  - name: Services
-    type: '[]string `json:"services" yaml:"services"` // References to Service definitions'
-    tag: ''
 - name: Service
   kind: struct
   description: Service represents a functional unit (e.g., PostgreSQL).
   implements: []
   references: []
-  position:
-    start_line: 74
-    end_line: 77
-  fields:
-  - name: BaseComponent
-    type: '`yaml:",inline"`'
-    tag: ''
-  - name: Spec
-    type: ServiceSpec
-    tag: json:"spec" yaml:"spec"
 - name: ServiceSpec
   kind: struct
   description: ''
   implements: []
   references: []
-  position:
-    start_line: 78
-    end_line: 83
-  fields:
-  - name: Module
-    type: string                 `json:"module" yaml:"module"`                           //
-      Reference to the schema/module name (e.g., "postgresql")
-    tag: ''
-  - name: Config
-    type: map[string]interface{} `json:"config,omitempty" yaml:"config,omitempty"`       //
-      Legacy configuration payload
-    tag: ''
-  - name: Resources
-    type: '[]ResourceSpec         `json:"resources,omitempty" yaml:"resources,omitempty"`
-      // Schema-driven resource declarations'
-    tag: ''
 - name: ResourceSpec
   kind: struct
   description: ResourceSpec declares a single managed resource within a Service.
   implements: []
   references: []
-  position:
-    start_line: 86
-    end_line: 92
-  fields:
-  - name: Meta
-    type: ResourceMeta
-    tag: json:"meta" yaml:"meta"
-  - name: SchemaRef
-    type: SchemaRef
-    tag: json:"schemaRef" yaml:"schemaRef"
-  - name: Spec
-    type: map[string]interface{}
-    tag: json:"spec,omitempty" yaml:"spec,omitempty"
-  - name: State
-    type: ResourceState
-    tag: json:"state,omitempty" yaml:"state,omitempty"
-  - name: Dependencies
-    type: '[]string'
-    tag: json:"dependencies,omitempty" yaml:"dependencies,omitempty"
 - name: SchemaRef
   kind: struct
   description: SchemaRef identifies a schema by name and version in the Cabinet registry.
   implements: []
   references: []
-  position:
-    start_line: 95
-    end_line: 98
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name" yaml:"name"
-  - name: Version
-    type: string
-    tag: json:"version" yaml:"version"
 - name: ResourceState
   kind: struct
   description: ResourceState holds the desired lifecycle state of a resource.
   implements: []
   references: []
-  position:
-    start_line: 101
-    end_line: 103
-  fields:
-  - name: Desired
-    type: string `json:"desired,omitempty" yaml:"desired,omitempty"` // "present"
-      or "absent"
-    tag: ''
 - name: ResourceMeta
   kind: struct
   description: ResourceMeta holds identifying metadata for a resource instance.
   implements: []
   references: []
-  position:
-    start_line: 106
-    end_line: 109
-  fields:
-  - name: Name
-    type: string
-    tag: json:"name" yaml:"name"
-  - name: Kind
-    type: string
-    tag: json:"kind,omitempty" yaml:"kind,omitempty"
 - name: Graph
   kind: struct
   description: Graph represents the in-memory execution graph.
   implements: []
   references: []
-  position:
-    start_line: 112
-    end_line: 116
-  fields:
-  - name: Relays
-    type: map[string]*Relay
-    tag: ''
-  - name: Hosts
-    type: map[string]*Host
-    tag: ''
-  - name: Services
-    type: map[string]*Service
-    tag: ''
 - name: ExpectedState
   kind: struct
   description: ExpectedState represents the "Desired State" snapshot for the recorder.
   implements: []
   references: []
-  position:
-    start_line: 119
-    end_line: 123
-  fields:
-  - name: Graph
-    type: '*Graph'
-    tag: json:"graph"
-  - name: Timestamp
-    type: time.Time
-    tag: json:"timestamp"
-  - name: RunID
-    type: string
-    tag: json:"run_id"

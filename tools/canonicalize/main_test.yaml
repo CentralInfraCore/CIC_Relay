@@ -24,41 +24,71 @@ objects:
   receiver: mockReader
   description: ''
   references: []
+  calls:
+  - New
 - name: Write
   kind: method
   receiver: failingWriter
   description: ''
   references: []
+  calls:
+  - New
 - name: TestRun_Success
   kind: func
   description: ''
   references:
   - assert.NoError
   - assert.Equal
+  calls:
+  - Equal
+  - NewReader
+  - NoError
+  - Run
+  - String
+  - TrimSpace
 - name: TestRun_ReadError
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - Run
 - name: TestRun_EmptyInput
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Equal
+  calls:
+  - Equal
+  - Error
+  - NewReader
+  - Run
 - name: TestRun_UnmarshalError
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - NewReader
+  - Run
 - name: TestRun_WriteError
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - NewReader
+  - Run
 - name: TestRun_CanonicalJsonError
   kind: func
   description: ''
@@ -66,12 +96,25 @@ objects:
   - canonicaljson.SetToJSONMock
   - assert.Error
   - assert.Contains
+  calls:
+  - Contains
+  - Error
+  - New
+  - NewReader
+  - Run
+  - SetToJSONMock
 - name: TestMain_ErrorPath
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Cleanup
+  - Equal
+  - New
 - name: TestMain_SuccessPath
   kind: func
   description: ''
   references: []
+  calls:
+  - Cleanup

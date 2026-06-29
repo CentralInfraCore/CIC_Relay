@@ -14,7 +14,18 @@ objects:
   kind: func
   description: ''
   references: []
+  calls:
+  - Fatalf
+  - Is
+  - Run
+  - ValidateSchema
 - name: TestValidateInputSchema
   kind: func
   description: ''
   references: []
+  calls:
+  - Background
+  - Fatalf
+  - Is
+  - NewModuleDescriptor
+  - Run

@@ -17,26 +17,11 @@ objects:
     context.Context, workflowID string, trace interface{}) error'
   implements: []
   references: []
-  position:
-    start_line: 18
-    end_line: 20
-  fields:
-  - name: sr
-    type: StateRecorder
-    tag: ''
 - name: NewWorkflowRecorder
   kind: func
   description: NewWorkflowRecorder creates a WorkflowRecorder wrapping the given StateRecorder.
   references: []
-  position:
-    start_line: 23
-    end_line: 25
-  signature:
-    params:
-    - name: sr
-      type: StateRecorder
-    returns:
-    - '*WorkflowRecorder'
+  calls: []
 - name: Record
   kind: method
   receiver: WorkflowRecorder
@@ -44,21 +29,8 @@ objects:
     is used as the RunID; trace is stored as the actual state.
   references:
   - types.ExpectedState
-  position:
-    start_line: 29
-    end_line: 39
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: workflowID
-      type: string
-    - name: trace
-      type: interface{}
-    returns:
-    - error
   calls:
+  - Errorf
+  - Now
+  - RecordState
   - UTC
-  - fmt.Errorf
-  - sr.RecordState
-  - time.Now

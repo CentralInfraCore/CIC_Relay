@@ -1,0 +1,123 @@
+---
+module: tools.infra
+description: ''
+tags:
+- builder
+- executor
+- loader
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ValidationFailureError
+  kind: class
+  decorators: []
+  description: Custom exception for schema validation failures.
+  implements:
+  - ReleaseError
+  references:
+  - .releaselib.exceptions.ReleaseError
+- name: load_yaml
+  kind: function
+  decorators: []
+  description: Loads a YAML file.
+  references:
+  - .releaselib.exceptions.ConfigurationError
+  - yaml.YAMLError
+  - yaml.safe_load
+- name: write_yaml
+  kind: function
+  decorators: []
+  description: Writes data to a YAML file atomically.
+  references:
+  - .releaselib.exceptions.ReleaseError
+  - yaml.dump
+- name: get_reproducible_repo_hash
+  kind: function
+  decorators: []
+  description: Calculates a reproducible SHA256 hash of a given git tree object.
+  references:
+  - .releaselib.exceptions.ReleaseError
+- name: ReleaseManager
+  kind: class
+  decorators: []
+  description: ''
+  implements: []
+  references: []
+- name: __init__
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: ''
+  references: []
+- name: _path
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: ''
+  references: []
+- name: run_validation
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: 'Validates the project against its schema and, if available, verifies
+    the cryptographic signature via Vault. Steps: 1. Structural: project.yaml against
+    project.schema.yaml (offline) 2. Checksum: recompute repo hash, compare with metadata.checksum
+    (offline) 3. Signature: Vault Transit verify — non-fatal if Vault unavailable'
+  references:
+  - .releaselib.exceptions.VaultServiceError
+- name: _check_base_branch_and_version
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: Checks git state, branch, and version validity.
+  references:
+  - .releaselib.exceptions.GitStateError
+- name: _check_api_accessibility
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: Checks if a given API URL is accessible. Exits with 0 regardless of
+    success/failure, as requested.
+  references:
+  - requests.exceptions
+  - requests.get
+- name: _validate_final_project_yaml
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: Validates the project.yaml against the project.schema.yaml. This is
+    used in the finalization phase to ensure all required fields (including signatures)
+    are present.
+  references:
+  - .releaselib.exceptions.ReleaseError
+  - jsonschema.ValidationError
+  - .releaselib.exceptions.ConfigurationError
+  - jsonschema.validate
+- name: _execute_developer_preparation_phase
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: 'Handles the developer preparation phase: creates release branch, updates
+    project.yaml, commits, tags.'
+  references:
+  - .releaselib.exceptions.ReleaseError
+  - yaml.dump
+  - .releaselib.exceptions.ConfigurationError
+- name: _execute_finalization_phase
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: 'Handles the finalization phase: validates project.yaml, commits, tags,
+    merges, and cleans up.'
+  references: []
+- name: run_release_close
+  kind: method
+  receiver: ReleaseManager
+  decorators: []
+  description: Orchestrates the release process based on the current Git branch and
+    dry_run status.
+  references:
+  - .releaselib.exceptions.GitStateError
+  - .releaselib.exceptions.VaultServiceError

@@ -2,6 +2,7 @@
 package: schemapipeline_test
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -28,22 +29,31 @@ objects:
   receiver: mockRunner
   description: ''
   references: []
+  calls:
+  - Errorf
 - name: expectNext
   kind: method
   receiver: mockRunner
   description: ''
   references: []
+  calls: []
 - name: expectErr
   kind: method
   receiver: mockRunner
   description: ''
   references: []
+  calls: []
 - name: TestStart_Success
   kind: func
   description: ''
   references:
   - schemapipeline.PipelineConfig
   - require.ErrorContains
+  calls:
+  - Background
+  - ErrorContains
+  - NewStartFunc
+  - TempDir
 - name: TestStart_CloneFailure
   kind: func
   description: ''
@@ -52,18 +62,41 @@ objects:
   - require.NoError
   - assert.True
   - assert.NotEqual
+  calls:
+  - Background
+  - EncodeToString
+  - HasPrefix
+  - NewStartFunc
+  - NoError
+  - NotEqual
+  - Sum256
+  - TempDir
+  - 'True'
 - name: TestStart_ComputesTreeDigest_GitDirSkipped
   kind: func
   description: ''
   references:
   - schemapipeline.PipelineConfig
   - require.ErrorContains
+  calls:
+  - Background
+  - ErrorContains
+  - Join
+  - MkdirAll
+  - NewStartFunc
+  - TempDir
+  - WriteFile
 - name: TestStart_MissingVersion
   kind: func
   description: ''
   references:
   - schemapipeline.PipelineConfigBuildDir
   - require.ErrorContains
+  calls:
+  - Background
+  - ErrorContains
+  - NewStartFunc
+  - TempDir
 - name: TestStart_RevParseError
   kind: func
   description: ''
@@ -71,11 +104,22 @@ objects:
   - schemapipeline.PipelineConfigBuildDir
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - Errorf
+  - NewStartFunc
+  - TempDir
 - name: Run
   kind: method
   receiver: gitAndRealFileRunner
   description: ''
   references: []
+  calls:
+  - Join
+  - MkdirAll
+  - WriteFile
 - name: TestStart_ComputesTreeDigest_GitDirExcluded
   kind: func
   description: TestStart_ComputesTreeDigest_GitDirExcluded verifies that .git content
@@ -86,3 +130,9 @@ objects:
   - schemapipeline.PipelineConfig
   - assert.Equal
   - assert.Error
+  calls:
+  - Background
+  - Equal
+  - Error
+  - NewStartFunc
+  - TempDir

@@ -17,6 +17,8 @@ objects:
     This is the exported counterpart of validateInputSchema and can be used independently
     without a ModuleDescriptor (e.g. for self-validation).
   references: []
+  calls:
+  - Errorf
 - name: validateInputSchema
   kind: func
   description: validateInputSchema checks whether inputData declares a "$schema" key
@@ -27,3 +29,6 @@ objects:
     carrying a "$schema" string value whose value appears in the Accepts list. Any
     deviation returns ErrInvalid.
   references: []
+  calls:
+  - Errorf
+  - ID

@@ -17,32 +17,11 @@ objects:
   references:
   - obs.LogSink
   - obs.MetricSink
-  position:
-    start_line: 26
-    end_line: 30
-  fields:
-  - name: registry
-    type: '*RepoRegistry'
-    tag: ''
-  - name: logSink
-    type: obs.LogSink
-    tag: ''
-  - name: metricSink
-    type: obs.MetricSink
-    tag: ''
 - name: NewExecGitOps
   kind: func
   description: NewExecGitOps creates an ExecGitOps backed by the given registry.
   references: []
-  position:
-    start_line: 33
-    end_line: 35
-  signature:
-    params:
-    - name: registry
-      type: '*RepoRegistry'
-    returns:
-    - '*ExecGitOps'
+  calls: []
 - name: SetObsSinks
   kind: method
   receiver: ExecGitOps
@@ -51,212 +30,73 @@ objects:
   references:
   - obs.LogSink
   - obs.MetricSink
-  position:
-    start_line: 39
-    end_line: 42
-  signature:
-    params:
-    - name: logSink
-      type: obs.LogSink
-    - name: metricSink
-      type: obs.MetricSink
-    returns: []
+  calls: []
 - name: Clone
   kind: method
   receiver: ExecGitOps
   description: Clone clones url into the local path registered for repoID.
   references: []
-  position:
-    start_line: 45
-    end_line: 51
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: repoID
-    - name: ''
-      type: url
-    - name: branch
-      type: string
-    returns:
-    - error
   calls:
-  - e.runGit
-  - registry.Resolve
+  - Resolve
 - name: Fetch
   kind: method
   receiver: ExecGitOps
   description: Fetch fetches the given remote for the registered repo.
   references: []
-  position:
-    start_line: 54
-    end_line: 60
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: repoID
-    - name: remote
-      type: string
-    returns:
-    - error
   calls:
-  - e.runGit
-  - registry.Resolve
+  - Resolve
 - name: Checkout
   kind: method
   receiver: ExecGitOps
   description: Checkout checks out the given ref in the registered repo.
   references: []
-  position:
-    start_line: 63
-    end_line: 69
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: repoID
-    - name: ref
-      type: string
-    returns:
-    - error
   calls:
-  - e.runGit
-  - registry.Resolve
+  - Resolve
 - name: Commit
   kind: method
   receiver: ExecGitOps
   description: Commit stages paths and creates a commit; returns the new commit hash.
   references: []
-  position:
-    start_line: 72
-    end_line: 91
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: repoID
-    - name: message
-      type: string
-    - name: paths
-      type: '[]string'
-    returns:
-    - string
-    - error
   calls:
-  - e.runGit
-  - e.runGitOutput
-  - fmt.Errorf
-  - registry.Resolve
-  - strings.TrimSpace
+  - Errorf
+  - Resolve
+  - TrimSpace
 - name: Push
   kind: method
   receiver: ExecGitOps
   description: Push pushes refspec to remote for the registered repo.
   references: []
-  position:
-    start_line: 94
-    end_line: 100
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: ''
-      type: repoID
-    - name: ''
-      type: remote
-    - name: refspec
-      type: string
-    returns:
-    - error
   calls:
-  - e.runGit
-  - registry.Resolve
+  - Resolve
 - name: Status
   kind: method
   receiver: ExecGitOps
   description: Status returns the working-tree status of the registered repo.
   references: []
-  position:
-    start_line: 103
-    end_line: 115
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: repoID
-      type: string
-    returns:
-    - '[]StatusEntry'
-    - error
   calls:
-  - e.runGitOutput
-  - parsePortcelainStatus
-  - registry.Resolve
+  - Resolve
 - name: parsePortcelainStatus
   kind: func
   description: parsePortcelainStatus parses the output of `git status --porcelain`.
   references: []
-  position:
-    start_line: 118
-    end_line: 134
-  signature:
-    params:
-    - name: output
-      type: string
-    returns:
-    - '[]StatusEntry'
   calls:
-  - strings.Contains
-  - strings.Split
-  - strings.SplitN
-  - strings.TrimSpace
+  - Contains
+  - Split
+  - SplitN
+  - TrimSpace
 - name: runGit
   kind: method
   receiver: ExecGitOps
   description: runGit executes a git command with a hardened environment. dir is the
     working directory; empty string means the caller's working directory.
   references: []
-  position:
-    start_line: 138
-    end_line: 141
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: dir
-      type: string
-    - name: args
-      type: '...string'
-    returns:
-    - error
-  calls:
-  - e.runGitOutputDir
+  calls: []
 - name: runGitOutput
   kind: method
   receiver: ExecGitOps
   description: runGitOutput executes a git command and returns its stdout as a string.
   references: []
-  position:
-    start_line: 144
-    end_line: 146
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: dir
-      type: string
-    - name: args
-      type: '...string'
-    returns:
-    - string
-    - error
-  calls:
-  - e.runGitOutputDir
+  calls: []
 - name: runGitOutputDir
   kind: method
   receiver: ExecGitOps
@@ -265,39 +105,21 @@ objects:
   - obs.HistogramPoint
   - obs.ResourceComponent
   - obs.LogRecord
-  position:
-    start_line: 147
-    end_line: 215
-  signature:
-    params:
-    - name: ctx
-      type: context.Context
-    - name: dir
-      type: string
-    - name: args
-      type: '...string'
-    returns:
-    - string
-    - error
+  - context.Context.Deadline
   calls:
+  - Bytes
+  - CommandContext
+  - Deadline
+  - Environ
+  - Errorf
   - Format
+  - Join
+  - Milliseconds
+  - Now
+  - RecordHistogram
+  - RecordLog
+  - Run
+  - Since
+  - TrimSpace
   - UTC
-  - buf.Bytes
-  - cancel
-  - cmd.Run
-  - context.WithTimeout
-  - ctx.Deadline
-  - elapsed.Milliseconds
-  - exec.CommandContext
-  - float64
-  - fmt.Errorf
-  - logSink.RecordLog
-  - metricSink.RecordHistogram
-  - name
-  - os.Environ
-  - s
-  - string
-  - strings.Join
-  - strings.TrimSpace
-  - time.Now
-  - time.Since
+  - WithTimeout

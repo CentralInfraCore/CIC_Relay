@@ -2,6 +2,7 @@
 package: operator
 description: ''
 tags:
+- core
 - test
 category: []
 used_in: []
@@ -19,12 +20,16 @@ objects:
   description: ''
   references:
   - types.ExpectedState
+  calls: []
 - name: silentLogger
   kind: func
   description: ''
   references:
   - logrus.Logger
   - logrus.New
+  calls:
+  - New
+  - SetOutput
 - name: TestBootstrapHost_Valid
   kind: func
   description: ''
@@ -34,6 +39,16 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   - assert.True
+  calls:
+  - After
+  - Background
+  - BootstrapHost
+  - Equal
+  - NewBootstrapper
+  - NoError
+  - NotEmpty
+  - NotNil
+  - 'True'
 - name: TestBootstrapHost_EmptyHostID
   kind: func
   description: ''
@@ -41,12 +56,25 @@ objects:
   - assert.Nil
   - assert.Error
   - assert.Contains
+  calls:
+  - Background
+  - BootstrapHost
+  - Contains
+  - Error
+  - NewBootstrapper
+  - Nil
 - name: TestBootstrapHost_NilRecorder
   kind: func
   description: ''
   references:
   - require.NoError
   - assert.NotNil
+  calls:
+  - Background
+  - BootstrapHost
+  - NewBootstrapper
+  - NoError
+  - NotNil
 - name: TestBootstrapHost_RecorderError_NonFatal
   kind: func
   description: ''
@@ -54,42 +82,88 @@ objects:
   - assert.AnError
   - require.NoError
   - assert.NotNil
+  calls:
+  - Background
+  - BootstrapHost
+  - NewBootstrapper
+  - NoError
+  - NotNil
 - name: TestBootstrapToken_TTL
   kind: func
   description: ''
   references:
   - require.NotNil
   - assert.WithinDuration
+  calls:
+  - Add
+  - Background
+  - BootstrapHost
+  - NewBootstrapper
+  - NotNil
+  - WithinDuration
 - name: TestValidateToken_Valid
   kind: func
   description: ''
   references:
   - require.NotNil
   - assert.NoError
+  calls:
+  - Background
+  - BootstrapHost
+  - NewBootstrapper
+  - NoError
+  - NotNil
+  - ValidateToken
 - name: TestValidateToken_Expired
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Add
+  - Contains
+  - Error
+  - NewBootstrapper
+  - Now
+  - UTC
+  - ValidateToken
 - name: TestValidateToken_InvalidHMAC
   kind: func
   description: ''
   references:
   - assert.Error
   - assert.Contains
+  calls:
+  - Add
+  - Contains
+  - Error
+  - NewBootstrapper
+  - Now
+  - UTC
+  - ValidateToken
 - name: TestValidateToken_Nil
   kind: func
   description: ''
   references:
   - assert.Error
+  calls:
+  - Error
+  - NewBootstrapper
+  - ValidateToken
 - name: TestComputeHMAC_Deterministic
   kind: func
   description: ''
   references:
   - assert.Equal
+  calls:
+  - Date
+  - Equal
 - name: TestComputeHMAC_DifferentSecrets
   kind: func
   description: ''
   references:
   - assert.NotEqual
+  calls:
+  - Date
+  - NotEqual

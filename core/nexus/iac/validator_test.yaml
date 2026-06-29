@@ -2,6 +2,7 @@
 package: iac
 description: ''
 tags:
+- core
 - schema
 - test
 category: []
@@ -21,36 +22,43 @@ objects:
   description: ''
   references:
   - cabinet.Schema
+  calls:
+  - New
 - name: PutSchema
   kind: method
   receiver: stubCabinet
   description: ''
   references:
   - cabinet.Schema
+  calls: []
 - name: PutModule
   kind: method
   receiver: stubCabinet
   description: ''
   references:
   - cabinet.ModuleDescriptor
+  calls: []
 - name: GetModule
   kind: method
   receiver: stubCabinet
   description: ''
   references:
   - cabinet.ModuleDescriptor
+  calls: []
 - name: PutWorkflow
   kind: method
   receiver: stubCabinet
   description: ''
   references:
   - cabinet.Workflow
+  calls: []
 - name: GetWorkflow
   kind: method
   receiver: stubCabinet
   description: ''
   references:
   - cabinet.Workflow
+  calls: []
 - name: Setx
   kind: method
   receiver: stubCabinet
@@ -58,15 +66,18 @@ objects:
   references:
   - cabinet.SetPayload
   - cabinet.SetResponse
+  calls: []
 - name: Close
   kind: method
   receiver: stubCabinet
   description: ''
   references: []
+  calls: []
 - name: newStubCabinet
   kind: func
   description: newStubCabinet returns a cabinet stub with the given schema IDs pre-populated.
   references: []
+  calls: []
 - name: makeTestResource
   kind: func
   description: ''
@@ -75,17 +86,29 @@ objects:
   - types.ResourceMetaName
   - types.SchemaRefName
   - types.ResourceStateDesired
+  calls: []
 - name: TestIaCValidator_ValidateResource_SchemaFound
   kind: func
   description: ''
   references:
   - require.NoError
+  calls:
+  - Background
+  - NewIaCValidator
+  - NoError
+  - ValidateResource
 - name: TestIaCValidator_ValidateResource_SchemaNotFound
   kind: func
   description: ''
   references:
   - require.Error
   - assert.Contains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - NewIaCValidator
+  - ValidateResource
 - name: TestIaCValidator_Validate_Graph_AllValid
   kind: func
   description: ''
@@ -95,6 +118,11 @@ objects:
   - types.ServiceSpecResources
   - types.ResourceSpec
   - require.NoError
+  calls:
+  - Background
+  - NewIaCValidator
+  - NoError
+  - Validate
 - name: TestIaCValidator_Validate_Graph_PartialFailure
   kind: func
   description: ''
@@ -106,6 +134,13 @@ objects:
   - require.Error
   - assert.Contains
   - assert.NotContains
+  calls:
+  - Background
+  - Contains
+  - Error
+  - NewIaCValidator
+  - NotContains
+  - Validate
 - name: TestIaCValidator_Validate_EmptyGraph
   kind: func
   description: ''
@@ -113,3 +148,8 @@ objects:
   - types.GraphServices
   - types.Service
   - require.NoError
+  calls:
+  - Background
+  - NewIaCValidator
+  - NoError
+  - Validate

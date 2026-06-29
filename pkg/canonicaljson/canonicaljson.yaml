@@ -15,36 +15,55 @@ objects:
   kind: func
   description: ToJSONOriginal is the original implementation of ToJSON.
   references: []
+  calls:
+  - Bytes
 - name: ToJSON
   kind: func
   description: ToJSON marshals a Go value into a canonical JSON string. It ensures
     that map keys are sorted alphabetically for deterministic output.
   references: []
+  calls:
+  - ToJSONImpl
 - name: SetToJSONMock
   kind: func
   description: SetToJSONMock sets the mock function for ToJSON. Pass nil to restore
     the original implementation.
   references: []
+  calls: []
 - name: writeCanonicalJSON
   kind: func
   description: ''
   references:
   - io.Writer.Write
+  calls:
+  - Errorf
+  - Marshal
+  - Sprintf
+  - Unmarshal
+  - Write
 - name: writeJSONString
   kind: func
   description: ''
   references:
   - io.Writer.Write
+  calls:
+  - Marshal
+  - Write
 - name: writeJSONArray
   kind: func
   description: ''
   references:
   - io.Writer.Write
+  calls:
+  - Write
 - name: writeJSONMap
   kind: func
   description: ''
   references:
   - io.Writer.Write
+  calls:
+  - Strings
+  - Write
 - name: ToJSONImpl
   kind: var
   description: ToJSONImpl is the actual implementation of ToJSON that can be swapped

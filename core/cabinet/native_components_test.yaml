@@ -16,3 +16,10 @@ objects:
   - require.NoError
   - assert.Equal
   - assert.Nil
+  calls:
+  - Background
+  - CoreEcho
+  - Equal
+  - Nil
+  - NoError
+  - Run
