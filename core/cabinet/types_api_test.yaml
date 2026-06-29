@@ -17,9 +17,7 @@ objects:
   - cabinet.BaseBlock
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchemaIdentity_API_Shape
   kind: func
   description: ''
@@ -27,9 +25,7 @@ objects:
   - cabinet.SchemaIdentity
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchemaConfig_API_Shape
   kind: func
   description: ''
@@ -37,9 +33,7 @@ objects:
   - cabinet.SchemaConfig
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchemaSigning_API_Shape
   kind: func
   description: ''
@@ -47,9 +41,7 @@ objects:
   - cabinet.SchemaSigning
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchema_API_Shape
   kind: func
   description: ''
@@ -57,9 +49,7 @@ objects:
   - cabinet.Schema
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestModuleDescriptor_API_Shape
   kind: func
   description: ''
@@ -67,9 +57,7 @@ objects:
   - cabinet.ModuleDescriptor
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflowIdentity_API_Shape
   kind: func
   description: ''
@@ -77,9 +65,7 @@ objects:
   - cabinet.WorkflowIdentity
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflowConfig_API_Shape
   kind: func
   description: ''
@@ -87,9 +73,7 @@ objects:
   - cabinet.WorkflowConfig
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflowSigning_API_Shape
   kind: func
   description: ''
@@ -97,9 +81,7 @@ objects:
   - cabinet.WorkflowSigning
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflow_API_Shape
   kind: func
   description: ''
@@ -107,6 +89,4 @@ objects:
   - cabinet.Workflow
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal

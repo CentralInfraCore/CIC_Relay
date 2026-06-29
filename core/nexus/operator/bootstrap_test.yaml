@@ -28,8 +28,7 @@ objects:
   - logrus.Logger
   - logrus.New
   calls:
-  - New
-  - SetOutput
+  - logrus.New
 - name: TestBootstrapHost_Valid
   kind: func
   description: ''
@@ -40,15 +39,11 @@ objects:
   - assert.NotEmpty
   - assert.True
   calls:
-  - After
-  - Background
-  - BootstrapHost
-  - Equal
-  - NewBootstrapper
-  - NoError
-  - NotEmpty
-  - NotNil
-  - 'True'
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.True
+  - require.NoError
+  - require.NotNil
 - name: TestBootstrapHost_EmptyHostID
   kind: func
   description: ''
@@ -57,12 +52,9 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - BootstrapHost
-  - Contains
-  - Error
-  - NewBootstrapper
-  - Nil
+  - assert.Contains
+  - assert.Error
+  - assert.Nil
 - name: TestBootstrapHost_NilRecorder
   kind: func
   description: ''
@@ -70,11 +62,8 @@ objects:
   - require.NoError
   - assert.NotNil
   calls:
-  - Background
-  - BootstrapHost
-  - NewBootstrapper
-  - NoError
-  - NotNil
+  - assert.NotNil
+  - require.NoError
 - name: TestBootstrapHost_RecorderError_NonFatal
   kind: func
   description: ''
@@ -83,11 +72,8 @@ objects:
   - require.NoError
   - assert.NotNil
   calls:
-  - Background
-  - BootstrapHost
-  - NewBootstrapper
-  - NoError
-  - NotNil
+  - assert.NotNil
+  - require.NoError
 - name: TestBootstrapToken_TTL
   kind: func
   description: ''
@@ -95,12 +81,8 @@ objects:
   - require.NotNil
   - assert.WithinDuration
   calls:
-  - Add
-  - Background
-  - BootstrapHost
-  - NewBootstrapper
-  - NotNil
-  - WithinDuration
+  - assert.WithinDuration
+  - require.NotNil
 - name: TestValidateToken_Valid
   kind: func
   description: ''
@@ -108,12 +90,8 @@ objects:
   - require.NotNil
   - assert.NoError
   calls:
-  - Background
-  - BootstrapHost
-  - NewBootstrapper
-  - NoError
-  - NotNil
-  - ValidateToken
+  - assert.NoError
+  - require.NotNil
 - name: TestValidateToken_Expired
   kind: func
   description: ''
@@ -121,13 +99,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Add
-  - Contains
-  - Error
-  - NewBootstrapper
-  - Now
-  - UTC
-  - ValidateToken
+  - assert.Contains
+  - assert.Error
 - name: TestValidateToken_InvalidHMAC
   kind: func
   description: ''
@@ -135,35 +108,26 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Add
-  - Contains
-  - Error
-  - NewBootstrapper
-  - Now
-  - UTC
-  - ValidateToken
+  - assert.Contains
+  - assert.Error
 - name: TestValidateToken_Nil
   kind: func
   description: ''
   references:
   - assert.Error
   calls:
-  - Error
-  - NewBootstrapper
-  - ValidateToken
+  - assert.Error
 - name: TestComputeHMAC_Deterministic
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Date
-  - Equal
+  - assert.Equal
 - name: TestComputeHMAC_DifferentSecrets
   kind: func
   description: ''
   references:
   - assert.NotEqual
   calls:
-  - Date
-  - NotEqual
+  - assert.NotEqual

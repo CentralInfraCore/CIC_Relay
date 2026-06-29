@@ -31,15 +31,4 @@ objects:
   references:
   - context.Context.Done
   calls:
-  - Bytes
-  - DecodeString
-  - Decrypt
-  - Done
-  - Encode
-  - EncodeToString
-  - Error
-  - NewEncoder
-  - NewScanner
-  - Scan
-  - Sprintf
-  - Unmarshal
+  - context.Context.Done

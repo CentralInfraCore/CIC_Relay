@@ -31,21 +31,6 @@ objects:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
   calls:
-  - Close
-  - Encode
-  - Error
-  - Header
-  - Info
-  - LimitReader
-  - New
-  - NewEncoder
-  - ProofVerifyResponse
-  - ReadAll
-  - Set
-  - String
-  - Unmarshal
-  - VerifyProofArtifact
-  - WithError
-  - WithField
-  - WithFields
-  - WriteHeader
+  - http.ResponseWriter.Header
+  - http.ResponseWriter.WriteHeader
+  - uuid.New

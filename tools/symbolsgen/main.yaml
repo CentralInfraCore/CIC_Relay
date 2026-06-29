@@ -23,17 +23,7 @@ objects:
   - packages.NeedTypes
   - packages.Load
   calls:
-  - Background
-  - Bytes
-  - Errorf
-  - Load
-  - NewFileSet
-  - NewFromFiles
-  - Slice
-  - Sprintf
-  - WithTimeout
-  - Write
-  - WriteString
+  - packages.Load
 - name: run
   kind: func
   description: run reads a package allowlist, generates symbols documentation, and

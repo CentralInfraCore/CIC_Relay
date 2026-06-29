@@ -93,10 +93,7 @@ objects:
   references:
   - require.NoError
   calls:
-  - Background
-  - NewIaCValidator
-  - NoError
-  - ValidateResource
+  - require.NoError
 - name: TestIaCValidator_ValidateResource_SchemaNotFound
   kind: func
   description: ''
@@ -104,11 +101,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewIaCValidator
-  - ValidateResource
+  - assert.Contains
+  - require.Error
 - name: TestIaCValidator_Validate_Graph_AllValid
   kind: func
   description: ''
@@ -119,10 +113,7 @@ objects:
   - types.ResourceSpec
   - require.NoError
   calls:
-  - Background
-  - NewIaCValidator
-  - NoError
-  - Validate
+  - require.NoError
 - name: TestIaCValidator_Validate_Graph_PartialFailure
   kind: func
   description: ''
@@ -135,12 +126,9 @@ objects:
   - assert.Contains
   - assert.NotContains
   calls:
-  - Background
-  - Contains
-  - Error
-  - NewIaCValidator
-  - NotContains
-  - Validate
+  - assert.Contains
+  - assert.NotContains
+  - require.Error
 - name: TestIaCValidator_Validate_EmptyGraph
   kind: func
   description: ''
@@ -149,7 +137,4 @@ objects:
   - types.Service
   - require.NoError
   calls:
-  - Background
-  - NewIaCValidator
-  - NoError
-  - Validate
+  - require.NoError

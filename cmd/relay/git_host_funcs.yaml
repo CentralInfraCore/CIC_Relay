@@ -31,13 +31,7 @@ objects:
   - nexusgit.GitOps
   - wazero.Runtime.NewHostModuleBuilder
   calls:
-  - Export
-  - Instantiate
-  - NewFunctionBuilder
-  - NewHostModuleBuilder
-  - WithFunc
-  - WithParameterNames
-  - WithResultNames
+  - wazero.Runtime.NewHostModuleBuilder
 - name: makeCloneFn
   kind: func
   description: makeCloneFn creates a WASM host function that clones a git repository.
@@ -46,8 +40,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Clone
   calls:
-  - Clone
-  - Error
+  - nexusgit.GitOps.Clone
 - name: makeFetchFn
   kind: func
   description: makeFetchFn creates a WASM host function that fetches updates from
@@ -57,8 +50,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Fetch
   calls:
-  - Error
-  - Fetch
+  - nexusgit.GitOps.Fetch
 - name: makeCheckoutFn
   kind: func
   description: makeCheckoutFn creates a WASM host function that checks out a git reference.
@@ -67,8 +59,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Checkout
   calls:
-  - Checkout
-  - Error
+  - nexusgit.GitOps.Checkout
 - name: makeCommitFn
   kind: func
   description: makeCommitFn creates a WASM host function that commits changes to a
@@ -78,8 +69,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Commit
   calls:
-  - Commit
-  - Error
+  - nexusgit.GitOps.Commit
 - name: makePushFn
   kind: func
   description: makePushFn creates a WASM host function that pushes commits to a git
@@ -89,8 +79,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Push
   calls:
-  - Error
-  - Push
+  - nexusgit.GitOps.Push
 - name: makeStatusFn
   kind: func
   description: makeStatusFn creates a WASM host function that queries the status of
@@ -100,8 +89,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Status
   calls:
-  - Error
-  - Status
+  - nexusgit.GitOps.Status
 - name: gitReadJSON
   kind: func
   description: gitReadJSON reads reqLen bytes from WASM memory at reqPtr and unmarshals
@@ -110,9 +98,7 @@ objects:
   - api.Module
   - api.Module.Memory
   calls:
-  - Memory
-  - Read
-  - Unmarshal
+  - api.Module.Memory
 - name: gitWriteJSON
   kind: func
   description: gitWriteJSON marshals v as JSON and writes it into WASM memory at (outPtr,
@@ -121,9 +107,7 @@ objects:
   - api.Module
   - api.Module.Memory
   calls:
-  - Marshal
-  - Memory
-  - Write
+  - api.Module.Memory
 - name: gitWriteError
   kind: func
   description: gitWriteError writes a JSON error response into WASM memory.

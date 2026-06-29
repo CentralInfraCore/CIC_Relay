@@ -16,87 +16,67 @@ objects:
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchemaIdentity_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchemaConfig_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchemaSigning_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestSchema_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestModuleDescriptor_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflowIdentity_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflowConfig_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflowSigning_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal
 - name: TestWorkflow_Shape
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
-  - NumField
-  - TypeOf
+  - assert.Equal

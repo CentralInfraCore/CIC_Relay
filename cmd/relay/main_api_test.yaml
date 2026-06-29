@@ -25,12 +25,9 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   calls:
-  - Bytes
-  - Equal
-  - Helper
-  - NoError
-  - NotEmpty
-  - Unmarshal
+  - assert.Equal
+  - assert.NoError
+  - assert.NotEmpty
 - name: TestSetHandler_Success
   kind: func
   description: TestSetHandler_Success tests the happy path for the /set endpoint.
@@ -44,20 +41,9 @@ objects:
   - cabinet.SetResponse
   - assert.NoError
   calls:
-  - AssertExpectations
-  - Bytes
-  - Equal
-  - Marshal
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - NoError
-  - 'On'
-  - Return
-  - Set
-  - SetOutput
-  - Unmarshal
+  - assert.Equal
+  - assert.NoError
+  - logrus.New
 - name: TestSetHandler_MethodNotAllowed
   kind: func
   description: TestSetHandler_MethodNotAllowed tests that the /set endpoint only accepts
@@ -66,14 +52,8 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - AssertNotCalled
-  - Equal
-  - Get
-  - Header
-  - New
-  - NewRecorder
-  - NewRequest
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestSetHandler_BodyTooLarge
   kind: func
   description: TestSetHandler_BodyTooLarge tests that the handler rejects bodies larger
@@ -82,16 +62,8 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - AssertNotCalled
-  - Equal
-  - Get
-  - Header
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - Set
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestSetHandler_InvalidJSON
   kind: func
   description: TestSetHandler_InvalidJSON tests that the handler returns a 400 error
@@ -100,16 +72,8 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - AssertNotCalled
-  - Equal
-  - Get
-  - Header
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - Set
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestSetHandler_CabinetInvalidError
   kind: func
   description: TestSetHandler_CabinetInvalidError tests the handler's response to
@@ -121,18 +85,8 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - AssertCalled
-  - Equal
-  - Get
-  - Header
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - Set
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestSetHandler_Timeout
   kind: func
   description: TestSetHandler_Timeout tests the handler's response to a timeout from
@@ -144,19 +98,8 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - AssertCalled
-  - Equal
-  - Errorf
-  - Get
-  - Header
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - Set
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestSetHandler_CabinetInternalError
   kind: func
   description: TestSetHandler_CabinetInternalError tests the handler's response to
@@ -167,19 +110,8 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - AssertCalled
-  - Equal
-  - Errorf
-  - Get
-  - Header
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - Set
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestSetHandler_ObsEmission_Success
   kind: func
   description: TestSetHandler_ObsEmission_Success verifies that a successful /set
@@ -196,18 +128,11 @@ objects:
   - assert.NotEmpty
   - assert.NotNil
   calls:
-  - Equal
-  - Len
-  - Marshal
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - NotEmpty
-  - NotNil
-  - 'On'
-  - Return
-  - SetOutput
+  - assert.Equal
+  - assert.Len
+  - assert.NotEmpty
+  - assert.NotNil
+  - logrus.New
 - name: TestSetHandler_ObsEmission_MethodNotAllowed
   kind: func
   description: TestSetHandler_ObsEmission_MethodNotAllowed verifies that a rejected
@@ -219,13 +144,10 @@ objects:
   - assert.Len
   - assert.Empty
   calls:
-  - Empty
-  - Equal
-  - Len
-  - New
-  - NewRecorder
-  - NewRequest
-  - SetOutput
+  - assert.Empty
+  - assert.Equal
+  - assert.Len
+  - logrus.New
 - name: TestSetHandler_ObsEmission_Timeout
   kind: func
   description: TestSetHandler_ObsEmission_Timeout verifies that a timed-out request
@@ -239,16 +161,9 @@ objects:
   - assert.Equal
   - assert.Len
   calls:
-  - Equal
-  - Errorf
-  - Len
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - SetOutput
+  - assert.Equal
+  - assert.Len
+  - logrus.New
 - name: TestSetHandler_ObsEmission_NilSinks
   kind: func
   description: TestSetHandler_ObsEmission_NilSinks verifies that nil sinks do not
@@ -262,16 +177,9 @@ objects:
   - assert.NotPanics
   - assert.Equal
   calls:
-  - Equal
-  - Marshal
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - NotPanics
-  - 'On'
-  - Return
-  - SetOutput
+  - assert.Equal
+  - assert.NotPanics
+  - logrus.New
 - name: TestSetHandler_ChainAnchor_Success
   kind: func
   description: TestSetHandler_ChainAnchor_Success verifies that when Setx returns
@@ -288,16 +196,9 @@ objects:
   - assert.Equal
   - require.Len
   calls:
-  - Equal
-  - Len
-  - Marshal
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - SetOutput
+  - assert.Equal
+  - logrus.New
+  - require.Len
 - name: TestSetHandler_ChainAnchor_Error
   kind: func
   description: TestSetHandler_ChainAnchor_Error verifies that when Setx returns an
@@ -311,18 +212,10 @@ objects:
   - require.Len
   - assert.False
   calls:
-  - Equal
-  - Errorf
-  - 'False'
-  - Len
-  - Marshal
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - SetOutput
+  - assert.Equal
+  - assert.False
+  - logrus.New
+  - require.Len
 - name: TestSimpleHandlers
   kind: func
   description: TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz,
@@ -332,14 +225,9 @@ objects:
   - assert.Equal
   - assert.JSONEq
   calls:
-  - Equal
-  - JSONEq
-  - New
-  - NewRecorder
-  - NewRequest
-  - Run
-  - SetOutput
-  - String
+  - assert.Equal
+  - assert.JSONEq
+  - logrus.New
 - name: Read
   kind: method
   receiver: errorReader
@@ -354,12 +242,8 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
-  - Equal
-  - New
-  - NewRecorder
-  - NewRequest
-  - NopCloser
-  - SetOutput
+  - assert.Equal
+  - logrus.New
 - name: TestSetHandler_SourceDigestFromTreeHash
   kind: func
   description: ''
@@ -371,13 +255,5 @@ objects:
   - cabinet.SetResponseResults
   - logrus.New
   calls:
-  - AssertExpectations
-  - Marshal
-  - MatchedBy
-  - New
-  - NewReader
-  - NewRecorder
-  - NewRequest
-  - 'On'
-  - Return
-  - SetOutput
+  - logrus.New
+  - mock.MatchedBy

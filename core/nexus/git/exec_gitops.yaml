@@ -107,19 +107,4 @@ objects:
   - obs.LogRecord
   - context.Context.Deadline
   calls:
-  - Bytes
-  - CommandContext
-  - Deadline
-  - Environ
-  - Errorf
-  - Format
-  - Join
-  - Milliseconds
-  - Now
-  - RecordHistogram
-  - RecordLog
-  - Run
-  - Since
-  - TrimSpace
-  - UTC
-  - WithTimeout
+  - context.Context.Deadline

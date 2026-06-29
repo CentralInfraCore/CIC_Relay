@@ -102,25 +102,22 @@ objects:
   - assert.True
   - assert.Equal
   calls:
-  - Equal
-  - Marshal
-  - 'True'
-  - Write
+  - assert.Equal
+  - assert.True
 - name: TestGitReadJSON_BadOffset
   kind: func
   description: ''
   references:
   - assert.False
   calls:
-  - 'False'
+  - assert.False
 - name: TestGitReadJSON_BadJSON
   kind: func
   description: ''
   references:
   - assert.False
   calls:
-  - 'False'
-  - Write
+  - assert.False
 - name: TestGitWriteJSON_OK
   kind: func
   description: ''
@@ -129,24 +126,23 @@ objects:
   - require.True
   - assert.Contains
   calls:
-  - Contains
-  - Greater
-  - Read
-  - 'True'
+  - assert.Contains
+  - assert.Greater
+  - require.True
 - name: TestGitWriteJSON_BufferTooSmall
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
+  - assert.Equal
 - name: TestGitWriteJSON_WriteFailure
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
+  - assert.Equal
 - name: TestGitWriteError_WritesErrorField
   kind: func
   description: ''
@@ -154,9 +150,8 @@ objects:
   - require.Greater
   - assert.Contains
   calls:
-  - Contains
-  - Greater
-  - Read
+  - assert.Contains
+  - require.Greater
 - name: TestRegisterGitHostFunctions
   kind: func
   description: ''
@@ -164,10 +159,8 @@ objects:
   - wazero.NewRuntime
   - require.NoError
   calls:
-  - Background
-  - Close
-  - NewRuntime
-  - NoError
+  - require.NoError
+  - wazero.NewRuntime
 - name: TestMakeGitHostSetupFn
   kind: func
   description: ''
@@ -175,10 +168,8 @@ objects:
   - wazero.NewRuntime
   - require.NoError
   calls:
-  - Background
-  - Close
-  - NewRuntime
-  - NoError
+  - require.NoError
+  - wazero.NewRuntime
 - name: TestMakeCloneFn_Success
   kind: func
   description: ''
@@ -186,182 +177,138 @@ objects:
   - assert.Greater
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Greater
-  - Read
+  - assert.Contains
+  - assert.Greater
 - name: TestMakeCloneFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - Read
+  - assert.Contains
 - name: TestMakeCloneFn_BadJSON
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
-  - Write
+  - assert.Contains
 - name: TestMakeFetchFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakeFetchFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - Read
+  - assert.Contains
 - name: TestMakeCheckoutFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakeCheckoutFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - Read
+  - assert.Contains
 - name: TestMakeCommitFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakeCommitFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - Read
+  - assert.Contains
 - name: TestMakePushFn_Success
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakePushFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - Read
+  - assert.Contains
 - name: TestMakeStatusFn_Success
   kind: func
   description: ''
   references:
   - assert.Greater
   calls:
-  - Background
-  - Greater
+  - assert.Greater
 - name: TestMakeStatusFn_Error
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - New
-  - Read
+  - assert.Contains
 - name: TestMakeCloneFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakeFetchFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakeCheckoutFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakeCommitFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakePushFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestMakeStatusFn_BadRequest
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Read
+  - assert.Contains
 - name: TestGitWriteJSON_MarshalError
   kind: func
   description: ''
   references:
   - assert.Equal
   calls:
-  - Equal
+  - assert.Equal

@@ -31,9 +31,7 @@ objects:
   references:
   - canonicaljson.ToJSON
   calls:
-  - EncodeToString
-  - Sum256
-  - ToJSON
+  - canonicaljson.ToJSON
 - name: ComputeChainHashV1
   kind: func
   description: 'ComputeChainHashV1 returns SHA-256 over the full execution identity:

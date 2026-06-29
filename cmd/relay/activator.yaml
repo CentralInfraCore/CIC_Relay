@@ -41,10 +41,5 @@ objects:
   - cabinet.Setx
   - logrus.Fields
   calls:
-  - CanonicalizeSetPayload
-  - Errorf
-  - Info
-  - ModuleID
-  - Setx
-  - WithField
-  - WithFields
+  - cabinet.CanonicalizeSetPayload
+  - cabinet.Setx

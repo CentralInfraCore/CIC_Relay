@@ -93,6 +93,4 @@ objects:
   - types.ExpectedStateRunID
   - recorder.RecordState
   calls:
-  - RecordState
-  - Warn
-  - WithError
+  - recorder.RecordState

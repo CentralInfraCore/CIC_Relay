@@ -20,13 +20,9 @@ objects:
   - cabinet.IsConflict
   - cabinet.IsNotFound
   calls:
-  - Errorf
-  - Fatalf
-  - IsConflict
-  - IsInvalid
-  - IsNotFound
-  - New
-  - Run
+  - cabinet.IsConflict
+  - cabinet.IsInvalid
+  - cabinet.IsNotFound
 - name: TestValidationError_Error_EmptyReturnsErrInvalid_API
   kind: func
   description: ''
@@ -35,8 +31,7 @@ objects:
   - cabinet.ErrInvalid
   - cabinet.Error
   calls:
-  - Error
-  - Fatalf
+  - cabinet.Error
 - name: TestValidationError_Error_WithCauses_JSONPrefixed_API
   kind: func
   description: ''
@@ -56,8 +51,7 @@ objects:
   - cabinet.FieldErrorField
   - cabinet.NewValidationError
   calls:
-  - Fatalf
-  - NewValidationError
+  - cabinet.NewValidationError
 - name: TestValidationError_DoesNotMatchIsInvalid_API
   kind: func
   description: ''
@@ -66,13 +60,12 @@ objects:
   - cabinet.FieldErrorField
   - cabinet.IsInvalid
   calls:
-  - Fatalf
-  - IsInvalid
-  - NewValidationError
+  - cabinet.IsInvalid
+  - cabinet.NewValidationError
 - name: TestValidationError_ImplementsError_API
   kind: func
   description: ''
   references:
   - cabinet.NewValidationError
   calls:
-  - NewValidationError
+  - cabinet.NewValidationError

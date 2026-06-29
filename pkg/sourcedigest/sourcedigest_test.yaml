@@ -16,12 +16,9 @@ objects:
   - sourcedigest.ComputeTreeHash
   - assert.NotEqual
   calls:
-  - ComputeTreeHash
-  - Join
-  - NoError
-  - NotEqual
-  - TempDir
-  - WriteFile
+  - assert.NotEqual
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
 - name: TestComputeTreeHash_AddedFileSensitivity
   kind: func
   description: ''
@@ -30,12 +27,9 @@ objects:
   - sourcedigest.ComputeTreeHash
   - assert.NotEqual
   calls:
-  - ComputeTreeHash
-  - Join
-  - NoError
-  - NotEqual
-  - TempDir
-  - WriteFile
+  - assert.NotEqual
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
 - name: TestComputeTreeHash_PathSensitivity
   kind: func
   description: ''
@@ -44,12 +38,9 @@ objects:
   - sourcedigest.ComputeTreeHash
   - assert.NotEqual
   calls:
-  - ComputeTreeHash
-  - Join
-  - NoError
-  - NotEqual
-  - TempDir
-  - WriteFile
+  - assert.NotEqual
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
 - name: TestComputeTreeHash_ExcludesDir
   kind: func
   description: ''
@@ -59,14 +50,10 @@ objects:
   - assert.NotEqual
   - assert.Equal
   calls:
-  - ComputeTreeHash
-  - Equal
-  - Join
-  - MkdirAll
-  - NoError
-  - NotEqual
-  - TempDir
-  - WriteFile
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
 - name: TestComputeTreeHash_EmptyDir
   kind: func
   description: ''
@@ -75,10 +62,9 @@ objects:
   - require.NoError
   - assert.Len
   calls:
-  - ComputeTreeHash
-  - Len
-  - NoError
-  - TempDir
+  - assert.Len
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
 - name: TestComputeTreeHash_SymlinksSkipped
   kind: func
   description: ''
@@ -87,13 +73,9 @@ objects:
   - sourcedigest.ComputeTreeHash
   - assert.Len
   calls:
-  - ComputeTreeHash
-  - Join
-  - Len
-  - NoError
-  - Symlink
-  - TempDir
-  - WriteFile
+  - assert.Len
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
 - name: TestComputeTreeHash_UnreadableFile
   kind: func
   description: ''
@@ -102,13 +84,6 @@ objects:
   - sourcedigest.ComputeTreeHash
   - assert.Error
   calls:
-  - Chmod
-  - Cleanup
-  - ComputeTreeHash
-  - Error
-  - Getuid
-  - Join
-  - NoError
-  - Skip
-  - TempDir
-  - WriteFile
+  - assert.Error
+  - require.NoError
+  - sourcedigest.ComputeTreeHash

@@ -33,19 +33,6 @@ objects:
   - require.Error
   - require.True
   calls:
-  - Background
-  - Error
-  - IsNotFound
-  - Logf
-  - NewAPI
-  - NewCabinetService
-  - NewMemModuleStore
-  - NewMemSchemaStore
-  - NewMemWorkflowStore
-  - NewModuleDescriptor
-  - NewWorkflow
-  - NoError
-  - Put
-  - Run
-  - 'True'
-  - ValidateSet
+  - require.Error
+  - require.NoError
+  - require.True

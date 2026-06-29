@@ -17,12 +17,8 @@ objects:
   - require.NoError
   - require.NotNil
   calls:
-  - Cleanup
-  - NewServer
-  - NewVaultCryptoService
-  - NoError
-  - NotNil
-  - Setenv
+  - require.NoError
+  - require.NotNil
 - name: TestNewVaultCryptoService_Errors
   kind: func
   description: ''

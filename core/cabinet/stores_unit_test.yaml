@@ -35,13 +35,9 @@ objects:
   - assert.Equal
   - require.NotNil
   calls:
-  - Equal
-  - Exists
-  - 'False'
-  - Get
-  - ID
-  - NewMemModuleStore
-  - Nil
-  - NotNil
-  - Put
-  - 'True'
+  - assert.Equal
+  - assert.True
+  - require.False
+  - require.Nil
+  - require.NotNil
+  - require.True

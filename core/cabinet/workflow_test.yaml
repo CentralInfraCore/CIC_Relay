@@ -19,10 +19,8 @@ objects:
   - require.Error
   - assert.EqualError
   calls:
-  - Background
-  - EqualError
-  - Error
-  - ErrorIs
-  - NewWorkflow
-  - Nil
-  - Run
+  - assert.EqualError
+  - assert.Error
+  - assert.ErrorIs
+  - assert.Nil
+  - require.Error

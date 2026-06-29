@@ -56,7 +56,7 @@ objects:
   references:
   - logrus.New
   calls:
-  - New
+  - logrus.New
 - name: NewOperatorWithLifecycle
   kind: func
   description: NewOperatorWithLifecycle creates an Operator with full bootstrap and
@@ -95,12 +95,7 @@ objects:
   - logrus.Fields
   - context.Context.Done
   calls:
-  - Done
-  - Errorf
-  - Warn
-  - Watch
-  - WithError
-  - WithFields
+  - context.Context.Done
 - name: handleEvent
   kind: method
   receiver: Operator
@@ -202,12 +197,8 @@ objects:
   - logrus.WithField
   - context.Context.Done
   calls:
-  - Done
-  - Join
-  - ReadFile
-  - Warn
-  - WithError
-  - WithField
+  - context.Context.Done
+  - logrus.WithField
 - name: Watch
   kind: method
   receiver: PollingWatcher
@@ -216,9 +207,5 @@ objects:
   - logrus.WithField
   - context.Context.Done
   calls:
-  - Done
-  - NewTicker
-  - Stop
-  - Warn
-  - WithError
-  - WithField
+  - context.Context.Done
+  - logrus.WithField

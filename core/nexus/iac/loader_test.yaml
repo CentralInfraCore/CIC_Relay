@@ -25,15 +25,12 @@ objects:
   - assert.Equal
   - require.Len
   calls:
-  - Background
-  - Equal
-  - Len
-  - Load
-  - NewFileSource
-  - NewLoader
-  - NoError
-  - NotNil
-  - 'True'
+  - assert.Equal
+  - assert.Len
+  - require.Len
+  - require.NoError
+  - require.NotNil
+  - require.True
 - name: TestLoader_Load_RelativePaths
   kind: func
   description: ''
@@ -41,16 +38,8 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Join
-  - Load
-  - MkdirAll
-  - NewFileSource
-  - NewLoader
-  - NoError
-  - TempDir
-  - WriteFile
+  - assert.Contains
+  - require.NoError
 - name: TestLoader_Load_Errors
   kind: func
   description: ''
@@ -58,16 +47,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
-  - Background
-  - Contains
-  - Error
-  - Join
-  - Load
-  - NewFileSource
-  - NewLoader
-  - Run
-  - TempDir
-  - WriteFile
+  - assert.Contains
+  - assert.Error
 - name: FetchConfig
   kind: method
   receiver: mockErrorSource
@@ -81,14 +62,7 @@ objects:
   references:
   - assert.Error
   calls:
-  - Background
-  - Error
-  - FetchConfig
-  - Join
-  - NewFileSource
-  - Skip
-  - Symlink
-  - TempDir
+  - assert.Error
 - name: TestFileSource_FetchConfig_EmptyDir
   kind: func
   description: ''
@@ -96,9 +70,5 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
-  - Background
-  - Empty
-  - FetchConfig
-  - NewFileSource
-  - NoError
-  - TempDir
+  - assert.Empty
+  - require.NoError

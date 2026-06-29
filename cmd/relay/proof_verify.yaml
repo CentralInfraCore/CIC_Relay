@@ -43,8 +43,7 @@ objects:
   - cabinet.ProofTraceStep
   - cabinet.ComputeChainHashV1
   calls:
-  - ComputeChainHashV1
-  - Sprintf
+  - cabinet.ComputeChainHashV1
 - name: ProofArtifactFromTrace
   kind: func
   description: ProofArtifactFromTrace converts a cabinet.ProofTrace to a ProofArtifact.

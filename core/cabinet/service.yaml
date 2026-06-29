@@ -108,41 +108,7 @@ objects:
   - logrus.WithFields
   - logrus.Fields
   calls:
-  - Call
-  - Close
-  - ComputeChainHashV1
-  - Elem
-  - Errorf
-  - Format
-  - Get
-  - GetModule
-  - GetWorkflow
-  - ID
-  - In
-  - Init
-  - Interface
-  - IsNil
-  - Kind
-  - Marshal
-  - NewExecutionContext
-  - NewHostInstance
-  - Notify
-  - Now
-  - NumIn
-  - NumOut
-  - Out
-  - ParseExecutionGraph
-  - Process
-  - Record
-  - Set
-  - ToLower
-  - Type
-  - TypeOf
-  - UTC
-  - Unmarshal
-  - ValueOf
-  - Warn
-  - WithFields
+  - logrus.WithFields
 - name: Close
   kind: method
   receiver: cabinetService

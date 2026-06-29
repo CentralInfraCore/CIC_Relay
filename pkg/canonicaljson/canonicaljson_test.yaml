@@ -28,12 +28,9 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - Error
-  - NaN
-  - NoError
-  - Run
-  - ToJSON
+  - assert.Equal
+  - assert.Error
+  - require.NoError
 - name: TestToJSON_ErrorCases
   kind: func
   description: ''
@@ -41,12 +38,8 @@ objects:
   - assert.Error
   - assert.Equal
   calls:
-  - Equal
-  - Error
-  - Inf
-  - NaN
-  - Run
-  - String
+  - assert.Equal
+  - assert.Error
 - name: TestSetToJSONMock
   kind: func
   description: ''
@@ -54,8 +47,5 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
-  - Equal
-  - NoError
-  - SetToJSONMock
-  - ToJSON
-  - ToJSONOriginal
+  - assert.Equal
+  - require.NoError
