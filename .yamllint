@@ -23,3 +23,26 @@ file-rules:
 ignore: |
   /p_venv/
   /source/
+  /.mcp_data/
+  # KB companion YAMLs are machine-generated beside every source file (module:/
+  # package: + objects:). They are data, not hand-authored config — don't lint them.
+  /cmd/
+  /core/
+  /pkg/
+  /docs/
+  /tools/
+  /tests/
+  # Generated schema / data / IaC YAML at the repo root.
+  *.schema.yaml
+  *.meta.yaml
+  /LICENSE.yaml
+  /README.yaml
+  /project.yaml
+  /feature-list.yaml
+  /postgresql-*.yaml
+  # Non-CI content: planning docs, PKI data assets, and POC examples are data,
+  # not build/operational config. (NOTE: ai/PROMPTMAP.yaml has genuine duplicate
+  # keys — tracked separately, not a yamllint-gate concern.)
+  /ai/
+  /embedded/
+  /examples/
