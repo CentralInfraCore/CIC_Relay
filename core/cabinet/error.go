@@ -19,7 +19,7 @@ var (
 )
 
 // IsInvalid checks if an error is an ErrInvalid validation or integrity failure.
-func IsInvalid(err error) bool  { return errors.Is(err, ErrInvalid) }
+func IsInvalid(err error) bool { return errors.Is(err, ErrInvalid) }
 
 // IsConflict checks if an error is an ErrConflict resource state conflict.
 func IsConflict(err error) bool { return errors.Is(err, ErrConflict) }
@@ -28,7 +28,7 @@ func IsConflict(err error) bool { return errors.Is(err, ErrConflict) }
 func IsNotFound(err error) bool { return errors.Is(err, ErrNotFound) }
 
 // IsTimeout checks if an error is an ErrTimeout execution exceeded time budget.
-func IsTimeout(err error) bool  { return errors.Is(err, ErrTimeout) }
+func IsTimeout(err error) bool { return errors.Is(err, ErrTimeout) }
 
 // FieldError describes a validation error for a specific field.
 type FieldError struct {

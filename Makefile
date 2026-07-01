@@ -13,7 +13,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	symbols check-symbols test-api deps \
 	dev-vault dev-vault-stop \
 	release release-relay release-verify sourcehash validate \
-	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki \
+	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki fetch-pki-release \
 	infra-down infra.help \
 	mutate mutate-all
 
@@ -31,9 +31,12 @@ BUILD_DIR ?= ./output/$(COMMIT)
 COVERAGE_FILE ?= /output/$(COMMIT)/coverage.out
 COVERAGE_HTML ?= /output/$(COMMIT)/coverage.html
 
-# BUILDER_IMAGE_DIGEST: pinned golang builder image digest from docker-compose.yaml.
-# Re-pin: grep -m1 'sha256:' docker-compose.yaml | grep -o 'sha256:[a-f0-9]*'
-BUILDER_IMAGE_DIGEST ?= sha256:d6d07e5326853f71a30decb4d777467428e85c087433b3d76c8b74933abd48b1
+# BUILDER_IMAGE_DIGEST: golang builder image digest, derived at make-time from the
+# single source of truth — the &golang_image anchor in docker-compose.yml that every
+# golang service (*golang_image) references. This cannot drift: bump the anchor and the
+# digest baked into the binary (-X main.BuilderImageDigest) follows automatically.
+# Override for hermetic/off-tree builds: make ... BUILDER_IMAGE_DIGEST=sha256:...
+BUILDER_IMAGE_DIGEST ?= $(shell grep '^x-golang-version:' docker-compose.yml | grep -oE 'sha256:[a-f0-9]{64}')
 
 # RELEASE_LD_FLAGS: timestamp-free — produces byte-identical binaries from the same source.
 # SourceTreeHash is injected inline in release/build recipes via:
@@ -96,10 +99,10 @@ endif
 # Macros — Go container exec
 # =============================================================================
 define GO_EXEC
-	docker compose exec -T builder sh -eu -o pipefail -c 'cd /git-source && $(1)'
+	docker compose exec -T go-builder sh -eu -o pipefail -c 'cd /git-source && $(1)'
 endef
 define GO_FIXER
-	docker compose exec -T fixer sh -eu -o pipefail -c 'cd /git-source && $(1)'
+	docker compose exec -T go-fixer sh -eu -o pipefail -c 'cd /git-source && $(1)'
 endef
 
 # =============================================================================
@@ -109,8 +112,8 @@ up: infra.up ## Start the development environment
 down: infra.down ## Stop and remove the development environment
 build: infra.build ## Build Docker images
 
-shell: ## Open an interactive shell into the running builder container
-	docker compose exec builder bash
+shell: ## Open an interactive shell into the running Python builder container
+	docker compose exec py-builder bash
 
 # =============================================================================
 # Help
@@ -204,7 +207,7 @@ deps: ## Tidy go module files
 # =============================================================================
 validate: ## Run fast, offline validation of all schemas
 	@echo "--- Validating all schemas against the meta-schema ---"
-	@docker compose exec builder python -m tools.compiler validate $(COMPILER_CLI_ARGS)
+	@docker compose exec py-builder python -m tools.compiler validate $(COMPILER_CLI_ARGS)
 
 release: ## Build, checksum, and sign all non-dev schemas (requires Vault + VERSION=X.Y.Z)
 ifeq ($(VERSION),)
@@ -216,7 +219,7 @@ endif
 		-e GIT_AUTHOR_EMAIL="$(shell git config user.email)" \
 		-e GIT_COMMITTER_NAME="$(shell git config user.name)" \
 		-e GIT_COMMITTER_EMAIL="$(shell git config user.email)" \
-		builder python -m tools.compiler release --version $(VERSION) $(COMPILER_CLI_ARGS)
+		py-builder python -m tools.compiler release --version $(VERSION) $(COMPILER_CLI_ARGS)
 
 # =============================================================================
 # Symbol generation
@@ -283,7 +286,7 @@ vuln: ## Run Go vulnerability scan (govulncheck)
 deadcode: ## Scan for functions unreachable from any main entrypoint (catches exported dead code staticcheck misses)
 	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
 		set -euo pipefail; \
-		command -v deadcode >/dev/null 2>&1 || GOFLAGS="" go install golang.org/x/tools/cmd/deadcode@latest; \
+		command -v deadcode >/dev/null 2>&1 || GOFLAGS="" go install golang.org/x/tools/cmd/deadcode@v0.44.0; \
 		echo "deadcode ./..."; \
 		GO111MODULE=on GOFLAGS="$(GOFLAGS)" deadcode ./... \
 	)
@@ -395,14 +398,14 @@ mutate-all: ## Run mutation testing on all critical packages (efficacy ≥ 90%)
 	)
 
 coverage-threshold: coverage ## Fail if coverage < $(COVERAGE_MIN)%
-	mkdir -p $(BUILD_DIR) && docker compose exec -T builder sh -c 'cd /git-source && \
+	mkdir -p $(BUILD_DIR) && docker compose exec -T go-builder sh -c 'cd /git-source && \
 		go tool cover -func=$(COVERAGE_FILE) | \
 		awk -v MIN=$(COVERAGE_MIN) '"'"'/^total:/ { gsub("%","",$$3); v=$$3+0 } END { if (v < MIN) { printf "Coverage below %d%% (got %.1f%%)\n", MIN, v; exit 1 } else { printf "Coverage OK: %.1f%% >= %d%%\n", v, MIN } }'"'"''
 
 # Per-csomag coverage küszöbök — aktuális mérések alapján (~1-2 pp tartalékkal).
 # Frissítsd, ha szándékosan emeled a lefedettséget.
 coverage-check-pkgs: ## Fail if per-package coverage < threshold
-	mkdir -p $(BUILD_DIR) && docker compose exec builder sh -c 'cd /git-source && \
+	mkdir -p $(BUILD_DIR) && docker compose exec go-builder sh -c 'cd /git-source && \
 		set -e; \
 		git config --global --add safe.directory /git-source 2>/dev/null || true; \
 		for p in $$(go list ./... | grep -v /vendor/); do \
@@ -443,34 +446,57 @@ coverage-check-pkgs: ## Fail if per-package coverage < threshold
 # =============================================================================
 # PKI asset fetch (build-time, requires local Vault)
 # =============================================================================
-# Vault KV mount and cert key — must match vault-sign-agent.sh KEY_NAME + --cic-dir load
+# Vault connection + KV mount and cert key — must match vault-sign-agent.sh KEY_NAME + --cic-dir load.
+# VAULT_ADDR is normally supplied via the environment; declared here so
+# --warn-undefined-variables stays quiet (the fetch recipes still guard on it).
+VAULT_ADDR        ?=
 VAULT_KV_MOUNT    ?= cic-my-sign-key
 VAULT_SOURCE_CA   ?= CICSourceCA
 PKI_CERT_FIELD    ?= bar
 PKI_OUT           := embedded/pki/cic-source-ca.pem
 
-fetch-pki: ## Fetch CICSourceCA cert from local Vault → embedded/pki/cic-source-ca.pem
-	@echo "Fetching CICSourceCA from Vault ($(VAULT_ADDR))..."
-	@test -n "$$VAULT_ADDR"  || { echo "VAULT_ADDR not set"; exit 1; }
-	@test -n "$$VAULT_TOKEN" || \
+# Shared CICSourceCA fetch. $(1) = extra `vault` TLS args, $(2) = mode label.
+# The trust root is embedded into the binary (go:embed), so how it is fetched is
+# itself a trust-boundary decision: dev tolerates a self-signed Vault; release
+# must pull it over a CA-verified TLS channel.
+define FETCH_PKI
+	@echo "Fetching $(VAULT_SOURCE_CA) from Vault ($(VAULT_ADDR)) [$(2)]..."
+	@test -n "$${VAULT_ADDR:-}"  || { echo "VAULT_ADDR not set"; exit 1; }
+	@test -n "$${VAULT_TOKEN:-}" || \
 		{ VAULT_TOKEN=$$(cat $$XDG_RUNTIME_DIR/vault/sign-token 2>/dev/null) && \
 		  test -n "$$VAULT_TOKEN" || { echo "VAULT_TOKEN not set and sign-token not found"; exit 1; }; }
 	@VAULT_TOKEN=$${VAULT_TOKEN:-$$(cat $$XDG_RUNTIME_DIR/vault/sign-token)} && \
 	 VAULT_CACERT=$${VAULT_CACERT:-$$XDG_RUNTIME_DIR/vault/server.crt} && \
 	 vault kv get \
 		-address="$$VAULT_ADDR" \
-		-tls-skip-verify \
+		$(1) \
 		-mount=$(VAULT_KV_MOUNT) \
 		-field=$(PKI_CERT_FIELD) \
 		$(VAULT_SOURCE_CA) > $(PKI_OUT)
-	@echo "CICSourceCA written to $(PKI_OUT)"
+	@echo "$(VAULT_SOURCE_CA) written to $(PKI_OUT)"
+endef
+
+fetch-pki: ## [dev] Fetch CICSourceCA from local Vault (TLS verification DISABLED)
+	@echo "⚠  fetch-pki (dev): -tls-skip-verify is ON — do NOT use this for release builds."
+	$(call FETCH_PKI,-tls-skip-verify,dev)
+
+# Release fetch: no -tls-skip-verify, and VAULT_CACERT must be explicitly provided
+# (the ephemeral dev server.crt is not a substitute). Fails loudly otherwise.
+# NOTE: not yet wired as a hard dependency of release-relay — that gate lands once
+# the CICRootCA → Intermediate → leaf chain is bootstrapped (see CLAUDE.md scaffold
+# map). Until then, run this manually for release-grade provenance.
+fetch-pki-release: ## [release] Fetch CICSourceCA with CA-verified TLS (no skip-verify; requires VAULT_CACERT)
+	@test -n "$${VAULT_CACERT:-}" || { echo "VAULT_CACERT must point to the CA that signed the Vault server cert (release fetch will not skip TLS verification)"; exit 1; }
+	@test -f "$${VAULT_CACERT:-}"  || { echo "VAULT_CACERT file not found: $${VAULT_CACERT:-}"; exit 1; }
+	@case "$${VAULT_CACERT:-}" in "$${XDG_RUNTIME_DIR:-}"/vault/*) echo "Refusing the ephemeral dev Vault cert ($${VAULT_CACERT:-}) for a release fetch"; exit 1 ;; esac
+	$(call FETCH_PKI,,release)
 
 # =============================================================================
 # Go Relay Build
 # =============================================================================
 build-relay: fetch-pki prepare quality test-go coverage coverage-check-pkgs ## Build relay binary with quality gates
 	@echo "Building $(APP_NAME)..."
-	docker compose exec builder sh -c ' cd /git-source \
+	docker compose exec go-builder sh -c ' cd /git-source \
 		&& SOURCE_HASH=$$(go run ./tools/sourcehash .) \
 		&& go build $(GO_RACE) $(GOFLAGS) -gcflags="$(GCFLAGS)" \
 		   -ldflags "$(LDFLAGS) -X main.SourceTreeHash=$$SOURCE_HASH" \
@@ -485,6 +511,9 @@ build-relay: fetch-pki prepare quality test-go coverage coverage-check-pkgs ## B
 CYCLONEDX_GOMOD_VERSION ?= v1.8.0
 
 release-relay: ## Build reproducible static binary + sha256 + CycloneDX SBOM into dist/
+ifeq ($(VERSION),)
+	$(error VERSION is required for the release-relay command. Usage: make release-relay VERSION=1.0.0)
+endif
 	$(call GO_EXEC, \
 		mkdir -p /git-source/dist && \
 		SOURCE_HASH=$$(go run ./tools/sourcehash .) && \
@@ -508,12 +537,12 @@ sourcehash: ## Print deterministic source tree hash (pkg/sourcedigest)
 
 build-crt-parser: prepare ## Build crt_parser tool
 	@echo "Building crt_parser..."
-	docker compose exec builder sh -c 'cd /git-source/tools/certutils && go build -ldflags "$(LD_FLAGS)" -o /output/$(COMMIT)/crt_parser crt_parser.go'
+	docker compose exec go-builder sh -c 'cd /git-source/tools/certutils && go build -ldflags "$(LD_FLAGS)" -o /output/$(COMMIT)/crt_parser crt_parser.go'
 	@echo "crt_parser built at $(BUILD_DIR)/crt_parser"
 
 build-canonicalize: prepare ## Build canonicalize tool
 	@echo "Building canonicalize..."
-	docker compose exec builder sh -c 'cd /git-source/tools/canonicalize && mkdir -p /output/$(COMMIT) && go build -trimpath -ldflags "$(LD_FLAGS)" -o /output/$(COMMIT)/canonicalize .'
+	docker compose exec go-builder sh -c 'cd /git-source/tools/canonicalize && mkdir -p /output/$(COMMIT) && go build -trimpath -ldflags "$(LD_FLAGS)" -o /output/$(COMMIT)/canonicalize .'
 	@echo "canonicalize built at $(BUILD_DIR)/canonicalize"
 
 # =============================================================================
@@ -550,7 +579,7 @@ manifest-src: ## Snapshot of tracked sources (audit)
 
 manifest-verify: ## Verify repository manifest
 	@echo "--- Verifying repository manifest ---"
-	@docker compose exec builder sh -c 'test -f MANIFEST.sha256 && sha256sum -c MANIFEST.sha256'
+	@docker compose exec go-builder sh -c 'test -f MANIFEST.sha256 && sha256sum -c MANIFEST.sha256'
 
 manifest-update: ## Re-generate MANIFEST.sha256
 	@echo "--- Updating repository manifest ---"
@@ -584,7 +613,7 @@ cache-populate: ## Pre-populate Go module and tool cache
 		&& echo ineffassign && go install github.com/gordonklaus/ineffassign@v0.1.0 \
 		&& echo reflex && go install github.com/cespare/reflex@v0.3.1 \
 		&& echo govulncheck && go install golang.org/x/vuln/cmd/govulncheck@v1.1.4 \
-		&& echo deadcode && go install golang.org/x/tools/cmd/deadcode@latest \
+		&& echo deadcode && go install golang.org/x/tools/cmd/deadcode@v0.44.0 \
 		&& echo gremlins && go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0 \
 		"
 

@@ -25,6 +25,12 @@ jobs:
         run: |
           go mod download || true
 
+      - name: gofmt check
+        run: |
+          set -euo pipefail
+          M="$(git ls-files -z -- '*.go' | xargs -0 gofmt -s -l)"
+          test -z "$M" || { printf '%s\n' "$M"; echo "Code not gofmt-formatted. Run make fmt"; exit 1; }
+
       - name: Go Vet
         run: go vet ./...
 
@@ -41,7 +47,7 @@ jobs:
         run: govulncheck ./...
 
       - name: Install deadcode
-        run: go install golang.org/x/tools/cmd/deadcode@latest
+        run: go install golang.org/x/tools/cmd/deadcode@v0.44.0
 
       - name: Dead code scan
         run: deadcode ./...
@@ -195,3 +201,46 @@ jobs:
           GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
             --workers 4 --threshold-efficacy 90 \
             ./core/modules/schemacompile
+
+  python:
+    # Quality + test gate for the Python tooling (tools/, tests/). Mirrors the
+    # checks run by `make infra.check` / `make test-py`, but natively (no Docker)
+    # to match the Go jobs. Dependencies are installed hash-verified from the
+    # pinned requirements.txt (pip --require-hashes).
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (hash-verified)
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements.txt
+
+      - name: Ruff (lint)
+        run: python -m ruff check .
+
+      - name: Black (format check)
+        run: python -m black --check --exclude p_venv .
+
+      - name: Isort (import order check)
+        run: python -m isort --check-only --skip-glob "p_venv/*" .
+
+      - name: MyPy (type check)
+        run: python -m mypy --exclude p_venv .
+
+      - name: yamllint
+        run: python -m yamllint .
+
+      - name: Bandit (security)
+        # Fail only on medium+ severity; the tools/ dir's findings are all low
+        # (asserts in tests, expected subprocess use to git/vault).
+        run: python -m bandit -r tools --severity-level medium
+
+      - name: Pytest
+        run: python -m pytest

@@ -16,9 +16,9 @@ type ProofVerifyRequest struct {
 
 // ProofVerifyResponse is the response body for POST /v1/proof/verify.
 type ProofVerifyResponse struct {
-	Valid     bool     `json:"valid"`
-	Errors    []string `json:"errors,omitempty"`
-	Warnings  []string `json:"warnings,omitempty"`
+	Valid    bool     `json:"valid"`
+	Errors   []string `json:"errors,omitempty"`
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // proofVerifyHandler handles POST /v1/proof/verify requests by validating a ProofArtifact against the schema contract.

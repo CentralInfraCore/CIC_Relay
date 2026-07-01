@@ -191,11 +191,11 @@ A reprodukálható build három rétegből áll:
 |-------|-------------|---------|
 | Forrás tree | `SourceTreeHash` (pkg/sourcedigest, tools/sourcehash) | Kész |
 | Go dependency | `go.sum` + `-mod=readonly` | Kész |
-| Builder image | digest-pinelt (`golang:1.24.6@sha256:d6d07e...`) | Kész |
-| CI toolchain | Go `1.24.6` exact, `staticcheck@v0.6.1` | Kész |
+| Builder image | digest-pinelt (`golang:1.25.11@sha256:654d46b...`) | Kész |
+| CI toolchain | Go `1.25.11` exact, `staticcheck@v0.6.1` | Kész |
 
-**Builder image digests** (docker-compose.yaml, linux/amd64):
-- `golang:1.24.6` → `sha256:d6d07e5326853f71a30decb4d777467428e85c087433b3d76c8b74933abd48b1`
+**Builder image digests** (docker-compose.yml `&golang_image` anchor, linux/amd64):
+- `golang:1.25.11` → `sha256:654d46b58d84d5b0ccd27656ae69c8f2d57341192ee40353cef173e33bef3254`
 - `nats:2.10.12` → `sha256:dbab4c53c0de6b089ceb67849d41bdf54a0ad29e50f1105048fc5f19508db803`
 - `natsio/nats-box:0.12.0` → `sha256:1a2c9c9281add7b81ccc886f92d2bc7a247c3ddfd99ecfab51f86a883b38cf7d`
 

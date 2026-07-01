@@ -126,7 +126,9 @@ class ReleaseManager:
                 )
             self.logger.info(f"✓ Checksum verified: {computed_checksum}")
         else:
-            self.logger.warning("No checksum in metadata, skipping checksum verification.")
+            self.logger.warning(
+                "No checksum in metadata, skipping checksum verification."
+            )
 
         self.logger.info("Step 3/3: Signature verification via Vault...")
         signature = metadata.get("sign")
@@ -148,10 +150,14 @@ class ReleaseManager:
 
             valid = self.vault_service.verify(digest_b64, signature, vault_key_name)
             if not valid:
-                raise ValidationFailureError("Signature verification failed: Vault returned invalid.")
+                raise ValidationFailureError(
+                    "Signature verification failed: Vault returned invalid."
+                )
             self.logger.info("✓ Signature verified via Vault.")
         except VaultServiceError as e:
-            self.logger.warning(f"Vault unavailable, skipping signature verification: {e}")
+            self.logger.warning(
+                f"Vault unavailable, skipping signature verification: {e}"
+            )
 
     def _check_base_branch_and_version(
         self, release_version: str, skip_git_state_checks: bool = False
