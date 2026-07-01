@@ -247,8 +247,9 @@ jobs:
 
   rust:
     # Quality + test gate for the Rust workspace (Cargo.toml + connections/…).
-    # Mirrors `make rust`: rustfmt, clippy (-D warnings), tests (--locked), and
-    # the cargo-deny supply-chain gate. Toolchain is pinned by rust-toolchain.toml.
+    # Mirrors `make rust`: rustfmt, clippy (-D warnings), tests (--locked),
+    # line-coverage floor (cargo-llvm-cov), and the cargo-deny supply-chain gate.
+    # Toolchain is pinned by rust-toolchain.toml.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -258,7 +259,7 @@ jobs:
         run: |
           set -euo pipefail
           rustup show active-toolchain || rustup toolchain install
-          rustup component add rustfmt clippy
+          rustup component add rustfmt clippy llvm-tools-preview
 
       - name: rustfmt (format check)
         run: cargo fmt --all --check
@@ -268,6 +269,14 @@ jobs:
 
       - name: Test (locked)
         run: cargo test --all --locked
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Coverage (fail under 90% lines)
+        run: cargo llvm-cov --all --locked --fail-under-lines 90
 
       - name: cargo-deny (advisories/licenses/bans/sources)
         uses: EmbarkStudios/cargo-deny-action@v2
