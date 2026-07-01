@@ -137,6 +137,7 @@ A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
 | p57  | —         | ✅ Done   | fix(B1): `ComputeChainHashV1` export — verifier és teszt egységes forrást hív |
 | p58  | —         | ✅ Done   | fix(B2): manifest timestamp eltávolítva, `make manifest-update` unified |
 | p59  | —         | ✅ Done   | fix(B3): PKI prod fail-closed — `CIC_PLATFORM_CA_BUNDLE` kötelező, hiány = error |
+| p60  | —         | ✅ Done   | Build-provenance hardening: `deadcode`+python image digest pin, `release-relay` VERSION guard, `BUILDER_IMAGE_DIGEST` single-source (drift javítva), pip `--require-hashes`, Python CI gate (ruff/black/isort/mypy/yamllint/bandit/pytest) + `pytest.ini`/`.coveragerc`, compose konszolidáció (`go-*`/`py-*` service-ek), `fetch-pki-release` (release-ben tls-skip-verify tiltva), `source -> .` symlink eltávolítva |
 
 ---
 
