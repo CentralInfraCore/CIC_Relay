@@ -1,0 +1,7 @@
+# Pinned Rust toolchain — the single source of truth for the version used by the
+# rust-builder container, CI, and local developers alike (rustup honours this).
+# Bump in lockstep with the rust image digest in docker-compose.yml.
+[toolchain]
+channel = "1.96.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

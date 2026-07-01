@@ -15,7 +15,8 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	release release-relay release-verify sourcehash validate \
 	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki fetch-pki-release \
 	infra-down infra.help \
-	mutate mutate-all
+	mutate mutate-all \
+	fmt-rust fmt-rust-check lint-rust test-rust deny-rust release-rust rust
 
 # Default to showing help
 all: help
@@ -37,6 +38,10 @@ COVERAGE_HTML ?= /output/$(COMMIT)/coverage.html
 # digest baked into the binary (-X main.BuilderImageDigest) follows automatically.
 # Override for hermetic/off-tree builds: make ... BUILDER_IMAGE_DIGEST=sha256:...
 BUILDER_IMAGE_DIGEST ?= $(shell grep '^x-golang-version:' docker-compose.yml | grep -oE 'sha256:[a-f0-9]{64}')
+
+# RUST_IMAGE_DIGEST: same single-source discipline for the rust-builder image —
+# derived from the &rust_image anchor in docker-compose.yml so it cannot drift.
+RUST_IMAGE_DIGEST ?= $(shell grep '^x-rust-version:' docker-compose.yml | grep -oE 'sha256:[a-f0-9]{64}')
 
 # RELEASE_LD_FLAGS: timestamp-free — produces byte-identical binaries from the same source.
 # SourceTreeHash is injected inline in release/build recipes via:
@@ -103,6 +108,11 @@ define GO_EXEC
 endef
 define GO_FIXER
 	docker compose exec -T go-fixer sh -eu -o pipefail -c 'cd /git-source && $(1)'
+endef
+# RUST_EXEC: run a cargo command in the rust-builder. Ensures rustfmt/clippy are
+# present (idempotent, cheap once installed) so every rust target is self-sufficient.
+define RUST_EXEC
+	docker compose exec -T rust-builder bash -eu -o pipefail -c 'cd /git-source && rustup component add rustfmt clippy >/dev/null 2>&1 || true; $(1)'
 endef
 
 # =============================================================================
@@ -294,15 +304,49 @@ deadcode: ## Scan for functions unreachable from any main entrypoint (catches ex
 quality: fmt-check lint-go vet vuln deadcode ## Go quality gate: all checks must pass
 
 # =============================================================================
-# Code Quality — combined (Go + Python)
+# Rust build/lint/test (rust-builder container; workspace at repo root)
 # =============================================================================
-fmt: fmt-go infra.fmt ## Format all code (Go gofmt + Python black/isort)
+fmt-rust: ## Apply rustfmt across the Rust workspace
+	@echo "Formatting Rust..."
+	$(call RUST_EXEC, cargo fmt --all)
 
-lint: lint-go infra.lint ## Lint all code (Go staticcheck + Python ruff + yamllint)
+fmt-rust-check: ## Fail if Rust formatting differs
+	$(call RUST_EXEC, cargo fmt --all --check)
+
+lint-rust: ## Run clippy as a hard gate (-D warnings)
+	@echo "Clippy (Rust)..."
+	$(call RUST_EXEC, cargo clippy --all-targets --all-features --locked -- -D warnings)
+
+test-rust: ## Run Rust unit/doc tests (locked dependencies)
+	@echo "Testing Rust..."
+	$(call RUST_EXEC, cargo test --all --locked)
+
+deny-rust: ## Rust supply-chain gate (cargo-deny: advisories/licenses/bans/sources)
+	@echo "cargo-deny (Rust)..."
+	$(call RUST_EXEC, export PATH="/cargo/bin:$$PATH"; \
+		command -v cargo-deny >/dev/null 2>&1 || cargo install cargo-deny --locked >/dev/null 2>&1; \
+		cargo deny check)
+
+release-rust: ## Build reproducible release artifacts (--locked) + sha256 into dist/
+	$(call RUST_EXEC, \
+		mkdir -p /git-source/dist 2>/dev/null || true; \
+		RUSTFLAGS="--remap-path-prefix=/git-source=." \
+			cargo build --release --locked --workspace; \
+		echo "rust builder image: $(RUST_IMAGE_DIGEST)")
+	@echo "Rust release built (target/release) with digest $(RUST_IMAGE_DIGEST)"
+
+rust: fmt-rust-check lint-rust test-rust deny-rust ## Rust quality gate: all checks must pass
+
+# =============================================================================
+# Code Quality — combined (Go + Python + Rust)
+# =============================================================================
+fmt: fmt-go fmt-rust infra.fmt ## Format all code (Go gofmt + Rust rustfmt + Python black/isort)
+
+lint: lint-go lint-rust infra.lint ## Lint all code (Go staticcheck + Rust clippy + Python ruff + yamllint)
 
 typecheck: infra.typecheck ## Run static type checking (Python MyPy)
 
-check: infra.check quality ## Run all code quality checks (Go + Python)
+check: infra.check quality rust ## Run all code quality checks (Go + Python + Rust)
 
 repo.init: infra.repo.init ## Set up Git hooks for this repository
 
@@ -325,7 +369,7 @@ test-go: ## Run Go unit tests (verbose, race)
 test-py: ## Run Python (pytest) tests
 	@$(MAKE) infra.test
 
-test: test-go test-py ## Run all tests (Go + Python)
+test: test-go test-py test-rust ## Run all tests (Go + Python + Rust)
 
 test-api: ## Run E2E smoke tests against a running relay (RELAY_URL=http://localhost:8080)
 	@echo "Running E2E smoke tests..."

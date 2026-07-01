@@ -44,6 +44,8 @@ embedded/pki/*.key
 /.idea/
 /.pip-cache/
 /p_venv/
+# Rust build output (one target/ for the whole workspace). Cargo.lock IS committed.
+/target/
 # Accidental self-referential symlink emitted by the KB companion-YAML generator
 # (source -> .). It sends every recursive tool into infinite recursion; never commit it.
 /source

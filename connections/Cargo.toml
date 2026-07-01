@@ -1,0 +1,12 @@
+[package]
+name = "connections"
+description = "Logical relationships between schemas, plugins, and graph nodes (feature-006 Cabinet concept)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

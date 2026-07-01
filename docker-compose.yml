@@ -8,9 +8,11 @@
 # Image digests — pinned to linux/amd64 manifests for hermetic, reproducible builds.
 # To re-pin: docker manifest inspect <image>:<tag> | jq '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest'
 # golang:1.25.11         linux/amd64  sha256:654d46b58d84d5b0ccd27656ae69c8f2d57341192ee40353cef173e33bef3254
+# rust:1.96.1-bookworm   linux/amd64  sha256:d99f7b31f49909348dc59b51f3c95d1efded1701ffb222f095aaab7de3c4abd8
 # nats:2.10.12           linux/amd64  sha256:dbab4c53c0de6b089ceb67849d41bdf54a0ad29e50f1105048fc5f19508db803
 # natsio/nats-box:0.12.0 linux/amd64  sha256:1a2c9c9281add7b81ccc886f92d2bc7a247c3ddfd99ecfab51f86a883b38cf7d
 x-golang-version: &golang_image golang:1.25.11@sha256:654d46b58d84d5b0ccd27656ae69c8f2d57341192ee40353cef173e33bef3254
+x-rust-version: &rust_image rust:1.96.1-bookworm@sha256:d99f7b31f49909348dc59b51f3c95d1efded1701ffb222f095aaab7de3c4abd8
 x-nats-version: &nats_image nats:2.10.12@sha256:dbab4c53c0de6b089ceb67849d41bdf54a0ad29e50f1105048fc5f19508db803
 x-nats-box-version: &nats_box_image natsio/nats-box:0.12.0@sha256:1a2c9c9281add7b81ccc886f92d2bc7a247c3ddfd99ecfab51f86a883b38cf7d
 
@@ -100,6 +102,28 @@ services:
       - GOMODCACHE=/go/pkg/mod
       - GOCACHE=/go/cache
     working_dir: /tmp
+    stdin_open: true
+    tty: true
+    entrypoint: ["sh"]
+
+  # --- Rust build/lint/test toolchain ------------------------------------------
+
+  # Long-running: `exec`ed into for cargo fmt/clippy/test/build. Source is
+  # read-only; the target dir and cargo home (registry + installed tools like
+  # cargo-deny) live in cache volumes. rustfmt/clippy are added on demand per
+  # rust-toolchain.toml and persist for the container's life.
+  rust-builder:
+    image: *rust_image
+    container_name: cic-rust-builder
+    volumes:
+      - ./:/git-source:ro
+      - ~/tmp/cache/CIC-Relay/rust-cargo:/cargo
+      - ~/tmp/cache/CIC-Relay/rust-target:/target
+    environment:
+      - CARGO_HOME=/cargo
+      - CARGO_TARGET_DIR=/target
+      - CARGO_TERM_COLOR=never
+    working_dir: /git-source
     stdin_open: true
     tty: true
     entrypoint: ["sh"]

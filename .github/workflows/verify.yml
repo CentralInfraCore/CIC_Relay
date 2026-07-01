@@ -244,3 +244,32 @@ jobs:
 
       - name: Pytest
         run: python -m pytest
+
+  rust:
+    # Quality + test gate for the Rust workspace (Cargo.toml + connections/…).
+    # Mirrors `make rust`: rustfmt, clippy (-D warnings), tests (--locked), and
+    # the cargo-deny supply-chain gate. Toolchain is pinned by rust-toolchain.toml.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pinned toolchain (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          rustup show active-toolchain || rustup toolchain install
+          rustup component add rustfmt clippy
+
+      - name: rustfmt (format check)
+        run: cargo fmt --all --check
+
+      - name: Clippy (-D warnings)
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+
+      - name: Test (locked)
+        run: cargo test --all --locked
+
+      - name: cargo-deny (advisories/licenses/bans/sources)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
