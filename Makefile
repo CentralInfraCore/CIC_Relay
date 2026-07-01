@@ -16,7 +16,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki fetch-pki-release \
 	infra-down infra.help \
 	mutate mutate-all \
-	fmt-rust fmt-rust-check lint-rust test-rust deny-rust release-rust rust
+	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust
 
 # Default to showing help
 all: help
@@ -321,6 +321,16 @@ test-rust: ## Run Rust unit/doc tests (locked dependencies)
 	@echo "Testing Rust..."
 	$(call RUST_EXEC, cargo test --all --locked)
 
+# Line-coverage floor, to ratchet up (never down) — parity with the Go per-package
+# thresholds and the Python --cov-fail-under gate. connections currently measures 100%.
+RUST_COV_MIN ?= 90
+coverage-rust: ## Rust line-coverage gate (cargo-llvm-cov, fail under RUST_COV_MIN%)
+	@echo "Rust coverage (min $(RUST_COV_MIN)%)..."
+	$(call RUST_EXEC, export PATH="/cargo/bin:$$PATH"; \
+		rustup component add llvm-tools-preview >/dev/null 2>&1 || true; \
+		command -v cargo-llvm-cov >/dev/null 2>&1 || cargo install cargo-llvm-cov --locked >/dev/null 2>&1; \
+		cargo llvm-cov --all --locked --fail-under-lines $(RUST_COV_MIN))
+
 deny-rust: ## Rust supply-chain gate (cargo-deny: advisories/licenses/bans/sources)
 	@echo "cargo-deny (Rust)..."
 	$(call RUST_EXEC, export PATH="/cargo/bin:$$PATH"; \
@@ -335,7 +345,7 @@ release-rust: ## Build reproducible release artifacts (--locked) + sha256 into d
 		echo "rust builder image: $(RUST_IMAGE_DIGEST)")
 	@echo "Rust release built (target/release) with digest $(RUST_IMAGE_DIGEST)"
 
-rust: fmt-rust-check lint-rust test-rust deny-rust ## Rust quality gate: all checks must pass
+rust: fmt-rust-check lint-rust coverage-rust deny-rust ## Rust quality gate: fmt + clippy + coverage + supply-chain
 
 # =============================================================================
 # Code Quality — combined (Go + Python + Rust)
