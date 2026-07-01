@@ -16,8 +16,8 @@ infra.down:
 	@docker compose down -v
 
 infra.shell:
-	@echo "--- Opening a shell into the running builder container ---"
-	@docker compose exec builder bash
+	@echo "--- Opening a shell into the running Python builder container ---"
+	@docker compose exec py-builder bash
 
 infra.build:
 	@echo "--- Building Docker images ---"
@@ -29,22 +29,22 @@ infra.build:
 
 infra.fmt:
 	@echo "--- Formatting Python code with Black and Isort ---"
-	@docker compose exec builder python -m black --exclude p_venv .
-	@docker compose exec builder python -m isort --skip-glob "p_venv/*" .
+	@docker compose exec py-builder python -m black --exclude p_venv .
+	@docker compose exec py-builder python -m isort --skip-glob "p_venv/*" .
 
 infra.lint:
 	@echo "--- Linting Python code with Ruff ---"
-	@docker compose exec builder python -m ruff check .
+	@docker compose exec py-builder python -m ruff check .
 	@echo "--- Linting YAML files with yamllint ---"
-	@docker compose exec builder python -m yamllint .
+	@docker compose exec py-builder python -m yamllint .
 
 infra.typecheck:
 	@echo "--- Running static type checking with MyPy ---"
-	@docker compose exec builder python -m mypy --exclude p_venv .
+	@docker compose exec py-builder python -m mypy --exclude p_venv .
 
 infra.security:
 	@echo "--- Running security checks with Bandit ---"
-	@docker compose exec builder python3 -m bandit -r tools --severity-level medium
+	@docker compose exec py-builder python3 -m bandit -r tools --severity-level medium
 
 infra.check: infra.fmt infra.lint infra.typecheck infra.security
 	@echo "--- Running all code quality checks (format, lint, typecheck) ---"
@@ -63,16 +63,16 @@ infra.repo.init:
 
 infra.deps:
 	@echo "--- Initializing Python dependencies into ./p_venv cache ---"
-	@docker compose run --rm setup
+	@docker compose run --rm py-setup
 
 infra.coverage:
 	@echo "--- Generating HTML coverage report ---"
-	@docker compose exec builder python -m pytest --ignore p_venv --cov=tools.compiler --cov-report=html
+	@docker compose exec py-builder python -m pytest --ignore p_venv --cov=tools.compiler --cov-report=html
 	@echo "HTML coverage report generated in ./htmlcov/index.html"
 
 infra.test:
 	@echo "--- Running pytest for the compiler infrastructure ---"
-	@docker compose exec builder python -m pytest $(PYTEST_ARGS)
+	@docker compose exec py-builder python -m pytest $(PYTEST_ARGS)
 
 infra.clean:
 	@echo "--- Cleaning up all generated files and caches ---"

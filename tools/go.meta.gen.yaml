@@ -68,6 +68,7 @@ objects:
   - _remove_comments
   - block_m.group
   - line.strip
+  - line_m.group
   - m.group
 - name: _find_module_name
   kind: function
