@@ -25,6 +25,12 @@ jobs:
         run: |
           go mod download || true
 
+      - name: gofmt check
+        run: |
+          set -euo pipefail
+          M="$(git ls-files -z -- '*.go' | xargs -0 gofmt -s -l)"
+          test -z "$M" || { printf '%s\n' "$M"; echo "Code not gofmt-formatted. Run make fmt"; exit 1; }
+
       - name: Go Vet
         run: go vet ./...
 
