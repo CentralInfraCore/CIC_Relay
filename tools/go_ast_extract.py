@@ -33,7 +33,7 @@ def extract_ast(go_file: Path) -> dict:
     except (FileNotFoundError, IsADirectoryError, PermissionError):
         return {}
 
-    lines = source.split('\n')
+    lines = source.split("\n")
     result = {}
 
     # Extract all definitions with line numbers
@@ -43,24 +43,24 @@ def extract_ast(go_file: Path) -> dict:
     for func_info in funcs:
         key = _make_key(func_info)
         result[key] = {
-            'kind': func_info['kind'],
-            'signature': func_info.get('signature'),
-            'calls': func_info.get('calls', []),
-            'position': func_info['position'],
-            'exported': func_info['exported'],
+            "kind": func_info["kind"],
+            "signature": func_info.get("signature"),
+            "calls": func_info.get("calls", []),
+            "position": func_info["position"],
+            "exported": func_info["exported"],
         }
 
     for type_info in types:
-        key = type_info['name']
+        key = type_info["name"]
         obj = {
-            'kind': type_info['kind'],
-            'position': type_info['position'],
-            'exported': type_info['exported'],
+            "kind": type_info["kind"],
+            "position": type_info["position"],
+            "exported": type_info["exported"],
         }
-        if 'fields' in type_info:
-            obj['fields'] = type_info['fields']
-        if 'methods' in type_info:
-            obj['methods'] = type_info['methods']
+        if "fields" in type_info:
+            obj["fields"] = type_info["fields"]
+        if "methods" in type_info:
+            obj["methods"] = type_info["methods"]
         result[key] = obj
 
     return result
@@ -68,10 +68,10 @@ def extract_ast(go_file: Path) -> dict:
 
 def _make_key(func_info: dict) -> str:
     """Make a key for a function/method matching go.meta.gen.py's object_key format."""
-    if func_info['kind'] == 'method':
-        return func_info['receiver'] + '.' + func_info['name']
+    if func_info["kind"] == "method":
+        return func_info["receiver"] + "." + func_info["name"]
     else:
-        return func_info['name']
+        return func_info["name"]
 
 
 def _extract_funcs(source: str, lines: list) -> list:
@@ -81,48 +81,48 @@ def _extract_funcs(source: str, lines: list) -> list:
     # Pattern: func [receiver] name(params) returns { ... }
     # Simplified: match func declarations, extract receiver (optional), name, params, returns
     pattern = re.compile(
-        r'^\s*func\s+'
-        r'(?:\(\s*(\w+)\s+\*?(\w+)\s*\)\s*)?'  # optional receiver: ($var $Type)
-        r'(\w+)\s*'                              # func name
-        r'\(([^)]*(?:\([^)]*\)[^)]*)*)\)'       # params (with nested parens handling)
-        r'(.*?)(?={)',                            # return types
-        re.MULTILINE
+        r"^\s*func\s+"
+        r"(?:\(\s*(\w+)\s+\*?(\w+)\s*\)\s*)?"  # optional receiver: ($var $Type)
+        r"(\w+)\s*"  # func name
+        r"\(([^)]*(?:\([^)]*\)[^)]*)*)\)"  # params (with nested parens handling)
+        r"(.*?)(?={)",  # return types
+        re.MULTILINE,
     )
 
     for m in pattern.finditer(source):
         recv_var, recv_type, name, params_str, returns_str = m.groups()
-        line_num = source[:m.start()].count('\n') + 1
+        line_num = source[: m.start()].count("\n") + 1
 
         # Find the closing brace to get end line
-        brace_pos = source.find('{', m.end())
+        brace_pos = source.find("{", m.end())
         if brace_pos == -1:
             end_line = line_num
         else:
-            end_line = source[:brace_pos:].count('\n') + 1
+            end_line = source[:brace_pos:].count("\n") + 1
             # Find closing brace by brace matching
             depth = 1
             pos = brace_pos + 1
             while pos < len(source) and depth > 0:
-                if source[pos] == '{':
+                if source[pos] == "{":
                     depth += 1
-                elif source[pos] == '}':
+                elif source[pos] == "}":
                     depth -= 1
                 pos += 1
-            end_line = source[:pos].count('\n') + 1
+            end_line = source[:pos].count("\n") + 1
 
         func_info = {
-            'name': name,
-            'kind': 'method' if recv_type else 'func',
-            'position': {'start_line': line_num, 'end_line': end_line},
-            'exported': name[0].isupper(),
-            'signature': {
-                'params': _parse_params(params_str),
-                'returns': _parse_returns(returns_str),
+            "name": name,
+            "kind": "method" if recv_type else "func",
+            "position": {"start_line": line_num, "end_line": end_line},
+            "exported": name[0].isupper(),
+            "signature": {
+                "params": _parse_params(params_str),
+                "returns": _parse_returns(returns_str),
             },
         }
 
         if recv_type:
-            func_info['receiver'] = recv_type
+            func_info["receiver"] = recv_type
 
         # Extract calls from function body
         if brace_pos != -1:
@@ -130,15 +130,15 @@ def _extract_funcs(source: str, lines: list) -> list:
             depth = 1
             pos = body_start
             while pos < len(source) and depth > 0:
-                if source[pos] == '{':
+                if source[pos] == "{":
                     depth += 1
-                elif source[pos] == '}':
+                elif source[pos] == "}":
                     depth -= 1
                 pos += 1
-            body = source[body_start:pos-1]
-            func_info['calls'] = _extract_calls(body)
+            body = source[body_start : pos - 1]
+            func_info["calls"] = _extract_calls(body)
         else:
-            func_info['calls'] = []
+            func_info["calls"] = []
 
         funcs.append(func_info)
 
@@ -151,62 +151,65 @@ def _extract_types(source: str, lines: list) -> list:
 
     # Pattern: type Name struct { ... } or type Name interface { ... }
     struct_pattern = re.compile(
-        r'^\s*type\s+(\w+)\s+struct\s*\{(.*?)^\s*\}',
-        re.MULTILINE | re.DOTALL
+        r"^\s*type\s+(\w+)\s+struct\s*\{(.*?)^\s*\}", re.MULTILINE | re.DOTALL
     )
 
     iface_pattern = re.compile(
-        r'^\s*type\s+(\w+)\s+interface\s*\{(.*?)^\s*\}',
-        re.MULTILINE | re.DOTALL
+        r"^\s*type\s+(\w+)\s+interface\s*\{(.*?)^\s*\}", re.MULTILINE | re.DOTALL
     )
 
     # Structs
     for m in struct_pattern.finditer(source):
         name, body = m.groups()
-        start_line = source[:m.start()].count('\n') + 1
-        end_line = source[:m.end()].count('\n') + 1
+        start_line = source[: m.start()].count("\n") + 1
+        end_line = source[: m.end()].count("\n") + 1
 
-        types.append({
-            'name': name,
-            'kind': 'struct',
-            'position': {'start_line': start_line, 'end_line': end_line},
-            'exported': name[0].isupper(),
-            'fields': _parse_struct_fields(body),
-        })
+        types.append(
+            {
+                "name": name,
+                "kind": "struct",
+                "position": {"start_line": start_line, "end_line": end_line},
+                "exported": name[0].isupper(),
+                "fields": _parse_struct_fields(body),
+            }
+        )
 
     # Interfaces
     for m in iface_pattern.finditer(source):
         name, body = m.groups()
-        start_line = source[:m.start()].count('\n') + 1
-        end_line = source[:m.end()].count('\n') + 1
+        start_line = source[: m.start()].count("\n") + 1
+        end_line = source[: m.end()].count("\n") + 1
 
-        types.append({
-            'name': name,
-            'kind': 'interface',
-            'position': {'start_line': start_line, 'end_line': end_line},
-            'exported': name[0].isupper(),
-            'methods': _parse_interface_methods(body),
-        })
+        types.append(
+            {
+                "name": name,
+                "kind": "interface",
+                "position": {"start_line": start_line, "end_line": end_line},
+                "exported": name[0].isupper(),
+                "methods": _parse_interface_methods(body),
+            }
+        )
 
     # Type aliases (type Name TypeExpr, but not struct/interface)
     type_pattern = re.compile(
-        r'^\s*type\s+(\w+)\s+(?!struct|interface)(\S+)',
-        re.MULTILINE
+        r"^\s*type\s+(\w+)\s+(?!struct|interface)(\S+)", re.MULTILINE
     )
 
     for m in type_pattern.finditer(source):
         name = m.group(1)
         # Skip if already added as struct/interface
-        if any(t['name'] == name for t in types):
+        if any(t["name"] == name for t in types):
             continue
 
-        start_line = source[:m.start()].count('\n') + 1
-        types.append({
-            'name': name,
-            'kind': 'type',
-            'position': {'start_line': start_line, 'end_line': start_line},
-            'exported': name[0].isupper(),
-        })
+        start_line = source[: m.start()].count("\n") + 1
+        types.append(
+            {
+                "name": name,
+                "kind": "type",
+                "position": {"start_line": start_line, "end_line": start_line},
+                "exported": name[0].isupper(),
+            }
+        )
 
     return types
 
@@ -226,12 +229,12 @@ def _parse_params(params_str: str) -> list:
             continue
 
         # Try to match "name type" pattern
-        m = re.match(r'(\w+)\s+(.+)', part)
+        m = re.match(r"(\w+)\s+(.+)", part)
         if m:
-            params.append({'name': m.group(1), 'type': m.group(2)})
+            params.append({"name": m.group(1), "type": m.group(2)})
         else:
             # No name, just type
-            params.append({'name': '', 'type': part})
+            params.append({"name": "", "type": part})
 
     return params
 
@@ -244,9 +247,9 @@ def _parse_returns(returns_str: str) -> list:
     returns_str = returns_str.strip()
 
     # If starts with (, it's a parenthesized return list
-    if returns_str.startswith('('):
+    if returns_str.startswith("("):
         returns_str = returns_str[1:]
-        if returns_str.endswith(')'):
+        if returns_str.endswith(")"):
             returns_str = returns_str[:-1]
         parts = _split_params(returns_str)
     else:
@@ -256,7 +259,7 @@ def _parse_returns(returns_str: str) -> list:
     for part in parts:
         part = part.strip()
         # Named return: name type → extract type
-        if m := re.match(r'(\w+)\s+(.+)', part):
+        if m := re.match(r"(\w+)\s+(.+)", part):
             result.append(m.group(2))
         elif part:
             result.append(part)
@@ -267,22 +270,22 @@ def _parse_returns(returns_str: str) -> list:
 def _split_params(params_str: str) -> list:
     """Split parameters by comma, respecting nested brackets/parens."""
     parts = []
-    current = []
+    current: list = []
     depth = 0
 
     for char in params_str:
-        if char in '([{':
+        if char in "([{":
             depth += 1
-        elif char in ')]}':
+        elif char in ")]}":
             depth -= 1
-        elif char == ',' and depth == 0:
-            parts.append(''.join(current))
+        elif char == "," and depth == 0:
+            parts.append("".join(current))
             current = []
             continue
         current.append(char)
 
     if current:
-        parts.append(''.join(current))
+        parts.append("".join(current))
 
     return parts
 
@@ -292,14 +295,34 @@ def _extract_calls(body: str) -> list:
     calls = set()
 
     # Pattern: identifier(args) or identifier.identifier(args)
-    pattern = re.compile(r'(\w+)(?:\.(\w+))?\s*\(')
+    pattern = re.compile(r"(\w+)(?:\.(\w+))?\s*\(")
 
     for m in pattern.finditer(body):
         if m.group(2):
-            calls.add(m.group(1) + '.' + m.group(2))
+            calls.add(m.group(1) + "." + m.group(2))
         else:
             # Filter out keywords
-            if m.group(1) not in {'if', 'for', 'switch', 'defer', 'go', 'make', 'len', 'cap', 'range', 'return', 'panic', 'recover', 'close', 'copy', 'delete', 'append', 'real', 'imag', 'complex'}:
+            if m.group(1) not in {
+                "if",
+                "for",
+                "switch",
+                "defer",
+                "go",
+                "make",
+                "len",
+                "cap",
+                "range",
+                "return",
+                "panic",
+                "recover",
+                "close",
+                "copy",
+                "delete",
+                "append",
+                "real",
+                "imag",
+                "complex",
+            }:
                 calls.add(m.group(1))
 
     return sorted(list(calls))
@@ -309,28 +332,25 @@ def _parse_struct_fields(body: str) -> list:
     """Extract struct fields from struct body."""
     fields = []
 
-    # Pattern: name type `tag` or embedded type
-    pattern = re.compile(
-        r'^\s*(\w+)?\s+(.+?)(?:\s+`([^`]*)`)?$',
-        re.MULTILINE
-    )
-
-    for line in body.split('\n'):
+    # Pattern: name type `tag` or embedded type (matched inline per line below).
+    for line in body.split("\n"):
         line = line.strip()
-        if not line or line.startswith('//'):
+        if not line or line.startswith("//"):
             continue
 
-        m = re.match(r'(\w+)?\s+(.+?)(?:\s+`([^`]*)`)?$', line)
+        m = re.match(r"(\w+)?\s+(.+?)(?:\s+`([^`]*)`)?$", line)
         if m:
             name = m.group(1) or m.group(2)  # name or embedded type
             field_type = m.group(2) if m.group(1) else m.group(2)
-            tag = m.group(3) or ''
+            tag = m.group(3) or ""
 
-            fields.append({
-                'name': name.strip(),
-                'type': field_type.strip(),
-                'tag': tag.strip() if tag else '',
-            })
+            fields.append(
+                {
+                    "name": name.strip(),
+                    "type": field_type.strip(),
+                    "tag": tag.strip() if tag else "",
+                }
+            )
 
     return fields
 
@@ -339,33 +359,30 @@ def _parse_interface_methods(body: str) -> list:
     """Extract interface methods from interface body."""
     methods = []
 
-    # Pattern: name(params) returntype(s)
-    pattern = re.compile(
-        r'^\s*(\w+)\s*\(([^)]*)\)(?:\s+(.+))?$',
-        re.MULTILINE
-    )
-
-    for line in body.split('\n'):
+    # Pattern: name(params) returntype(s) (matched inline per line below).
+    for line in body.split("\n"):
         line = line.strip()
-        if not line or line.startswith('//'):
+        if not line or line.startswith("//"):
             continue
 
-        m = re.match(r'^(\w+)\s*\(([^)]*)\)(?:\s+(.+))?$', line)
+        m = re.match(r"^(\w+)\s*\(([^)]*)\)(?:\s+(.+))?$", line)
         if m:
             name = m.group(1)
             params = _split_params(m.group(2)) if m.group(2) else []
             returns = _split_params(m.group(3)) if m.group(3) else []
 
-            methods.append({
-                'name': name,
-                'params': [p.strip() for p in params if p.strip()],
-                'returns': [r.strip() for r in returns if r.strip()],
-            })
+            methods.append(
+                {
+                    "name": name,
+                    "params": [p.strip() for p in params if p.strip()],
+                    "returns": [r.strip() for r in returns if r.strip()],
+                }
+            )
 
     return methods
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import json
     import sys
 

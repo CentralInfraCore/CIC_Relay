@@ -22,8 +22,8 @@ fi
 # Map directory paths to fully-qualified Go package paths
 PKGS=$(echo "$CHANGED_DIRS" | awk '{print "centralrelay/" $0}' | tr '\n' ' ')
 
-# Run tests inside the Docker builder (read-only mount, Go available)
-RESULT=$(COMPOSE_FILE=docker-compose.yaml docker compose exec -T builder sh -c \
+# Run tests inside the Go builder container (read-only mount, Go available)
+RESULT=$(docker compose exec -T go-builder sh -c \
   "cd /git-source && \
    git config --global --add safe.directory /git-source 2>/dev/null || true; \
    GOFLAGS='-mod=readonly -trimpath' go test -race $PKGS 2>&1") \

@@ -19,6 +19,9 @@ objects:
   description: Create a temporary Go file with various definitions for testing.
   references:
   - pytest.fixture
+  calls:
+  - f.flush
+  - f.write
 - name: TestFunctionExtraction
   kind: class
   decorators: []
@@ -32,12 +35,16 @@ objects:
   description: Test that function signatures are correctly extracted.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - go_ast_extract.extract_ast
 - name: test_function_calls_extraction
   kind: method
   receiver: TestFunctionExtraction
   decorators: []
   description: Test that function calls within a body are extracted.
   references:
+  - go_ast_extract.extract_ast
+  calls:
   - go_ast_extract.extract_ast
 - name: test_method_extraction
   kind: method
@@ -46,12 +53,16 @@ objects:
   description: Test that methods on types are correctly extracted.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - go_ast_extract.extract_ast
 - name: test_unexported_function
   kind: method
   receiver: TestFunctionExtraction
   decorators: []
   description: Test that unexported functions are marked correctly.
   references:
+  - go_ast_extract.extract_ast
+  calls:
   - go_ast_extract.extract_ast
 - name: TestStructExtraction
   kind: class
@@ -66,6 +77,8 @@ objects:
   description: Test that struct fields are correctly extracted.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - go_ast_extract.extract_ast
 - name: TestInterfaceExtraction
   kind: class
   decorators: []
@@ -78,6 +91,8 @@ objects:
   decorators: []
   description: Test that interface methods are correctly extracted.
   references:
+  - go_ast_extract.extract_ast
+  calls:
   - go_ast_extract.extract_ast
 - name: TestPositionAccuracy
   kind: class
@@ -92,6 +107,8 @@ objects:
   description: Test that start and end line positions are extracted.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - go_ast_extract.extract_ast
 - name: test_multiple_objects_position_ordering
   kind: method
   receiver: TestPositionAccuracy
@@ -99,6 +116,10 @@ objects:
   description: Test that positions are correctly ordered for multiple objects.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - go_ast_extract.extract_ast
+  - positions.items
+  - result.items
 - name: TestExportedFlag
   kind: class
   decorators: []
@@ -112,6 +133,10 @@ objects:
   description: Test that exported vs unexported symbols are correctly identified.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - go_ast_extract.extract_ast
+  - result.items
+  - v.get
 - name: TestEdgeCases
   kind: class
   decorators: []
@@ -125,6 +150,8 @@ objects:
   description: Test that nonexistent file returns empty dict.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - go_ast_extract.extract_ast
 - name: test_empty_file
   kind: method
   receiver: TestEdgeCases
@@ -132,10 +159,18 @@ objects:
   description: Test that empty Go file returns empty dict.
   references:
   - go_ast_extract.extract_ast
+  calls:
+  - f.flush
+  - f.write
+  - go_ast_extract.extract_ast
 - name: test_function_without_params_or_returns
   kind: method
   receiver: TestEdgeCases
   decorators: []
   description: Test function with no parameters or return values.
   references:
+  - go_ast_extract.extract_ast
+  calls:
+  - f.flush
+  - f.write
   - go_ast_extract.extract_ast

@@ -174,7 +174,10 @@ VALID_SIGNATURE = "vault:v1:test-signature"
 
 def test_verify_dry_run(dry_run_vault_service):
     """Test that verify in dry-run mode returns True."""
-    assert dry_run_vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key") is True
+    assert (
+        dry_run_vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key")
+        is True
+    )
 
 
 def test_verify_invalid_base64(vault_service):
@@ -230,7 +233,9 @@ def test_verify_missing_valid_field(mock_post, vault_service):
 def test_verify_http_error(mock_post, vault_service):
     """Test that an HTTP error is handled."""
     mock_response = MagicMock()
-    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("403 Forbidden")
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+        "403 Forbidden"
+    )
     mock_post.return_value = mock_response
     with pytest.raises(VaultServiceError, match="Vault verify request failed"):
         vault_service.verify(VALID_DIGEST_B64, VALID_SIGNATURE, "my-key")
