@@ -202,6 +202,19 @@ jobs:
             --workers 4 --threshold-efficacy 90 \
             ./core/modules/schemacompile
 
+      # Rust mutation testing (cargo-mutants) — same PR-only mutation gate as
+      # gremlins. Fails if any viable mutant survives.
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Install cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+
+      - name: Mutation — Rust workspace (no surviving mutants)
+        run: cargo mutants --workspace
+
   python:
     # Quality + test gate for the Python tooling (tools/, tests/). Mirrors the
     # checks run by `make infra.check` / `make test-py`, but natively (no Docker)
