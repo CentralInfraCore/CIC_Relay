@@ -31,9 +31,12 @@ BUILD_DIR ?= ./output/$(COMMIT)
 COVERAGE_FILE ?= /output/$(COMMIT)/coverage.out
 COVERAGE_HTML ?= /output/$(COMMIT)/coverage.html
 
-# BUILDER_IMAGE_DIGEST: pinned golang builder image digest from docker-compose.yaml.
-# Re-pin: grep -m1 'sha256:' docker-compose.yaml | grep -o 'sha256:[a-f0-9]*'
-BUILDER_IMAGE_DIGEST ?= sha256:d6d07e5326853f71a30decb4d777467428e85c087433b3d76c8b74933abd48b1
+# BUILDER_IMAGE_DIGEST: golang builder image digest, derived at make-time from the
+# single source of truth — the &golang_image anchor in docker-compose.yaml that every
+# golang service (*golang_image) references. This cannot drift: bump the anchor and the
+# digest baked into the binary (-X main.BuilderImageDigest) follows automatically.
+# Override for hermetic/off-tree builds: make ... BUILDER_IMAGE_DIGEST=sha256:...
+BUILDER_IMAGE_DIGEST ?= $(shell grep '^x-golang-version:' docker-compose.yaml | grep -oE 'sha256:[a-f0-9]{64}')
 
 # RELEASE_LD_FLAGS: timestamp-free — produces byte-identical binaries from the same source.
 # SourceTreeHash is injected inline in release/build recipes via:
@@ -283,7 +286,7 @@ vuln: ## Run Go vulnerability scan (govulncheck)
 deadcode: ## Scan for functions unreachable from any main entrypoint (catches exported dead code staticcheck misses)
 	mkdir -p $(BUILD_DIR) && $(call GO_EXEC, \
 		set -euo pipefail; \
-		command -v deadcode >/dev/null 2>&1 || GOFLAGS="" go install golang.org/x/tools/cmd/deadcode@latest; \
+		command -v deadcode >/dev/null 2>&1 || GOFLAGS="" go install golang.org/x/tools/cmd/deadcode@v0.44.0; \
 		echo "deadcode ./..."; \
 		GO111MODULE=on GOFLAGS="$(GOFLAGS)" deadcode ./... \
 	)
@@ -485,6 +488,9 @@ build-relay: fetch-pki prepare quality test-go coverage coverage-check-pkgs ## B
 CYCLONEDX_GOMOD_VERSION ?= v1.8.0
 
 release-relay: ## Build reproducible static binary + sha256 + CycloneDX SBOM into dist/
+ifeq ($(VERSION),)
+	$(error VERSION is required for the release-relay command. Usage: make release-relay VERSION=1.0.0)
+endif
 	$(call GO_EXEC, \
 		mkdir -p /git-source/dist && \
 		SOURCE_HASH=$$(go run ./tools/sourcehash .) && \
@@ -584,7 +590,7 @@ cache-populate: ## Pre-populate Go module and tool cache
 		&& echo ineffassign && go install github.com/gordonklaus/ineffassign@v0.1.0 \
 		&& echo reflex && go install github.com/cespare/reflex@v0.3.1 \
 		&& echo govulncheck && go install golang.org/x/vuln/cmd/govulncheck@v1.1.4 \
-		&& echo deadcode && go install golang.org/x/tools/cmd/deadcode@latest \
+		&& echo deadcode && go install golang.org/x/tools/cmd/deadcode@v0.44.0 \
 		&& echo gremlins && go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0 \
 		"
 
