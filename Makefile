@@ -16,7 +16,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki fetch-pki-release \
 	infra-down infra.help \
 	mutate mutate-all \
-	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust
+	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust
 
 # Default to showing help
 all: help
@@ -450,6 +450,16 @@ mutate-all: ## Run mutation testing on all critical packages (efficacy ≥ 90%)
 		GOFLAGS="$(GOFLAGS)" gremlins unleash --workers $(GREMLINS_WORKERS) --threshold-efficacy 90 ./core/modules/schemacompile; \
 		rm -rf /tmp/gremlins-run \
 	)
+
+# Rust mutation testing (cargo-mutants). Like gremlins, it is slow — kept out of
+# the per-push `rust` gate and run as a PR-only CI job. cargo-mutants fails if any
+# viable mutant survives (0 surviving = pass); connections currently: 6 caught,
+# 1 unviable, 0 missed. Output goes to the writable /target volume (source is ro).
+mutate-rust: ## Rust mutation testing (cargo-mutants; fails on surviving mutants)
+	@echo "cargo-mutants (Rust)..."
+	$(call RUST_EXEC, export PATH="/cargo/bin:$$PATH"; \
+		command -v cargo-mutants >/dev/null 2>&1 || cargo install cargo-mutants --locked >/dev/null 2>&1; \
+		cargo mutants --workspace --output /target/mutants)
 
 coverage-threshold: coverage ## Fail if coverage < $(COVERAGE_MIN)%
 	mkdir -p $(BUILD_DIR) && docker compose exec -T go-builder sh -c 'cd /git-source && \
