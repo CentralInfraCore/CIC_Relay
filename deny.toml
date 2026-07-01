@@ -1,0 +1,33 @@
+# cargo-deny configuration — the Rust supply-chain gate, mirroring govulncheck
+# (Go) and pip --require-hashes + bandit (Python).
+
+[advisories]
+# Fail on any known vulnerability in the dependency graph.
+version = 2
+yanked = "deny"
+
+[licenses]
+# Allowlist of licenses acceptable for dependencies. The workspace itself is
+# Apache-2.0; permissive licenses only.
+version = 2
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+# Reproducibility hygiene: flag accidental duplicate versions of a crate and
+# wildcard version requirements.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+# Only crates.io is a trusted source; unknown registries/git sources fail.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
