@@ -1,6 +1,7 @@
 # pyproject.toml
 
 [tool.mypy]
+exclude = ['p_venv', 'source']
 # Ignore missing stubs for libraries that don't have them
 [[tool.mypy.overrides]]
 module = [
@@ -24,9 +25,15 @@ exclude = '''
   | build
   | dist
   | p_venv
+  | source
 )/
 '''
 
 [tool.isort]
 profile = "black"
-skip_glob = ["p_venv/*"]
+skip_glob = ["p_venv/*", "source/*"]
+
+[tool.ruff]
+# `source` is a self-referential symlink (source -> .) accidentally emitted by the
+# KB generator; excluding it (plus p_venv) keeps recursive runs from exploding.
+extend-exclude = ["p_venv", "source"]
