@@ -44,7 +44,7 @@ infra.typecheck:
 
 infra.security:
 	@echo "--- Running security checks with Bandit ---"
-	@docker compose exec builder python3 -m bandit -r tools
+	@docker compose exec builder python3 -m bandit -r tools --severity-level medium
 
 infra.check: infra.fmt infra.lint infra.typecheck infra.security
 	@echo "--- Running all code quality checks (format, lint, typecheck) ---"

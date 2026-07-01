@@ -181,7 +181,10 @@ class TestRunValidation:
                     "version": "1.0.0",
                     "checksum": "dummy_hash_b64",
                     "sign": "vault:v1:dummy-sig",
-                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                    "description": "d",
+                    "license": "l",
+                    "owner": "o",
+                    "main_branch": "main",
                 },
             },
         )
@@ -196,8 +199,13 @@ class TestRunValidation:
             "tools.infra.load_yaml",
             return_value={
                 "metadata": {
-                    "name": "base", "version": "1.0.0", "checksum": "dummy_hash_b64",
-                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                    "name": "base",
+                    "version": "1.0.0",
+                    "checksum": "dummy_hash_b64",
+                    "description": "d",
+                    "license": "l",
+                    "owner": "o",
+                    "main_branch": "main",
                 },
             },
         )
@@ -211,12 +219,18 @@ class TestRunValidation:
             "tools.infra.load_yaml",
             return_value={
                 "metadata": {
-                    "name": "base", "version": "1.0.0", "checksum": "wrong_checksum",
-                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                    "name": "base",
+                    "version": "1.0.0",
+                    "checksum": "wrong_checksum",
+                    "description": "d",
+                    "license": "l",
+                    "owner": "o",
+                    "main_branch": "main",
                 },
             },
         )
         from tools.infra import ValidationFailureError
+
         manager = self._make_manager(mock_services)
         with pytest.raises(ValidationFailureError, match="Checksum mismatch"):
             manager.run_validation()
@@ -227,16 +241,24 @@ class TestRunValidation:
             "tools.infra.load_yaml",
             return_value={
                 "metadata": {
-                    "name": "base", "version": "1.0.0", "checksum": "dummy_hash_b64",
+                    "name": "base",
+                    "version": "1.0.0",
+                    "checksum": "dummy_hash_b64",
                     "sign": "vault:v1:bad-sig",
-                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                    "description": "d",
+                    "license": "l",
+                    "owner": "o",
+                    "main_branch": "main",
                 },
             },
         )
         mock_services["vault_service"].verify.return_value = False
         from tools.infra import ValidationFailureError
+
         manager = self._make_manager(mock_services)
-        with pytest.raises(ValidationFailureError, match="Signature verification failed"):
+        with pytest.raises(
+            ValidationFailureError, match="Signature verification failed"
+        ):
             manager.run_validation()
 
     def test_validation_vault_unavailable_is_warning(self, mock_services, mocker):
@@ -245,13 +267,20 @@ class TestRunValidation:
             "tools.infra.load_yaml",
             return_value={
                 "metadata": {
-                    "name": "base", "version": "1.0.0", "checksum": "dummy_hash_b64",
+                    "name": "base",
+                    "version": "1.0.0",
+                    "checksum": "dummy_hash_b64",
                     "sign": "vault:v1:sig",
-                    "description": "d", "license": "l", "owner": "o", "main_branch": "main",
+                    "description": "d",
+                    "license": "l",
+                    "owner": "o",
+                    "main_branch": "main",
                 },
             },
         )
-        mock_services["vault_service"].verify.side_effect = VaultServiceError("connection refused")
+        mock_services["vault_service"].verify.side_effect = VaultServiceError(
+            "connection refused"
+        )
         manager = self._make_manager(mock_services)
         manager.run_validation()  # must not raise
         mock_services["logger"].warning.assert_called()

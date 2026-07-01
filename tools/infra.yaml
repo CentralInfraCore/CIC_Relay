@@ -26,11 +26,19 @@ objects:
   - .releaselib.exceptions.ConfigurationError
   - yaml.YAMLError
   - yaml.safe_load
+  calls:
+  - .releaselib.exceptions.ConfigurationError
+  - content.strip
+  - f.read
+  - yaml.safe_load
 - name: write_yaml
   kind: function
   decorators: []
   description: Writes data to a YAML file atomically.
   references:
+  - .releaselib.exceptions.ReleaseError
+  - yaml.dump
+  calls:
   - .releaselib.exceptions.ReleaseError
   - yaml.dump
 - name: get_reproducible_repo_hash
@@ -39,6 +47,11 @@ objects:
   description: Calculates a reproducible SHA256 hash of a given git tree object.
   references:
   - .releaselib.exceptions.ReleaseError
+  calls:
+  - .releaselib.exceptions.ReleaseError
+  - git_service.archive_tree_bytes
+  - hasher.digest
+  - hasher.update
 - name: ReleaseManager
   kind: class
   decorators: []
@@ -51,12 +64,15 @@ objects:
   decorators: []
   description: ''
   references: []
+  calls:
+  - project_root.resolve
 - name: _path
   kind: method
   receiver: ReleaseManager
   decorators: []
   description: ''
   references: []
+  calls: []
 - name: run_validation
   kind: method
   receiver: ReleaseManager
@@ -67,12 +83,21 @@ objects:
     (offline) 3. Signature: Vault Transit verify — non-fatal if Vault unavailable'
   references:
   - .releaselib.exceptions.VaultServiceError
+  calls:
+  - ValidationFailureError
+  - data_json.encode
+  - metadata.get
+  - project_data.get
+  - self._path
+  - self._validate_final_project_yaml
 - name: _check_base_branch_and_version
   kind: method
   receiver: ReleaseManager
   decorators: []
   description: Checks git state, branch, and version validity.
   references:
+  - .releaselib.exceptions.GitStateError
+  calls:
   - .releaselib.exceptions.GitStateError
 - name: _check_api_accessibility
   kind: method
@@ -83,6 +108,9 @@ objects:
   references:
   - requests.exceptions
   - requests.get
+  calls:
+  - requests.get
+  - response.raise_for_status
 - name: _validate_final_project_yaml
   kind: method
   receiver: ReleaseManager
@@ -95,6 +123,12 @@ objects:
   - jsonschema.ValidationError
   - .releaselib.exceptions.ConfigurationError
   - jsonschema.validate
+  calls:
+  - .releaselib.exceptions.ConfigurationError
+  - .releaselib.exceptions.ReleaseError
+  - ValidationFailureError
+  - jsonschema.validate
+  - self._path
 - name: _execute_developer_preparation_phase
   kind: method
   receiver: ReleaseManager
@@ -105,6 +139,14 @@ objects:
   - .releaselib.exceptions.ReleaseError
   - yaml.dump
   - .releaselib.exceptions.ConfigurationError
+  calls:
+  - .releaselib.exceptions.ConfigurationError
+  - .releaselib.exceptions.ReleaseError
+  - data_to_sign_json.encode
+  - project_data.get
+  - self._check_api_accessibility
+  - self._path
+  - yaml.dump
 - name: _execute_finalization_phase
   kind: method
   receiver: ReleaseManager
@@ -112,6 +154,9 @@ objects:
   description: 'Handles the finalization phase: validates project.yaml, commits, tags,
     merges, and cleans up.'
   references: []
+  calls:
+  - self._path
+  - self._validate_final_project_yaml
 - name: run_release_close
   kind: method
   receiver: ReleaseManager
@@ -121,3 +166,9 @@ objects:
   references:
   - .releaselib.exceptions.GitStateError
   - .releaselib.exceptions.VaultServiceError
+  calls:
+  - .releaselib.exceptions.GitStateError
+  - .releaselib.exceptions.VaultServiceError
+  - self._check_base_branch_and_version
+  - self._execute_developer_preparation_phase
+  - self._execute_finalization_phase
