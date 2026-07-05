@@ -12,6 +12,8 @@
 //! **Vault lib owns access** (a separate driver), **adapter owns translation**,
 //! **runtime owns execution**.
 
+pub mod port;
+
 use std::collections::BTreeSet;
 use std::fmt;
 
