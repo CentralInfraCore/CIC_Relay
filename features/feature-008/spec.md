@@ -112,7 +112,7 @@ This feature *activates* components that are intentionally scaffolded today:
 | `core/nexus/isolation/coordinator.go` | implemented (concept-bound) | 3-step onion decrypt (Relay→Module→Host); the pubkey-encrypted token is the module-layer of this onion |
 | `core/nexus/crypto/service.go` | implemented | Vault Transit wrapper — candidate mechanism for the pubkey encryption |
 | `connections` crate | implemented (minimal) | home of the Vault Connection object model (this feature grows it) |
-| M25 PKI Trust Bootstrap | Done | CICRootCA → Intermediate → leaf; the Relay countersignature is the Intermediate role at runtime |
+| M25 PKI Trust Bootstrap | Done (public anchor only) | CICRootCA → Intermediate → leaf; the Relay countersignature is the Intermediate role at runtime. **Caveat**: only the public verify anchor is wired — the intermediate *signing key* custody is not (see *Countersign runtime blocker* below) |
 
 ## Open edges (to resolve before implementation)
 
@@ -125,6 +125,43 @@ This feature *activates* components that are intentionally scaffolded today:
    that must be countersigned, **who countersigns the Relay's very first Cert?**
    Presumably closed by the CICRootCA / M25 trust bootstrap (the Relay leaf sits
    directly under the root/intermediate). *(to specify)*
+
+## Countersign runtime blocker — confirmed (the critical path for the Relay slice)
+
+The **Relay countersignature runtime** slice (still `concept`) cannot start until
+the Relay holds an intermediate *signing key* at runtime. This blocker is
+**confirmed against the code**, not assumed:
+
+- **Verify side is live, signing side is absent.** `core/cabinet/pki_verify.go`
+  (`VerifyCertificateChain` + CRL + SPKI pinning) is fully implemented and already
+  wired into module loading (`cmd/relay/bootstrap.go`, `ExtKeyUsageCodeSigning`).
+  There is **no countersign / `x509.CreateCertificate`-as-intermediate** code path
+  anywhere, and **no intermediate private-key custody** in the runtime.
+- **The runtime embeds only the public anchor.** `//go:embed embedded` in
+  `cmd/relay/embedded.go` bundles `cmd/relay/embedded/` — which contains **only
+  public `.pem` certs** (`rootCA2026.pem`, `CICDeveloperCA2026.pem`,
+  `EmbeddedTestRootCA.pem`); no private key.
+- **The private keys in the repo are not the runtime's.** The repo-root
+  `embedded/pki/` holds real `intermediate_ca.key` / `root_ca.key`, but it is an
+  offline openssl generation scratch dir (`.csr` / `.srl` artifacts), it is **not**
+  the embedded FS the runtime bundles, and no Go code loads it as a signing key.
+  Its own README states: *"DEVELOPMENT ONLY … Production PKI material is injected
+  at runtime from Vault or a separate secure store."*
+
+**Consequence**: today the Relay can only *verify* (public trust store), never
+*countersign* (needs the private intermediate key). Wiring intermediate-key custody
+is therefore the **first task** of the Relay countersignature slice — everything
+downstream (policy decision point, signing op, WASM ABI endpoint, verify round-trip)
+depends on it.
+
+### Decision — intermediate signing key custody lives in Vault
+
+Resolving *Open edge #1*'s custody question: the intermediate signing key is
+**injected at runtime from Vault, not embedded as an asset**. `core/nexus/crypto`
+(the Vault Transit wrapper) is the candidate mechanism — the Relay's countersign
+operation becomes a Transit *sign* call rather than a local private-key operation,
+so the raw intermediate key need never sit in the Relay's process memory. Embedded
+`.key` files remain **dev/test only**, per the `embedded/pki/README.md` warning.
 
 ## Testing posture (target)
 
@@ -152,7 +189,7 @@ existing Rust/Go/Python gates.
 | Live Vault backend on the real driver (`VaultSecretSource::read_sealed` via KV v2, `AdapterError` mapping) | **implemented** | `vault-adapter/` — depends on `sinkog/vault-client-rs` as a **pinned git dep** (rev `17cba8d`); async read path; gates green, coverage TOTAL 97.85% |
 | Vault cert-auth → scoped token (`VaultSecretSource::login`, `IssuedToken`) | **implemented** | `vault-adapter/` — `client.auth().cert_at(mount).login(role)`; token kept as redacting `SecretString` |
 | Cert generation + private-key custody (WASM side) | **concept** | — |
-| Relay countersignature runtime (intermediate-CA + policy) | **concept** | port defined; runtime preconditions: `pki_verify.go`, M25 |
+| Relay countersignature runtime (intermediate-CA + policy) | **concept** | port defined; **blocked** on intermediate signing-key custody (Vault) — see *Countersign runtime blocker*. Verify side (`pki_verify.go`) already live; signing side absent |
 | Live-path integration tests (wiremock) for `read_sealed` + `login` | **implemented** | `vault-adapter/tests/live_mock.rs` — mocked Vault HTTP; `vault-adapter` now 100% line coverage |
 | Pubkey-sealing of returned secrets + pipeline use endpoint | **concept** | `isolation/coordinator.go`, `crypto/service.go` — turns `IssuedToken` into a `SealedSecret` |
 
