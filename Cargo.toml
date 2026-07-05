@@ -5,6 +5,7 @@
 resolver = "2"
 members = [
     "connections",
+    "vault-adapter",
 ]
 
 # Shared metadata + lints applied to every workspace crate.
