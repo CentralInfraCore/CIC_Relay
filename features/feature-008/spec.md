@@ -143,6 +143,22 @@ Per the layer model, unit tests are not enough for the core/capability layer:
 Gate target for the core/adapter: 90%+ coverage + mutation testing, matching the
 existing Rust/Go/Python gates.
 
+## Implementation progress
+
+| Slice | Status | Where |
+|---|---|---|
+| Core object model (`Cn`, `AuthScope`, `SecretRef`, `CounterSignedCert`, `SealedSecret`, typestate `Connection<S>`) | **implemented** | `connections/src/vault.rs` — clippy `-D warnings` clean, 100% coverage, cargo-deny ok |
+| Cert generation + private-key custody (WASM side) | **concept** | — |
+| Relay countersignature (intermediate-CA + policy) | **concept** | preconditions: `pki_verify.go`, M25 |
+| Vault cert-auth adapter → scoped token | **concept** | Vault lib driver + adapter |
+| Pubkey-sealing of returned secrets + pipeline use endpoint | **concept** | `isolation/coordinator.go`, `crypto/service.go` |
+
+The core slice deliberately carries **no cryptography and talks to no Vault** —
+it owns *meaning* only. The typestate (`Requested → Countersigned → Initialized`)
+makes the flow order a compile-time guarantee, and `SealedSecret` has no plaintext
+field and redacts under `Debug`/`Display`, encoding the security invariant in the
+type system rather than in runtime checks.
+
 ## Relationship to other features
 
 - **feature-006** (Cabinet / `connections`): this feature adds the first
