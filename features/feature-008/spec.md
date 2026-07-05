@@ -153,8 +153,8 @@ existing Rust/Go/Python gates.
 | Vault cert-auth → scoped token (`VaultSecretSource::login`, `IssuedToken`) | **implemented** | `vault-adapter/` — `client.auth().cert_at(mount).login(role)`; token kept as redacting `SecretString` |
 | Cert generation + private-key custody (WASM side) | **concept** | — |
 | Relay countersignature runtime (intermediate-CA + policy) | **concept** | port defined; runtime preconditions: `pki_verify.go`, M25 |
+| Live-path integration tests (wiremock) for `read_sealed` + `login` | **implemented** | `vault-adapter/tests/live_mock.rs` — mocked Vault HTTP; `vault-adapter` now 100% line coverage |
 | Pubkey-sealing of returned secrets + pipeline use endpoint | **concept** | `isolation/coordinator.go`, `crypto/service.go` — turns `IssuedToken` into a `SealedSecret` |
-| Live-path integration tests (wiremock / real Vault) for `read_sealed` + `login` | **concept** | network async shells are the only sub-90% coverage in `vault-adapter` |
 
 The `vault-adapter` crate is the concrete **adapter** layer: it depends on the
 maintained `sinkog/vault-client-rs` fork (pinned by rev in `Cargo.lock`) and owns
