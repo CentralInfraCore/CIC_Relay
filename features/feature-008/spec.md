@@ -68,10 +68,26 @@ endpoint**. This is the runtime ABI form of the `with_secret(scope)` /
 | Component | Role |
 |---|---|
 | WASM module | key holder + execution endpoint; generates Cert, holds private key, decrypts and uses secret in-scope |
-| Relay | notary / intermediate CA (countersigns) **and** policy authority (decides CN scope) — content-dependent authorization |
+| Relay | notary / intermediate CA (countersigns) **and** policy authority (decides CN scope) — content-dependent authorization. **Cryptographically blind to secrets** — see below |
 | Vault lib | pure access driver; cert-auth against the Relay chain, maps CN/role → policy → scoped token; **not CIC-aware** |
 | Adapter | translates between the Vault driver and the `connections` core model |
 | Host / cache | stores only pubkey-encrypted ciphertext; never sees plaintext |
+
+## No privileged component — the Relay is not a secret broker
+
+There is **no privileged component** in this model. The Relay is not a trusted
+super-broker that can see plaintext; it is **as blind to secrets as anyone else**.
+
+- **The Relay's own first request follows the exact same flow as a normal WASM
+  module**: it generates its own keypair + Cert, gets it countersigned, and
+  receives a token **encrypted to its own public key that only it can open**.
+  There is no privileged/back-door path for the Relay to obtain secrets.
+- The Relay's two roles are **orthogonal**: it *authorizes* (countersigns CNs)
+  and *orchestrates*, but it **cannot read** the material it authorizes. There
+  is **no master key and no trusted plaintext broker** anywhere in the system.
+- This is what makes the boundary claim defensible: not "trust the Relay", but
+  "no component — including the Relay — is a plaintext holder for material that
+  is not its own".
 
 ## Why this is not "hard isolation" — and how it is handled instead
 
@@ -105,6 +121,10 @@ This feature *activates* components that are intentionally scaffolded today:
 2. **CN → Vault policy mapping** lives on the **Vault** side (cert-auth backend
    roles); the Relay only requests scope via CN, Vault decides what it grants.
    *(assumed, to confirm)*
+3. **Relay bootstrap (chicken-and-egg)**: since the Relay is just another module
+   that must be countersigned, **who countersigns the Relay's very first Cert?**
+   Presumably closed by the CICRootCA / M25 trust bootstrap (the Relay leaf sits
+   directly under the root/intermediate). *(to specify)*
 
 ## Testing posture (target)
 
