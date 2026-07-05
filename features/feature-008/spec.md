@@ -147,11 +147,18 @@ existing Rust/Go/Python gates.
 
 | Slice | Status | Where |
 |---|---|---|
-| Core object model (`Cn`, `AuthScope`, `SecretRef`, `CounterSignedCert`, `SealedSecret`, typestate `Connection<S>`) | **implemented** | `connections/src/vault.rs` — clippy `-D warnings` clean, 100% coverage, cargo-deny ok |
+| Core object model (`Cn`, `AuthScope`, `SecretRef`, `CounterSignedCert`, `SealedSecret`, typestate `Connection<S>`) | **implemented** | `connections/src/vault/mod.rs` — clippy `-D warnings` clean, 100% coverage, cargo-deny ok |
+| Port/adapter trait surface (`Countersigner`, `TokenProvider`, `SecretBackend` + typed errors, in-memory refs, `establish()`, contract tests) | **implemented** | `connections/src/vault/port.rs` — sync/deterministic/dependency-free; 16 tests, line coverage 100% |
 | Cert generation + private-key custody (WASM side) | **concept** | — |
-| Relay countersignature (intermediate-CA + policy) | **concept** | preconditions: `pki_verify.go`, M25 |
-| Vault cert-auth adapter → scoped token | **concept** | Vault lib driver + adapter |
+| Relay countersignature runtime (intermediate-CA + policy) | **concept** | port defined; runtime preconditions: `pki_verify.go`, M25 |
+| Vault cert-auth driver → scoped token | **concept** | port defined; needs Vault lib driver + async adapter |
 | Pubkey-sealing of returned secrets + pipeline use endpoint | **concept** | `isolation/coordinator.go`, `crypto/service.go` |
+
+The port layer intentionally stays **synchronous, deterministic and
+dependency-free** — the core declares *what* it needs; the async Vault I/O is the
+future adapter's *how*. The three ports map one-to-one onto the three runtime
+bridges, so wiring each concept slice is now "implement this trait against the
+real driver" rather than an open design question.
 
 The core slice deliberately carries **no cryptography and talks to no Vault** —
 it owns *meaning* only. The typestate (`Requested → Countersigned → Initialized`)
