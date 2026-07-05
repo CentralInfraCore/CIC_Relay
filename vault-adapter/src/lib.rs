@@ -16,7 +16,8 @@ use std::fmt;
 
 use base64::Engine;
 use connections::vault::{SealedSecret, SecretRef};
-use vault_client_rs::{VaultClient, VaultError};
+use secrecy::SecretString;
+use vault_client_rs::{AuthInfo, CertAuthOperations, VaultClient, VaultError};
 
 /// The KV v2 field under which a pubkey-sealed secret envelope is stored.
 const SEALED_FIELD: &str = "sealed";
@@ -31,6 +32,8 @@ pub enum AdapterError {
     Denied(SecretRef),
     /// The stored envelope was not valid base64.
     Decode(SecretRef),
+    /// Certificate authentication was rejected by Vault.
+    Unauthorized,
     /// Any other Vault backend failure.
     Backend(VaultError),
 }
@@ -41,6 +44,7 @@ impl fmt::Display for AdapterError {
             Self::NotFound(r) => write!(f, "no sealed secret at {r}"),
             Self::Denied(r) => write!(f, "access denied to {r}"),
             Self::Decode(r) => write!(f, "sealed envelope at {r} is not valid base64"),
+            Self::Unauthorized => f.write_str("certificate authentication rejected"),
             Self::Backend(e) => write!(f, "vault backend error: {e}"),
         }
     }
@@ -75,6 +79,58 @@ fn decode_sealed(field: &str, secret_ref: &SecretRef) -> Result<SealedSecret, Ad
         .decode(field)
         .map(|bytes| SealedSecret::new(secret_ref.clone(), bytes))
         .map_err(|_| AdapterError::Decode(secret_ref.clone()))
+}
+
+/// Maps a cert-auth login error to an [`AdapterError`].
+fn map_auth_error(err: VaultError) -> AdapterError {
+    match err {
+        VaultError::PermissionDenied { .. } | VaultError::AuthRequired => {
+            AdapterError::Unauthorized
+        }
+        other => AdapterError::Backend(other),
+    }
+}
+
+/// A token issued by Vault cert-auth (the live counterpart of the
+/// [`connections::vault::port::TokenProvider`] contract's output).
+///
+/// The `client_token` stays a redacting, zeroizing [`SecretString`] — never a
+/// plain [`String`] — so it cannot leak into logs. Turning it into a
+/// pubkey-sealed [`SealedSecret`] for at-rest storage is a separate step (the
+/// pubkey-sealing slice), not yet wired.
+#[derive(Debug, Clone)]
+pub struct IssuedToken {
+    client_token: SecretString,
+    /// The token accessor — a non-secret handle for lookup/revocation.
+    pub accessor: String,
+    /// The effective policies attached to the token.
+    pub policies: Vec<String>,
+    /// Lease duration in seconds.
+    pub lease_duration: u64,
+    /// Whether the lease is renewable.
+    pub renewable: bool,
+}
+
+impl IssuedToken {
+    /// Projects Vault's [`AuthInfo`] into the fields we carry, keeping the token
+    /// in its protected [`SecretString`] form. Takes a reference and clones, since
+    /// [`AuthInfo`] is `Drop` (zeroizing) and cannot be moved out of.
+    fn from_auth(auth: &AuthInfo) -> Self {
+        Self {
+            client_token: auth.client_token.clone(),
+            accessor: auth.accessor.clone(),
+            policies: auth.token_policies.clone(),
+            lease_duration: auth.lease_duration,
+            renewable: auth.renewable,
+        }
+    }
+
+    /// The protected client token, for controlled hand-off to the sealing step.
+    /// Reading the plaintext requires `secrecy::ExposeSecret` and deliberate intent.
+    #[must_use]
+    pub fn client_token(&self) -> &SecretString {
+        &self.client_token
+    }
 }
 
 /// A live secret source backed by a `HashiCorp` Vault KV v2 mount, via the
@@ -121,13 +177,41 @@ impl VaultSecretSource {
             .map_err(|e| map_read_error(e, secret_ref))?;
         decode_sealed(&field, secret_ref)
     }
+
+    /// Authenticates to Vault via the cert-auth backend at `mount`, presenting the
+    /// (mTLS) client certificate configured on the transport and optionally naming
+    /// the cert `role`. Returns the issued token with its lease metadata.
+    ///
+    /// This is the live async counterpart of the in-memory `TokenProvider`
+    /// contract: the Relay-countersigned Cert is exchanged for a scoped token.
+    ///
+    /// # Errors
+    /// [`AdapterError::Unauthorized`] if Vault rejects the certificate;
+    /// [`AdapterError::Backend`] on any other Vault failure.
+    pub async fn login(
+        &self,
+        mount: &str,
+        role: Option<&str>,
+    ) -> Result<IssuedToken, AdapterError> {
+        let auth = self
+            .client
+            .auth()
+            .cert_at(mount)
+            .login(role)
+            .await
+            .map_err(map_auth_error)?;
+        Ok(IssuedToken::from_auth(&auth))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{decode_sealed, map_read_error, AdapterError, VaultSecretSource};
+    use super::{
+        decode_sealed, map_auth_error, map_read_error, AdapterError, IssuedToken, VaultSecretSource,
+    };
     use base64::Engine;
     use connections::vault::SecretRef;
+    use secrecy::{ExposeSecret, SecretString};
     use vault_client_rs::VaultError;
 
     fn secret_ref() -> SecretRef {
@@ -186,6 +270,42 @@ mod tests {
     }
 
     #[test]
+    fn issued_token_protects_the_client_token() {
+        // `AuthInfo` is `#[non_exhaustive]`, so we exercise the carrier directly.
+        let token = IssuedToken {
+            client_token: SecretString::from("hvs.SECRETTOKEN".to_string()),
+            accessor: "acc-123".to_string(),
+            policies: vec!["db.read".to_string()],
+            lease_duration: 3600,
+            renewable: true,
+        };
+        assert_eq!(token.accessor, "acc-123");
+        assert_eq!(token.policies, ["db.read"]);
+        assert_eq!(token.lease_duration, 3600);
+        assert!(token.renewable);
+
+        // The token is readable only via ExposeSecret, and Debug redacts it.
+        assert_eq!(token.client_token().expose_secret(), "hvs.SECRETTOKEN");
+        assert!(!format!("{token:?}").contains("hvs.SECRETTOKEN"));
+    }
+
+    #[test]
+    fn map_auth_error_classifies_login_failures() {
+        assert!(matches!(
+            map_auth_error(VaultError::PermissionDenied { errors: vec![] }),
+            AdapterError::Unauthorized
+        ));
+        assert!(matches!(
+            map_auth_error(VaultError::AuthRequired),
+            AdapterError::Unauthorized
+        ));
+        assert!(matches!(
+            map_auth_error(VaultError::EmptyResponse),
+            AdapterError::Backend(_)
+        ));
+    }
+
+    #[test]
     fn adapter_error_displays_and_chains_without_leaking() {
         assert!(AdapterError::NotFound(secret_ref())
             .to_string()
@@ -197,10 +317,13 @@ mod tests {
             .to_string()
             .contains("base64"));
 
+        assert!(AdapterError::Unauthorized.to_string().contains("rejected"));
+
         let backend = AdapterError::Backend(VaultError::EmptyResponse);
         assert!(!backend.to_string().is_empty());
         assert!(std::error::Error::source(&backend).is_some());
         assert!(std::error::Error::source(&AdapterError::NotFound(secret_ref())).is_none());
+        assert!(std::error::Error::source(&AdapterError::Unauthorized).is_none());
     }
 
     #[test]

@@ -13,6 +13,7 @@ workspace = true
 connections = { path = "../connections" }
 vault-client-rs = { git = "https://github.com/sinkog/vault-client-rs", rev = "17cba8d" }
 base64 = "0.22"
+secrecy = "0.10"
 
 [dev-dependencies]
 tokio = { version = "1", default-features = false, features = ["rt", "macros"] }
