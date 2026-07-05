@@ -149,10 +149,20 @@ existing Rust/Go/Python gates.
 |---|---|---|
 | Core object model (`Cn`, `AuthScope`, `SecretRef`, `CounterSignedCert`, `SealedSecret`, typestate `Connection<S>`) | **implemented** | `connections/src/vault/mod.rs` — clippy `-D warnings` clean, 100% coverage, cargo-deny ok |
 | Port/adapter trait surface (`Countersigner`, `TokenProvider`, `SecretBackend` + typed errors, in-memory refs, `establish()`, contract tests) | **implemented** | `connections/src/vault/port.rs` — sync/deterministic/dependency-free; 16 tests, line coverage 100% |
+| Live Vault backend on the real driver (`VaultSecretSource::read_sealed` via KV v2, `AdapterError` mapping) | **implemented** | `vault-adapter/` — depends on `sinkog/vault-client-rs` as a **pinned git dep** (rev `17cba8d`); async read path; gates green, coverage TOTAL 97.85% |
 | Cert generation + private-key custody (WASM side) | **concept** | — |
 | Relay countersignature runtime (intermediate-CA + policy) | **concept** | port defined; runtime preconditions: `pki_verify.go`, M25 |
-| Vault cert-auth driver → scoped token | **concept** | port defined; needs Vault lib driver + async adapter |
+| Vault cert-auth → scoped token (adapter `login`) | **concept** | driver has `CertAuthOperations::login`; adapter method not yet written |
 | Pubkey-sealing of returned secrets + pipeline use endpoint | **concept** | `isolation/coordinator.go`, `crypto/service.go` |
+
+The `vault-adapter` crate is the concrete **adapter** layer: it depends on the
+maintained `sinkog/vault-client-rs` fork (pinned by rev in `Cargo.lock`) and owns
+*translation* between that async driver and the `connections` core types. It never
+decrypts — `read_sealed` reads the pubkey-sealed envelope from KV v2 and wraps it
+opaquely as a `SealedSecret`. All async/dependency complexity is isolated here; the
+`connections` core stays synchronous and dependency-free. `deny.toml` gained the
+fork's git source (`allow-git`), the `CDLA-Permissive-2.0` license (webpki-roots),
+and `allow-wildcard-paths` for the internal path/git deps.
 
 The port layer intentionally stays **synchronous, deterministic and
 dependency-free** — the core declares *what* it needs; the async Vault I/O is the
