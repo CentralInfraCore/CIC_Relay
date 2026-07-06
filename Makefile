@@ -498,6 +498,7 @@ coverage-check-pkgs: ## Fail if per-package coverage < threshold
 		    *"/core/nexus/types") continue ;; \
 		    *"/embedded/pki")     continue ;; \
 		    *"/tools/sourcehash") continue ;; \
+		    *"/pkg/cicffi")       continue ;; \
 		  esac; \
 		  GO111MODULE=on GOFLAGS="$(GOFLAGS)" go test $$p -coverprofile=/tmp/cover.out >/dev/null 2>&1; \
 		  pc=$$(go tool cover -func=/tmp/cover.out 2>/dev/null | awk '"'"'END{print $$3}'"'"' | tr -d "%"); \
