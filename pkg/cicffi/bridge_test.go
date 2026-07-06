@@ -65,3 +65,23 @@ func TestConnectionRequestRejects(t *testing.T) {
 		t.Fatal("expected error for empty subject")
 	}
 }
+
+// TestABIVersion checks that the Go package and the linked staticlib agree on
+// the C-ABI version — the guard against a stale libcic_ffi.a link.
+func TestABIVersion(t *testing.T) {
+	if err := CheckABI(); err != nil {
+		t.Fatalf("ABI check failed: %v", err)
+	}
+	if got := ABIVersion(); got != ExpectedABIVersion {
+		t.Fatalf("ABIVersion: got %d want %d", got, ExpectedABIVersion)
+	}
+}
+
+// TestPingRejectsOversizedInput drives the seam's ingress size cap (Rust-side
+// MAX_INPUT_LEN = 1 MiB): oversized input is rejected, yielding nil.
+func TestPingRejectsOversizedInput(t *testing.T) {
+	big := make([]byte, 1024*1024+1)
+	if got := Ping(big); got != nil {
+		t.Fatalf("expected nil for oversized input, got %d bytes", len(got))
+	}
+}

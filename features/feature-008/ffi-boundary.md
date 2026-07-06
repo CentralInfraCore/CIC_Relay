@@ -98,6 +98,18 @@ handful of lines each, and they contain **no** decision logic.
    ProofTrace hash chain must be byte-identical whether produced via Rust tests
    or via the Go call path.
 
+## Realized hardening knobs
+
+- **Ingress size cap** (`MAX_INPUT_LEN`, 1 MiB): oversized input is rejected at
+  the seam before it is copied (rule 3). Control-plane requests are tiny.
+- **ABI version** (`cic_ffi_abi_version()` ↔ Go `ExpectedABIVersion` / `CheckABI`):
+  the Go side verifies the linked staticlib's ABI version at startup, so a stale
+  or mismatched `libcic_ffi.a` fails fast instead of misbehaving.
+- **Go-side length guard**: the result length is checked against `math.MaxInt32`
+  before `C.GoBytes`, refusing a size it cannot represent rather than truncating.
+- **Still open (deliberate)**: a structured error/status channel (today an export
+  returns null on any rejection); this is an ABI change, tracked as a later slice.
+
 ## Crate topology
 
 ```

@@ -190,6 +190,22 @@ permitted — have Vault countersign, yielding a `CounterSignedCert` carrying th
 against the driver-level `MockPki`; this is the live counterpart of the
 `connections` `Countersigner` port.
 
+#### Scope contract — authorization must equal signed content
+
+`sign-verbatim` signs the request's CSR **unchanged**, so the issued cert's
+identity (its SANs) is exactly the request's scope, and **Vault cert-auth
+authorizes on the cert, not on the `CounterSignedCert.scope` metadata**. A policy
+that returns a strict *subset* of the requested scope would therefore emit a cert
+whose SANs **exceed** the authorized scope — the metadata would narrow, the
+cryptographic reality would not. This is a security invariant, not a nuance.
+
+Contract, enforced in code: `authorized == request.scope` or the countersign
+**fails closed** (`CountersignError::ScopeNarrowingUnsupported`). `AllowlistPolicy`
+is all-or-nothing, so it satisfies this today. Any future *narrowing* policy must
+first make the mechanism reflect the decision in the **signed bytes** — rebuild
+the CSR/cert to the authorized subset, or verify the returned cert's SANs against
+`authorized` — before the guard can be relaxed.
+
 ### Driver-level mock foundation (in place — the custody scaffolding)
 
 So the custody + countersign logic can be built against Vault's `transit`/`pki`

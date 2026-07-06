@@ -2,7 +2,9 @@
 //! and PKI-signing translation against the `vault-client-rs-test` `MockPki` — no
 //! live Vault, no HTTP.
 
-use vault_adapter::{AllowlistPolicy, CountersignError, PkiBackend, VaultPkiCountersigner};
+use vault_adapter::{
+    AllowlistPolicy, CountersignError, CountersignPolicy, Denied, PkiBackend, VaultPkiCountersigner,
+};
 use vault_client_rs::{PkiOperations, PkiSignedCert, VaultError};
 use vault_client_rs_test::mock::{pki_signed, MockError, MockPki};
 
@@ -67,6 +69,42 @@ async fn denied_cn_is_refused() {
         .await
         .unwrap_err();
     assert!(matches!(err, CountersignError::Denied(d) if d.reason().contains("rogue")));
+}
+
+/// A policy that authorizes a fixed scope regardless of the request — used to
+/// drive a strict-subset authorization that the sign-verbatim mechanism cannot
+/// honor.
+struct NarrowingPolicy {
+    grant: AuthScope,
+}
+
+impl CountersignPolicy for NarrowingPolicy {
+    fn authorize(&self, _request: &CertRequest) -> Result<AuthScope, Denied> {
+        Ok(self.grant.clone())
+    }
+}
+
+#[tokio::test]
+async fn scope_narrowing_is_refused_before_signing() {
+    // Policy grants only {a} while the request asks for {a, b}. sign-verbatim
+    // would emit a cert whose SANs ({a, b}) exceed the authorized scope ({a}),
+    // so the countersigner must fail closed BEFORE reaching the backend — the
+    // empty MockPki is never signed against.
+    let policy = NarrowingPolicy {
+        grant: AuthScope::from_cns([Cn::new("a")]),
+    };
+    let cs = VaultPkiCountersigner::new(
+        policy,
+        MockPkiBackend {
+            pki: MockPki::new(),
+        },
+        "pki-int",
+        "cic-module",
+    );
+
+    let err = cs.countersign(&request_for(&["a", "b"])).await.unwrap_err();
+    assert!(matches!(&err, CountersignError::ScopeNarrowingUnsupported));
+    assert!(err.to_string().contains("scope narrowing"));
 }
 
 #[tokio::test]

@@ -9,6 +9,20 @@ package cicffi
 
 const disabled = "cicffi: built without the ffi_cgo build tag (CGO bridge disabled)"
 
+// ExpectedABIVersion is the C-ABI version this package targets (see the cgo
+// build for the checked value).
+const ExpectedABIVersion uint32 = 1
+
+// ABIVersion is unavailable in the default (non-cgo) build.
+func ABIVersion() uint32 {
+	panic(disabled)
+}
+
+// CheckABI is unavailable in the default (non-cgo) build.
+func CheckABI() error {
+	panic(disabled)
+}
+
 // Ping is unavailable in the default (non-cgo) build. Rebuild with the
 // `ffi_cgo` tag and CGO_ENABLED=1 to link the Rust airlock.
 func Ping(_ []byte) []byte {
