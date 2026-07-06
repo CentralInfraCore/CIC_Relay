@@ -294,6 +294,21 @@ mod tests {
     }
 
     #[test]
+    fn ping_accepts_input_exactly_at_the_cap() {
+        // Hard-codes the documented 1 MiB cap (rather than `super::MAX_INPUT_LEN`)
+        // so this test still pins the real boundary if the constant's definition
+        // is ever miscomputed.
+        let at_cap = vec![b'y'; 1024 * 1024];
+        let mut out_len: usize = 0;
+        // SAFETY: `at_cap` is a valid slice; `out_len` is a valid local.
+        let out = unsafe { cic_ffi_ping(at_cap.as_ptr(), at_cap.len(), &raw mut out_len) };
+        assert!(!out.is_null());
+        assert_eq!(out_len, at_cap.len());
+        // SAFETY: releasing the exact pair returned above, exactly once.
+        unsafe { cic_ffi_free(out, out_len) };
+    }
+
+    #[test]
     fn abi_version_matches_the_constant() {
         assert_eq!(cic_ffi_abi_version(), super::CIC_FFI_ABI_VERSION);
     }
