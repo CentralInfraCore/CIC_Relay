@@ -11,11 +11,12 @@ workspace = true
 
 [dependencies]
 connections = { path = "../connections" }
-vault-client-rs = { git = "https://github.com/sinkog/vault-client-rs", rev = "17cba8d" }
+vault-client-rs = { git = "https://github.com/sinkog/vault-client-rs", rev = "73dab2c" }
 base64 = "0.22"
 secrecy = "0.10"
 
 [dev-dependencies]
+vault-client-rs-test = { git = "https://github.com/sinkog/vault-client-rs", rev = "73dab2c" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 wiremock = "0.6"
 serde_json = "1"

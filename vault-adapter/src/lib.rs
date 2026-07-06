@@ -13,6 +13,7 @@
 //! [`connections::vault::port::SecretBackend`] contract.
 
 use std::fmt;
+use std::future::Future;
 
 use base64::Engine;
 use connections::vault::{SealedSecret, SecretRef};
@@ -133,29 +134,72 @@ impl IssuedToken {
     }
 }
 
-/// A live secret source backed by a `HashiCorp` Vault KV v2 mount, via the
-/// `vault-client-rs` driver.
+/// The narrow set of Vault driver operations the adapter needs, as a seam.
 ///
-/// It reads the pubkey-sealed envelope stored under the `sealed` field and wraps
-/// it as a [`SealedSecret`]; it never decrypts.
-#[derive(Debug)]
-pub struct VaultSecretSource {
-    client: VaultClient,
+/// This is the adapter's own port over the `vault-client-rs` driver: it names
+/// exactly the two operations [`VaultSecretSource`] performs — a KV v2 field read
+/// and a cert-auth login — each scoped by an explicit `mount`. The real
+/// [`VaultClient`] implements it by delegating to the driver's mount-scoped
+/// handlers; tests implement it with the driver-level trait mocks, so the
+/// adapter's translation logic is exercised without `WireMock` or a live Vault.
+///
+/// Methods return `impl Future + Send` (rather than `async fn`) so the trait
+/// stays object-safe-adjacent and imposes an explicit `Send` bound on the
+/// returned futures.
+pub trait VaultBackend: Send + Sync {
+    /// Reads a single string `field` from the KV v2 secret at `mount`/`path`.
+    fn read_field(
+        &self,
+        mount: &str,
+        path: &str,
+        field: &str,
+    ) -> impl Future<Output = Result<String, VaultError>> + Send;
+
+    /// Authenticates against the cert-auth backend at `mount`, optionally naming
+    /// the cert `role`, yielding Vault's [`AuthInfo`].
+    fn cert_login(
+        &self,
+        mount: &str,
+        role: Option<&str>,
+    ) -> impl Future<Output = Result<AuthInfo, VaultError>> + Send;
 }
 
-impl VaultSecretSource {
-    /// Wraps an existing [`VaultClient`].
-    #[must_use]
-    pub fn new(client: VaultClient) -> Self {
-        Self { client }
+impl VaultBackend for VaultClient {
+    async fn read_field(&self, mount: &str, path: &str, field: &str) -> Result<String, VaultError> {
+        self.kv2(mount).read_field(path, field).await
     }
 
+    async fn cert_login(&self, mount: &str, role: Option<&str>) -> Result<AuthInfo, VaultError> {
+        self.auth().cert_at(mount).login(role).await
+    }
+}
+
+/// A live secret source backed by a `HashiCorp` Vault KV v2 mount, via the
+/// `vault-client-rs` driver (the default backend `B`).
+///
+/// It reads the pubkey-sealed envelope stored under the `sealed` field and wraps
+/// it as a [`SealedSecret`]; it never decrypts. Generic over the [`VaultBackend`]
+/// seam so it can be driven by the real driver or a mock.
+#[derive(Debug)]
+pub struct VaultSecretSource<B = VaultClient> {
+    backend: B,
+}
+
+impl VaultSecretSource<VaultClient> {
     /// Connects to Vault at `address`, authenticating with `token`.
     ///
     /// # Errors
     /// [`VaultError`] if the address or client configuration is invalid.
     pub fn connect(address: &str, token: &str) -> Result<Self, VaultError> {
         Ok(Self::new(VaultClient::new(address, token)?))
+    }
+}
+
+impl<B: VaultBackend> VaultSecretSource<B> {
+    /// Wraps an existing [`VaultBackend`] (e.g. a [`VaultClient`]).
+    #[must_use]
+    pub fn new(backend: B) -> Self {
+        Self { backend }
     }
 
     /// Reads the sealed envelope at `secret_ref` from Vault KV v2.
@@ -170,9 +214,8 @@ impl VaultSecretSource {
     /// [`AdapterError::Backend`] on any other Vault failure.
     pub async fn read_sealed(&self, secret_ref: &SecretRef) -> Result<SealedSecret, AdapterError> {
         let field = self
-            .client
-            .kv2(&secret_ref.mount)
-            .read_field(&secret_ref.path, SEALED_FIELD)
+            .backend
+            .read_field(&secret_ref.mount, &secret_ref.path, SEALED_FIELD)
             .await
             .map_err(|e| map_read_error(e, secret_ref))?;
         decode_sealed(&field, secret_ref)
@@ -194,10 +237,8 @@ impl VaultSecretSource {
         role: Option<&str>,
     ) -> Result<IssuedToken, AdapterError> {
         let auth = self
-            .client
-            .auth()
-            .cert_at(mount)
-            .login(role)
+            .backend
+            .cert_login(mount, role)
             .await
             .map_err(map_auth_error)?;
         Ok(IssuedToken::from_auth(&auth))
