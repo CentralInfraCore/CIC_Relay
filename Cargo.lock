@@ -1562,7 +1562,7 @@ dependencies = [
 [[package]]
 name = "vault-client-rs"
 version = "0.9.0"
-source = "git+https://github.com/sinkog/vault-client-rs?rev=73dab2c#73dab2ceb4c68f81ec07280e885eaa73c5ae35bb"
+source = "git+https://github.com/sinkog/vault-client-rs?rev=57d26ed#57d26ed6a193b39b018e230bf36c87c2844f0fad"
 dependencies = [
  "base64",
  "home",
@@ -1581,7 +1581,7 @@ dependencies = [
 [[package]]
 name = "vault-client-rs-test"
 version = "0.9.0"
-source = "git+https://github.com/sinkog/vault-client-rs?rev=73dab2c#73dab2ceb4c68f81ec07280e885eaa73c5ae35bb"
+source = "git+https://github.com/sinkog/vault-client-rs?rev=57d26ed#57d26ed6a193b39b018e230bf36c87c2844f0fad"
 dependencies = [
  "secrecy",
  "serde",

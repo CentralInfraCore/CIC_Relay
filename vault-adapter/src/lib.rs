@@ -20,6 +20,11 @@ use connections::vault::{SealedSecret, SecretRef};
 use secrecy::SecretString;
 use vault_client_rs::{AuthInfo, CertAuthOperations, VaultClient, VaultError};
 
+pub mod countersign;
+pub use countersign::{
+    AllowlistPolicy, CountersignError, CountersignPolicy, Denied, PkiBackend, VaultPkiCountersigner,
+};
+
 /// The KV v2 field under which a pubkey-sealed secret envelope is stored.
 const SEALED_FIELD: &str = "sealed";
 
