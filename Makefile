@@ -16,7 +16,8 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	up down repo.init typecheck check build-crt-parser build-canonicalize fetch-pki fetch-pki-release \
 	infra-down infra.help \
 	mutate mutate-all \
-	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust
+	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust \
+	ffi-staticlib test-ffi
 
 # Default to showing help
 all: help
@@ -346,6 +347,26 @@ release-rust: ## Build reproducible release artifacts (--locked) + sha256 into d
 	@echo "Rust release built (target/release) with digest $(RUST_IMAGE_DIGEST)"
 
 rust: fmt-rust-check lint-rust coverage-rust deny-rust ## Rust quality gate: fmt + clippy + coverage + supply-chain
+
+# =============================================================================
+# Rust ↔ Go FFI bridge (cic-ffi staticlib → Go cgo). Opt-in: CGO_ENABLED=1 +
+# the `ffi_cgo` build tag, so the default pure-static Go build is untouched.
+# See features/feature-008/ffi-boundary.md.
+# =============================================================================
+FFI_LIB_DIR ?= /output/lib
+
+ffi-staticlib: ## Build the cic-ffi staticlib and stage it for the Go cgo link
+	@echo "Building cic-ffi staticlib..."
+	$(call RUST_EXEC, cargo build -p cic-ffi --release --locked)
+	$(call RUST_EXEC, mkdir -p $(FFI_LIB_DIR) && cp /target/release/libcic_ffi.a $(FFI_LIB_DIR)/libcic_ffi.a)
+	@echo "staticlib staged at $(FFI_LIB_DIR)/libcic_ffi.a"
+
+test-ffi: ffi-staticlib ## Test the live Go→Rust→Go bridge (cgo, ffi_cgo tag)
+	@echo "Testing FFI bridge (cgo)..."
+	$(call GO_EXEC, \
+		git config --global --add safe.directory /git-source 2>/dev/null || true; \
+		CGO_ENABLED=1 CGO_LDFLAGS="-L$(FFI_LIB_DIR)" \
+			go test -tags ffi_cgo -count=1 -v ./pkg/cicffi/...)
 
 # =============================================================================
 # Code Quality — combined (Go + Python + Rust)
