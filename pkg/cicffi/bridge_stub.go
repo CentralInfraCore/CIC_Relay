@@ -7,8 +7,16 @@
 // See features/feature-008/ffi-boundary.md.
 package cicffi
 
+const disabled = "cicffi: built without the ffi_cgo build tag (CGO bridge disabled)"
+
 // Ping is unavailable in the default (non-cgo) build. Rebuild with the
 // `ffi_cgo` tag and CGO_ENABLED=1 to link the Rust airlock.
 func Ping(_ []byte) []byte {
-	panic("cicffi: built without the ffi_cgo build tag (CGO bridge disabled)")
+	panic(disabled)
+}
+
+// ConnectionRequest is unavailable in the default (non-cgo) build. Rebuild with
+// the `ffi_cgo` tag and CGO_ENABLED=1 to link the Rust airlock.
+func ConnectionRequest(_ []byte) ([]byte, error) {
+	panic(disabled)
 }

@@ -25,3 +25,5 @@ pedantic = { level = "warn", priority = -1 }
 undocumented_unsafe_blocks = "deny"
 
 [dependencies]
+connections = { path = "../connections" }
+serde_json = "1"
