@@ -1,0 +1,16 @@
+# cargo-mutants config for the CIC-Relay Rust workspace (verify.yml `mutation`
+# job — "no surviving mutants" is the merge gate).
+#
+# Every entry below excludes a mutant that is behaviorally *equivalent* to the
+# unmutated code today — no test can kill it without the constant/impl it
+# targets changing. Each entry documents the specific reason so this file
+# cannot silently grow into a general-purpose mutation-coverage bypass.
+exclude_re = [
+    # `CIC_FFI_ABI_VERSION` is `1` today, so a mutant that hardcodes
+    # `cic_ffi_abi_version()`'s return to the literal `1` is byte-for-byte
+    # identical to the real function — there is no observable difference for
+    # a test to catch while the constant holds that value. Bumping the ABI
+    # version (feature-008 FFI hardening, ffi/src/lib.rs) will make this
+    # mutant non-equivalent again; remove this exclusion at that point.
+    'replace cic_ffi_abi_version -> u32 with 1',
+]

@@ -158,6 +158,15 @@ mod tests {
     }
 
     #[test]
+    fn debug_redacts_the_signing_key() {
+        let (id, _) = ModuleIdentity::generate(Cn::new("m"), AuthScope::new()).expect("gen");
+        assert_eq!(
+            format!("{id:?}"),
+            "ModuleIdentity { signing_key: \"<redacted>\" }"
+        );
+    }
+
+    #[test]
     fn generate_yields_request_matching_inputs() {
         let (_id, req) =
             ModuleIdentity::generate(Cn::new("task:build"), scope(&["task:build", "env:prod"]))
@@ -244,6 +253,27 @@ mod tests {
         let (id, _) = ModuleIdentity::generate(Cn::new("m"), AuthScope::new()).expect("gen");
         let short = SealedSecret::new(secret_ref(), vec![0u8; 10]);
         assert!(id.open(&short).is_err());
+    }
+
+    #[test]
+    fn open_rejects_a_blob_one_byte_under_the_header_length() {
+        // Header is eph_pub(65) + nonce(12) = 77 bytes; one byte under that must
+        // still be flagged as the length check, not fail later while slicing.
+        let (id, _) = ModuleIdentity::generate(Cn::new("m"), AuthScope::new()).expect("gen");
+        let short = SealedSecret::new(secret_ref(), vec![0u8; 76]);
+        let err = id.open(&short).unwrap_err();
+        assert!(err.message().contains("too short"));
+    }
+
+    #[test]
+    fn open_accepts_a_blob_exactly_at_the_header_length() {
+        // At exactly 77 bytes the length guard must pass — the header is
+        // present in full (even though the header bytes here are garbage, so
+        // it still fails, just later, at ephemeral-key parsing).
+        let (id, _) = ModuleIdentity::generate(Cn::new("m"), AuthScope::new()).expect("gen");
+        let at_header = SealedSecret::new(secret_ref(), vec![0u8; 77]);
+        let err = id.open(&at_header).unwrap_err();
+        assert!(!err.message().contains("too short"));
     }
 
     #[test]
