@@ -10,6 +10,11 @@ coverage.json
 coverage.out
 *.prof
 *.test
+# Compiled relay binary — build it with `make build`, never commit it.
+/relay
+
+# Sync-client conflict-duplicate files (Syncthing etc.) — never intentional.
+*.sync-conflict-*
 
 # Python
 p_venv/
