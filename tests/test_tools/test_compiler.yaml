@@ -19,6 +19,9 @@ objects:
   description: Auto-mock environment and services for all tests in this module.
   references:
   - pytest.fixture
+  calls:
+  - mocker.patch
+  - pytest.fixture
 - name: TestMainCLI
   kind: class
   decorators: []
@@ -33,12 +36,19 @@ objects:
   references:
   - tools.compiler.main
   - pytest.raises
+  calls:
+  - pytest.raises
+  - tools.compiler.main
 - name: test_validate_command_success
   kind: method
   receiver: TestMainCLI
   decorators: []
   description: ''
   references:
+  - tools.compiler.main
+  calls:
+  - mock_release_manager_class.assert_called_once
+  - mocker.patch
   - tools.compiler.main
 - name: test_release_command_requires_version
   kind: method
@@ -48,6 +58,9 @@ objects:
   references:
   - tools.compiler.main
   - pytest.raises
+  calls:
+  - pytest.raises
+  - tools.compiler.main
 - name: test_release_command_success
   kind: method
   receiver: TestMainCLI
@@ -55,12 +68,20 @@ objects:
   description: Test the 'release' command success case.
   references:
   - tools.compiler.main
+  calls:
+  - mock_release_manager_class.assert_called_once
+  - mocker.patch
+  - tools.compiler.main
 - name: test_release_command_with_vault_files
   kind: method
   receiver: TestMainCLI
   decorators: []
   description: Test 'release' command reads Vault token and CA from files.
   references:
+  - tools.compiler.main
+  calls:
+  - kwargs.get
+  - mocker.patch
   - tools.compiler.main
 - name: test_main_handles_manual_intervention
   kind: method
@@ -71,6 +92,11 @@ objects:
   - tools.compiler.main
   - pytest.raises
   - tools.releaselib.exceptions.ManualInterventionRequired
+  calls:
+  - mocker.patch
+  - pytest.raises
+  - tools.compiler.main
+  - tools.releaselib.exceptions.ManualInterventionRequired
 - name: test_main_handles_release_error
   kind: method
   receiver: TestMainCLI
@@ -79,6 +105,11 @@ objects:
   references:
   - tools.compiler.main
   - pytest.raises
+  - tools.releaselib.exceptions.ReleaseError
+  calls:
+  - mocker.patch
+  - pytest.raises
+  - tools.compiler.main
   - tools.releaselib.exceptions.ReleaseError
 - name: TestConfigLoader
   kind: class
@@ -94,6 +125,8 @@ objects:
   description: ''
   references:
   - pytest.fixture
+  calls:
+  - pytest.fixture
 - name: test_load_project_config_io_error
   kind: method
   receiver: TestConfigLoader
@@ -102,6 +135,11 @@ objects:
   references:
   - tools.compiler.load_project_config
   - pytest.raises
+  calls:
+  - IOError
+  - mocker.patch
+  - pytest.raises
+  - tools.compiler.load_project_config
 - name: test_load_project_config_key_error
   kind: method
   receiver: TestConfigLoader
@@ -110,6 +148,10 @@ objects:
   references:
   - tools.compiler.load_project_config
   - pytest.raises
+  calls:
+  - mocker.patch
+  - pytest.raises
+  - tools.compiler.load_project_config
 - name: TestLogging
   kind: class
   decorators: []
@@ -124,6 +166,9 @@ objects:
   description: ''
   references:
   - pytest.fixture
+  calls:
+  - mocker.stopall
+  - pytest.fixture
 - name: test_setup_logging_levels
   kind: method
   receiver: TestLogging
@@ -131,10 +176,15 @@ objects:
   description: ''
   references:
   - tools.compiler.setup_logging
+  calls:
+  - tools.compiler.setup_logging
 - name: test_colored_formatter
   kind: method
   receiver: TestLogging
   decorators: []
   description: ''
   references:
+  - tools.compiler.ColoredFormatter
+  calls:
+  - formatter.format
   - tools.compiler.ColoredFormatter

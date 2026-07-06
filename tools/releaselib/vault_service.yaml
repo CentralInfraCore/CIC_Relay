@@ -22,6 +22,8 @@ objects:
   description: ''
   references:
   - .exceptions.VaultServiceError
+  calls:
+  - .exceptions.VaultServiceError
 - name: sign
   kind: method
   receiver: VaultService
@@ -31,6 +33,13 @@ objects:
   - .exceptions.VaultServiceError
   - requests.exceptions
   - requests.post
+  calls:
+  - .exceptions.VaultServiceError
+  - requests.post
+  - response.json
+  - response.raise_for_status
+  - response_data.get
+  - signature.startswith
 - name: verify
   kind: method
   receiver: VaultService
@@ -41,6 +50,11 @@ objects:
   - .exceptions.VaultServiceError
   - requests.exceptions
   - requests.post
+  calls:
+  - .exceptions.VaultServiceError
+  - requests.post
+  - response.json
+  - response.raise_for_status
 - name: get_certificate
   kind: method
   receiver: VaultService
@@ -51,3 +65,9 @@ objects:
   - .exceptions.VaultServiceError
   - requests.exceptions
   - requests.get
+  calls:
+  - .exceptions.VaultServiceError
+  - requests.get
+  - response.json
+  - response.raise_for_status
+  - response_data.get

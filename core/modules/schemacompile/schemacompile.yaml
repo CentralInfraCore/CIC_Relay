@@ -25,6 +25,8 @@ objects:
     must be context-aware and respect cancellation. Pass nil to NewSignArtifactFunc
     to run without signing (cic_sign will be "unavailable").
   references: []
+  methods:
+  - Sign
 - name: CertVerifyFunc
   kind: type
   description: CertVerifyFunc is called with the parsed developer certificate from
