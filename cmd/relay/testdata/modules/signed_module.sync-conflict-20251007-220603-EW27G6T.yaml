@@ -1,7 +1,0 @@
-apiVersion: relay.cic.com/v1
-kind: Module
-metadata:
-  name: signed.module
-  version: "1.0"
-wasmDigest: "292ed65ec666d77aa17f84777f83e6e5aca98d61ba75461ca76fe8313a44382c"
-wasmSize: 8
