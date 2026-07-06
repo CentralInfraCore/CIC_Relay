@@ -23,6 +23,16 @@ use std::panic::{catch_unwind, UnwindSafe};
 use std::ptr;
 use std::slice;
 
+/// Maximum input accepted at the seam (1 MiB). Control-plane requests are tiny;
+/// anything larger is rejected on ingress rather than copied (ffi-boundary.md
+/// rule 3 — validate/size-cap at the seam).
+const MAX_INPUT_LEN: usize = 1024 * 1024;
+
+/// C-ABI version of this staticlib. Bump on any breaking change to an export's
+/// signature or semantics; the Go side checks it against its own expectation to
+/// catch a stale or mismatched library link.
+const CIC_FFI_ABI_VERSION: u32 = 1;
+
 /// The safe core. Contains no `unsafe` and no raw pointers — every function here
 /// takes owned/borrowed-owned bytes and returns owned bytes, so it is ordinary,
 /// machine-checked safe Rust dispatching into the trust-flow crates.
@@ -94,6 +104,11 @@ unsafe fn marshal(
     }
     // SAFETY: `out_len` checked non-null just above; single write.
     *out_len = 0;
+
+    // Reject oversized input at the seam, before allocating/copying it.
+    if len > MAX_INPUT_LEN {
+        return ptr::null_mut();
+    }
 
     // ---- INGRESS: copy + own immediately; no borrow escapes. ----
     let owned: Vec<u8> = if ptr.is_null() || len == 0 {
@@ -175,9 +190,17 @@ pub unsafe extern "C" fn cic_ffi_connection_request(
     marshal(ptr, len, out_len, logic::connection_request)
 }
 
+/// Returns the C-ABI version of this staticlib. The Go side checks it against
+/// its own expectation at startup to catch a stale or mismatched link. No
+/// pointers cross here, so it needs no airlock.
+#[no_mangle]
+pub extern "C" fn cic_ffi_abi_version() -> u32 {
+    CIC_FFI_ABI_VERSION
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{cic_ffi_connection_request, cic_ffi_free, cic_ffi_ping};
+    use super::{cic_ffi_abi_version, cic_ffi_connection_request, cic_ffi_free, cic_ffi_ping};
     use serde_json::{json, Value};
     use std::ptr;
     use std::slice;
@@ -258,5 +281,35 @@ mod tests {
         let out =
             unsafe { cic_ffi_connection_request(input.as_ptr(), input.len(), &raw mut out_len) };
         assert!(out.is_null());
+    }
+
+    #[test]
+    fn ping_rejects_oversized_input() {
+        let big = vec![b'x'; super::MAX_INPUT_LEN + 1];
+        let mut out_len: usize = 9;
+        // SAFETY: `big` is a valid slice; `out_len` is a valid local.
+        let out = unsafe { cic_ffi_ping(big.as_ptr(), big.len(), &raw mut out_len) };
+        assert!(out.is_null());
+        assert_eq!(out_len, 0);
+    }
+
+    #[test]
+    fn ping_accepts_input_exactly_at_the_cap() {
+        // Hard-codes the documented 1 MiB cap (rather than `super::MAX_INPUT_LEN`)
+        // so this test still pins the real boundary if the constant's definition
+        // is ever miscomputed.
+        let at_cap = vec![b'y'; 1024 * 1024];
+        let mut out_len: usize = 0;
+        // SAFETY: `at_cap` is a valid slice; `out_len` is a valid local.
+        let out = unsafe { cic_ffi_ping(at_cap.as_ptr(), at_cap.len(), &raw mut out_len) };
+        assert!(!out.is_null());
+        assert_eq!(out_len, at_cap.len());
+        // SAFETY: releasing the exact pair returned above, exactly once.
+        unsafe { cic_ffi_free(out, out_len) };
+    }
+
+    #[test]
+    fn abi_version_matches_the_constant() {
+        assert_eq!(cic_ffi_abi_version(), super::CIC_FFI_ABI_VERSION);
     }
 }

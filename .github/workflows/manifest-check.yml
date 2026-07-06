@@ -1,10 +1,12 @@
 name: manifest-check
 
 on:
+  # See verify.yml: pull_request already covers every branch, so push is
+  # scoped to main to avoid running the identical check twice per commit.
   pull_request:
     branches: ["**"]
   push:
-    branches: ["**"]
+    branches: ["main"]
 
 jobs:
   manifest:

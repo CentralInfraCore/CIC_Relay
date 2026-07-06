@@ -1,8 +1,13 @@
 name: verify
 
 on:
+  # `pull_request` already runs this full suite on every branch (it's the
+  # merge gate); scoping `push` to `main` avoids running the identical jobs
+  # twice for the same commit whenever a branch has an open PR (only
+  # `mutation`/`coverage` differ between the two events — everything else
+  # was literally duplicated work).
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
     branches: ["**"]
 

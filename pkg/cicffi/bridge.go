@@ -13,19 +13,42 @@ package cicffi
 #cgo LDFLAGS: -lcic_ffi
 
 #include <stddef.h>
+#include <stdint.h>
 
 // Mirrors the exports in ffi/src/lib.rs (the unsafe airlock). The -L path to
 // libcic_ffi.a is supplied at build time via CGO_LDFLAGS (see the Makefile).
 unsigned char *cic_ffi_ping(const unsigned char *ptr, size_t len, size_t *out_len);
 unsigned char *cic_ffi_connection_request(const unsigned char *ptr, size_t len, size_t *out_len);
 void cic_ffi_free(unsigned char *ptr, size_t len);
+uint32_t cic_ffi_abi_version(void);
 */
 import "C"
 
 import (
 	"errors"
+	"math"
 	"unsafe"
 )
+
+// ExpectedABIVersion is the C-ABI version this Go package is written against.
+// It must match the linked staticlib's cic_ffi_abi_version(); a mismatch means
+// a stale or wrong libcic_ffi.a was linked. Kept in sync with CIC_FFI_ABI_VERSION
+// in ffi/src/lib.rs.
+const ExpectedABIVersion uint32 = 1
+
+// ABIVersion returns the C-ABI version of the linked cic-ffi staticlib.
+func ABIVersion() uint32 {
+	return uint32(C.cic_ffi_abi_version())
+}
+
+// CheckABI reports an error if the linked staticlib's ABI version differs from
+// ExpectedABIVersion. Call it once at startup before using the bridge.
+func CheckABI() error {
+	if got := ABIVersion(); got != ExpectedABIVersion {
+		return errors.New("cicffi: ABI version mismatch between Go package and linked staticlib")
+	}
+	return nil
+}
 
 // invoke runs one airlock call: it hands `in` to a C export `fn`, copies the
 // Rust-owned result into Go memory, and frees the Rust buffer. It returns nil
@@ -46,6 +69,11 @@ func invoke(in []byte, fn func(*C.uchar, C.size_t, *C.size_t) *C.uchar) []byte {
 	}
 	// Copy Rust-owned bytes into Go memory, then release the Rust buffer.
 	defer C.cic_ffi_free(out, outLen)
+	// C.GoBytes takes a C.int length; refuse a size we cannot represent safely
+	// rather than truncate (defence-in-depth — inputs are already capped).
+	if uint64(outLen) > uint64(math.MaxInt32) {
+		return nil
+	}
 	return C.GoBytes(unsafe.Pointer(out), C.int(outLen))
 }
 
