@@ -11,9 +11,13 @@ workspace = true
 
 [dependencies]
 connections = { path = "../connections" }
-p256 = { version = "0.13", features = ["ecdsa", "pem", "std"] }
+p256 = { version = "0.13", features = ["ecdsa", "ecdh", "pem", "std"] }
 x509-cert = { version = "0.2", features = ["builder"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 # Enables `Sha256: AssociatedOid`, required for the ECDSA-with-SHA256 signature
 # algorithm identifier that x509-cert's RequestBuilder needs from the p256 signer.
 sha2 = { version = "0.10", features = ["oid"] }
+# ECIES pubkey-sealing: P-256 ECDH (above) + HKDF-SHA256 + AES-256-GCM.
+hkdf = "0.12"
+aes-gcm = "0.10"
+secrecy = "0.10"
