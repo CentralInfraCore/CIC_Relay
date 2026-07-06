@@ -163,6 +163,25 @@ operation becomes a Transit *sign* call rather than a local private-key operatio
 so the raw intermediate key need never sit in the Relay's process memory. Embedded
 `.key` files remain **dev/test only**, per the `embedded/pki/README.md` warning.
 
+### Driver-level mock foundation (in place — the custody scaffolding)
+
+So the custody + countersign logic can be built against Vault's `transit`/`pki`
+operations **without a live Vault and without pre-committing the provisioning
+path**, a driver-level mock of the Vault client now exists:
+
+- Upstream in the `sinkog/vault-client-rs-test` crate (`feat/driver-trait-mocks`,
+  rev `73dab2c`): hand-written trait mocks (`MockKv2`, `MockCertAuth`) implementing
+  the driver's operation traits — reusable, owned, programmable doubles (the
+  operation traits are not object-safe, so `mockall` is out and the seam is generic).
+- In `vault-adapter/`: a narrow `VaultBackend` port (`read_field` + `cert_login`)
+  over the driver; `VaultSecretSource<B>` is generic over it (default `VaultClient`).
+  `tests/driver_mock.rs` exercises the adapter's translation logic against the mocks
+  with no `WireMock`/HTTP; the p70 `WireMock` tests remain as the HTTP layer.
+
+The `MockTransit`/`MockPki` doubles follow the same template and land with the
+countersign slice that first exercises `TransitOperations::sign` / `PkiOperations`.
+Tracked as **p72** (Done) in `ai/ROADMAP.md`; unblocks the p71 custody work.
+
 ## Testing posture (target)
 
 Per the layer model, unit tests are not enough for the core/capability layer:
