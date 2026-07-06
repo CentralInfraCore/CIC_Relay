@@ -236,7 +236,7 @@ existing Rust/Go/Python gates.
 | Cert generation + private-key custody (WASM side) | **implemented** | `module/` — `ModuleIdentity::generate(subject, scope)` → P-256 keypair + PKCS#10 CSR (subject CN + scope CNs as SANs) → `CertRequest`; private key held (redacted `Debug`), never emitted. Pure-Rust (`p256`+`x509-cert`), permissive-only. E2e round-trip test: module CSR → `VaultPkiCountersigner` |
 | Relay countersignature runtime (intermediate-CA + policy) | **concept** | port defined; **blocked** on intermediate signing-key custody (Vault) — see *Countersign runtime blocker*. Verify side (`pki_verify.go`) already live; signing side absent |
 | Live-path integration tests (wiremock) for `read_sealed` + `login` | **implemented** | `vault-adapter/tests/live_mock.rs` — mocked Vault HTTP; `vault-adapter` now 100% line coverage |
-| Pubkey-sealing of returned secrets + pipeline use endpoint | **concept** | `isolation/coordinator.go`, `crypto/service.go` — turns `IssuedToken` into a `SealedSecret` |
+| Pubkey-sealing of returned secrets + module open endpoint | **implemented** | `module/src/sealing.rs` — `seal(pubkey_der, ref, plaintext)` → `SealedSecret` and `ModuleIdentity::open()` → plaintext. **ECIES over P-256** (ephemeral ECDH + HKDF-SHA256 + AES-256-GCM), *not* Vault Transit (which can't encrypt to an external module key). Full-flow e2e: CSR → countersign → seal → `Connection::initialize` → module opens |
 
 The `vault-adapter` crate is the concrete **adapter** layer: it depends on the
 maintained `sinkog/vault-client-rs` fork (pinned by rev in `Cargo.lock`) and owns
