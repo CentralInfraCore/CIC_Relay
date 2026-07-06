@@ -113,6 +113,7 @@ This feature *activates* components that are intentionally scaffolded today:
 | `core/nexus/crypto/service.go` | implemented | Vault Transit wrapper — candidate mechanism for the pubkey encryption |
 | `connections` crate | implemented (minimal) | home of the Vault Connection object model (this feature grows it) |
 | M25 PKI Trust Bootstrap | Done (public anchor only) | CICRootCA → Intermediate → leaf; the Relay countersignature is the Intermediate role at runtime. **Caveat**: only the public verify anchor is wired — the intermediate *signing key* custody is not (see *Countersign runtime blocker* below) |
+| Rust ↔ Go FFI bridge | principle fixed, code scaffold | the trust-flow crates link into the Go relay as a library; the boundary rules are fixed in [`ffi-boundary.md`](./ffi-boundary.md) (unsafe airlock, safe core) |
 
 ## Open edges (to resolve before implementation)
 
