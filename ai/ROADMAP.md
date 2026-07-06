@@ -149,6 +149,7 @@ A sprint 13 végén lezajlott egy átfogó teszt-minőségi sprint (2026-05-16):
 | p69  | feature-008 | ✅ Done   | Vault cert-auth → scoped token: `VaultSecretSource::login` (`cert_at(mount).login(role)`), `IssuedToken` redacting `SecretString`-ként |
 | p70  | feature-008 | ✅ Done   | Live-path wiremock integrációs tesztek `read_sealed` + `login` útra (`vault-adapter/tests/live_mock.rs`) — mockolt Vault HTTP, `vault-adapter` 100% line coverage |
 | p71  | feature-008 | 🟢 Todo   | Relay countersignature runtime (intermediate-CA + policy) — **blocked**: az intermediate *signing kulcs* runtime-custody hiányzik (verify oldal él, signing oldal nincs). Megerősített blokkoló, döntés: kulcs Vaultból injektálva (`core/nexus/crypto` Transit). Lásd `features/feature-008/spec.md` *Countersign runtime blocker* |
+| p72  | feature-008 | ✅ Done   | Vault-lib **driver-level mock** alapozás a p71 custody-hoz (valódi Vault és provisioning-döntés nélkül): a `sinkog/vault-client-rs-test` forkban kézzel írt trait-mockok (`MockKv2`/`MockCertAuth`, `feat/driver-trait-mocks` ág, rev `73dab2c`, test-crate coverage-floorból kizárva); CIC-Relay oldalon szűk `VaultBackend` port + generikus `VaultSecretSource<B>` + `tests/driver_mock.rs` (6 teszt, WireMock nélkül; a p70 HTTP-tesztek megmaradnak). clippy `-D`, deny, coverage (adapter line 100%) zöld. `Transit`/`Pki` mock + Go `CryptoService` fake szándékosan a custody slice-ra halasztva (nincs rá consumer-teszt most) |
 
 ---
 
