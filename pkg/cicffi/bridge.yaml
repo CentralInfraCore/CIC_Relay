@@ -1,0 +1,58 @@
+---
+package: cicffi
+description: Package cicffi is the Go side of the Rust↔Go FFI bridge. It links the
+  cic-ffi staticlib (the unsafe airlock) and exposes safe Go wrappers over the C-ABI
+  exports. See features/feature-008/ffi-boundary.md. This file is compiled only under
+  the `ffi_cgo` build tag with CGO_ENABLED=1; the default build uses the stub in bridge_stub.go,
+  so the rest of the tree builds without the Rust staticlib.
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ABIVersion
+  kind: func
+  description: ABIVersion returns the C-ABI version of the linked cic-ffi staticlib.
+  references: []
+  calls: []
+- name: CheckABI
+  kind: func
+  description: CheckABI reports an error if the linked staticlib's ABI version differs
+    from ExpectedABIVersion. Call it once at startup before using the bridge.
+  references: []
+  calls:
+  - ABIVersion
+  - New
+- name: invoke
+  kind: func
+  description: 'invoke runs one airlock call: it hands `in` to a C export `fn`, copies
+    the Rust-owned result into Go memory, and frees the Rust buffer. It returns nil
+    when the export returned null/empty (its rejection or empty signal), so no Rust
+    memory is retained by the caller.'
+  references:
+  - C.GoBytes
+  calls:
+  - C.GoBytes
+- name: Ping
+  kind: func
+  description: Ping sends bytes across the FFI boundary into the Rust airlock and
+    returns the echoed bytes (the linkability smoke test). Empty input yields nil.
+  references: []
+  calls: []
+- name: ConnectionRequest
+  kind: func
+  description: 'ConnectionRequest builds a canonical Vault Connection request from
+    a JSON {"subject": ..., "scope": [...]} document via the Rust core, returning
+    the canonical JSON (deduplicated, sorted scope). It returns an error when the
+    Rust core rejected the input (malformed JSON or an empty subject).'
+  references: []
+  calls:
+  - New
+- name: ExpectedABIVersion
+  kind: const
+  description: ExpectedABIVersion is the C-ABI version this Go package is written
+    against. It must match the linked staticlib's cic_ffi_abi_version(); a mismatch
+    means a stale or wrong libcic_ffi.a was linked. Kept in sync with CIC_FFI_ABI_VERSION
+    in ffi/src/lib.rs.
+  references: []

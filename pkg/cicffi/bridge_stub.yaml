@@ -1,0 +1,43 @@
+---
+package: cicffi
+description: Package cicffi is the Go side of the Rust↔Go FFI bridge. This stub is
+  compiled when the `ffi_cgo` tag is absent (the default, CGO-disabled build), so
+  the rest of the tree compiles without the Rust staticlib. Build with `-tags ffi_cgo`
+  and CGO_ENABLED=1 to link the real bridge. See features/feature-008/ffi-boundary.md.
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ABIVersion
+  kind: func
+  description: ABIVersion is unavailable in the default (non-cgo) build.
+  references: []
+  calls: []
+- name: CheckABI
+  kind: func
+  description: CheckABI is unavailable in the default (non-cgo) build.
+  references: []
+  calls: []
+- name: Ping
+  kind: func
+  description: Ping is unavailable in the default (non-cgo) build. Rebuild with the
+    `ffi_cgo` tag and CGO_ENABLED=1 to link the Rust airlock.
+  references: []
+  calls: []
+- name: ConnectionRequest
+  kind: func
+  description: ConnectionRequest is unavailable in the default (non-cgo) build. Rebuild
+    with the `ffi_cgo` tag and CGO_ENABLED=1 to link the Rust airlock.
+  references: []
+  calls: []
+- name: disabled
+  kind: const
+  description: ''
+  references: []
+- name: ExpectedABIVersion
+  kind: const
+  description: ExpectedABIVersion is the C-ABI version this package targets (see the
+    cgo build for the checked value).
+  references: []
