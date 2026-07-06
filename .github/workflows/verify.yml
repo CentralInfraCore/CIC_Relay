@@ -127,6 +127,7 @@ jobs:
               */core/nexus/types) echo "$p: skip (types-only)"; continue ;;
               */embedded/pki)     echo "$p: skip (no test files)"; continue ;;
               */tools/sourcehash) echo "$p: skip (main entry only)"; continue ;;
+              */pkg/cicffi)       echo "$p: skip (cgo bridge; tested in the ffi job under -tags ffi_cgo)"; continue ;;
             esac
             go test -coverprofile=/tmp/pkg_cover.out "$p" > /dev/null 2>&1 || continue
             pc=$(go tool cover -func=/tmp/pkg_cover.out | awk 'END{gsub(/%/,""); print $3+0}')
@@ -295,3 +296,33 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
+
+  ffi:
+    # Live Rust↔Go FFI bridge gate: builds the cic-ffi staticlib and links it
+    # into the Go cgo consumer (pkg/cicffi), exercising the real Go→Rust→Go
+    # round-trip. This is the only job that runs the CGO_ENABLED=1 path — every
+    # other build keeps the bridge tag-isolated (features/feature-008/ffi-boundary.md),
+    # so a broken staticlib symbol or ABI drift cannot rot silently.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.11"
+
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          rustup show active-toolchain || rustup toolchain install
+
+      - name: Build cic-ffi staticlib
+        run: cargo build -p cic-ffi --release --locked
+
+      - name: Test FFI bridge (cgo, ffi_cgo tag)
+        run: |
+          set -euo pipefail
+          CGO_ENABLED=1 CGO_LDFLAGS="-L$PWD/target/release" \
+            go test -tags ffi_cgo -count=1 -v ./pkg/cicffi/...
