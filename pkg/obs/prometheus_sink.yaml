@@ -1,0 +1,144 @@
+---
+package: obs
+description: ''
+tags:
+- metrics
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: PrometheusSink
+  kind: struct
+  description: PrometheusSink aggregates obs metric points in-process and renders
+    them in the Prometheus text exposition format (https://prometheus.io/docs/instrumenting/exposition_formats/).
+    It satisfies MetricSink. Counters sum monotonically per (name, labels) series;
+    gauges keep the latest value; histograms track only count+sum, exposed as a single
+    "+Inf" bucket — no call site today supplies distribution buckets, so percentile
+    buckets are not fabricated.
+  implements: []
+  references: []
+- name: label
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: series
+  kind: struct
+  description: series identifies one labeled time series (a metric name plus its sorted
+    labels).
+  implements: []
+  references: []
+- name: counterEntry
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: gaugeEntry
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: histogramEntry
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: errWriter
+  kind: struct
+  description: errWriter accumulates the first write error so callers can chain writes
+    without checking after every line.
+  implements: []
+  references: []
+- name: NewPrometheusSink
+  kind: func
+  description: NewPrometheusSink returns an empty PrometheusSink.
+  references: []
+  calls: []
+- name: labelsFor
+  kind: func
+  description: 'labelsFor builds the sorted label set for a point: Resource.Component
+    (if set) plus every Attrs entry.'
+  references: []
+  calls:
+  - Slice
+- name: seriesKey
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - String
+  - WriteByte
+  - WriteString
+- name: newSeries
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: RecordCounter
+  kind: method
+  receiver: PrometheusSink
+  description: RecordCounter adds p.Value to the running total for its series.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: RecordGauge
+  kind: method
+  receiver: PrometheusSink
+  description: RecordGauge overwrites the last-known value for its series.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: RecordHistogram
+  kind: method
+  receiver: PrometheusSink
+  description: RecordHistogram accumulates p.Sum/p.Count into the running total for
+    its series.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: sanitizeMetricName
+  kind: func
+  description: sanitizeMetricName maps an obs metric name (dot-separated, e.g. "relay.requests.total")
+    onto the Prometheus metric-name charset ([a-zA-Z_:][a-zA-Z0-9_:]*).
+  references: []
+  calls:
+  - NewReplacer
+  - Replace
+- name: formatFloat
+  kind: func
+  description: 'formatFloat renders v the way Prometheus expects: the shortest round-trippable
+    decimal representation.'
+  references: []
+  calls:
+  - FormatFloat
+- name: formatLabels
+  kind: func
+  description: formatLabels renders labels as a Prometheus label-set suffix, e.g.
+    `{component="cicwasm",module_id="x"}`, or "" when there are none.
+  references: []
+  calls:
+  - Fprintf
+  - String
+  - WriteByte
+- name: printf
+  kind: method
+  receiver: errWriter
+  description: ''
+  references: []
+  calls:
+  - Fprintf
+- name: WritePrometheus
+  kind: method
+  receiver: PrometheusSink
+  description: WritePrometheus renders every aggregated series to w in Prometheus
+    text exposition format, in a deterministic order (sorted by metric name, then
+    by label set) so repeated scrapes are diffable.
+  references: []
+  calls:
+  - Lock
+  - Slice
+  - Unlock

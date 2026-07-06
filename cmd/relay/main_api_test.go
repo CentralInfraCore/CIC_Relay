@@ -498,6 +498,87 @@ func TestSetHandler_ChainAnchor_Error(t *testing.T) {
 	assert.False(t, hasAnchor, "TraceFrame must not carry chain_anchor on error")
 }
 
+// TestMetricsHandler_NoSinkConfigured verifies that a relayServer built
+// without a PrometheusSink (e.g. most handler unit tests) responds 503
+// rather than panicking.
+func TestMetricsHandler_NoSinkConfigured(t *testing.T) {
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{logger: logger}
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	w := httptest.NewRecorder()
+	server.metricsHandler(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assertErrorJSON(t, w, "metrics_unavailable")
+}
+
+// TestMetricsHandler_ServesPrometheusFormat verifies that an aggregated
+// counter is exposed via /metrics in Prometheus text format.
+func TestMetricsHandler_ServesPrometheusFormat(t *testing.T) {
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	promSink := obs.NewPrometheusSink()
+	promSink.RecordCounter(obs.CounterPoint{Name: "relay.requests.total", Value: 4})
+	server := &relayServer{logger: logger, promSink: promSink}
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	w := httptest.NewRecorder()
+	server.metricsHandler(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "text/plain; version=0.0.4; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Contains(t, w.Body.String(), "relay_requests_total 4")
+}
+
+// failingResponseWriter's Write always errors, to exercise metricsHandler's
+// error-logging path when the client disconnects mid-response.
+type failingResponseWriter struct {
+	header http.Header
+	status int
+}
+
+func (f *failingResponseWriter) Header() http.Header {
+	if f.header == nil {
+		f.header = make(http.Header)
+	}
+	return f.header
+}
+func (f *failingResponseWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }
+func (f *failingResponseWriter) WriteHeader(status int)    { f.status = status }
+
+func TestMetricsHandler_LogsWriteError(t *testing.T) {
+	var logBuf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+	promSink := obs.NewPrometheusSink()
+	promSink.RecordCounter(obs.CounterPoint{Name: "relay.requests.total", Value: 1})
+	server := &relayServer{logger: logger, promSink: promSink}
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	w := &failingResponseWriter{}
+	assert.NotPanics(t, func() { server.metricsHandler(w, req) })
+	assert.Contains(t, logBuf.String(), "failed to write metrics response")
+}
+
+// TestNewMux_RegistersMetricsRoute verifies /metrics is wired into the router.
+func TestNewMux_RegistersMetricsRoute(t *testing.T) {
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	promSink := obs.NewPrometheusSink()
+	promSink.RecordCounter(obs.CounterPoint{Name: "relay.requests.total", Value: 1})
+	server := &relayServer{logger: logger, promSink: promSink}
+	mux := newMux(server)
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "relay_requests_total 1")
+}
+
 // TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz, /readyz, and /.
 func TestSimpleHandlers(t *testing.T) {
 	logger := logrus.New()

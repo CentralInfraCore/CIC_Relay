@@ -1,0 +1,39 @@
+---
+package: obs_test
+description: ''
+tags:
+- metrics
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestMultiMetricSink_FansOutToEverySink
+  kind: func
+  description: ''
+  references:
+  - obs.CaptureSink
+  - obs.NewMultiMetricSink
+  - obs.CounterPointName
+  - obs.GaugePointName
+  - obs.HistogramPointName
+  - obs.CaptureSinka
+  - require.Len
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - obs.NewMultiMetricSink
+  - require.Len
+- name: TestMultiMetricSink_NoSinksIsNoop
+  kind: func
+  description: ''
+  references:
+  - obs.NewMultiMetricSink
+  - assert.NotPanics
+  - obs.CounterPointName
+  - obs.GaugePointName
+  - obs.HistogramPointName
+  calls:
+  - assert.NotPanics
+  - obs.NewMultiMetricSink
