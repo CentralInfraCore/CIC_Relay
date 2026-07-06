@@ -1,0 +1,23 @@
+[package]
+name = "vault-adapter"
+description = "Live async bridge from the CIC secret-flow ports to a HashiCorp Vault backend (feature-008)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+connections = { path = "../connections" }
+vault-client-rs = { git = "https://github.com/sinkog/vault-client-rs", rev = "57d26ed" }
+base64 = "0.22"
+secrecy = "0.10"
+
+[dev-dependencies]
+vault-client-rs-test = { git = "https://github.com/sinkog/vault-client-rs", rev = "57d26ed" }
+module = { path = "../module" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+wiremock = "0.6"
+serde_json = "1"

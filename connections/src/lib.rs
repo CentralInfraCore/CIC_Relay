@@ -5,6 +5,8 @@
 //! real — enough to exercise the full build/lint/test/supply-chain gate — and is
 //! expected to grow as more of the Cabinet's relationship logic moves to Rust.
 
+pub mod vault;
+
 use std::collections::BTreeMap;
 
 /// The kind of node a [`NodeRef`] points at.

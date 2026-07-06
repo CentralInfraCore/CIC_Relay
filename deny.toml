@@ -17,6 +17,8 @@ allow = [
     "BSD-3-Clause",
     "ISC",
     "Unicode-3.0",
+    # webpki-roots ships the Mozilla CA bundle as data under CDLA-Permissive-2.0.
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.9
 
@@ -25,9 +27,15 @@ confidence-threshold = 0.9
 # wildcard version requirements.
 multiple-versions = "warn"
 wildcards = "deny"
+# Internal workspace deps (path) and the pinned vault-client-rs fork (git) carry
+# no version requirement by design; the lock pins the exact rev. Allowed only for
+# our own unpublished (publish = false) crates.
+allow-wildcard-paths = true
 
 [sources]
-# Only crates.io is a trusted source; unknown registries/git sources fail.
+# Only crates.io plus explicitly allowlisted git sources are trusted.
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# The maintained fork of vault-client-rs, pinned by rev in Cargo.lock (feature-008).
+allow-git = ["https://github.com/sinkog/vault-client-rs"]
