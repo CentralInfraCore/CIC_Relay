@@ -125,6 +125,11 @@ pub enum CountersignError {
     Backend(VaultError),
     /// The certificate Vault returned could not be decoded to DER.
     CertEncoding(String),
+    /// The policy authorized a strict *subset* of the requested scope, but
+    /// `sign-verbatim` signs the request's CSR unchanged — so the issued cert's
+    /// identity would exceed the authorized scope. Refused until the mechanism
+    /// rebuilds/verifies the signed content against the authorization.
+    ScopeNarrowingUnsupported,
 }
 
 impl fmt::Display for CountersignError {
@@ -133,6 +138,10 @@ impl fmt::Display for CountersignError {
             Self::Denied(d) => write!(f, "countersignature denied: {d}"),
             Self::Backend(e) => write!(f, "vault pki backend error: {e}"),
             Self::CertEncoding(m) => write!(f, "countersigned certificate not decodable: {m}"),
+            Self::ScopeNarrowingUnsupported => write!(
+                f,
+                "scope narrowing unsupported: policy authorized a subset but sign-verbatim signs the CSR unchanged"
+            ),
         }
     }
 }
@@ -195,7 +204,9 @@ impl<Pol: CountersignPolicy, B: PkiBackend> VaultPkiCountersigner<Pol, B> {
     /// Countersigns `request` if policy permits, via Vault PKI `sign-verbatim`.
     ///
     /// # Errors
-    /// [`CountersignError::Denied`] if the policy refuses; [`CountersignError::Backend`]
+    /// [`CountersignError::Denied`] if the policy refuses;
+    /// [`CountersignError::ScopeNarrowingUnsupported`] if the policy authorizes a
+    /// strict subset of the requested scope (see below); [`CountersignError::Backend`]
     /// on a Vault failure; [`CountersignError::CertEncoding`] if the returned
     /// certificate is not decodable.
     pub async fn countersign(
@@ -206,6 +217,16 @@ impl<Pol: CountersignPolicy, B: PkiBackend> VaultPkiCountersigner<Pol, B> {
             .policy
             .authorize(request)
             .map_err(CountersignError::Denied)?;
+
+        // `sign-verbatim` signs `request.csr_der` unchanged, so the issued cert's
+        // identity is exactly the request's (its SANs == request.scope). This
+        // countersigner can therefore only honor FULL-scope authorization: a
+        // strict subset would yield a cert whose SANs exceed `authorized`, and
+        // Vault cert-auth authorizes on the cert — not on this metadata. Fail
+        // closed. See features/feature-008/spec.md (countersign scope contract).
+        if authorized != request.scope {
+            return Err(CountersignError::ScopeNarrowingUnsupported);
+        }
 
         let csr_pem = der_to_pem(&request.csr_der, CSR_LABEL);
         let signed = self
