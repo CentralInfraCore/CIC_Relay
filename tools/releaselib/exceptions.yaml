@@ -21,6 +21,7 @@ objects:
   decorators: []
   description: ''
   references: []
+  calls: []
 - name: GitStateError
   kind: class
   decorators: []

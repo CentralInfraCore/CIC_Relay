@@ -1,0 +1,64 @@
+---
+package: cicffi
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestPingRoundTrip
+  kind: func
+  description: 'TestPingRoundTrip proves the live Go → Rust → Go path: bytes handed
+    to the Rust airlock come back byte-identical through the C-ABI seam.'
+  references: []
+  calls:
+  - Equal
+  - Fatalf
+  - Ping
+- name: TestPingEmpty
+  kind: func
+  description: TestPingEmpty checks the documented empty-input contract (nil result,
+    no allocation to free).
+  references: []
+  calls:
+  - Fatalf
+  - Ping
+- name: TestConnectionRequestCanonicalizes
+  kind: func
+  description: 'TestConnectionRequestCanonicalizes drives the first real trust-flow
+    function through the seam: a JSON request with a duplicated, unsorted scope comes
+    back deduplicated and sorted (AuthScope''s BTreeSet), proving real connections-crate
+    types crossed the boundary deterministically.'
+  references: []
+  calls:
+  - ConnectionRequest
+  - DeepEqual
+  - Fatalf
+  - Unmarshal
+- name: TestConnectionRequestRejects
+  kind: func
+  description: TestConnectionRequestRejects checks that the seam rejects bad input
+    with an error rather than crashing (the airlock's no-panic contract).
+  references: []
+  calls:
+  - ConnectionRequest
+  - Fatal
+- name: TestABIVersion
+  kind: func
+  description: TestABIVersion checks that the Go package and the linked staticlib
+    agree on the C-ABI version — the guard against a stale libcic_ffi.a link.
+  references: []
+  calls:
+  - ABIVersion
+  - CheckABI
+  - Fatalf
+- name: TestPingRejectsOversizedInput
+  kind: func
+  description: 'TestPingRejectsOversizedInput drives the seam''s ingress size cap
+    (Rust-side MAX_INPUT_LEN = 1 MiB): oversized input is rejected, yielding nil.'
+  references: []
+  calls:
+  - Fatalf
+  - Ping

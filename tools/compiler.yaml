@@ -35,11 +35,17 @@ objects:
   decorators: []
   description: ''
   references: []
+  calls:
+  - COLOR_CODES.get
 - name: setup_logging
   kind: function
   decorators: []
   description: ''
   references: []
+  calls:
+  - handler.setLevel
+  - logger.addHandler
+  - logger.setLevel
 - name: logger
   kind: const
   description: ''
@@ -51,6 +57,10 @@ objects:
   references:
   - yaml.YAMLError
   - yaml.safe_load
+  calls:
+  - KeyError
+  - logger.critical
+  - yaml.safe_load
 - name: main
   kind: function
   decorators: []
@@ -61,3 +71,19 @@ objects:
   - .infra.ReleaseManager
   - .releaselib.vault_service.VaultService
   - .releaselib.git_service.GitService
+  calls:
+  - .infra.ReleaseManager
+  - .releaselib.git_service.GitService
+  - .releaselib.vault_service.VaultService
+  - f.read
+  - full_config.get
+  - logger.critical
+  - logger.info
+  - logger.warning
+  - manager.run_release_close
+  - manager.run_validation
+  - parent_parser.add_argument
+  - parser.add_subparsers
+  - parser.parse_args
+  - release_parser.add_argument
+  - subparsers.add_parser
