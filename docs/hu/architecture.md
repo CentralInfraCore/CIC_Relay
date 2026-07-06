@@ -2,67 +2,112 @@
 
 Ez a dokumentum a projekt magas szintű architektúráját és működési filozófiáját mutatja be. A cél, hogy egy új fejlesztő 5-10 perc alatt megértse a rendszer alapvető koncepcióit.
 
-## A "Sablon Gyár" Koncepció
+> Ez a repo eredetileg a közös `base-repo` scaffolding template-ből lett
+> klónozva, és ez a dokumentum korábban *annak* a template-nek a saját
+> "sablonokat gyárt a leszármazott repóknak" modelljét írta le, nem azt,
+> amit a CIC-Relay ténylegesen csinál. A `project.yaml`/`tools/compiler.py`
+> még mindig a `base-repo` eredeti template-metaadatait hordozza, és nincs
+> bekötve ennek a repónak a CI-jába — örökölt, de inaktív scaffolding,
+> nem része az alább leírt runtime-nak.
 
-A legfontosabb megérteni, hogy ez a repository (`base-repo`) nem egy végterméket tartalmaz, hanem egy **"Sablon Gyár"** (Template Factory). A felelőssége, hogy olyan sablonokat gyártson és tartson karban, amelyekből később a tényleges "Termék Gyártó" (Production) repository-k jönnek létre.
+## Mi a CIC-Relay
 
-- **Sablon Repo (ez a repo):** A CI/CD folyamatok, a release logika, a build scriptek és a közös konfigurációk "forrása" (source of truth).
-- **Termelési Repo:** A sablonból származtatott, konkrét üzleti logikát (pl. egy Go alkalmazást, egy séma definíciót) tartalmazó repository.
+A CIC-Relay egy **ProofTrace-alapú, auditálható végrehajtási platform**.
+Minden végrehajtott workflow determinisztikus hash-láncot alkot, amelynek
+integritása a CICRootCA-ig visszavezethető kriptográfiai aláírással
+igazolható. A bizalom itt nem feltételezés — igazolható állapot.
 
-## A Repók Ökoszisztémája
+## Három réteg
 
-A rendszer több, egymással kapcsolatban álló repository-ból épül fel. A frissítések a sablon repóból automatikusan terjednek a termelési repók felé.
-
-```mermaid
-graph TD
-    A[Template Repo (base-repo)] -- "Renovate frissíti" --> B(Production Repo 1);
-    A -- "Renovate frissíti" --> C(Production Repo 2);
-    A -- "Renovate frissíti" --> D(Production Repo N);
+```
+cmd/relay        HTTP API (:8080), bootstrap, PKI asset betöltés
+core/cabinet      Schema/Module/Workflow registry + WASM végrehajtó (wazero)
+core/nexus        IaC loader, Git recorder, Vault crypto, sync, isolation, operator
 ```
 
-## Az Automatizáció Motorja: Renovate
+A `cabinet` és `nexus` szándékosan független — különböző fejlődési ütemük
+van. A jelenlegi ténylegesen futó runtime a `cmd/relay` + `core/cabinet`,
+opcionálisan bekötött `nexus/recorder` és `nexus/crypto` komponensekkel.
 
-A rendszer lelke a **Renovate**. Ez az eszköz figyeli a sablon repository `release` tag-jeit, és amikor új verziót észlel, automatikusan Pull Requesteket (PR) nyit a termelési repókon.
+## Végrehajtási folyamat
 
-Ez biztosítja, hogy a központi logika (pl. egy biztonsági javítás a CI folyamatban) automatikusan és konzisztensen eljusson minden termékhez, minimális emberi beavatkozással.
+1. Egy kliens `POST`-ol egy workflow-kérést a `cmd/relay` `/set` végpontjára.
+2. A `core/cabinet` `Setx()` függvénye validálja a kérést a regisztrált séma
+   ellen (`validateInputSchema`), majd végigmegy az `ExecutionGraph`-on — egy
+   lineáris, névvel ellátott lépéssorozaton.
+3. Minden WASM modult megnevező lépés a `cicwasm` host-on keresztül fut: a
+   wazero runtime lefordítja/instanciálja a modult (LRU-cache-elt,
+   singleflight-deduplikált, timeout-korlátos), majd végrehajtja.
+4. Minden lépés bemenete/kimenete belekerül egy lépésenkénti `ProofTrace`-be,
+   ami egy futó `chain_hash`-be láncolódik — ez a determinisztikus,
+   auditálható rekordja annak, hogy mi futott ténylegesen.
+5. Ha van konfigurált recorder (`core/nexus/recorder`), a trace-t a Vault
+   aláírja, és egy Git audit logba kerül commitolásra. Ha nincs, a rekord
+   `outcome: "skipped", reason: "trust ecosystem not bootstrapped"` értékkel
+   készül el — a bootstrap szándékosan hiányos, amíg a PKI-lánc nem épül fel
+   (lásd a Státusz szekciót lent), és a rendszer ezt ki is mondja, ahelyett
+   hogy úgy tenne, mintha kész lenne.
 
-## Az Egységes Compiler (`compiler.py`) Szerepe
+## Determinizmus
 
-A rendszer egyetlen, egységes `compiler.py` scriptet használ, amelynek a szerepe a futási környezettől függően kettős. Ez az eszköz egyszerre képviseli a "sablont kezelő motort" és a "terméket gyártó hasznos terhet".
+A teljes bizalmi modell azon múlik, hogy azonos bemenetek byte-azonos
+hash-eket adjanak, ezért a kanonizáció végig érvényesítve van:
 
-1.  **Sablon Karbantartó Szerepkör (a `base-repo`-ban futtatva)**
-    - **Felelősség:** A sablon repository karbantartása és verziózása.
-    - **Feladat:** A `project.yaml` központi konfigurációs fájl validálása és "lezárása" (finalizing) a sablon egy új verziójának kiadásakor. Ez a folyamat biztosítja a sablon belső konzisztenciáját.
+- `pkg/canonicaljson` — rendezett kulcsok, platform-független szerializáció.
+- A WASM binárisok custom section-jei kanonikusan el vannak távolítva
+  (`wabin`) hash-elés előtt.
+- A `CanonicalizeSetPayload` dedupe-olja és rendezi a kérés payload-ját,
+  mielőtt az egyáltalán hash-elésre kerülne.
 
-2.  **Termék Gyártó Szerepkör (a származtatott termelési repóban futtatva)**
-    - **Felelősség:** A sablon "hasznos terhe" (`payload`). Ez az az eszköz, amit a sablonból létrehozott termelési repo a saját végtermékének (pl. aláírt séma, Go bináris) előállítására használ.
-    - **Feladat:** Egy konkrét forrásfájlból egy digitálisan aláírt, ellenjegyzett "műtárgy" (artifact) létrehozása a termelési repo saját release folyamatában.
+Bármilyen változtatás, ami hash-elésbe kerülő dolgot érint, köteles átmenni
+a golden teszteken: `make verify`.
 
-Ez az egységes megközelítés biztosítja, hogy a termelési repók mindig pontosan ugyanazt a logikát és eszközt használják a saját termékük gyártására, mint amit a sablon repo használ a saját maga karbantartására.
+## Státusz-jelölés
 
-## A Változások Útja és a Branching Modell
+Minden komponens ebben a rendszerben a három közül az egyik, és a
+különbségnek jelentősége van — a "scaffold" nem hiba, hanem szándékos,
+előfeltételhez kötött helyfoglaló:
 
-A változások egy szigorúan definiált útvonalon haladnak a rendszereken keresztül.
+| Státusz | Jelentés |
+|---|---|
+| **implemented** | kódban él, tesztek fedik, CI zöld |
+| **scaffold** | kódban van, de szándékosan bekötetlen — előfeltétel hiányzik |
+| **concept** | dokumentált, de még nincs runtime megfelelője |
 
-```mermaid
-graph LR
-    subgraph "Template Repo (base-repo)"
-        T_MAIN[main] -- "release tag" --> T_REL(v1.2.0);
-        T_DF[df/feature] --> T_MAIN;
-        T_SCHEMAS[schemas/f/1] -- "specializáció" --> T_MAIN;
-    end
+### Ami ma implementált
 
-    subgraph "Production Repo"
-        P_MAIN[main];
-        P_DF[df/feature];
-        T_REL -- "Renovate PR" --> P_DF;
-        P_DF -- "merge" --> P_MAIN;
-    end
+- `core/cabinet/service.go` — `Setx()` workflow végrehajtó, schema validáció, ProofTrace, recorder hívás
+- `core/cabinet/graph.go` — `ExecutionGraph` (lineáris, névvel ellátott kimenet-kulcsokkal, visszafelé kompatibilis)
+- `core/cabinet/cicwasm.go` — WASM ABI (`Call`/`allocate`/`deallocate`), LRU cache, singleflight, timeout
+- `core/cabinet/validate.go` — determinisztikus checksum (kind prefix + canonical JSON + SHA-256)
+- `core/cabinet/stores.go` — CAS-alapú `ModuleStore`, thread-safe `SchemaStore`/`WorkflowStore`
+- `core/nexus/recorder/recorder.go` — Git-alapú audit: expected+actual JSON + Vault aláírás → commit
+- `core/nexus/crypto/service.go` — Vault Transit engine wrapper
+- `core/nexus/isolation/coordinator.go` — 3-lépéses onion decrypt (Relay → Module → Host)
+- `pkg/canonicaljson` — determinisztikus JSON serializer
+- `pkg/obs` — strukturált audit-log kibocsátás (`LogRecord`, hash-láncolt integrity envelope), plusz
+  alap futásidejű metrikák: egy in-process aggregátor (`obs.PrometheusSink`), amely a `GET /metrics`
+  végponton érhető el
 
-    style T_REL fill:#f9f,stroke:#333,stroke-width:2px
-```
+### Ami scaffold (szándékos, előfeltételre vár)
 
-1.  **Fejlesztés a Sablon Repóban:** A fejlesztés `df/xxx` ágakon történik, amelyek a `main` vagy egy specializációs ágból (pl. `schemas/f/1`) indulnak.
-2.  **Sablon Release:** A `main` ágra merge-elt változásokból egy új `release` tag jön létre.
-3.  **Terjesztés:** A Renovate észleli az új taget, és PR-t nyit a termelési repók `df/xxx` fejlesztési ágaira.
-4.  **Integráció a Termékbe:** A fejlesztők beolvasztják a frissítést a saját munkájukba, majd a `main` ágra, ami a termék kiadását triggereli.
+| Komponens | Előfeltétel |
+|---|---|
+| `pki_verify.go` bekötése | CICRootCA → Intermediate CA → leaf cert bootstrap |
+| `UpstreamSource` | relay federáció (v2) |
+| `LocalWorker` in-process isolation | 3-process isolation + Vault |
+
+### Ami csak concept (dokumentált, még nincs runtime)
+
+- A quorum döntési réteg
+- A CICmeta protocol híd a `core/cabinet` felé
+
+Ha egy kérdés ilyen pontra mutat, a becsületes válasz sosem az, hogy "nincs"
+— hanem hogy "a modell létezik, de az implementációs híd itt megszakad".
+
+## Hova tovább
+
+- `CLAUDE.md` — a kanonikus AI/fejlesztői kontextus, minden sprintben frissítve
+- `context/CONTRACT.md`, `context/SYMBOLS.md`, `context/LIMITS.md` — kanonikus szerződések
+- `ai/ROADMAP.md` — mérföldkövek és a jelenlegi sprint állapota
+- `ai/PROMPTMAP.yaml` — a konkrét következő lépések
