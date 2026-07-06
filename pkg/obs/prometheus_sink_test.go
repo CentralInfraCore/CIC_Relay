@@ -2,7 +2,9 @@ package obs_test
 
 import (
 	"errors"
+	"io"
 	"strings"
+	"sync"
 	"testing"
 
 	"centralrelay/pkg/obs"
@@ -100,4 +102,46 @@ func TestPrometheusSink_WritePrometheus_PropagatesWriteError(t *testing.T) {
 	s.RecordCounter(obs.CounterPoint{Name: "relay.x", Value: 1})
 	err := s.WritePrometheus(failingWriter{})
 	assert.Error(t, err)
+}
+
+// TestPrometheusSink_ConcurrentRecordAndWriteIsRaceFree pits WritePrometheus
+// against concurrent RecordCounter/RecordGauge/RecordHistogram calls on the
+// same series — run under `go test -race`, this fails if WritePrometheus
+// ever reads an entry's mutable fields without a snapshot taken under the
+// lock (the entries are shared *pointers keyed by series, so a scrape
+// racing a live update is the realistic production scenario for GET
+// /metrics).
+func TestPrometheusSink_ConcurrentRecordAndWriteIsRaceFree(t *testing.T) {
+	s := obs.NewPrometheusSink()
+	const iterations = 200
+
+	var wg sync.WaitGroup
+	wg.Add(4)
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			s.RecordCounter(obs.CounterPoint{Name: "relay.x", Value: 1, Attrs: map[string]string{"k": "v"}})
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			s.RecordGauge(obs.GaugePoint{Name: "relay.y", Value: float64(i), Attrs: map[string]string{"k": "v"}})
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			s.RecordHistogram(obs.HistogramPoint{Name: "relay.z", Sum: 1, Count: 1, Attrs: map[string]string{"k": "v"}})
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			require.NoError(t, s.WritePrometheus(io.Discard))
+		}
+	}()
+
+	wg.Wait()
 }
