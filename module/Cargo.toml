@@ -1,0 +1,19 @@
+[package]
+name = "module"
+description = "Module-side identity: keypair + CSR generation for the CIC secret flow (feature-008). The private key never leaves this boundary."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+connections = { path = "../connections" }
+p256 = { version = "0.13", features = ["ecdsa", "pem", "std"] }
+x509-cert = { version = "0.2", features = ["builder"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+# Enables `Sha256: AssociatedOid`, required for the ECDSA-with-SHA256 signature
+# algorithm identifier that x509-cert's RequestBuilder needs from the p256 signer.
+sha2 = { version = "0.10", features = ["oid"] }
