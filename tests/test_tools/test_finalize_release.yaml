@@ -15,6 +15,8 @@ objects:
   description: Fixture to mock argparse arguments with MagicMocks for paths.
   references:
   - pytest.fixture
+  calls:
+  - mocker.patch
 - name: mock_env
   kind: function
   decorators:
@@ -22,6 +24,8 @@ objects:
   description: Fixture to mock environment variables.
   references:
   - pytest.fixture
+  calls:
+  - mocker.patch
 - name: mock_vault
   kind: function
   decorators:
@@ -29,6 +33,8 @@ objects:
   description: Fixture to mock the VaultService.
   references:
   - pytest.fixture
+  calls:
+  - mocker.patch
 - name: mock_sys_exit
   kind: function
   decorators:
@@ -36,6 +42,8 @@ objects:
   description: Fixture to mock sys.exit to prevent test termination.
   references:
   - pytest.fixture
+  calls:
+  - mocker.patch
 - name: TestHelperFunctions
   kind: class
   decorators: []
@@ -55,6 +63,9 @@ objects:
   - tools.finalize_release
   - tools.finalize_release.logging
   - pytest.MonkeyPatch
+  calls:
+  - m.setattr
+  - tools.finalize_release.setup_logging
 - name: test_colored_formatter
   kind: method
   receiver: TestHelperFunctions
@@ -63,6 +74,9 @@ objects:
   references:
   - tools.finalize_release.LOG_FORMAT
   - tools.finalize_release
+  - tools.finalize_release.ColoredFormatter
+  calls:
+  - formatter.format
   - tools.finalize_release.ColoredFormatter
 - name: test_load_yaml_io_error
   kind: method
@@ -73,6 +87,12 @@ objects:
   - tools.finalize_release.load_yaml
   - tools.finalize_release
   - pytest.raises
+  calls:
+  - IOError
+  - caplog.set_level
+  - mocker.patch
+  - pytest.raises
+  - tools.finalize_release.load_yaml
 - name: test_load_yaml_yaml_error
   kind: method
   receiver: TestHelperFunctions
@@ -83,6 +103,12 @@ objects:
   - tools.finalize_release
   - yaml.YAMLError
   - pytest.raises
+  calls:
+  - caplog.set_level
+  - mocker.mock_open
+  - mocker.patch
+  - pytest.raises
+  - tools.finalize_release.load_yaml
 - name: test_write_yaml_io_error
   kind: method
   receiver: TestHelperFunctions
@@ -92,6 +118,12 @@ objects:
   - tools.finalize_release.write_yaml
   - tools.finalize_release
   - pytest.raises
+  calls:
+  - IOError
+  - caplog.set_level
+  - mocker.patch
+  - pytest.raises
+  - tools.finalize_release.write_yaml
 - name: TestMainExecution
   kind: class
   decorators: []
@@ -106,6 +138,9 @@ objects:
   description: Mock dependencies for the main function execution tests.
   references:
   - pytest.fixture
+  calls:
+  - mocker.patch
+  - pytest.fixture
 - name: test_main_success_with_cert_file
   kind: method
   receiver: TestMainExecution
@@ -114,6 +149,11 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - mock_open.assert_called_once_with
+  - mocker.mock_open
+  - mocker.patch
+  - tools.finalize_release.main
 - name: test_main_success_with_vault_path
   kind: method
   receiver: TestMainExecution
@@ -122,6 +162,8 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - tools.finalize_release.main
 - name: test_main_dry_run
   kind: method
   receiver: TestMainExecution
@@ -130,6 +172,12 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - caplog.set_level
+  - capsys.readouterr
+  - mocker.mock_open
+  - mocker.patch
+  - tools.finalize_release.main
 - name: test_error_filepath_not_found
   kind: method
   receiver: TestMainExecution
@@ -138,6 +186,9 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - tools.finalize_release.main
 - name: test_error_cert_file_not_found
   kind: method
   receiver: TestMainExecution
@@ -146,6 +197,9 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - tools.finalize_release.main
 - name: test_error_checksum_mismatch
   kind: method
   receiver: TestMainExecution
@@ -154,6 +208,10 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - mocker.patch
+  - tools.finalize_release.main
 - name: test_error_no_metadata_block
   kind: method
   receiver: TestMainExecution
@@ -162,6 +220,10 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - mocker.patch
+  - tools.finalize_release.main
 - name: test_error_vault_signing_fails
   kind: method
   receiver: TestMainExecution
@@ -170,6 +232,12 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  - tools.releaselib.exceptions.VaultServiceError
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - mocker.mock_open
+  - mocker.patch
+  - tools.finalize_release.main
   - tools.releaselib.exceptions.VaultServiceError
 - name: test_error_vault_cert_fetch_fails
   kind: method
@@ -180,6 +248,10 @@ objects:
   - tools.finalize_release.main
   - tools.finalize_release
   - tools.releaselib.exceptions.VaultServiceError
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - tools.finalize_release.main
+  - tools.releaselib.exceptions.VaultServiceError
 - name: test_error_invalid_vault_path_format
   kind: method
   receiver: TestMainExecution
@@ -188,6 +260,9 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - tools.finalize_release.main
 - name: test_error_missing_env_vars
   kind: method
   receiver: TestMainExecution
@@ -196,6 +271,10 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - mock_sys_exit.assert_called_once_with
+  - mocker.patch
+  - tools.finalize_release.main
 - name: test_unexpected_error_handling
   kind: method
   receiver: TestMainExecution
@@ -204,3 +283,8 @@ objects:
   references:
   - tools.finalize_release.main
   - tools.finalize_release
+  calls:
+  - Exception
+  - mock_sys_exit.assert_called_once_with
+  - mocker.patch
+  - tools.finalize_release.main

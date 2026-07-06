@@ -32,6 +32,8 @@ objects:
     the process exit code, and any execution-level error (not a non-zero exit). A
     non-zero exit is reported via exitCode, not err.
   references: []
+  methods:
+  - Run
 - name: Run
   kind: method
   receiver: OSCommandRunner
