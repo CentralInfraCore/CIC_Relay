@@ -36,6 +36,7 @@ dist/
 
 # MCP knowledge base — generated, do not commit
 .mcp_data/
+/kb_data/
 
 # Embedded PKI dev keys — do not commit new key material here
 # (existing keys are test-only and grandfathered in)
