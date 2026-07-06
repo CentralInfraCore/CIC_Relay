@@ -5,12 +5,19 @@ tags:
 - core
 - gateway
 - interface
+- metrics
 - test
 category: []
 used_in: []
 entrypoint: true
 related_nodes: []
 objects:
+- name: failingResponseWriter
+  kind: struct
+  description: failingResponseWriter's Write always errors, to exercise metricsHandler's
+    error-logging path when the client disconnects mid-response.
+  implements: []
+  references: []
 - name: errorReader
   kind: struct
   description: ''
@@ -216,6 +223,80 @@ objects:
   - assert.False
   - logrus.New
   - require.Len
+- name: TestMetricsHandler_NoSinkConfigured
+  kind: func
+  description: TestMetricsHandler_NoSinkConfigured verifies that a relayServer built
+    without a PrometheusSink (e.g. most handler unit tests) responds 503 rather than
+    panicking.
+  references:
+  - logrus.New
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - logrus.New
+- name: TestMetricsHandler_ServesPrometheusFormat
+  kind: func
+  description: TestMetricsHandler_ServesPrometheusFormat verifies that an aggregated
+    counter is exposed via /metrics in Prometheus text format.
+  references:
+  - logrus.New
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - logrus.New
+  - obs.NewPrometheusSink
+- name: Header
+  kind: method
+  receiver: failingResponseWriter
+  description: ''
+  references: []
+  calls: []
+- name: Write
+  kind: method
+  receiver: failingResponseWriter
+  description: ''
+  references: []
+  calls:
+  - New
+- name: WriteHeader
+  kind: method
+  receiver: failingResponseWriter
+  description: ''
+  references: []
+  calls: []
+- name: TestMetricsHandler_LogsWriteError
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - assert.NotPanics
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.NotPanics
+  - logrus.New
+  - obs.NewPrometheusSink
+- name: TestNewMux_RegistersMetricsRoute
+  kind: func
+  description: TestNewMux_RegistersMetricsRoute verifies /metrics is wired into the
+    router.
+  references:
+  - logrus.New
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - logrus.New
+  - obs.NewPrometheusSink
 - name: TestSimpleHandlers
   kind: func
   description: TestSimpleHandlers tests the simple, non-mutating endpoints like /healthz,

@@ -5,6 +5,7 @@ tags:
 - core
 - gateway
 - interface
+- metrics
 category: []
 used_in: []
 entrypoint: true
@@ -26,6 +27,7 @@ objects:
   - obs.LogSink
   - obs.MetricSink
   - obs.Resource
+  - obs.PrometheusSink
 - name: VaultSecrets
   kind: struct
   description: VaultSecrets holds Vault connection parameters loaded from the environment.
@@ -115,6 +117,16 @@ objects:
   calls:
   - http.ResponseWriter.Header
   - http.ResponseWriter.WriteHeader
+- name: metricsHandler
+  kind: method
+  receiver: relayServer
+  description: metricsHandler serves the in-process aggregated metrics (relay.requests.total,
+    relay.wasm.*_duration_ms, relay.git.op_duration_ms, …) in Prometheus text exposition
+    format. Responds 503 if no PrometheusSink is configured.
+  references:
+  - http.ResponseWriter.Header
+  calls:
+  - http.ResponseWriter.Header
 - name: setHandler
   kind: method
   receiver: relayServer
@@ -237,6 +249,8 @@ objects:
   - git.NewRepoRegistry
   - git.NewExecGitOps
   - obs.NewLogrusSink
+  - obs.NewPrometheusSink
+  - obs.NewMultiMetricSink
   - cabinet.WithObsSinks
   - cabinet.NewCabinetService
   - merkle.BuildContext
@@ -257,6 +271,8 @@ objects:
   - merkle.GoRuntimeDigest
   - merkle.GoSumDigest
   - obs.NewLogrusSink
+  - obs.NewMultiMetricSink
+  - obs.NewPrometheusSink
   - uuid.New
 - name: listenAndServe
   kind: var
