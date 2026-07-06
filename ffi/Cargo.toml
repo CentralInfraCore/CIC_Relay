@@ -1,0 +1,29 @@
+[package]
+name = "cic-ffi"
+description = "The single unsafe airlock: C-ABI seam that links the safe Rust trust-flow crates into the Go relay. See features/feature-008/ffi-boundary.md."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+# staticlib → C-linkable archive for cgo; rlib → normal Rust use + unit tests.
+crate-type = ["staticlib", "rlib"]
+
+# NOTE: this crate deliberately does NOT use `[lints] workspace = true`.
+# The workspace forbids `unsafe_code`; this is the one crate where the FFI seam
+# needs it. The posture below mirrors the workspace clippy denies, permits
+# `unsafe` here only, and forces a `// SAFETY:` comment on every unsafe block.
+# See features/feature-008/ffi-boundary.md.
+[lints.rust]
+unsafe_code = "allow"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+undocumented_unsafe_blocks = "deny"
+
+[dependencies]
+connections = { path = "../connections" }
+serde_json = "1"

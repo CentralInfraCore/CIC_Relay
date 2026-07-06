@@ -40,3 +40,10 @@ This document contains a list of all the features that are either planned, under
     -  **Description**: Implements the Cabinet object as the central static knowledge registry for schemas, plugins, and execution graphs.
     - **Spec Document**: [spec.md](features/feature-006/spec.md)
     - **Completion Date**: *(TBD)*
+
+- **Feature-008**: Capability-Based Secret Flow (Vault Connection)
+    -  **Status**: Concept
+    -  **Branch**: `d/feature-008`
+    -  **Description**: Trust model for obtaining/using a Vault secret/token without the plaintext ever existing as data outside a controlled boundary. A WASM module generates a Cert whose CNs encode task content; the Relay countersigns (content-dependent authorization); Vault cert-auth issues a scoped token; every returned secret is stored encrypted to the request's public key and used only through the WASM module's endpoint (pipeline). The first concrete `Connection` type on top of feature-006.
+    - **Spec Document**: [spec.md](features/feature-008/spec.md)
+    - **Completion Date**: *(TBD)*

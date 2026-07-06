@@ -119,6 +119,9 @@ services:
       - ./:/git-source:ro
       - ~/tmp/cache/CIC-Relay/rust-cargo:/cargo
       - ~/tmp/cache/CIC-Relay/rust-target:/target
+      # Shared with go-builder: staging point for the cic-ffi staticlib so the
+      # Go cgo build can link it (features/feature-008/ffi-boundary.md, 2b).
+      - ./output:/output
     environment:
       - CARGO_HOME=/cargo
       - CARGO_TARGET_DIR=/target
