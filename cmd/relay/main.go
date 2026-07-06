@@ -152,6 +152,9 @@ type relayServer struct {
 	logSink     obs.LogSink
 	metricSink  obs.MetricSink
 	obsResource obs.Resource // self-identification for obs records
+	// promSink backs the /metrics endpoint. Optional — nil means /metrics
+	// responds 503 (e.g. handler unit tests that build a bare relayServer).
+	promSink *obs.PrometheusSink
 }
 
 // emitTrace emits a TraceFrame if a TraceSink is configured.
@@ -193,6 +196,7 @@ func newMux(s *relayServer) *http.ServeMux {
 	mux.HandleFunc("/v1/proof/verify", s.proofVerifyHandler)
 	mux.HandleFunc("/healthz", s.healthzHandler)
 	mux.HandleFunc("/readyz", s.readyzHandler)
+	mux.HandleFunc("/metrics", s.metricsHandler)
 	return mux
 }
 
@@ -225,6 +229,20 @@ func (s *relayServer) readyzHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+// metricsHandler serves the in-process aggregated metrics (relay.requests.total,
+// relay.wasm.*_duration_ms, relay.git.op_duration_ms, …) in Prometheus text
+// exposition format. Responds 503 if no PrometheusSink is configured.
+func (s *relayServer) metricsHandler(w http.ResponseWriter, r *http.Request) {
+	if s.promSink == nil {
+		writeError(w, http.StatusServiceUnavailable, "metrics_unavailable", "metrics sink not configured")
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	if err := s.promSink.WritePrometheus(w); err != nil {
+		s.logger.WithError(err).Error("failed to write metrics response")
+	}
 }
 
 // setHandler processes incoming SetPayload requests.
@@ -635,8 +653,12 @@ func main() {
 	wasmConfig.HostSetupFn = makeGitHostSetupFn(gitOps)
 
 	logrusSink := obs.NewLogrusSink(logger)
-	gitOps.SetObsSinks(logrusSink, logrusSink) // relay.git.op_duration_ms + WARN logok
-	obsOpt := cabinet.WithObsSinks(logrusSink, logrusSink)
+	// promSink aggregates the same metric points for the /metrics endpoint,
+	// alongside logrusSink's structured-log emission — metricSink fans out to both.
+	promSink := obs.NewPrometheusSink()
+	metricSink := obs.NewMultiMetricSink(logrusSink, promSink)
+	gitOps.SetObsSinks(logrusSink, metricSink) // relay.git.op_duration_ms + WARN logok
+	obsOpt := cabinet.WithObsSinks(logrusSink, metricSink)
 	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, obsOpt)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
@@ -704,15 +726,17 @@ func main() {
 	}
 
 	// --- HTTP Server Initialization ---
-	// logrusSink is already declared above (wired into cabinetSvc via WithObsSinks).
-	// Reuse the same sink for the relayServer obs fields.
+	// logrusSink/metricSink/promSink are already declared above (wired into
+	// cabinetSvc + gitOps via WithObsSinks/SetObsSinks). Reuse them here so
+	// /metrics aggregates across every component, not just cmd/relay.
 	server := &relayServer{
 		api:        cabinetSvc,
 		config:     cfg,
 		logger:     logger,
 		traceSink:  logrusSink,
 		logSink:    logrusSink,
-		metricSink: logrusSink,
+		metricSink: metricSink,
+		promSink:   promSink,
 		obsResource: obs.Resource{
 			RelayID:   instanceID,
 			Component: "cmd/relay",

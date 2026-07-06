@@ -1,0 +1,115 @@
+---
+package: obs_test
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: failingWriter
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: TestPrometheusSink_EmptyProducesNoOutput
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - require.NoError
+  - assert.Empty
+  calls:
+  - assert.Empty
+  - obs.NewPrometheusSink
+  - require.NoError
+- name: TestPrometheusSink_CounterAccumulatesPerSeries
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - obs.ResourceComponent
+  - require.NoError
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - obs.NewPrometheusSink
+  - require.NoError
+- name: TestPrometheusSink_CounterKeepsDistinctSeriesSeparate
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - require.NoError
+  - assert.Contains
+  - assert.Equal
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - obs.NewPrometheusSink
+  - require.NoError
+- name: TestPrometheusSink_GaugeKeepsLastValue
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - obs.GaugePointName
+  - require.NoError
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - assert.Contains
+  - assert.NotContains
+  - obs.NewPrometheusSink
+  - require.NoError
+- name: TestPrometheusSink_HistogramAccumulatesSumAndCount
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - obs.HistogramPointName
+  - require.NoError
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - obs.NewPrometheusSink
+  - require.NoError
+- name: TestPrometheusSink_LabelValuesAreEscaped
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - require.NoError
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - obs.NewPrometheusSink
+  - require.NoError
+- name: TestPrometheusSink_OutputIsDeterministicallyOrdered
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - require.NoError
+  - assert.Equal
+  - assert.Less
+  calls:
+  - assert.Equal
+  - assert.Less
+  - obs.NewPrometheusSink
+  - require.NoError
+- name: TestPrometheusSink_WritePrometheus_PropagatesWriteError
+  kind: func
+  description: ''
+  references:
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - assert.Error
+  calls:
+  - assert.Error
+  - obs.NewPrometheusSink

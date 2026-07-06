@@ -1,0 +1,44 @@
+---
+package: obs
+description: ''
+tags:
+- metrics
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MultiMetricSink
+  kind: struct
+  description: MultiMetricSink fans out every metric point to a fixed list of MetricSinks
+    — e.g. a LogrusSink (structured-log visibility) and a PrometheusSink (aggregated
+    exposition) can both receive the same emission.
+  implements: []
+  references: []
+- name: NewMultiMetricSink
+  kind: func
+  description: NewMultiMetricSink returns a MetricSink that forwards every call to
+    each of sinks in order.
+  references: []
+  calls: []
+- name: RecordCounter
+  kind: method
+  receiver: MultiMetricSink
+  description: RecordCounter forwards p to every wrapped sink.
+  references: []
+  calls:
+  - RecordCounter
+- name: RecordGauge
+  kind: method
+  receiver: MultiMetricSink
+  description: RecordGauge forwards p to every wrapped sink.
+  references: []
+  calls:
+  - RecordGauge
+- name: RecordHistogram
+  kind: method
+  receiver: MultiMetricSink
+  description: RecordHistogram forwards p to every wrapped sink.
+  references: []
+  calls:
+  - RecordHistogram
