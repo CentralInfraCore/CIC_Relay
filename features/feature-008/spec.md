@@ -154,14 +154,40 @@ is therefore the **first task** of the Relay countersignature slice — everythi
 downstream (policy decision point, signing op, WASM ABI endpoint, verify round-trip)
 depends on it.
 
-### Decision — intermediate signing key custody lives in Vault
+### Decision — intermediate signing key custody lives in Vault (PKI engine)
 
 Resolving *Open edge #1*'s custody question: the intermediate signing key is
-**injected at runtime from Vault, not embedded as an asset**. `core/nexus/crypto`
-(the Vault Transit wrapper) is the candidate mechanism — the Relay's countersign
-operation becomes a Transit *sign* call rather than a local private-key operation,
-so the raw intermediate key need never sit in the Relay's process memory. Embedded
-`.key` files remain **dev/test only**, per the `embedded/pki/README.md` warning.
+**injected at runtime from Vault, not embedded as an asset**, and the countersign
+uses the **Vault PKI secrets engine** (`pki/sign-verbatim`), not Transit.
+
+The two feature-008 crypto operations are distinct: **countersigning** (the Relay
+as intermediate CA signing the module Cert) is a CA operation the PKI engine is
+built for — it takes the module's CSR and returns a cert chained to the CA root,
+so the intermediate key never leaves Vault; **pubkey-sealing** of the returned
+token (step 7) is the separate Transit/pubkey step. (An earlier note pinned the
+countersign to Transit *sign*; that only signs raw bytes and would force manual
+X.509 assembly, so it is corrected to the PKI engine here.) Embedded `.key` files
+remain **dev/test only**, per the `embedded/pki/README.md` warning.
+
+### The Relay's intelligence lives in the policy, not the signer
+
+The countersign runtime splits into two orthogonal parts, so the Relay's
+*content-dependent authorization* (trust-flow step 4 — deciding **which** CNs to
+countersign) is a first-class, injectable decision point rather than baked-in
+logic:
+
+- **`CountersignPolicy`** (the decision — where the Relay is "smart"): given a
+  `CertRequest`, returns the authorized `AuthScope` or a `Denied` reason. The
+  trivial `AllowlistPolicy` is just the simplest impl; richer content-dependent
+  rules (and later quorum) plug into the same seam.
+- **`PkiBackend`** (the mechanism — a dumb signer): `pki/sign-verbatim` over the
+  driver. It knows nothing about policy.
+
+`VaultPkiCountersigner` wires them: authorize, then — only for what policy
+permitted — have Vault countersign, yielding a `CounterSignedCert` carrying the
+**authorized** scope. Implemented in `vault-adapter/src/countersign.rs`, tested
+against the driver-level `MockPki`; this is the live counterpart of the
+`connections` `Countersigner` port.
 
 ### Driver-level mock foundation (in place — the custody scaffolding)
 
