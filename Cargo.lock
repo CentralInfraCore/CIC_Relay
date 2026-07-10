@@ -2006,7 +2006,7 @@ dependencies = [
  "secrecy",
  "serde_json",
  "tokio",
- "vault-client-rs",
+ "vault-client-rs 0.9.0 (git+https://github.com/sinkog/vault-client-rs?rev=57d26ed)",
  "vault-client-rs-test",
  "wiremock",
 ]
@@ -2031,15 +2031,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "vault-client-rs"
+version = "0.9.0"
+source = "git+https://github.com/sinkog/vault-client-rs?rev=e442b8122a2dcf93146113e987904841e717111b#e442b8122a2dcf93146113e987904841e717111b"
+dependencies = [
+ "base64",
+ "home",
+ "rand",
+ "reqwest",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+ "zeroize",
+]
+
+[[package]]
 name = "vault-client-rs-test"
 version = "0.9.0"
-source = "git+https://github.com/sinkog/vault-client-rs?rev=57d26ed#57d26ed6a193b39b018e230bf36c87c2844f0fad"
+source = "git+https://github.com/sinkog/vault-client-rs?rev=e442b8122a2dcf93146113e987904841e717111b#e442b8122a2dcf93146113e987904841e717111b"
 dependencies = [
  "secrecy",
  "serde",
  "serde_json",
  "tokio",
- "vault-client-rs",
+ "vault-client-rs 0.9.0 (git+https://github.com/sinkog/vault-client-rs?rev=e442b8122a2dcf93146113e987904841e717111b)",
  "wiremock",
 ]
 
