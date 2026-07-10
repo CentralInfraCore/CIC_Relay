@@ -178,18 +178,25 @@ func (e *errWriter) printf(format string, args ...any) {
 // exposition format, in a deterministic order (sorted by metric name, then
 // by label set) so repeated scrapes are diffable.
 func (s *PrometheusSink) WritePrometheus(w io.Writer) error {
+	// Snapshot by VALUE (dereferencing *counterEntry etc.) while still holding
+	// the lock. Copying just the pointers would leave the render loop below
+	// reading e.value/e.sum/e.count with no synchronization at all — a data
+	// race against a concurrent RecordCounter/RecordGauge/RecordHistogram
+	// mutating that same entry through its pointer. The `series` field
+	// (name/labels/key) is set once at creation and never mutated again, so
+	// sharing its label slice across the snapshot is safe.
 	s.mu.Lock()
-	counters := make([]*counterEntry, 0, len(s.counters))
+	counters := make([]counterEntry, 0, len(s.counters))
 	for _, e := range s.counters {
-		counters = append(counters, e)
+		counters = append(counters, *e)
 	}
-	gauges := make([]*gaugeEntry, 0, len(s.gauges))
+	gauges := make([]gaugeEntry, 0, len(s.gauges))
 	for _, e := range s.gauges {
-		gauges = append(gauges, e)
+		gauges = append(gauges, *e)
 	}
-	histograms := make([]*histogramEntry, 0, len(s.histograms))
+	histograms := make([]histogramEntry, 0, len(s.histograms))
 	for _, e := range s.histograms {
-		histograms = append(histograms, e)
+		histograms = append(histograms, *e)
 	}
 	s.mu.Unlock()
 
