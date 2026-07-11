@@ -1,0 +1,24 @@
+[package]
+name = "http-executor"
+description = "Live async HTTP adapter behind the `executor` port (feature-008, roadmap M43 seed): performs an actuation over HTTPS via reqwest under a minimal egress policy, applying the opened credential as a Bearer header. Mirrors how `vault-adapter` sits behind `connections`."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+executor = { path = "../executor" }
+secrecy = "0.10"
+url = "2"
+# rustls only — no default-tls/native-tls, so no new C-toolchain or license load.
+# The tree is already rustls via vault-client-rs → reqwest (0.13.4), whose `rustls`
+# feature verifies roots via rustls-platform-verifier; keeping to it avoids churning
+# the locked reqwest version.
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+wiremock = "0.6"

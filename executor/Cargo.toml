@@ -1,0 +1,15 @@
+[package]
+name = "executor"
+description = "Actuating (\"intervening\") half of a module/host pair: the executor object that performs the real intervention at the tail of the feature-008 secret-flow pipeline (first round: HTTP). This slice owns meaning + the port; no network I/O yet."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The opened plaintext credential arrives as a redacting SecretString (the same
+# type `module::open` yields), so it can never leak into logs or outcomes.
+secrecy = "0.10"
