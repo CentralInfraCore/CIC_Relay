@@ -36,6 +36,11 @@
     {
       "matchManagers": ["docker-compose"],
       "groupName": "Docker images"
+    },
+    {
+      "matchManagers": ["cargo"],
+      "matchDepNames": ["vault-client-rs", "vault-client-rs-test"],
+      "groupName": "vault-client-rs fork"
     }
   ]
 }

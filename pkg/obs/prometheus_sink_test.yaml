@@ -113,3 +113,20 @@ objects:
   calls:
   - assert.Error
   - obs.NewPrometheusSink
+- name: TestPrometheusSink_ConcurrentRecordAndWriteIsRaceFree
+  kind: func
+  description: TestPrometheusSink_ConcurrentRecordAndWriteIsRaceFree pits WritePrometheus
+    against concurrent RecordCounter/RecordGauge/RecordHistogram calls on the same
+    series — run under `go test -race`, this fails if WritePrometheus ever reads an
+    entry's mutable fields without a snapshot taken under the lock (the entries are
+    shared *pointers keyed by series, so a scrape racing a live update is the realistic
+    production scenario for GET /metrics).
+  references:
+  - obs.NewPrometheusSink
+  - obs.CounterPointName
+  - obs.GaugePointName
+  - obs.HistogramPointName
+  - require.NoError
+  calls:
+  - obs.NewPrometheusSink
+  - require.NoError
