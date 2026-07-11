@@ -121,8 +121,8 @@ impl ExecOutcome {
 /// An actuation failure. Carries no secret material, so it is always safe to log.
 ///
 /// A *reached* endpoint is **not** a failure — it is an [`ExecOutcome`] with a
-/// status. These variants cover only the three ways an actuation never produces
-/// an outcome.
+/// status. These variants cover only the ways an actuation never produces a
+/// (complete) outcome: malformed, denied, over a limit, or never completed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExecuteError {
     /// The request was malformed and rejected before any call (e.g. an empty or
@@ -131,6 +131,9 @@ pub enum ExecuteError {
     /// The executor refused to act on policy grounds (e.g. a non-https scheme or
     /// a host outside the egress allowlist). `reason` carries no secret.
     Denied(String),
+    /// A configured limit was exceeded (e.g. the response-body cap). `reason`
+    /// carries no secret.
+    LimitExceeded(String),
     /// The endpoint could not be reached, or its response could not be read, for
     /// a non-secret reason.
     Unavailable(String),
@@ -141,6 +144,7 @@ impl fmt::Display for ExecuteError {
         match self {
             Self::InvalidRequest(m) => write!(f, "invalid actuation request: {m}"),
             Self::Denied(m) => write!(f, "actuation denied: {m}"),
+            Self::LimitExceeded(m) => write!(f, "actuation limit exceeded: {m}"),
             Self::Unavailable(m) => write!(f, "actuation transport unavailable: {m}"),
         }
     }
@@ -323,6 +327,9 @@ mod tests {
         assert!(ExecuteError::Denied("host not allowed: x".to_owned())
             .to_string()
             .contains("denied"));
+        assert!(ExecuteError::LimitExceeded("body too large".to_owned())
+            .to_string()
+            .contains("limit exceeded"));
         assert!(ExecuteError::Unavailable("dns".to_owned())
             .to_string()
             .contains("dns"));

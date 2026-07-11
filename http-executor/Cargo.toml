@@ -18,6 +18,9 @@ url = "2"
 # feature verifies roots via rustls-platform-verifier; keeping to it avoids churning
 # the locked reqwest version.
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+# `rt` only — for `spawn_blocking` in the SSRF-guarding DNS resolver (getaddrinfo
+# is blocking). Already in the tree via reqwest; this just declares direct use.
+tokio = { version = "1", features = ["rt"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
