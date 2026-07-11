@@ -181,6 +181,23 @@ fn is_link_local_v6(v6: Ipv6Addr) -> bool {
     (v6.segments()[0] & 0xffc0) == 0xfe80
 }
 
+/// Whether a resolved address may be dialed: permitted if private IPs are
+/// allowed, or the address lies outside every blocked range.
+fn addr_allowed(allow_private: bool, ip: IpAddr) -> bool {
+    allow_private || !is_blocked_ip(ip)
+}
+
+/// Whether a declared `Content-Length` already exceeds the response cap.
+fn declared_over_cap(content_length: u64, cap: usize) -> bool {
+    content_length > cap as u64
+}
+
+/// Whether appending `additional` bytes to the `have` already read would exceed
+/// `cap`. Saturating, so the byte-accounting itself cannot overflow.
+fn would_exceed(have: usize, additional: usize, cap: usize) -> bool {
+    have.saturating_add(additional) > cap
+}
+
 /// A DNS resolver that filters out addresses in the blocked SSRF ranges. Because
 /// reqwest calls it on the connect path, a hostname resolving to a private
 /// address cannot be dialed (no resolve-then-connect TOCTOU for dialed addrs).
@@ -200,7 +217,7 @@ impl reqwest::dns::Resolve for GuardedResolver {
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
             let allowed: Vec<SocketAddr> = resolved
-                .filter(|addr| allow_private || !is_blocked_ip(addr.ip()))
+                .filter(|addr| addr_allowed(allow_private, addr.ip()))
                 .collect();
             if allowed.is_empty() {
                 return Err("all resolved addresses are blocked by egress policy".into());
@@ -296,7 +313,7 @@ impl HttpExecutor {
 
         // Refuse an oversized body up front if the endpoint declares one.
         if let Some(len) = response.content_length() {
-            if len > self.limits.max_response_bytes as u64 {
+            if declared_over_cap(len, self.limits.max_response_bytes) {
                 return Err(ExecuteError::LimitExceeded(format!(
                     "response exceeds {} bytes",
                     self.limits.max_response_bytes
@@ -324,7 +341,7 @@ impl HttpExecutor {
             .await
             .map_err(|_| ExecuteError::Unavailable("response body unreadable".to_owned()))?
         {
-            if body.len() + chunk.len() > self.limits.max_response_bytes {
+            if would_exceed(body.len(), chunk.len(), self.limits.max_response_bytes) {
                 return Err(ExecuteError::LimitExceeded(format!(
                     "response exceeds {} bytes",
                     self.limits.max_response_bytes
@@ -353,7 +370,10 @@ fn to_reqwest_method(method: Method) -> reqwest::Method {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_blocked_ip, normalize_host, to_reqwest_method, EgressPolicy, Limits};
+    use super::{
+        addr_allowed, declared_over_cap, is_blocked_ip, normalize_host, to_reqwest_method,
+        would_exceed, EgressPolicy, Limits,
+    };
     use executor::{ExecuteError, Method};
     use std::net::IpAddr;
     use std::time::Duration;
@@ -462,5 +482,34 @@ mod tests {
     fn normalize_host_lowercases_and_strips_trailing_dot() {
         assert_eq!(normalize_host("API.Example."), "api.example");
         assert_eq!(normalize_host("host"), "host");
+    }
+
+    #[test]
+    fn addr_allowed_gates_on_range_unless_private_permitted() {
+        let blocked = ip("127.0.0.1");
+        let public = ip("8.8.8.8");
+        // Private not permitted: only public passes.
+        assert!(!addr_allowed(false, blocked));
+        assert!(addr_allowed(false, public));
+        // Private permitted: everything passes (loopback/testing escape).
+        assert!(addr_allowed(true, blocked));
+        assert!(addr_allowed(true, public));
+    }
+
+    #[test]
+    fn declared_over_cap_is_strict_at_the_boundary() {
+        assert!(!declared_over_cap(4, 5)); // under
+        assert!(!declared_over_cap(5, 5)); // exactly at cap is allowed
+        assert!(declared_over_cap(6, 5)); // over
+    }
+
+    #[test]
+    fn would_exceed_is_strict_and_saturating_at_the_boundary() {
+        assert!(!would_exceed(2, 3, 5)); // 5 == cap, allowed
+        assert!(would_exceed(3, 3, 5)); // 6 > 5
+        assert!(!would_exceed(0, 5, 5)); // exactly at cap
+        assert!(would_exceed(0, 6, 5)); // over
+        assert!(would_exceed(1, 1, 1)); // 2 > 1 (distinguishes + from *)
+        assert!(!would_exceed(usize::MAX, 1, usize::MAX)); // saturates to MAX; MAX > MAX is false, no overflow
     }
 }
