@@ -63,6 +63,25 @@ The WASM module is thus simultaneously the **key holder** and the **execution
 endpoint**. This is the runtime ABI form of the `with_secret(scope)` /
 `execute_with_secret(request, capability)` pattern.
 
+#### Module identity lifecycle — per-request, single-use
+
+The module keypair is **the key of the request**, not a persistent identity. Per
+the OIS-lib model, *the client mints a fresh keypair per request, and the response
+key is always a single-use, session-level ephemeral key.* One keypair deliberately
+serves **both** roles — the signing identity (its public key carries the
+authorization CNs in the CSR) **and** the ECDH sealing recipient — because the
+public key **is** the capability, binding authorization and encryption in one
+short-lived object.
+
+**Why single-use matters (and why the code enforces it):** reusing one keypair
+across requests would make the ephemeral key effectively long-lived, at which
+point the shared signing/ECDH key reintroduces cross-algorithm-key-reuse and
+forward-secrecy concerns. The single-use lifecycle is what keeps the dual role
+sound. `ModuleIdentity::open()` therefore **consumes `self`** — opening ends the
+identity's life and zeroizes the key — so single-use is a type-system invariant,
+not a convention. The mechanism (rather than two keys) is the deliberate design;
+splitting the keypair would break the pubkey-as-capability model.
+
 ### Decision — secret envelope is **version A** (Vault does the pubkey-wrapping)
 
 _Recorded 2026-07-11. Resolves the M41.2 "secret envelope" A-vs-B spike._
