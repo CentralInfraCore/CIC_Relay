@@ -8,6 +8,8 @@ members = [
     "vault-adapter",
     "module",
     "ffi",
+    "executor",
+    "http-executor",
 ]
 
 # Shared metadata + lints applied to every workspace crate.
