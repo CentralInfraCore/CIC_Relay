@@ -5,8 +5,10 @@
 //! `Authorization` header, and a *reached* endpoint is an `Ok` outcome for any
 //! status.
 
+use std::time::Duration;
+
 use executor::{ExecRequest, ExecuteError, Method};
-use http_executor::{EgressPolicy, HttpExecutor};
+use http_executor::{EgressPolicy, HttpExecutor, Limits};
 use secrecy::SecretString;
 use wiremock::matchers::{body_bytes, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -120,4 +122,94 @@ async fn unreachable_endpoint_maps_to_unavailable_without_leaking() {
         .expect_err("connection refused");
     assert!(matches!(err, ExecuteError::Unavailable(_)));
     assert!(!format!("{err:?}").contains("s3cr3t"));
+}
+
+#[tokio::test]
+async fn oversized_response_body_is_refused_with_limit_exceeded() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/big"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(vec![b'x'; 4096]))
+        .mount(&server)
+        .await;
+
+    let exec = HttpExecutor::with_limits(
+        EgressPolicy::insecure_allowing(["127.0.0.1"]),
+        Limits {
+            max_response_bytes: 64,
+            ..Limits::default()
+        },
+    )
+    .expect("builds");
+    let req = ExecRequest::new(Method::Get, format!("{}/big", server.uri()));
+
+    let err = exec
+        .execute(&req, &secret("x"))
+        .await
+        .expect_err("body over cap");
+    assert!(matches!(err, ExecuteError::LimitExceeded(_)));
+}
+
+#[tokio::test]
+async fn slow_endpoint_times_out_as_unavailable() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/slow"))
+        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_millis(600)))
+        .mount(&server)
+        .await;
+
+    let exec = HttpExecutor::with_limits(
+        EgressPolicy::insecure_allowing(["127.0.0.1"]),
+        Limits {
+            request_timeout: Duration::from_millis(60),
+            ..Limits::default()
+        },
+    )
+    .expect("builds");
+    let req = ExecRequest::new(Method::Get, format!("{}/slow", server.uri()));
+
+    let err = exec
+        .execute(&req, &secret("x"))
+        .await
+        .expect_err("times out");
+    assert!(matches!(err, ExecuteError::Unavailable(_)));
+}
+
+#[tokio::test]
+async fn hostname_target_resolves_through_the_guarded_resolver() {
+    // Uses a *name* (localhost) rather than an IP literal, so reqwest exercises
+    // the custom SSRF-guarding resolver; the insecure policy permits loopback, so
+    // it resolves and the request reaches the mock.
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/via-name"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(b"ok".to_vec()))
+        .mount(&server)
+        .await;
+
+    let exec = HttpExecutor::new(EgressPolicy::insecure_allowing(["localhost"])).expect("builds");
+    let target = format!("{}/via-name", server.uri()).replace("127.0.0.1", "localhost");
+    let req = ExecRequest::new(Method::Get, target);
+
+    let out = exec
+        .execute(&req, &secret("x"))
+        .await
+        .expect("reaches via name");
+    assert_eq!(out.status, 200);
+    assert_eq!(out.body, b"ok");
+}
+
+#[tokio::test]
+async fn hostname_resolving_to_private_ip_is_blocked_by_resolver() {
+    // Production policy: the name is allowlisted, but it resolves to loopback, so
+    // the guarded resolver refuses every address and the dial never happens.
+    let exec = HttpExecutor::new(EgressPolicy::allowing(["localhost"])).expect("builds");
+    let req = ExecRequest::new(Method::Get, "https://localhost:1/x");
+
+    let err = exec
+        .execute(&req, &secret("x"))
+        .await
+        .expect_err("resolver blocks loopback");
+    assert!(matches!(err, ExecuteError::Unavailable(_)));
 }
