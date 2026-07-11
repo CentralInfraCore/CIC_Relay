@@ -54,9 +54,21 @@ impl fmt::Display for ModuleError {
 
 impl std::error::Error for ModuleError {}
 
-/// A module's cryptographic identity: an ECDSA P-256 keypair whose **private half
-/// never leaves this type**. It is the key holder of the trust flow — it emits the
-/// CSR now and (later) opens pubkey-sealed secrets. The signing key zeroizes on drop.
+/// A module's **per-request, single-use** cryptographic identity: a fresh P-256
+/// keypair minted for one trust-flow request. Its public key is a *capability* —
+/// it both carries the authorization metadata (the CNs encoded in the CSR) **and**
+/// is the recipient a returned secret is sealed to. This is the OIS-lib model:
+/// *"the response key is always a single-use, session-level ephemeral key"*, so one
+/// keypair deliberately serves both the signing identity and the ECDH sealing role.
+/// The **private half never leaves this type** and zeroizes on drop.
+///
+/// **Lifecycle contract — this is not a persistent identity.** Mint one per request
+/// with [`ModuleIdentity::generate`], use it for that request only, and do **not**
+/// persist or reuse it across requests: reuse would turn the ephemeral key
+/// long-lived and reintroduce cross-algorithm-key-reuse and forward-secrecy
+/// concerns that the single-use property is what keeps benign. [`open`](Self::open)
+/// **consumes** the identity, so the single-use property is enforced by the type
+/// system, not left to convention.
 pub struct ModuleIdentity {
     signing_key: SigningKey,
 }
@@ -72,9 +84,10 @@ impl fmt::Debug for ModuleIdentity {
 }
 
 impl ModuleIdentity {
-    /// Generates a fresh identity and the [`CertRequest`] to countersign for
-    /// `subject`/`scope`: a new P-256 keypair plus a CSR whose subject CN is
-    /// `subject` and whose DNS SANs carry the `scope` CNs (the task encoding).
+    /// Mints a fresh **per-request** identity and the [`CertRequest`] to
+    /// countersign for `subject`/`scope`: a new P-256 keypair plus a CSR whose
+    /// subject CN is `subject` and whose DNS SANs carry the `scope` CNs (the task
+    /// encoding). Call this once per request — see the type-level lifecycle contract.
     ///
     /// # Errors
     /// [`ModuleError`] if the subject/CNs cannot be encoded or the CSR cannot be
@@ -104,10 +117,17 @@ impl ModuleIdentity {
     /// module acting as the execution endpoint — the secret is decrypted *inside*
     /// the module, never handed out in the open.
     ///
+    /// **Consumes the identity** (`self` by value): the per-request keypair is
+    /// single-use, so opening ends its life and zeroizes the key on drop. Mint a
+    /// new [`ModuleIdentity`] for the next request.
+    ///
     /// # Errors
     /// [`ModuleError`] if the blob is malformed, was sealed to a different key, or
     /// was tampered with.
-    pub fn open(&self, sealed: &SealedSecret) -> Result<SecretString, ModuleError> {
+    // `self` by value is deliberate: it enforces the single-use lifecycle and
+    // drops/zeroizes the keypair after exactly one open.
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn open(self, sealed: &SealedSecret) -> Result<SecretString, ModuleError> {
         sealing::open(self.signing_key.as_nonzero_scalar(), sealed.ciphertext())
     }
 }
