@@ -63,6 +63,36 @@ The WASM module is thus simultaneously the **key holder** and the **execution
 endpoint**. This is the runtime ABI form of the `with_secret(scope)` /
 `execute_with_secret(request, capability)` pattern.
 
+### Decision — secret envelope is **version A** (Vault does the pubkey-wrapping)
+
+_Recorded 2026-07-11. Resolves the M41.2 "secret envelope" A-vs-B spike._
+
+The pubkey-encryption of returned secrets is **version A**: the wrapping to the
+requester's public key is done **by Vault (its Transit/KMS side), not by the
+Relay**. The Relay therefore **never holds plaintext** — it is cryptographically
+blind, consistent with "No privileged component" below. Version B (Relay as a
+transient plaintext broker) is **rejected**.
+
+Concretely, each `module/host` pair owns a **Vault object instantiated from the
+Vault lib** that:
+
+1. **holds the pubkey-encrypted secrets in a data structure** — the sealed
+   envelopes as they came from Vault, never plaintext;
+2. is **addressable by path** — a secret is fetched from that structure by its
+   `SecretRef` path (`mount`/`path`);
+3. can be **flowed into a pipeline** — the fetched sealed value is a pipeline
+   input, carried opaquely through the steps;
+4. **ends at the executor** — at the tail of the pipeline the executor object
+   (first round: HTTP) receives it; decryption happens inside the WASM module
+   (`module::open`, ECIES) immediately before the actuating call.
+
+Mapping to code: the Vault object is the `VaultSecretSource`-fed
+`Connection<Initialized>` carrying `SealedSecret`(s) keyed by `SecretRef`; today
+`read_sealed` reads a **pre-sealed** envelope from KV v2, so the **open edge** for
+version A is the *request-time* wrapping mechanism on the Vault side (Transit
+`wrap` / KMS key-wrapping to the module pubkey), not the reading path. The
+executor object (HTTP) is **not yet built** (concept; roadmap M43).
+
 ## Roles
 
 | Component | Role |
