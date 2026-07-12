@@ -16,7 +16,7 @@ use std::str::FromStr;
 use connections::vault::port::CertRequest;
 use connections::vault::{AuthScope, Cn, SealedSecret};
 use p256::ecdsa::{DerSignature, SigningKey};
-use p256::pkcs8::EncodePublicKey;
+use p256::pkcs8::{DecodePrivateKey, EncodePublicKey};
 use rand_core::OsRng;
 use secrecy::SecretString;
 use x509_cert::builder::{Builder, RequestBuilder};
@@ -97,6 +97,35 @@ impl ModuleIdentity {
         let csr_der = build_csr(&signing_key, &subject, &scope)?;
         let request = CertRequest::new(subject, scope, csr_der);
         Ok((Self { signing_key }, request))
+    }
+
+    /// Reconstructs an identity from an existing PKCS#8 PEM private key — for a
+    /// caller that *already* holds the module key (e.g. the module performing its
+    /// own Vault mTLS cert-auth login, where the same key is the TLS client
+    /// identity). The key still never leaves this type once constructed.
+    ///
+    /// # Errors
+    /// [`ModuleError`] if `pem` is not a valid PKCS#8 P-256 private key.
+    pub fn from_pkcs8_pem(pem: &str) -> Result<Self, ModuleError> {
+        let signing_key = SigningKey::from_pkcs8_pem(pem)
+            .map_err(|e| ModuleError::new(format!("invalid pkcs8 key: {e}")))?;
+        Ok(Self { signing_key })
+    }
+
+    /// Builds a [`CertRequest`] (CSR) for `subject`/`scope` from this identity's
+    /// key — the public counterpart of [`generate`](Self::generate) for an
+    /// already-constructed identity. Emits public material only.
+    ///
+    /// # Errors
+    /// [`ModuleError`] if the subject/CNs cannot be encoded or the CSR cannot be
+    /// built and signed.
+    pub fn certificate_request(
+        &self,
+        subject: Cn,
+        scope: AuthScope,
+    ) -> Result<CertRequest, ModuleError> {
+        let csr_der = build_csr(&self.signing_key, &subject, &scope)?;
+        Ok(CertRequest::new(subject, scope, csr_der))
     }
 
     /// The module's public key as SPKI DER — safe to share; the private half never
@@ -222,6 +251,47 @@ mod tests {
         let first = id.public_key_der().expect("pub");
         assert!(!first.is_empty());
         assert_eq!(first, id.public_key_der().expect("pub again"));
+    }
+
+    #[test]
+    fn from_pkcs8_pem_reconstructs_a_usable_identity() {
+        use p256::ecdsa::SigningKey;
+        use p256::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
+        use rand_core::OsRng;
+
+        let key = SigningKey::random(&mut OsRng);
+        let pem = key.to_pkcs8_pem(LineEnding::LF).expect("pkcs8 pem");
+        let expected_pub = key
+            .verifying_key()
+            .to_public_key_der()
+            .expect("pub")
+            .as_bytes()
+            .to_vec();
+
+        let id = ModuleIdentity::from_pkcs8_pem(&pem).expect("reconstruct");
+        // Same key → same public key.
+        assert_eq!(id.public_key_der().expect("pub"), expected_pub);
+
+        // It can build a CSR and open a secret sealed to it — a full usable identity.
+        let req = id
+            .certificate_request(Cn::new("relay.worker"), scope(&["db.read"]))
+            .expect("csr");
+        assert_eq!(req.subject, Cn::new("relay.worker"));
+        assert!(req.scope.contains(&Cn::new("db.read")));
+        assert_eq!(req.csr_der.first(), Some(&0x30));
+
+        let sealed =
+            seal(&id.public_key_der().expect("pub"), secret_ref(), b"hvs.T").expect("seal");
+        assert_eq!(id.open(&sealed).expect("open").expose_secret(), "hvs.T");
+    }
+
+    #[test]
+    fn from_pkcs8_pem_rejects_an_invalid_key() {
+        assert!(ModuleIdentity::from_pkcs8_pem("not a pem at all").is_err());
+        assert!(ModuleIdentity::from_pkcs8_pem(
+            "-----BEGIN PRIVATE KEY-----\nbogus\n-----END PRIVATE KEY-----"
+        )
+        .is_err());
     }
 
     #[test]
