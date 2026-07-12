@@ -198,6 +198,33 @@ impl VaultSecretSource<VaultClient> {
     pub fn connect(address: &str, token: &str) -> Result<Self, VaultError> {
         Ok(Self::new(VaultClient::new(address, token)?))
     }
+
+    /// Connects with an **mTLS client identity** for cert-auth login: the client
+    /// presents `client_cert_pem` + `client_key_pem` in the TLS handshake and
+    /// verifies the server against `ca_pem`. It starts tokenless —
+    /// [`login`](Self::login) performs the cert-auth exchange and the resulting
+    /// scoped token is what subsequent reads use.
+    ///
+    /// Gated behind the `live-vault` feature: it is exercised only by the opt-in
+    /// live-Vault integration test (`tests/live_chain.rs`), never in the default
+    /// build's unit/coverage/mutation runs.
+    ///
+    /// # Errors
+    /// [`VaultError`] if the address, CA certificate, or client identity is invalid.
+    #[cfg(feature = "live-vault")]
+    pub fn connect_mtls(
+        address: &str,
+        ca_pem: &[u8],
+        client_cert_pem: &[u8],
+        client_key_pem: &[u8],
+    ) -> Result<Self, VaultError> {
+        let client = VaultClient::builder()
+            .address(address)
+            .ca_cert_pem(ca_pem.to_vec())
+            .client_cert_pem(client_cert_pem.to_vec(), client_key_pem.to_vec())
+            .build()?;
+        Ok(Self::new(client))
+    }
 }
 
 impl<B: VaultBackend> VaultSecretSource<B> {

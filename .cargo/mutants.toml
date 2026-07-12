@@ -13,4 +13,12 @@ exclude_re = [
     # version (feature-008 FFI hardening, ffi/src/lib.rs) will make this
     # mutant non-equivalent again; remove this exclusion at that point.
     'replace cic_ffi_abi_version -> u32 with 1',
+    # `VaultSecretSource::connect_mtls` is behind the non-default `live-vault`
+    # feature. The mutation gate runs `cargo mutants --workspace` with default
+    # features, which `cfg`-compiles this function out — so mutating it is a
+    # no-op (behaviorally equivalent) that the default suite cannot catch. It is
+    # exercised end-to-end by the opt-in live-Vault test (`make test-vault-live`,
+    # vault-adapter/tests/live_chain.rs), not the default runs. Remove this if the
+    # mutation job is ever switched to `--all-features`.
+    'connect_mtls',
 ]
