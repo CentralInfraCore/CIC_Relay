@@ -10,6 +10,20 @@ publish.workspace = true
 # staticlib → C-linkable archive for cgo; rlib → normal Rust use + unit tests.
 crate-type = ["staticlib", "rlib"]
 
+[features]
+# Opt-in live-Vault profile for run_flow: pulls vault-adapter (real countersign /
+# mTLS cert-auth login / read_sealed) — and with it a TLS stack (rustls/aws-lc),
+# so the staticlib is NO LONGER pure-Rust. The default (mock) build stays
+# rustls-free; only `--features live-vault` drags the C TLS library into the cgo
+# link. SPIKE: verifying that link is tractable before wiring the full profile.
+live-vault = [
+    "dep:vault-adapter",
+    "vault-adapter/live-vault",
+    "dep:vault-client-rs",
+    "dep:p256",
+    "dep:rand_core",
+]
+
 # NOTE: this crate deliberately does NOT use `[lints] workspace = true`.
 # The workspace forbids `unsafe_code`; this is the one crate where the FFI seam
 # needs it. The posture below mirrors the workspace clippy denies, permits
@@ -34,5 +48,12 @@ executor = { path = "../executor" }
 http-executor = { path = "../http-executor", default-features = false }
 serde_json = "1"
 base64 = "0.22"
+# The opened credential is a redacting SecretString (as `module::open` yields).
+secrecy = "0.10"
 # A blocking bridge runs the async actuation to completion inside the sync airlock.
 tokio = { version = "1", features = ["rt-multi-thread", "time", "net"] }
+# Live-Vault profile only (optional): the real countersign / cert-auth / read path.
+vault-adapter = { path = "../vault-adapter", optional = true }
+vault-client-rs = { git = "https://github.com/sinkog/vault-client-rs", rev = "e442b8122a2dcf93146113e987904841e717111b", optional = true }
+p256 = { version = "0.13", features = ["ecdsa", "pem", "std"], optional = true }
+rand_core = { version = "0.6", features = ["getrandom"], optional = true }

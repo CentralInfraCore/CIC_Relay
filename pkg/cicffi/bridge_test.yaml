@@ -62,3 +62,34 @@ objects:
   calls:
   - Fatalf
   - Ping
+- name: TestRunFlowActuatesWithOpenedCredential
+  kind: func
+  description: 'TestRunFlowActuatesWithOpenedCredential drives the full end-to-end
+    PoC across the seam: Go hands in a request, Rust runs module-CSR → mock-countersign
+    → seal → open → HTTP actuation against a real (loopback) server, and only the
+    outcome crosses back. It proves the opened credential reached the endpoint as
+    a Bearer token and that the secret never leaks back through the boundary.'
+  references: []
+  calls:
+  - Close
+  - Contains
+  - DecodeString
+  - DeepEqual
+  - Fatal
+  - Fatalf
+  - Get
+  - HandlerFunc
+  - Marshal
+  - NewServer
+  - RunFlow
+  - Unmarshal
+  - Write
+  - WriteHeader
+- name: TestRunFlowRejectsMalformed
+  kind: func
+  description: 'TestRunFlowRejectsMalformed checks the seam''s no-panic rejection
+    contract for run-flow: bad input yields an error, not a crash.'
+  references: []
+  calls:
+  - Fatal
+  - RunFlow
