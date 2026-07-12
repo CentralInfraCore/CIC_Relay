@@ -26,4 +26,13 @@ undocumented_unsafe_blocks = "deny"
 
 [dependencies]
 connections = { path = "../connections" }
+module = { path = "../module" }
+executor = { path = "../executor" }
+# HTTP-only (default-features = false → no rustls/aws-lc), so the staticlib stays
+# pure-Rust and links into the Go cgo build without dragging a C TLS library. The
+# PoC actuates over loopback http; production egress uses the TLS-enabled crate.
+http-executor = { path = "../http-executor", default-features = false }
 serde_json = "1"
+base64 = "0.22"
+# A blocking bridge runs the async actuation to completion inside the sync airlock.
+tokio = { version = "1", features = ["rt-multi-thread", "time", "net"] }
