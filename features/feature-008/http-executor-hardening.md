@@ -97,7 +97,17 @@ Closes more of the M43/M44 list on the request path:
 
 ## Still open
 
-Port policy · audit/trace with `trace_id` + `Authorization` redaction test ·
-per-invocation request budget (multi-request) · configurable credential placement
-(beyond Bearer) · `module.open` → executor pipeline wiring and FFI exposure (done
-elsewhere — p85/p87).
+Port policy · per-invocation request budget (multi-request) · configurable
+credential placement (beyond Bearer) · `module.open` → executor pipeline wiring
+and FFI exposure (done elsewhere — p85/p87).
+
+## Slice 5 — audit/trace (done, M45 seed)
+
+Every actuation can emit a structured, **non-secret** [`AuditRecord`] via a
+caller-supplied `AuditSink` (`HttpExecutor::with_audit_sink`): `trace_id` (from
+`ExecRequest::with_trace_id`), method, host, `decision` (allow/deny + reason),
+status, `duration_ms`, and SHA-256 hex digests of the request/response bodies —
+**never** the credential, `Authorization`, a token, or any body contents. The
+record is emitted on both the allow and deny paths (`execute` wraps `execute_inner`
+to time it and record). This is the M45 seed; wiring the sink into the Go-side
+`ProofTrace` / the signed hash-chained audit log (feature-009) is the follow-up.

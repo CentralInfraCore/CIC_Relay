@@ -5,16 +5,27 @@
 //! `Authorization` header, and a *reached* endpoint is an `Ok` outcome for any
 //! status.
 
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use executor::{ExecRequest, ExecuteError, Method};
-use http_executor::{EgressPolicy, HttpExecutor, Limits};
+use http_executor::{AuditDecision, AuditRecord, AuditSink, EgressPolicy, HttpExecutor, Limits};
 use secrecy::SecretString;
 use wiremock::matchers::{body_bytes, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 fn secret(value: &str) -> SecretString {
     SecretString::from(value.to_owned())
+}
+
+/// An audit sink that records everything, for assertions.
+#[derive(Default)]
+struct CapturingSink(Mutex<Vec<AuditRecord>>);
+
+impl AuditSink for CapturingSink {
+    fn record(&self, record: &AuditRecord) {
+        self.0.lock().expect("audit lock").push(record.clone());
+    }
 }
 
 /// Builds an executor allowing plain http to the loopback host the mock server
@@ -253,6 +264,56 @@ async fn mismatched_host_header_is_denied() {
 
     let err = exec.execute(&req, &secret("x")).await.expect_err("denied");
     assert!(matches!(err, ExecuteError::Denied(m) if m.contains("host header")));
+}
+
+#[tokio::test]
+async fn emits_a_non_secret_audit_record_on_success() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/a"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(b"pong".to_vec()))
+        .mount(&server)
+        .await;
+
+    let sink = Arc::new(CapturingSink::default());
+    let exec = loopback_executor().with_audit_sink(sink.clone());
+    let req = ExecRequest::new(Method::Get, format!("{}/a", server.uri())).with_trace_id("trace-9");
+
+    exec.execute(&req, &secret("s3cr3t"))
+        .await
+        .expect("reaches");
+
+    let records = sink.0.lock().expect("lock");
+    assert_eq!(records.len(), 1);
+    let r = &records[0];
+    assert_eq!(r.trace_id.as_deref(), Some("trace-9"));
+    assert_eq!(r.decision, AuditDecision::Allowed);
+    assert_eq!(r.status, Some(200));
+    assert!(!r.request_body_sha256.is_empty());
+    assert!(r.response_body_sha256.is_some());
+    // The audit record never carries the secret.
+    assert!(!format!("{r:?}").contains("s3cr3t"));
+}
+
+#[tokio::test]
+async fn emits_a_denied_audit_record() {
+    let sink = Arc::new(CapturingSink::default());
+    let exec = HttpExecutor::new(
+        EgressPolicy::insecure_allowing(["127.0.0.1"]).with_allowed_methods([Method::Get]),
+    )
+    .expect("builds")
+    .with_audit_sink(sink.clone());
+    let req = ExecRequest::new(Method::Delete, "http://127.0.0.1:1/x");
+
+    let _ = exec.execute(&req, &secret("x")).await;
+
+    let records = sink.0.lock().expect("lock");
+    assert_eq!(records.len(), 1);
+    assert!(matches!(
+        &records[0].decision,
+        AuditDecision::Denied(m) if m.contains("method not allowed")
+    ));
+    assert_eq!(records[0].status, None);
 }
 
 #[tokio::test]

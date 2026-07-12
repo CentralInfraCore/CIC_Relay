@@ -257,6 +257,99 @@ fn would_exceed(have: usize, additional: usize, cap: usize) -> bool {
     have.saturating_add(additional) > cap
 }
 
+/// The allow/deny outcome recorded for an actuation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuditDecision {
+    /// The egress policy permitted the actuation (it was attempted; it may still
+    /// have failed to reach the endpoint).
+    Allowed,
+    /// The actuation was refused before dialing, with a non-secret reason.
+    Denied(String),
+}
+
+/// A structured, **non-secret** audit record for one actuation (roadmap M45 seed).
+///
+/// It never carries the credential, the `Authorization` header, a Vault token, or
+/// any request/response body — only the facts needed to prove *what happened*.
+/// Bodies are recorded as SHA-256 hex digests, not contents, so the record is
+/// always safe to log or fold into a `ProofTrace`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuditRecord {
+    /// The caller's correlation id, if any (from [`ExecRequest::trace_id`]).
+    pub trace_id: Option<String>,
+    /// The request method.
+    pub method: Method,
+    /// The target host (`"unknown"` if the target did not parse).
+    pub host: String,
+    /// The egress-policy decision.
+    pub decision: AuditDecision,
+    /// The endpoint status, if one was reached.
+    pub status: Option<u16>,
+    /// Wall-clock duration of the actuation, in milliseconds.
+    pub duration_ms: u128,
+    /// SHA-256 (hex) of the request body.
+    pub request_body_sha256: String,
+    /// SHA-256 (hex) of the response body, if one was read.
+    pub response_body_sha256: Option<String>,
+}
+
+/// A sink for [`AuditRecord`]s — a log, a `ProofTrace` recorder, etc. It runs
+/// inline after each actuation, so `record` must not block for long.
+pub trait AuditSink: Send + Sync {
+    /// Records one actuation's audit entry.
+    fn record(&self, record: &AuditRecord);
+}
+
+/// Lower-hex SHA-256 of `bytes`.
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    use std::fmt::Write;
+    Sha256::digest(bytes)
+        .iter()
+        .fold(String::new(), |mut acc, b| {
+            let _ = write!(acc, "{b:02x}");
+            acc
+        })
+}
+
+/// Derives the (non-secret) audit record for an actuation from its request,
+/// result and elapsed time.
+fn build_audit_record(
+    request: &ExecRequest,
+    result: &Result<ExecOutcome, ExecuteError>,
+    elapsed: std::time::Duration,
+) -> AuditRecord {
+    let host = url::Url::parse(&request.target)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .unwrap_or_else(|| "unknown".to_owned());
+    let (decision, status, response_body_sha256) = match result {
+        Ok(outcome) => (
+            AuditDecision::Allowed,
+            Some(outcome.status),
+            Some(sha256_hex(&outcome.body)),
+        ),
+        // Attempted (policy allowed) but never completed.
+        Err(ExecuteError::Unavailable(_)) => (AuditDecision::Allowed, None, None),
+        // Refused before dialing.
+        Err(
+            ExecuteError::Denied(reason)
+            | ExecuteError::LimitExceeded(reason)
+            | ExecuteError::InvalidRequest(reason),
+        ) => (AuditDecision::Denied(reason.clone()), None, None),
+    };
+    AuditRecord {
+        trace_id: request.trace_id.clone(),
+        method: request.method,
+        host,
+        decision,
+        status,
+        duration_ms: elapsed.as_millis(),
+        request_body_sha256: sha256_hex(&request.body),
+        response_body_sha256,
+    }
+}
+
 /// A DNS resolver that filters out addresses in the blocked SSRF ranges. Because
 /// reqwest calls it on the connect path, a hostname resolving to a private
 /// address cannot be dialed (no resolve-then-connect TOCTOU for dialed addrs).
@@ -293,6 +386,7 @@ pub struct HttpExecutor {
     client: Client,
     policy: EgressPolicy,
     limits: Limits,
+    audit: Option<Arc<dyn AuditSink>>,
 }
 
 impl HttpExecutor {
@@ -326,7 +420,17 @@ impl HttpExecutor {
             client,
             policy,
             limits,
+            audit: None,
         })
+    }
+
+    /// Attaches an [`AuditSink`]: from then on every [`execute`](Self::execute)
+    /// emits a non-secret [`AuditRecord`] (allow/deny, host, method, status,
+    /// duration, body digests) after the actuation.
+    #[must_use]
+    pub fn with_audit_sink(mut self, sink: Arc<dyn AuditSink>) -> Self {
+        self.audit = Some(sink);
+        self
     }
 
     /// Performs `request` over the network, applying `secret` as a Bearer
@@ -352,6 +456,21 @@ impl HttpExecutor {
     ///
     /// [`Executor`]: executor::Executor
     pub async fn execute(
+        &self,
+        request: &ExecRequest,
+        secret: &SecretString,
+    ) -> Result<ExecOutcome, ExecuteError> {
+        let started = std::time::Instant::now();
+        let result = self.execute_inner(request, secret).await;
+        if let Some(sink) = &self.audit {
+            sink.record(&build_audit_record(request, &result, started.elapsed()));
+        }
+        result
+    }
+
+    /// The actuation itself (policy checks, header hygiene, dial, capped read).
+    /// [`execute`](Self::execute) wraps this to time it and emit the audit record.
+    async fn execute_inner(
         &self,
         request: &ExecRequest,
         secret: &SecretString,
@@ -461,12 +580,75 @@ fn to_reqwest_method(method: Method) -> reqwest::Method {
 #[cfg(test)]
 mod tests {
     use super::{
-        addr_allowed, declared_over_cap, is_blocked_ip, is_forbidden_request_header,
-        normalize_host, to_reqwest_method, would_exceed, EgressPolicy, Limits,
+        addr_allowed, build_audit_record, declared_over_cap, is_blocked_ip,
+        is_forbidden_request_header, normalize_host, sha256_hex, to_reqwest_method, would_exceed,
+        AuditDecision, EgressPolicy, Limits,
     };
-    use executor::{ExecuteError, Method};
+    use executor::{ExecOutcome, ExecRequest, ExecuteError, Method};
     use std::net::IpAddr;
     use std::time::Duration;
+
+    #[test]
+    fn sha256_hex_matches_known_vectors() {
+        assert_eq!(
+            sha256_hex(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn audit_record_allow_captures_status_trace_and_digests() {
+        let req = ExecRequest::new(Method::Post, "https://api.example/x")
+            .with_body(b"req".to_vec())
+            .with_trace_id("t1");
+        let outcome = Ok(ExecOutcome {
+            status: 200,
+            headers: std::collections::BTreeMap::new(),
+            body: b"resp".to_vec(),
+        });
+        let rec = build_audit_record(&req, &outcome, Duration::from_millis(5));
+        assert_eq!(rec.trace_id.as_deref(), Some("t1"));
+        assert_eq!(rec.method, Method::Post);
+        assert_eq!(rec.host, "api.example");
+        assert_eq!(rec.decision, AuditDecision::Allowed);
+        assert_eq!(rec.status, Some(200));
+        assert_eq!(rec.duration_ms, 5);
+        assert_eq!(rec.request_body_sha256, sha256_hex(b"req"));
+        assert_eq!(
+            rec.response_body_sha256.as_deref(),
+            Some(sha256_hex(b"resp").as_str())
+        );
+    }
+
+    #[test]
+    fn audit_record_denied_has_reason_and_no_status() {
+        let req = ExecRequest::new(Method::Get, "https://api.example/x");
+        let rec = build_audit_record(
+            &req,
+            &Err(ExecuteError::Denied("nope".to_owned())),
+            Duration::ZERO,
+        );
+        assert_eq!(rec.decision, AuditDecision::Denied("nope".to_owned()));
+        assert_eq!(rec.status, None);
+        assert_eq!(rec.response_body_sha256, None);
+    }
+
+    #[test]
+    fn audit_record_unavailable_is_allowed_and_unknown_host() {
+        let req = ExecRequest::new(Method::Get, "not a url");
+        let rec = build_audit_record(
+            &req,
+            &Err(ExecuteError::Unavailable("x".to_owned())),
+            Duration::ZERO,
+        );
+        assert_eq!(rec.decision, AuditDecision::Allowed);
+        assert_eq!(rec.host, "unknown");
+        assert_eq!(rec.status, None);
+    }
 
     fn ip(s: &str) -> IpAddr {
         s.parse().expect("valid ip")
