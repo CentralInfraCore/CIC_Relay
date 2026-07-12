@@ -300,6 +300,147 @@ pub trait AuditSink: Send + Sync {
     fn record(&self, record: &AuditRecord);
 }
 
+/// The `prev_hash` of the first chained entry (domain-separated genesis).
+const AUDIT_CHAIN_GENESIS: &str = "cic-audit-chain/v1/genesis";
+
+/// One entry in a **tamper-evident audit chain** (feature-009 seed): an
+/// [`AuditRecord`] bound to its position by
+/// `record_hash = SHA-256(domain ‖ prev_hash ‖ seq ‖ canonical(record))`. The
+/// hash **excludes itself** (self-excluding projection), so recomputation is
+/// well-defined. Signing each `record_hash` with the relay key (Vault) and the
+/// per-type/topic dual chains of feature-009 are separate follow-ups.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChainedEntry {
+    /// Zero-based position in the chain.
+    pub seq: u64,
+    /// The previous entry's `record_hash` (or the genesis for the first).
+    pub prev_hash: String,
+    /// The audit record.
+    pub record: AuditRecord,
+    /// SHA-256 (hex) binding this record to `prev_hash` + `seq`.
+    pub record_hash: String,
+}
+
+/// Length-prefixed, fixed-order canonical encoding of a record's fields, so the
+/// hash is deterministic and free of field-boundary ambiguity.
+fn canonical_record(record: &AuditRecord) -> Vec<u8> {
+    fn push(buf: &mut Vec<u8>, field: &str) {
+        buf.extend_from_slice(&(field.len() as u64).to_le_bytes());
+        buf.extend_from_slice(field.as_bytes());
+    }
+    let decision = match &record.decision {
+        AuditDecision::Allowed => "allow".to_owned(),
+        AuditDecision::Denied(reason) => format!("deny:{reason}"),
+    };
+    let mut buf = Vec::new();
+    push(&mut buf, record.trace_id.as_deref().unwrap_or(""));
+    push(&mut buf, &record.method.to_string());
+    push(&mut buf, &record.host);
+    push(&mut buf, &decision);
+    push(
+        &mut buf,
+        &record.status.map_or(String::new(), |s| s.to_string()),
+    );
+    push(&mut buf, &record.duration_ms.to_string());
+    push(&mut buf, &record.request_body_sha256);
+    push(
+        &mut buf,
+        record.response_body_sha256.as_deref().unwrap_or(""),
+    );
+    buf
+}
+
+/// The self-excluding `record_hash` for a record at `seq` following `prev_hash`.
+fn compute_record_hash(prev_hash: &str, seq: u64, record: &AuditRecord) -> String {
+    let mut input = Vec::new();
+    input.extend_from_slice(b"cic-audit-chain/v1");
+    input.extend_from_slice(prev_hash.as_bytes());
+    input.extend_from_slice(&seq.to_le_bytes());
+    input.extend_from_slice(&canonical_record(record));
+    sha256_hex(&input)
+}
+
+/// Verifies a chain end to end: sequential `seq` from 0, correct `prev_hash`
+/// linkage from the genesis, and a `record_hash` matching each record. Returns
+/// `false` on any break (tamper, reorder, gap).
+#[must_use]
+pub fn verify_chain(entries: &[ChainedEntry]) -> bool {
+    let mut prev = AUDIT_CHAIN_GENESIS.to_owned();
+    for (index, entry) in entries.iter().enumerate() {
+        // Each check is a separate early return so a break in any single one
+        // (out-of-order seq, broken linkage, tampered record) is caught on its own.
+        if entry.seq != index as u64 {
+            return false;
+        }
+        if entry.prev_hash != prev {
+            return false;
+        }
+        if entry.record_hash != compute_record_hash(&entry.prev_hash, entry.seq, &entry.record) {
+            return false;
+        }
+        prev.clone_from(&entry.record_hash);
+    }
+    true
+}
+
+/// An [`AuditSink`] that appends each record to a tamper-evident hash chain
+/// (feature-009 seed). Thread-safe; snapshot with [`entries`](Self::entries) and
+/// check with [`verify_chain`].
+#[derive(Default)]
+pub struct HashChainedAuditSink {
+    state: std::sync::Mutex<AuditChainState>,
+}
+
+struct AuditChainState {
+    next_seq: u64,
+    prev_hash: String,
+    entries: Vec<ChainedEntry>,
+}
+
+impl Default for AuditChainState {
+    fn default() -> Self {
+        Self {
+            next_seq: 0,
+            prev_hash: AUDIT_CHAIN_GENESIS.to_owned(),
+            entries: Vec::new(),
+        }
+    }
+}
+
+impl HashChainedAuditSink {
+    /// A new, empty chain.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// A snapshot of the chained entries recorded so far.
+    ///
+    /// # Panics
+    /// If the internal lock was poisoned by a panic in another thread.
+    #[must_use]
+    pub fn entries(&self) -> Vec<ChainedEntry> {
+        self.state.lock().expect("audit chain lock").entries.clone()
+    }
+}
+
+impl AuditSink for HashChainedAuditSink {
+    fn record(&self, record: &AuditRecord) {
+        let mut st = self.state.lock().expect("audit chain lock");
+        let seq = st.next_seq;
+        let prev_hash = st.prev_hash.clone();
+        let record_hash = compute_record_hash(&prev_hash, seq, record);
+        st.entries.push(ChainedEntry {
+            seq,
+            prev_hash,
+            record: record.clone(),
+            record_hash: record_hash.clone(),
+        });
+        st.prev_hash = record_hash;
+        st.next_seq += 1;
+    }
+}
+
 /// Lower-hex SHA-256 of `bytes`.
 fn sha256_hex(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};
@@ -581,11 +722,75 @@ fn to_reqwest_method(method: Method) -> reqwest::Method {
 mod tests {
     use super::{
         addr_allowed, build_audit_record, declared_over_cap, is_blocked_ip,
-        is_forbidden_request_header, normalize_host, sha256_hex, to_reqwest_method, would_exceed,
-        AuditDecision, EgressPolicy, Limits,
+        is_forbidden_request_header, normalize_host, sha256_hex, to_reqwest_method, verify_chain,
+        would_exceed, AuditDecision, AuditRecord, AuditSink, EgressPolicy, HashChainedAuditSink,
+        Limits, AUDIT_CHAIN_GENESIS,
     };
     use executor::{ExecOutcome, ExecRequest, ExecuteError, Method};
     use std::net::IpAddr;
+
+    fn sample_record(trace: &str) -> AuditRecord {
+        AuditRecord {
+            trace_id: Some(trace.to_owned()),
+            method: Method::Get,
+            host: "api.example".to_owned(),
+            decision: AuditDecision::Allowed,
+            status: Some(200),
+            duration_ms: 3,
+            request_body_sha256: sha256_hex(b"req"),
+            response_body_sha256: Some(sha256_hex(b"resp")),
+        }
+    }
+
+    #[test]
+    fn hash_chain_grows_and_verifies() {
+        let sink = HashChainedAuditSink::new();
+        sink.record(&sample_record("t1"));
+        sink.record(&sample_record("t2"));
+
+        let entries = sink.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].seq, 0);
+        assert_eq!(entries[0].prev_hash, AUDIT_CHAIN_GENESIS);
+        assert_eq!(entries[1].seq, 1);
+        assert_eq!(entries[1].prev_hash, entries[0].record_hash); // linked
+        assert_ne!(entries[0].record_hash, entries[1].record_hash);
+        assert!(verify_chain(&entries));
+    }
+
+    #[test]
+    fn empty_chain_verifies() {
+        assert!(verify_chain(&[]));
+    }
+
+    #[test]
+    fn tampered_record_breaks_the_chain() {
+        let sink = HashChainedAuditSink::new();
+        sink.record(&sample_record("t1"));
+        sink.record(&sample_record("t2"));
+        let mut entries = sink.entries();
+        entries[0].record.host = "evil.example".to_owned(); // tamper the payload
+        assert!(!verify_chain(&entries));
+    }
+
+    #[test]
+    fn tampered_hash_breaks_the_chain() {
+        let sink = HashChainedAuditSink::new();
+        sink.record(&sample_record("t1"));
+        let mut entries = sink.entries();
+        entries[0].record_hash = "deadbeef".to_owned();
+        assert!(!verify_chain(&entries));
+    }
+
+    #[test]
+    fn reordered_entries_break_the_chain() {
+        let sink = HashChainedAuditSink::new();
+        sink.record(&sample_record("a"));
+        sink.record(&sample_record("b"));
+        let mut entries = sink.entries();
+        entries.swap(0, 1);
+        assert!(!verify_chain(&entries));
+    }
     use std::time::Duration;
 
     #[test]
