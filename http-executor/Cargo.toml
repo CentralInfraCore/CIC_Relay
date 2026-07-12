@@ -25,6 +25,8 @@ rustls = ["reqwest/rustls"]
 executor = { path = "../executor" }
 secrecy = "0.10"
 url = "2"
+# Body digests for audit records (permissive, pure-Rust — already in the tree).
+sha2 = "0.10"
 # TLS backend is selected by this crate's `rustls` feature (see [features]).
 reqwest = { version = "0.13", default-features = false }
 # `rt` only — for `spawn_blocking` in the SSRF-guarding DNS resolver (getaddrinfo

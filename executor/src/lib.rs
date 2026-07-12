@@ -66,10 +66,14 @@ pub struct ExecRequest {
     pub headers: BTreeMap<String, String>,
     /// The request body (may be empty).
     pub body: Vec<u8>,
+    /// An optional correlation id, carried into audit records so an actuation can
+    /// be linked to the `ProofTrace` step (or wider trace) that drove it.
+    pub trace_id: Option<String>,
 }
 
 impl ExecRequest {
-    /// Builds a request for `method` against `target`, with empty headers/body.
+    /// Builds a request for `method` against `target`, with empty headers/body
+    /// and no trace id.
     #[must_use]
     pub fn new(method: Method, target: impl Into<String>) -> Self {
         Self {
@@ -77,6 +81,7 @@ impl ExecRequest {
             target: target.into(),
             headers: BTreeMap::new(),
             body: Vec::new(),
+            trace_id: None,
         }
     }
 
@@ -84,6 +89,13 @@ impl ExecRequest {
     #[must_use]
     pub fn with_header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         self.headers.insert(name.into(), value.into());
+        self
+    }
+
+    /// Sets the correlation id carried into audit records, returning `self`.
+    #[must_use]
+    pub fn with_trace_id(mut self, trace_id: impl Into<String>) -> Self {
+        self.trace_id = Some(trace_id.into());
         self
     }
 
@@ -261,6 +273,11 @@ mod tests {
             Some("application/json")
         );
         assert_eq!(req.body, b"{}");
+        assert_eq!(req.trace_id, None); // absent unless set
+
+        let traced =
+            ExecRequest::new(Method::Get, "https://api.example/t").with_trace_id("trace-42");
+        assert_eq!(traced.trace_id.as_deref(), Some("trace-42"));
     }
 
     #[test]
