@@ -42,6 +42,9 @@ pub struct Limits {
     /// Maximum response-body size read into memory; a larger body is refused with
     /// [`ExecuteError::LimitExceeded`] rather than read.
     pub max_response_bytes: usize,
+    /// Maximum request-body size accepted; a larger body is refused with
+    /// [`ExecuteError::LimitExceeded`] before any network call.
+    pub max_request_bytes: usize,
 }
 
 impl Default for Limits {
@@ -50,6 +53,7 @@ impl Default for Limits {
             request_timeout: Duration::from_secs(30),
             connect_timeout: Duration::from_secs(10),
             max_response_bytes: 1 << 20, // 1 MiB
+            max_request_bytes: 1 << 20,  // 1 MiB
         }
     }
 }
@@ -66,13 +70,23 @@ impl Default for Limits {
 #[derive(Debug, Clone)]
 pub struct EgressPolicy {
     allowed_hosts: BTreeSet<String>,
+    allowed_methods: BTreeSet<Method>,
     require_https: bool,
     allow_private_ips: bool,
 }
 
+/// Every request method — the permissive default method set.
+fn all_methods() -> BTreeSet<Method> {
+    [Method::Get, Method::Post, Method::Put, Method::Delete]
+        .into_iter()
+        .collect()
+}
+
 impl EgressPolicy {
     /// Allows exactly `hosts` (exact, lowercase match) over **https only**, with
-    /// private/loopback/link-local IP ranges denied. This is the production shape.
+    /// private/loopback/link-local IP ranges denied. All methods are permitted
+    /// until narrowed with [`with_allowed_methods`](Self::with_allowed_methods).
+    /// This is the production shape.
     #[must_use]
     pub fn allowing(hosts: impl IntoIterator<Item = impl Into<String>>) -> Self {
         Self {
@@ -80,6 +94,7 @@ impl EgressPolicy {
                 .into_iter()
                 .map(|h| normalize_host(&h.into()))
                 .collect(),
+            allowed_methods: all_methods(),
             require_https: true,
             allow_private_ips: false,
         }
@@ -95,6 +110,14 @@ impl EgressPolicy {
             allow_private_ips: true,
             ..Self::allowing(hosts)
         }
+    }
+
+    /// Narrows the permitted request methods to exactly `methods` (an M43 method
+    /// allowlist). A request whose method is not listed is `Denied`.
+    #[must_use]
+    pub fn with_allowed_methods(mut self, methods: impl IntoIterator<Item = Method>) -> Self {
+        self.allowed_methods = methods.into_iter().collect();
+        self
     }
 
     /// Validates `target`, returning the parsed URL or the reason it is refused.
@@ -137,6 +160,42 @@ impl EgressPolicy {
         }
         Ok(url)
     }
+
+    /// Refuses a request whose method is outside the allowlist.
+    fn check_method(&self, method: Method) -> Result<(), ExecuteError> {
+        if self.allowed_methods.contains(&method) {
+            Ok(())
+        } else {
+            Err(ExecuteError::Denied(format!(
+                "method not allowed: {method}"
+            )))
+        }
+    }
+}
+
+/// Whether a caller-supplied request header must never be forwarded: hop-by-hop
+/// framing, proxy-related headers, and `Authorization` (the executor applies the
+/// credential itself). Matched case-insensitively. The `Host` header is handled
+/// separately (validated against the target, not silently stripped).
+fn is_forbidden_request_header(name: &str) -> bool {
+    const FORBIDDEN: &[&str] = &[
+        // hop-by-hop framing (RFC 7230 §6.1 + related)
+        "connection",
+        "proxy-connection",
+        "keep-alive",
+        "transfer-encoding",
+        "te",
+        "trailer",
+        "upgrade",
+        // proxy-related / spoofable
+        "proxy-authorization",
+        "x-forwarded-for",
+        "x-real-ip",
+        // applied by the executor, never taken from the caller
+        "authorization",
+    ];
+    let lower = name.to_ascii_lowercase();
+    FORBIDDEN.contains(&lower.as_str())
 }
 
 /// Lowercases a host and strips a single trailing dot (`api.example.` ==
@@ -276,11 +335,17 @@ impl HttpExecutor {
     ///
     /// A reached endpoint yields `Ok(`[`ExecOutcome`]`)` for **any** status.
     ///
+    /// Caller headers are sanitized: hop-by-hop, proxy-related and `Authorization`
+    /// headers are stripped (the executor applies the credential itself), and a
+    /// `Host` header that disagrees with the target is refused rather than allowed
+    /// to silently redirect.
+    ///
     /// # Errors
     /// [`ExecuteError::InvalidRequest`] if the target is malformed;
     /// [`ExecuteError::Denied`] if the egress policy refuses it (non-https, a host
-    /// outside the allowlist, or a blocked IP literal);
-    /// [`ExecuteError::LimitExceeded`] if the response body exceeds the cap;
+    /// outside the allowlist, a blocked IP literal, a method outside the allowlist,
+    /// or a mismatched `Host` header);
+    /// [`ExecuteError::LimitExceeded`] if the request or response body exceeds its cap;
     /// [`ExecuteError::Unavailable`] if the endpoint is not reached (timeout,
     /// connect failure, blocked resolution) or its body cannot be read. No error
     /// carries the secret.
@@ -291,10 +356,35 @@ impl HttpExecutor {
         request: &ExecRequest,
         secret: &SecretString,
     ) -> Result<ExecOutcome, ExecuteError> {
+        self.policy.check_method(request.method)?;
+        // Reuse the boundary-tested cap predicate (an empty "additional") so the
+        // comparison is not a fresh, untested `>`.
+        if would_exceed(request.body.len(), 0, self.limits.max_request_bytes) {
+            return Err(ExecuteError::LimitExceeded(format!(
+                "request body exceeds {} bytes",
+                self.limits.max_request_bytes
+            )));
+        }
         let url = self.policy.check(&request.target)?;
+        let url_host = url.host_str().map(str::to_ascii_lowercase);
 
         let mut builder = self.client.request(to_reqwest_method(request.method), url);
         for (name, value) in &request.headers {
+            // The Host header must not silently redirect the request: a mismatch
+            // with the target host is denied; a match is dropped (reqwest sets Host
+            // from the URL).
+            if name.eq_ignore_ascii_case("host") {
+                if url_host.as_deref() != Some(normalize_host(value).as_str()) {
+                    return Err(ExecuteError::Denied(format!(
+                        "host header does not match target: {value}"
+                    )));
+                }
+                continue;
+            }
+            // Strip hop-by-hop / proxy / Authorization headers from the caller.
+            if is_forbidden_request_header(name) {
+                continue;
+            }
             builder = builder.header(name, value);
         }
         // The single point where the opened credential is applied. reqwest keeps
@@ -371,8 +461,8 @@ fn to_reqwest_method(method: Method) -> reqwest::Method {
 #[cfg(test)]
 mod tests {
     use super::{
-        addr_allowed, declared_over_cap, is_blocked_ip, normalize_host, to_reqwest_method,
-        would_exceed, EgressPolicy, Limits,
+        addr_allowed, declared_over_cap, is_blocked_ip, is_forbidden_request_header,
+        normalize_host, to_reqwest_method, would_exceed, EgressPolicy, Limits,
     };
     use executor::{ExecuteError, Method};
     use std::net::IpAddr;
@@ -380,6 +470,44 @@ mod tests {
 
     fn ip(s: &str) -> IpAddr {
         s.parse().expect("valid ip")
+    }
+
+    #[test]
+    fn method_allowlist_denies_unlisted_methods() {
+        let policy = EgressPolicy::allowing(["api.example"])
+            .with_allowed_methods([Method::Get, Method::Post]);
+        assert!(policy.check_method(Method::Get).is_ok());
+        assert!(policy.check_method(Method::Post).is_ok());
+        assert!(matches!(
+            policy.check_method(Method::Delete),
+            Err(ExecuteError::Denied(m)) if m.contains("method not allowed")
+        ));
+        // The default (unnarrowed) policy permits every method.
+        assert!(EgressPolicy::allowing(["api.example"])
+            .check_method(Method::Delete)
+            .is_ok());
+    }
+
+    #[test]
+    fn forbidden_request_headers_are_recognized_case_insensitively() {
+        for h in [
+            "Connection",
+            "transfer-encoding",
+            "Keep-Alive",
+            "Upgrade",
+            "TE",
+            "Trailer",
+            "Proxy-Connection",
+            "Proxy-Authorization",
+            "X-Forwarded-For",
+            "x-real-ip",
+            "Authorization",
+        ] {
+            assert!(is_forbidden_request_header(h), "{h} must be forbidden");
+        }
+        for h in ["content-type", "accept", "x-custom", "user-agent"] {
+            assert!(!is_forbidden_request_header(h), "{h} must be allowed");
+        }
     }
 
     #[test]
@@ -396,6 +524,7 @@ mod tests {
         assert_eq!(l.request_timeout, Duration::from_secs(30));
         assert_eq!(l.connect_timeout, Duration::from_secs(10));
         assert_eq!(l.max_response_bytes, 1 << 20);
+        assert_eq!(l.max_request_bytes, 1 << 20);
     }
 
     #[test]

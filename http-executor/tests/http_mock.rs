@@ -213,3 +213,79 @@ async fn hostname_resolving_to_private_ip_is_blocked_by_resolver() {
         .expect_err("resolver blocks loopback");
     assert!(matches!(err, ExecuteError::Unavailable(_)));
 }
+
+#[tokio::test]
+async fn method_outside_the_allowlist_is_denied_before_any_call() {
+    let exec = HttpExecutor::new(
+        EgressPolicy::insecure_allowing(["127.0.0.1"]).with_allowed_methods([Method::Get]),
+    )
+    .expect("builds");
+    let req = ExecRequest::new(Method::Delete, "http://127.0.0.1:1/x");
+
+    let err = exec.execute(&req, &secret("x")).await.expect_err("denied");
+    assert!(matches!(err, ExecuteError::Denied(m) if m.contains("method not allowed")));
+}
+
+#[tokio::test]
+async fn oversized_request_body_is_refused_before_any_call() {
+    let exec = HttpExecutor::with_limits(
+        EgressPolicy::insecure_allowing(["127.0.0.1"]),
+        Limits {
+            max_request_bytes: 8,
+            ..Limits::default()
+        },
+    )
+    .expect("builds");
+    let req = ExecRequest::new(Method::Post, "http://127.0.0.1:1/x").with_body(vec![b'x'; 100]);
+
+    let err = exec
+        .execute(&req, &secret("x"))
+        .await
+        .expect_err("body over cap");
+    assert!(matches!(err, ExecuteError::LimitExceeded(_)));
+}
+
+#[tokio::test]
+async fn mismatched_host_header_is_denied() {
+    let exec = loopback_executor();
+    let req = ExecRequest::new(Method::Get, "http://127.0.0.1:8080/x")
+        .with_header("host", "evil.example");
+
+    let err = exec.execute(&req, &secret("x")).await.expect_err("denied");
+    assert!(matches!(err, ExecuteError::Denied(m) if m.contains("host header")));
+}
+
+#[tokio::test]
+async fn strips_hop_by_hop_and_proxy_headers_and_overrides_authorization() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/h"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&server)
+        .await;
+
+    let exec = loopback_executor();
+    let req = ExecRequest::new(Method::Get, format!("{}/h", server.uri()))
+        .with_header("x-custom", "keep")
+        .with_header("host", "127.0.0.1") // matches the target → dropped, not an error
+        .with_header("connection", "keep-alive")
+        .with_header("x-forwarded-for", "9.9.9.9")
+        .with_header("proxy-authorization", "Basic zzz")
+        .with_header("authorization", "Bearer caller-supplied");
+
+    exec.execute(&req, &secret("real")).await.expect("reaches");
+
+    let received = server.received_requests().await.expect("recorded requests");
+    let sent = &received[0].headers;
+    // The allowed custom header is forwarded.
+    assert!(sent.contains_key("x-custom"));
+    // Hop-by-hop / proxy headers are stripped.
+    assert!(!sent.contains_key("connection"));
+    assert!(!sent.contains_key("x-forwarded-for"));
+    assert!(!sent.contains_key("proxy-authorization"));
+    // The executor's credential overrides any caller-supplied Authorization.
+    assert_eq!(
+        sent.get("authorization").expect("authorization"),
+        "Bearer real"
+    );
+}
