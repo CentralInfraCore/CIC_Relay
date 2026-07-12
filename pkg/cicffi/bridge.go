@@ -10,15 +10,19 @@
 package cicffi
 
 /*
-#cgo LDFLAGS: -lcic_ffi
+// -lcic_ffi is the staticlib; the trailing system libs are what the Rust
+// staticlib needs at the final link (tokio/mio → pthread/dl, etc.), per
+// `cargo rustc -- --print native-static-libs`. The -L path is supplied at build
+// time via CGO_LDFLAGS (see the Makefile).
+#cgo LDFLAGS: -lcic_ffi -lpthread -ldl -lm -lrt
 
 #include <stddef.h>
 #include <stdint.h>
 
-// Mirrors the exports in ffi/src/lib.rs (the unsafe airlock). The -L path to
-// libcic_ffi.a is supplied at build time via CGO_LDFLAGS (see the Makefile).
+// Mirrors the exports in ffi/src/lib.rs (the unsafe airlock).
 unsigned char *cic_ffi_ping(const unsigned char *ptr, size_t len, size_t *out_len);
 unsigned char *cic_ffi_connection_request(const unsigned char *ptr, size_t len, size_t *out_len);
+unsigned char *cic_ffi_run_flow(const unsigned char *ptr, size_t len, size_t *out_len);
 void cic_ffi_free(unsigned char *ptr, size_t len);
 uint32_t cic_ffi_abi_version(void);
 */
@@ -34,7 +38,7 @@ import (
 // It must match the linked staticlib's cic_ffi_abi_version(); a mismatch means
 // a stale or wrong libcic_ffi.a was linked. Kept in sync with CIC_FFI_ABI_VERSION
 // in ffi/src/lib.rs.
-const ExpectedABIVersion uint32 = 1
+const ExpectedABIVersion uint32 = 2
 
 // ABIVersion returns the C-ABI version of the linked cic-ffi staticlib.
 func ABIVersion() uint32 {
@@ -95,6 +99,27 @@ func ConnectionRequest(reqJSON []byte) ([]byte, error) {
 	})
 	if out == nil {
 		return nil, errors.New("cicffi: connection request rejected (malformed JSON or empty subject)")
+	}
+	return out, nil
+}
+
+// RunFlow runs the end-to-end trust-flow PoC entirely inside Rust and returns
+// its JSON result. The Go side hands in a request document — subject, scope,
+// secret, target, allow_hosts (and optional method/headers/body_base64/insecure)
+// — and Rust mints a module identity, mock-countersigns it, seals the secret to
+// the module key, opens it internally, and actuates over HTTP with the opened
+// credential. Only the outcome crosses back; the secret never leaves Rust.
+//
+// The result JSON is {"ok":true,"status":..,"body_base64":..,"scope":[..]} for a
+// completed actuation, or {"ok":false,"error":".."} if the flow ran but failed
+// (policy/HTTP). It returns an error only when the Rust core rejected the input
+// (malformed JSON or a missing/empty required field).
+func RunFlow(reqJSON []byte) ([]byte, error) {
+	out := invoke(reqJSON, func(p *C.uchar, n C.size_t, o *C.size_t) *C.uchar {
+		return C.cic_ffi_run_flow(p, n, o)
+	})
+	if out == nil {
+		return nil, errors.New("cicffi: run flow rejected (malformed JSON or missing required field)")
 	}
 	return out, nil
 }

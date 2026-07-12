@@ -9,15 +9,24 @@ publish.workspace = true
 [lints]
 workspace = true
 
-[dependencies]
-executor = { path = "../executor" }
-secrecy = "0.10"
-url = "2"
+[features]
+# TLS is on by default (production egress is https). It is a feature so a
+# consumer that only needs plain-http actuation — notably the `cic-ffi`
+# staticlib, where pulling rustls would drag the aws-lc C library into the Go
+# cgo link — can opt out with `default-features = false` and stay pure-Rust.
+default = ["rustls"]
 # rustls only — no default-tls/native-tls, so no new C-toolchain or license load.
 # The tree is already rustls via vault-client-rs → reqwest (0.13.4), whose `rustls`
 # feature verifies roots via rustls-platform-verifier; keeping to it avoids churning
 # the locked reqwest version.
-reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+rustls = ["reqwest/rustls"]
+
+[dependencies]
+executor = { path = "../executor" }
+secrecy = "0.10"
+url = "2"
+# TLS backend is selected by this crate's `rustls` feature (see [features]).
+reqwest = { version = "0.13", default-features = false }
 # `rt` only — for `spawn_blocking` in the SSRF-guarding DNS resolver (getaddrinfo
 # is blocking). Already in the tree via reqwest; this just declares direct use.
 tokio = { version = "1", features = ["rt"] }

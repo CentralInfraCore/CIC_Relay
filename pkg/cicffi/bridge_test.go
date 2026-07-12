@@ -4,7 +4,10 @@ package cicffi
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 )
@@ -83,5 +86,80 @@ func TestPingRejectsOversizedInput(t *testing.T) {
 	big := make([]byte, 1024*1024+1)
 	if got := Ping(big); got != nil {
 		t.Fatalf("expected nil for oversized input, got %d bytes", len(got))
+	}
+}
+
+// TestRunFlowActuatesWithOpenedCredential drives the full end-to-end PoC across
+// the seam: Go hands in a request, Rust runs module-CSR → mock-countersign →
+// seal → open → HTTP actuation against a real (loopback) server, and only the
+// outcome crosses back. It proves the opened credential reached the endpoint as
+// a Bearer token and that the secret never leaks back through the boundary.
+func TestRunFlowActuatesWithOpenedCredential(t *testing.T) {
+	const secret = "hvs.TOPSECRET"
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("pong"))
+	}))
+	defer srv.Close()
+
+	reqJSON, err := json.Marshal(map[string]any{
+		"subject":     "relay.worker",
+		"scope":       []string{"db.read"},
+		"secret":      secret,
+		"target":      srv.URL + "/x",
+		"allow_hosts": []string{"127.0.0.1"},
+		"insecure":    true,
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	out, err := RunFlow(reqJSON)
+	if err != nil {
+		t.Fatalf("RunFlow rejected valid input: %v", err)
+	}
+
+	var res struct {
+		OK         bool     `json:"ok"`
+		Status     int      `json:"status"`
+		BodyBase64 string   `json:"body_base64"`
+		Scope      []string `json:"scope"`
+		Error      string   `json:"error"`
+	}
+	if err := json.Unmarshal(out, &res); err != nil {
+		t.Fatalf("result not JSON: %v (%q)", err, out)
+	}
+	if !res.OK {
+		t.Fatalf("flow failed: %s", res.Error)
+	}
+	if res.Status != http.StatusOK {
+		t.Fatalf("status: got %d want 200", res.Status)
+	}
+	if body, _ := base64.StdEncoding.DecodeString(res.BodyBase64); string(body) != "pong" {
+		t.Fatalf("body: got %q want pong", body)
+	}
+	if want := []string{"db.read"}; !reflect.DeepEqual(res.Scope, want) {
+		t.Fatalf("scope: got %v want %v", res.Scope, want)
+	}
+	// The opened credential reached the endpoint as a Bearer token.
+	if gotAuth != "Bearer "+secret {
+		t.Fatalf("authorization: got %q want %q", gotAuth, "Bearer "+secret)
+	}
+	// The secret never crosses back through the seam.
+	if bytes.Contains(out, []byte(secret)) {
+		t.Fatal("secret leaked into the FFI result")
+	}
+}
+
+// TestRunFlowRejectsMalformed checks the seam's no-panic rejection contract for
+// run-flow: bad input yields an error, not a crash.
+func TestRunFlowRejectsMalformed(t *testing.T) {
+	if _, err := RunFlow([]byte("not json")); err == nil {
+		t.Fatal("expected error for malformed JSON")
+	}
+	if _, err := RunFlow([]byte(`{"secret":"x","target":"http://127.0.0.1/x"}`)); err == nil {
+		t.Fatal("expected error for missing subject")
 	}
 }
