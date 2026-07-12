@@ -368,6 +368,18 @@ test-ffi: ffi-staticlib ## Test the live Go→Rust→Go bridge (cgo, ffi_cgo tag
 		CGO_ENABLED=1 CGO_LDFLAGS="-L$(FFI_LIB_DIR)" \
 			go test -tags ffi_cgo -count=1 -v ./pkg/cicffi/...)
 
+# Opt-in live-Vault end-to-end test of the full feature-008 trust-flow chain
+# (countersign → mTLS cert-auth login → read_sealed → open). Spins a throwaway
+# `-dev-tls` OpenBao inside the rust-builder (needs the `vault`/openbao binary on
+# the host, mounted in) — no admin token, never touches a real Vault. Not a CI
+# gate; the chain is otherwise unverifiable without a live server.
+test-vault-live: ## Live-Vault e2e trust-flow chain (throwaway dev-tls server; needs the vault/openbao binary)
+	@command -v vault >/dev/null 2>&1 || { echo "vault/openbao binary not found on host — install it to run the live-Vault test"; exit 1; }
+	@echo "Running live-Vault trust-flow chain (throwaway dev-tls server)..."
+	docker compose run --rm --entrypoint bash \
+		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
+		rust-builder scripts/vault-live-e2e.sh
+
 # =============================================================================
 # Code Quality — combined (Go + Python + Rust)
 # =============================================================================
