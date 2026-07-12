@@ -380,6 +380,21 @@ test-vault-live: ## Live-Vault e2e trust-flow chain (throwaway dev-tls server; n
 		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
 		rust-builder scripts/vault-live-e2e.sh
 
+# Live FFI trust-flow: Go → Rust (cic-ffi built with --features live-vault) → real
+# Vault (countersign / mTLS cert-auth login / read_sealed / open) → HTTP actuation.
+# Builds the live staticlib (rust-builder), then runs the cgo Go test against a
+# throwaway dev-tls server in the go-builder (with the vault binary mounted).
+# Opt-in, not a CI gate.
+test-ffi-live: ## Live FFI trust-flow (Go → Rust → live Vault → HTTP; needs the vault/openbao binary)
+	@command -v vault >/dev/null 2>&1 || { echo "vault/openbao binary not found on host — install it to run the live FFI test"; exit 1; }
+	@echo "Building live-vault cic-ffi staticlib..."
+	$(call RUST_EXEC, cargo build -p cic-ffi --release --locked --features live-vault)
+	$(call RUST_EXEC, mkdir -p $(FFI_LIB_DIR) && cp /target/release/libcic_ffi.a $(FFI_LIB_DIR)/libcic_ffi.a)
+	@echo "Running live FFI trust-flow (throwaway dev-tls server)..."
+	docker compose run --rm --entrypoint bash \
+		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
+		go-builder /git-source/scripts/ffi-live-e2e.sh
+
 # =============================================================================
 # Code Quality — combined (Go + Python + Rust)
 # =============================================================================

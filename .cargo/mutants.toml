@@ -21,4 +21,15 @@ exclude_re = [
     # vault-adapter/tests/live_chain.rs), not the default runs. Remove this if the
     # mutation job is ever switched to `--all-features`.
     'connect_mtls',
+    # The cic-ffi `flow::live` module (the live-Vault run_flow profile) is behind
+    # the non-default `live-vault` feature. The default mutation build cfg-compiles
+    # it out, so its mutants are no-ops (equivalent) the default suite cannot catch.
+    # It is exercised by the opt-in live FFI test (`make test-ffi-live`). Remove if
+    # the mutation job ever runs with `--all-features`.
+    'flow::live::',
+    # `flow::run_live` has two cfg variants: the not-compiled stub (default build,
+    # returns an error — tested) and the feature-on dispatcher into `flow::live`.
+    # The default mutation build cfg-compiles the feature-on variant out, so its
+    # mutants are no-ops the suite cannot catch. Same rationale as `flow::live::`.
+    'flow::run_live',
 ]
