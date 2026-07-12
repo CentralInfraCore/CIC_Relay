@@ -49,6 +49,21 @@ objects:
   references: []
   calls:
   - New
+- name: RunFlow
+  kind: func
+  description: RunFlow runs the end-to-end trust-flow PoC entirely inside Rust and
+    returns its JSON result. The Go side hands in a request document — subject, scope,
+    secret, target, allow_hosts (and optional method/headers/body_base64/insecure)
+    — and Rust mints a module identity, mock-countersigns it, seals the secret to
+    the module key, opens it internally, and actuates over HTTP with the opened credential.
+    Only the outcome crosses back; the secret never leaves Rust. The result JSON is
+    {"ok":true,"status":..,"body_base64":..,"scope":[..]} for a completed actuation,
+    or {"ok":false,"error":".."} if the flow ran but failed (policy/HTTP). It returns
+    an error only when the Rust core rejected the input (malformed JSON or a missing/empty
+    required field).
+  references: []
+  calls:
+  - New
 - name: ExpectedABIVersion
   kind: const
   description: ExpectedABIVersion is the C-ABI version this Go package is written
