@@ -187,8 +187,13 @@ dependencies = [
 name = "cic-ffi"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "connections",
+ "executor",
+ "http-executor",
+ "module",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
