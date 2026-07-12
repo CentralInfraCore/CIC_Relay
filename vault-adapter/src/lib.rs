@@ -25,6 +25,9 @@ pub use countersign::{
     AllowlistPolicy, CountersignError, CountersignPolicy, Denied, PkiBackend, VaultPkiCountersigner,
 };
 
+pub mod transit;
+pub use transit::{SignError, TransitBackend, VaultSignature, VaultTransitSigner};
+
 /// The KV v2 field under which a pubkey-sealed secret envelope is stored.
 const SEALED_FIELD: &str = "sealed";
 
