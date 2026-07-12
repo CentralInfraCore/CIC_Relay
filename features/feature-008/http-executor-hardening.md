@@ -78,10 +78,26 @@ escape used for loopback testing):
 No variant carries the secret credential; reqwest error `Display` (which can
 include the URL) is never surfaced — messages are coarse and non-secret.
 
-## Still open (not this slice)
+## Slice 4 — request-side hardening (done)
 
-Method allowlist · hop-by-hop + proxy request-header stripping · Host-header
-validation vs allowlist · port policy · audit/trace with `trace_id` +
-`Authorization` redaction test · per-invocation request budget · configurable
-credential placement (beyond Bearer) · `module.open` → executor pipeline wiring ·
-FFI exposure to the Go relay.
+Closes more of the M43/M44 list on the request path:
+
+- **Method allowlist** — `EgressPolicy::with_allowed_methods` narrows the permitted
+  methods; a method outside the set is `Denied` before any call. (Default: all
+  four, for backward compatibility.)
+- **Request-header hygiene** — hop-by-hop framing (`Connection`,
+  `Transfer-Encoding`, `Keep-Alive`, `Upgrade`, `TE`, `Trailer`,
+  `Proxy-Connection`), proxy-related (`Proxy-Authorization`, `X-Forwarded-For`,
+  `X-Real-IP`) and caller-supplied `Authorization` headers are stripped; the
+  executor's credential always wins.
+- **Host-header validation** — a `Host` header that disagrees with the target is
+  `Denied` (no silent redirect); a matching one is dropped (reqwest sets it).
+- **Request-body cap** — `Limits.max_request_bytes` (default 1 MiB); an oversized
+  body is `LimitExceeded` before any network call.
+
+## Still open
+
+Port policy · audit/trace with `trace_id` + `Authorization` redaction test ·
+per-invocation request budget (multi-request) · configurable credential placement
+(beyond Bearer) · `module.open` → executor pipeline wiring and FFI exposure (done
+elsewhere — p85/p87).
