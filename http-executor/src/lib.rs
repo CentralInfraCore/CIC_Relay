@@ -306,9 +306,9 @@ const AUDIT_CHAIN_GENESIS: &str = "cic-audit-chain/v1/genesis";
 /// One entry in a **tamper-evident audit chain** (feature-009 seed): an
 /// [`AuditRecord`] bound to its position by
 /// `record_hash = SHA-256(domain ‖ prev_hash ‖ seq ‖ canonical(record))`. The
-/// hash **excludes itself** (self-excluding projection), so recomputation is
-/// well-defined. Signing each `record_hash` with the relay key (Vault) and the
-/// per-type/topic dual chains of feature-009 are separate follow-ups.
+/// hash **excludes itself and the signature** (self-excluding projection), so
+/// recomputation is well-defined. The per-type/topic dual chains of feature-009
+/// are a separate follow-up.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChainedEntry {
     /// Zero-based position in the chain.
@@ -319,6 +319,9 @@ pub struct ChainedEntry {
     pub record: AuditRecord,
     /// SHA-256 (hex) binding this record to `prev_hash` + `seq`.
     pub record_hash: String,
+    /// The relay's signature over `record_hash` (present iff the sink has a
+    /// [`RecordSigner`]). Authenticates the entry; public material, safe to store.
+    pub signature: Option<Vec<u8>>,
 }
 
 /// Length-prefixed, fixed-order canonical encoding of a record's fields, so the
@@ -383,12 +386,87 @@ pub fn verify_chain(entries: &[ChainedEntry]) -> bool {
     true
 }
 
+/// Signs an audit `record_hash` with the relay key — the authentication step
+/// on top of the tamper-evident chain (feature-009). The key custody is the
+/// implementation's concern (a local key here; Vault Transit in the live path).
+pub trait RecordSigner: Send + Sync {
+    /// Returns a signature over `message` (the entry's `record_hash` bytes).
+    fn sign(&self, message: &[u8]) -> Vec<u8>;
+}
+
+/// Verifies a signature produced by a [`RecordSigner`].
+pub trait RecordVerifier {
+    /// Returns `true` iff `signature` is a valid signature over `message`.
+    fn verify(&self, message: &[u8], signature: &[u8]) -> bool;
+}
+
+/// A local ECDSA-P256 [`RecordSigner`] holding the key in process. The production
+/// relay signer keeps the key in Vault (Transit); this is the CI-testable stand-in
+/// and the reference for the signature format (DER ECDSA over the `record_hash`).
+pub struct LocalEcdsaSigner {
+    key: p256::ecdsa::SigningKey,
+}
+
+impl LocalEcdsaSigner {
+    /// Wraps an ECDSA-P256 signing key.
+    #[must_use]
+    pub fn new(key: p256::ecdsa::SigningKey) -> Self {
+        Self { key }
+    }
+
+    /// The matching verifier (the public half).
+    #[must_use]
+    pub fn verifier(&self) -> LocalEcdsaVerifier {
+        LocalEcdsaVerifier {
+            key: *self.key.verifying_key(),
+        }
+    }
+}
+
+impl RecordSigner for LocalEcdsaSigner {
+    fn sign(&self, message: &[u8]) -> Vec<u8> {
+        use p256::ecdsa::{signature::Signer, DerSignature};
+        let signature: DerSignature = self.key.sign(message);
+        signature.as_bytes().to_vec()
+    }
+}
+
+/// The public verifier matching a [`LocalEcdsaSigner`] (or any DER ECDSA-P256
+/// signature over the `record_hash`).
+pub struct LocalEcdsaVerifier {
+    key: p256::ecdsa::VerifyingKey,
+}
+
+impl RecordVerifier for LocalEcdsaVerifier {
+    fn verify(&self, message: &[u8], signature: &[u8]) -> bool {
+        use p256::ecdsa::{signature::Verifier, DerSignature};
+        DerSignature::try_from(signature).is_ok_and(|sig| self.key.verify(message, &sig).is_ok())
+    }
+}
+
+/// Verifies a chain **and** its signatures: the hash chain must be intact
+/// ([`verify_chain`]) and every entry must carry a signature that `verifier`
+/// accepts over its `record_hash`. Returns `false` if any signature is missing,
+/// malformed, or wrong.
+#[must_use]
+pub fn verify_signed_chain(entries: &[ChainedEntry], verifier: &dyn RecordVerifier) -> bool {
+    verify_chain(entries)
+        && entries.iter().all(|entry| {
+            entry
+                .signature
+                .as_deref()
+                .is_some_and(|sig| verifier.verify(entry.record_hash.as_bytes(), sig))
+        })
+}
+
 /// An [`AuditSink`] that appends each record to a tamper-evident hash chain
-/// (feature-009 seed). Thread-safe; snapshot with [`entries`](Self::entries) and
-/// check with [`verify_chain`].
+/// (feature-009 seed), optionally **signing** each entry's `record_hash` with a
+/// [`RecordSigner`]. Thread-safe; snapshot with [`entries`](Self::entries) and
+/// check with [`verify_chain`] / [`verify_signed_chain`].
 #[derive(Default)]
 pub struct HashChainedAuditSink {
     state: std::sync::Mutex<AuditChainState>,
+    signer: Option<Arc<dyn RecordSigner>>,
 }
 
 struct AuditChainState {
@@ -414,6 +492,14 @@ impl HashChainedAuditSink {
         Self::default()
     }
 
+    /// Attaches a [`RecordSigner`]: from then on every entry's `record_hash` is
+    /// signed (authenticating the chain, not just making it tamper-evident).
+    #[must_use]
+    pub fn with_signer(mut self, signer: Arc<dyn RecordSigner>) -> Self {
+        self.signer = Some(signer);
+        self
+    }
+
     /// A snapshot of the chained entries recorded so far.
     ///
     /// # Panics
@@ -430,11 +516,13 @@ impl AuditSink for HashChainedAuditSink {
         let seq = st.next_seq;
         let prev_hash = st.prev_hash.clone();
         let record_hash = compute_record_hash(&prev_hash, seq, record);
+        let signature = self.signer.as_ref().map(|s| s.sign(record_hash.as_bytes()));
         st.entries.push(ChainedEntry {
             seq,
             prev_hash,
             record: record.clone(),
             record_hash: record_hash.clone(),
+            signature,
         });
         st.prev_hash = record_hash;
         st.next_seq += 1;
@@ -723,11 +811,57 @@ mod tests {
     use super::{
         addr_allowed, build_audit_record, declared_over_cap, is_blocked_ip,
         is_forbidden_request_header, normalize_host, sha256_hex, to_reqwest_method, verify_chain,
-        would_exceed, AuditDecision, AuditRecord, AuditSink, EgressPolicy, HashChainedAuditSink,
-        Limits, AUDIT_CHAIN_GENESIS,
+        verify_signed_chain, would_exceed, AuditDecision, AuditRecord, AuditSink, EgressPolicy,
+        HashChainedAuditSink, Limits, LocalEcdsaSigner, AUDIT_CHAIN_GENESIS,
     };
     use executor::{ExecOutcome, ExecRequest, ExecuteError, Method};
     use std::net::IpAddr;
+    use std::sync::Arc;
+
+    fn ecdsa_signer(seed: u8) -> LocalEcdsaSigner {
+        LocalEcdsaSigner::new(p256::ecdsa::SigningKey::from_slice(&[seed; 32]).expect("valid key"))
+    }
+
+    #[test]
+    fn signed_chain_verifies_with_matching_key_and_rejects_others() {
+        let signer = ecdsa_signer(1);
+        let verifier = signer.verifier();
+        let sink = HashChainedAuditSink::new().with_signer(Arc::new(signer));
+        sink.record(&sample_record("t1"));
+        sink.record(&sample_record("t2"));
+
+        let entries = sink.entries();
+        assert!(entries.iter().all(|e| e.signature.is_some()));
+        assert!(verify_signed_chain(&entries, &verifier));
+
+        // A different key rejects the signatures.
+        let other = ecdsa_signer(2).verifier();
+        assert!(!verify_signed_chain(&entries, &other));
+    }
+
+    #[test]
+    fn unsigned_chain_fails_signed_verification_but_hash_chain_holds() {
+        let verifier = ecdsa_signer(1).verifier();
+        let sink = HashChainedAuditSink::new(); // no signer
+        sink.record(&sample_record("t1"));
+        let entries = sink.entries();
+        assert!(entries[0].signature.is_none());
+        assert!(!verify_signed_chain(&entries, &verifier)); // missing signature → false
+        assert!(verify_chain(&entries)); // but the hash chain is still valid
+    }
+
+    #[test]
+    fn tampered_signature_fails_verification() {
+        let signer = ecdsa_signer(1);
+        let verifier = signer.verifier();
+        let sink = HashChainedAuditSink::new().with_signer(Arc::new(signer));
+        sink.record(&sample_record("t1"));
+        let mut entries = sink.entries();
+        if let Some(sig) = entries[0].signature.as_mut() {
+            sig[0] ^= 0xff; // flip a byte
+        }
+        assert!(!verify_signed_chain(&entries, &verifier));
+    }
 
     fn sample_record(trace: &str) -> AuditRecord {
         AuditRecord {
