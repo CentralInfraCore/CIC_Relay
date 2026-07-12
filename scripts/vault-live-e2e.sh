@@ -53,12 +53,18 @@ vault write auth/cic-cert/certs/cic-module \
 echo "[*] enabling KV v2"
 vault secrets enable -path=cic-kv kv-v2 >/dev/null
 
-echo "[*] running the live trust-flow chain test"
+echo "[*] enabling Transit + ecdsa-p256 audit-chain signing key (key never leaves Vault)"
+vault secrets enable -path=cic-transit transit >/dev/null
+vault write cic-transit/keys/cic-audit type=ecdsa-p256 >/dev/null
+
+echo "[*] running the live trust-flow chain + transit audit-signer tests"
 export VAULT_LIVE_ADDR="${VAULT_ADDR}"
 export VAULT_LIVE_TOKEN="${VAULT_TOKEN}"
 export VAULT_LIVE_CACERT="${VAULT_CACERT}"
 export VAULT_LIVE_PKI_MOUNT="cic-pki" VAULT_LIVE_PKI_ROLE="cic-module"
 export VAULT_LIVE_CERT_MOUNT="cic-cert" VAULT_LIVE_CERT_ROLE="cic-module"
 export VAULT_LIVE_KV_MOUNT="cic-kv" VAULT_LIVE_KV_PATH="module-secret"
+export VAULT_LIVE_TRANSIT_MOUNT="cic-transit" VAULT_LIVE_TRANSIT_KEY="cic-audit"
 
-cargo test -p vault-adapter --features live-vault --locked --test live_chain -- --nocapture
+cargo test -p vault-adapter --features live-vault --locked \
+	--test live_chain --test transit_sign -- --nocapture
