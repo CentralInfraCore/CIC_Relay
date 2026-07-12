@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -161,5 +162,96 @@ func TestRunFlowRejectsMalformed(t *testing.T) {
 	}
 	if _, err := RunFlow([]byte(`{"secret":"x","target":"http://127.0.0.1/x"}`)); err == nil {
 		t.Fatal("expected error for missing subject")
+	}
+}
+
+// TestRunFlowLive drives the FULL live-Vault trust-flow across the FFI: Go → Rust
+// → real Vault (countersign → mTLS cert-auth login → read_sealed → open) → HTTP
+// actuation → back to Go. It requires the `live-vault` staticlib and a running
+// Vault (env pointed at it by `make test-ffi-live`); it skips otherwise.
+func TestRunFlowLive(t *testing.T) {
+	addr := os.Getenv("VAULT_LIVE_ADDR")
+	if addr == "" {
+		t.Skip("VAULT_LIVE_ADDR unset — run via `make test-ffi-live`")
+	}
+	caPem, err := os.ReadFile(os.Getenv("VAULT_LIVE_CACERT"))
+	if err != nil {
+		t.Fatalf("read CA cert: %v", err)
+	}
+
+	const secret = "hvs.LIVE-FFI-SECRET"
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("pong"))
+	}))
+	defer srv.Close()
+
+	envOr := func(k, d string) string {
+		if v := os.Getenv(k); v != "" {
+			return v
+		}
+		return d
+	}
+	reqJSON, err := json.Marshal(map[string]any{
+		"profile":     "live",
+		"subject":     "relay.worker",
+		"scope":       []string{"db.read"},
+		"secret":      secret,
+		"target":      srv.URL + "/x",
+		"allow_hosts": []string{"127.0.0.1"},
+		"insecure":    true,
+		"vault": map[string]any{
+			"addr":              addr,
+			"token":             envOr("VAULT_LIVE_TOKEN", "root"),
+			"cacert_pem_base64": base64.StdEncoding.EncodeToString(caPem),
+			"pki_mount":         envOr("VAULT_LIVE_PKI_MOUNT", "cic-pki"),
+			"pki_role":          envOr("VAULT_LIVE_PKI_ROLE", "cic-module"),
+			"cert_mount":        envOr("VAULT_LIVE_CERT_MOUNT", "cic-cert"),
+			"cert_role":         envOr("VAULT_LIVE_CERT_ROLE", "cic-module"),
+			"kv_mount":          envOr("VAULT_LIVE_KV_MOUNT", "cic-kv"),
+			"kv_path":           envOr("VAULT_LIVE_KV_PATH", "module-secret"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	out, err := RunFlow(reqJSON)
+	if err != nil {
+		t.Fatalf("RunFlow rejected valid live request: %v", err)
+	}
+
+	var res struct {
+		OK         bool     `json:"ok"`
+		Status     int      `json:"status"`
+		BodyBase64 string   `json:"body_base64"`
+		Scope      []string `json:"scope"`
+		Error      string   `json:"error"`
+	}
+	if err := json.Unmarshal(out, &res); err != nil {
+		t.Fatalf("result not JSON: %v (%q)", err, out)
+	}
+	if !res.OK {
+		t.Fatalf("live flow failed: %s", res.Error)
+	}
+	if res.Status != http.StatusOK {
+		t.Fatalf("status: got %d want 200", res.Status)
+	}
+	if body, _ := base64.StdEncoding.DecodeString(res.BodyBase64); string(body) != "pong" {
+		t.Fatalf("body: got %q want pong", body)
+	}
+	if want := []string{"db.read"}; !reflect.DeepEqual(res.Scope, want) {
+		t.Fatalf("scope: got %v want %v", res.Scope, want)
+	}
+	// The credential the endpoint received round-tripped through Vault (sealed →
+	// read_sealed → opened) and was applied as a Bearer token.
+	if gotAuth != "Bearer "+secret {
+		t.Fatalf("authorization: got %q want %q", gotAuth, "Bearer "+secret)
+	}
+	// The secret never crosses back through the seam.
+	if bytes.Contains(out, []byte(secret)) {
+		t.Fatal("secret leaked into the FFI result")
 	}
 }
