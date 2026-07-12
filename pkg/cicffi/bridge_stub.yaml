@@ -32,6 +32,12 @@ objects:
     with the `ffi_cgo` tag and CGO_ENABLED=1 to link the Rust airlock.
   references: []
   calls: []
+- name: RunFlow
+  kind: func
+  description: RunFlow is unavailable in the default (non-cgo) build. Rebuild with
+    the `ffi_cgo` tag and CGO_ENABLED=1 to link the Rust airlock.
+  references: []
+  calls: []
 - name: disabled
   kind: const
   description: ''

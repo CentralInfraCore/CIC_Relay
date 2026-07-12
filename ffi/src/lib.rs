@@ -105,6 +105,7 @@ mod flow {
     use executor::{ExecOutcome, ExecRequest, Method};
     use http_executor::{EgressPolicy, HttpExecutor, Limits};
     use module::{seal, ModuleIdentity};
+    use secrecy::SecretString;
     use serde_json::{json, Value};
     use tokio::runtime::Runtime;
 
@@ -222,8 +223,8 @@ mod flow {
 
     /// Runs the full pipeline, returning the actuation outcome and the scope the
     /// (mock) Relay countersigned. Every failure is a non-secret `String`.
-    fn execute_flow(input: FlowInput) -> Result<(ExecOutcome, Vec<String>), String> {
-        let subject = Cn::new(input.subject);
+    fn execute_flow(input: &FlowInput) -> Result<(ExecOutcome, Vec<String>), String> {
+        let subject = Cn::new(input.subject.clone());
 
         // 1. Module mints a per-request identity + CSR; the private key stays in.
         let (identity, request) =
@@ -246,26 +247,33 @@ mod flow {
 
         // 4. Advance the connection typestate and open the token *inside* the
         //    module — the plaintext exists only here, never as data outside.
-        let connection = Connection::request(subject, input.scope)
+        let connection = Connection::request(subject, input.scope.clone())
             .countersign(cert)
             .initialize(sealed);
         let credential = identity.open(connection.token()).map_err(err_string)?;
 
         // 5. Actuate over HTTP, applying the opened credential.
+        let outcome = actuate(input, &credential)?;
+        Ok((outcome, authorized))
+    }
+
+    /// Actuates `input` over HTTP with the opened `credential`. Shared by the mock
+    /// and live profiles — they differ only in *how* the credential is obtained.
+    fn actuate(input: &FlowInput, credential: &SecretString) -> Result<ExecOutcome, String> {
         let policy = if input.insecure {
-            EgressPolicy::insecure_allowing(input.allow_hosts)
+            EgressPolicy::insecure_allowing(input.allow_hosts.clone())
         } else {
-            EgressPolicy::allowing(input.allow_hosts)
+            EgressPolicy::allowing(input.allow_hosts.clone())
         };
         let executor = HttpExecutor::with_limits(policy, Limits::default()).map_err(err_string)?;
-        let mut req = ExecRequest::new(input.method, input.target).with_body(input.body);
-        for (name, value) in input.headers {
-            req = req.with_header(name, value);
+        let mut req =
+            ExecRequest::new(input.method, input.target.clone()).with_body(input.body.clone());
+        for (name, value) in &input.headers {
+            req = req.with_header(name.clone(), value.clone());
         }
-        let outcome = runtime()
-            .block_on(executor.execute(&req, &credential))
-            .map_err(err_string)?;
-        Ok((outcome, authorized))
+        runtime()
+            .block_on(executor.execute(&req, credential))
+            .map_err(err_string)
     }
 
     /// Renders any flow error as its (non-secret) Display string.
@@ -273,12 +281,44 @@ mod flow {
         e.to_string()
     }
 
+    /// Dispatches to the requested execution profile. `mock` (default) runs the
+    /// in-process mock trust backends; `live` (only when built with the
+    /// `live-vault` feature) drives the real Vault chain.
+    fn run_profile(
+        profile: &str,
+        input: &FlowInput,
+        doc: &Value,
+    ) -> Result<(ExecOutcome, Vec<String>), String> {
+        match profile {
+            "mock" => execute_flow(input),
+            "live" => run_live(input, doc),
+            other => Err(format!("unknown profile: {other}")),
+        }
+    }
+
+    /// Live profile — real Vault chain (see the `live` module).
+    #[cfg(feature = "live-vault")]
+    fn run_live(input: &FlowInput, doc: &Value) -> Result<(ExecOutcome, Vec<String>), String> {
+        live::execute_flow(input, doc)
+    }
+
+    /// Live profile is not compiled into this staticlib.
+    #[cfg(not(feature = "live-vault"))]
+    fn run_live(_input: &FlowInput, _doc: &Value) -> Result<(ExecOutcome, Vec<String>), String> {
+        Err("live profile not compiled in (build cic-ffi with --features live-vault)".to_owned())
+    }
+
     /// The airlock core for `cic_ffi_run_flow`. Returns `None` only on malformed
     /// input; a flow that runs but fails (policy/HTTP) yields `{"ok":false,...}`.
     pub fn run_flow(input: &[u8]) -> Option<Vec<u8>> {
         let doc: Value = serde_json::from_slice(input).ok()?;
         let parsed = parse(&doc)?;
-        let result = match execute_flow(parsed) {
+        let profile = doc
+            .get("profile")
+            .and_then(Value::as_str)
+            .unwrap_or("mock")
+            .to_owned();
+        let result = match run_profile(&profile, &parsed, &doc) {
             Ok((outcome, scope)) => json!({
                 "ok": true,
                 "status": outcome.status,
@@ -288,6 +328,151 @@ mod flow {
             Err(message) => json!({ "ok": false, "error": message }),
         };
         serde_json::to_vec(&result).ok()
+    }
+
+    /// The live profile: the real Vault chain (countersign → mTLS cert-auth login
+    /// → `read_sealed` → open) through `vault-adapter`/`module`, then the shared HTTP
+    /// actuation. Compiled only with the `live-vault` feature (which drags in a
+    /// TLS stack, so the staticlib is no longer pure-Rust). The secret is sealed to
+    /// the module key and seeded into KV here — the request-time A-version wrap
+    /// (M41.2) is a deferred edge.
+    #[cfg(feature = "live-vault")]
+    mod live {
+        use super::{actuate, err_string, runtime, FlowInput};
+        use base64::Engine;
+        use connections::vault::{Cn, SecretRef};
+        use executor::ExecOutcome;
+        use module::{seal, ModuleIdentity};
+        use p256::ecdsa::SigningKey;
+        use p256::pkcs8::{EncodePrivateKey, LineEnding};
+        use serde_json::{json, Value};
+        use vault_adapter::{AllowlistPolicy, VaultPkiCountersigner, VaultSecretSource};
+        use vault_client_rs::VaultClient;
+
+        /// Vault connection + mount coordinates, supplied by the caller in the
+        /// request's `vault` object.
+        struct VaultConfig {
+            addr: String,
+            token: String,
+            ca_pem: Vec<u8>,
+            pki_mount: String,
+            pki_role: String,
+            cert_mount: String,
+            cert_role: String,
+            kv_mount: String,
+            kv_path: String,
+        }
+
+        /// Parses the `vault` object; `None` (→ a clean error) if any field is missing
+        /// or `cacert_pem_base64` is undecodable.
+        fn parse_vault(doc: &Value) -> Option<VaultConfig> {
+            let v = doc.get("vault")?.as_object()?;
+            let s = |k: &str| v.get(k).and_then(Value::as_str).map(str::to_owned);
+            Some(VaultConfig {
+                addr: s("addr")?,
+                token: s("token")?,
+                ca_pem: super::b64().decode(s("cacert_pem_base64")?).ok()?,
+                pki_mount: s("pki_mount")?,
+                pki_role: s("pki_role")?,
+                cert_mount: s("cert_mount")?,
+                cert_role: s("cert_role")?,
+                kv_mount: s("kv_mount")?,
+                kv_path: s("kv_path")?,
+            })
+        }
+
+        /// Wraps DER in a PEM CERTIFICATE block (for the mTLS client identity).
+        fn der_to_cert_pem(der: &[u8]) -> String {
+            let encoded = super::b64().encode(der);
+            let mut out = String::from("-----BEGIN CERTIFICATE-----\n");
+            for line in encoded.as_bytes().chunks(64) {
+                out.push_str(std::str::from_utf8(line).expect("base64 is ascii"));
+                out.push('\n');
+            }
+            out.push_str("-----END CERTIFICATE-----\n");
+            out
+        }
+
+        /// An admin (token-auth) client verifying the server CA.
+        fn admin(cfg: &VaultConfig) -> Result<VaultClient, String> {
+            VaultClient::builder()
+                .address(&cfg.addr)
+                .token_str(&cfg.token)
+                .ca_cert_pem(cfg.ca_pem.clone())
+                .build()
+                .map_err(err_string)
+        }
+
+        /// Runs the live Vault chain and actuates. The module holds a per-request
+        /// raw key (its CSR signer, mTLS identity, and sealing recipient).
+        pub fn execute_flow(
+            input: &FlowInput,
+            doc: &Value,
+        ) -> Result<(ExecOutcome, Vec<String>), String> {
+            let cfg = parse_vault(doc)
+                .ok_or_else(|| "live profile requires a `vault` config".to_owned())?;
+
+            // Module key: CSR signer + mTLS client identity + sealing recipient.
+            let signing = SigningKey::random(&mut rand_core::OsRng);
+            let key_pem = signing.to_pkcs8_pem(LineEnding::LF).map_err(err_string)?;
+            let identity = ModuleIdentity::from_pkcs8_pem(&key_pem).map_err(err_string)?;
+            let subject = Cn::new(input.subject.clone());
+
+            // 1. Live countersign: module CSR → Vault PKI sign-verbatim.
+            let request = identity
+                .certificate_request(subject, input.scope.clone())
+                .map_err(err_string)?;
+            let countersigner = VaultPkiCountersigner::new(
+                AllowlistPolicy::new(input.scope.clone()),
+                admin(&cfg)?,
+                cfg.pki_mount.clone(),
+                cfg.pki_role.clone(),
+            );
+            let cert = runtime()
+                .block_on(countersigner.countersign(&request))
+                .map_err(err_string)?;
+            let authorized: Vec<String> =
+                cert.scope().cns().map(|c| c.as_str().to_owned()).collect();
+            let cert_pem = der_to_cert_pem(cert.der());
+
+            // 2. Seed KV: seal the secret to the module key + admin write (stands in
+            //    for the deferred request-time Vault-side wrap).
+            let secret_ref = SecretRef::new(&cfg.kv_mount, &cfg.kv_path);
+            let sealed = seal(
+                &identity.public_key_der().map_err(err_string)?,
+                secret_ref.clone(),
+                input.secret.as_bytes(),
+            )
+            .map_err(err_string)?;
+            let sealed_b64 = super::b64().encode(sealed.ciphertext());
+            runtime()
+                .block_on(
+                    admin(&cfg)?
+                        .kv2(&cfg.kv_mount)
+                        .write(&cfg.kv_path, &json!({ "sealed": sealed_b64 })),
+                )
+                .map_err(err_string)?;
+
+            // 3. mTLS cert-auth login → scoped token → read_sealed → open.
+            let source = VaultSecretSource::connect_mtls(
+                &cfg.addr,
+                &cfg.ca_pem,
+                cert_pem.as_bytes(),
+                key_pem.as_bytes(),
+            )
+            .map_err(err_string)?;
+            runtime()
+                .block_on(source.login(&cfg.cert_mount, Some(&cfg.cert_role)))
+                .map_err(err_string)?;
+            let read_back = runtime()
+                .block_on(source.read_sealed(&secret_ref))
+                .map_err(err_string)?;
+            let credential = identity.open(&read_back).map_err(err_string)?;
+
+            // 4. Actuate over HTTP with the opened credential (shared path).
+            let outcome = actuate(input, &credential)?;
+            Ok((outcome, authorized))
+        }
     }
 
     #[cfg(test)]
@@ -335,6 +520,50 @@ mod flow {
 
             assert_eq!(parse_allow_hosts(&doc), ["h1".to_owned(), "h2".to_owned()]);
             assert!(parse_allow_hosts(&serde_json::json!({})).is_empty());
+        }
+
+        #[test]
+        fn unknown_profile_is_a_structured_error() {
+            let input = serde_json::json!({
+                "subject": "m", "secret": "x", "target": "http://127.0.0.1:1/x",
+                "profile": "bogus",
+            });
+            let out = run_flow(input.to_string().as_bytes()).expect("result");
+            let v: Value = serde_json::from_slice(&out).expect("json");
+            assert_eq!(v["ok"], false);
+            assert!(v["error"]
+                .as_str()
+                .expect("error")
+                .contains("unknown profile"));
+        }
+
+        #[cfg(not(feature = "live-vault"))]
+        #[test]
+        fn live_profile_without_the_feature_is_a_structured_error() {
+            let input = serde_json::json!({
+                "subject": "m", "secret": "x", "target": "http://127.0.0.1:1/x",
+                "profile": "live",
+            });
+            let out = run_flow(input.to_string().as_bytes()).expect("result");
+            let v: Value = serde_json::from_slice(&out).expect("json");
+            assert_eq!(v["ok"], false);
+            assert!(v["error"]
+                .as_str()
+                .expect("error")
+                .contains("live profile not compiled in"));
+        }
+
+        #[cfg(feature = "live-vault")]
+        #[test]
+        fn live_profile_without_a_vault_config_is_a_structured_error() {
+            let input = serde_json::json!({
+                "subject": "m", "secret": "x", "target": "http://127.0.0.1:1/x",
+                "profile": "live",
+            });
+            let out = run_flow(input.to_string().as_bytes()).expect("result");
+            let v: Value = serde_json::from_slice(&out).expect("json");
+            assert_eq!(v["ok"], false);
+            assert!(v["error"].as_str().expect("error").contains("vault"));
         }
 
         #[test]

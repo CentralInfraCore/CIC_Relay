@@ -192,8 +192,13 @@ dependencies = [
  "executor",
  "http-executor",
  "module",
+ "p256",
+ "rand_core 0.6.4",
+ "secrecy",
  "serde_json",
  "tokio",
+ "vault-adapter",
+ "vault-client-rs",
 ]
 
 [[package]]
