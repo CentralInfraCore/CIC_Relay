@@ -1,0 +1,42 @@
+---
+package: drift
+description: 'Package drift classifies the difference between a declared (desired)
+  state and the observed (actual) state — the CIC "Declarative Accountability" primitive
+  (demo §8.2–§8.3). The classification is deterministic (a `ProofTrace` prerequisite):
+  the same desired/actual pair always yields the same type and the same, sorted, difference
+  report.'
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Report
+  kind: struct
+  description: 'Report is the deterministic result of comparing a desired state against
+    an actual one: the drift Type plus the exact keys that differ.'
+  implements: []
+  references: []
+- name: Type
+  kind: type
+  description: Type is the classification of a desired-vs-actual difference.
+  references: []
+- name: Analyze
+  kind: func
+  description: 'Analyze compares a desired state against an actual state and returns
+    the deterministic drift Report. Both are canonicalizable maps (e.g. decoded JSON).
+    An empty or nil actual state is HARD_DRIFT (the infrastructure is gone), regardless
+    of desired. Otherwise: any missing or changed desired key makes it RECONCILIABLE_DRIFT;
+    if the desired state is fully satisfied but the actual has extra keys, it is SOFT_DRIFT;
+    an exact match is NONE.'
+  references: []
+  calls:
+  - DeepEqual
+  - Strings
+- name: Classify
+  kind: func
+  description: Classify is a convenience over Analyze returning only the drift Type.
+  references: []
+  calls:
+  - Analyze
