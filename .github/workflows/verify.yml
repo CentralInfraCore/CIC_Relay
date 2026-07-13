@@ -208,6 +208,12 @@ jobs:
             --workers 4 --threshold-efficacy 90 \
             ./core/modules/schemacompile
 
+      - name: Mutation — core/modules/httpcap (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/modules/httpcap
+
       # Rust mutation testing (cargo-mutants) — same PR-only mutation gate as
       # gremlins. Fails if any viable mutant survives.
       - name: Install pinned Rust toolchain (rust-toolchain.toml)
