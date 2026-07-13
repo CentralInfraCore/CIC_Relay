@@ -11,6 +11,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"centralrelay/core/cabinet"
 )
 
 // TestPingRoundTrip proves the live Go → Rust → Go path: bytes handed to the
@@ -105,6 +107,7 @@ func TestRunFlowActuatesWithOpenedCredential(t *testing.T) {
 	}))
 	defer srv.Close()
 
+	const traceID = "trace-xyz-789"
 	reqJSON, err := json.Marshal(map[string]any{
 		"subject":     "relay.worker",
 		"scope":       []string{"db.read"},
@@ -112,6 +115,7 @@ func TestRunFlowActuatesWithOpenedCredential(t *testing.T) {
 		"target":      srv.URL + "/x",
 		"allow_hosts": []string{"127.0.0.1"},
 		"insecure":    true,
+		"trace_id":    traceID,
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
@@ -122,14 +126,8 @@ func TestRunFlowActuatesWithOpenedCredential(t *testing.T) {
 		t.Fatalf("RunFlow rejected valid input: %v", err)
 	}
 
-	var res struct {
-		OK         bool     `json:"ok"`
-		Status     int      `json:"status"`
-		BodyBase64 string   `json:"body_base64"`
-		Scope      []string `json:"scope"`
-		Error      string   `json:"error"`
-	}
-	if err := json.Unmarshal(out, &res); err != nil {
+	res, err := ParseRunFlowResult(out)
+	if err != nil {
 		t.Fatalf("result not JSON: %v (%q)", err, out)
 	}
 	if !res.OK {
@@ -151,6 +149,31 @@ func TestRunFlowActuatesWithOpenedCredential(t *testing.T) {
 	// The secret never crosses back through the seam.
 	if bytes.Contains(out, []byte(secret)) {
 		t.Fatal("secret leaked into the FFI result")
+	}
+
+	// feature-009 bridge: the actuation's non-secret audit crosses the FFI seam
+	// and folds into the Go relay's ProofTrace vocabulary.
+	if res.Audit == nil {
+		t.Fatal("audit: got nil, want the actuation's audit record")
+	}
+	if res.Audit.TraceID != traceID {
+		t.Errorf("audit trace_id: got %q want %q", res.Audit.TraceID, traceID)
+	}
+	if res.Audit.Method != "GET" || res.Audit.Host != "127.0.0.1" || res.Audit.Decision != "allow" {
+		t.Errorf("audit facts: %+v", res.Audit)
+	}
+	if len(res.Audit.RecordHash) != 64 {
+		t.Errorf("audit record_hash: got %q, want 64-hex", res.Audit.RecordHash)
+	}
+	step := cabinet.ProofTraceStepFromActuation(
+		res.Audit.TraceID, res.Audit.Method, res.Audit.Host,
+		res.Audit.RequestBodySHA256, res.Audit.ResponseBodySHA256,
+	)
+	if step.Name != traceID || step.Module != "http-executor" {
+		t.Errorf("ProofTraceStep: got %+v", step)
+	}
+	if h := cabinet.ComputeChainHashV1("cap-flow", "", []cabinet.ProofTraceStep{step}); len(h) != 64 {
+		t.Errorf("chain hash over the actuation step: got %q", h)
 	}
 }
 
