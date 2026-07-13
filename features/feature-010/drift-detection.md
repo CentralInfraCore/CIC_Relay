@@ -47,7 +47,22 @@ chain. Tested: NONE/RECONCILIABLE/HARD classification persisted and signed, the
 verdict readable from the committed meta, and a mixed chain verifies (recorder
 coverage 86.4%).
 
+## In the live demo (done)
+
+`make demo` now records **observed states against a declared desired state** with
+`RecordDrift`, printing the verdict per commit against a real (throwaway) Vault:
+
+```
+[*] declared desired state: map[network:10.0.1.0/24 vms:3]
+  commit #1  1e7df82f74c0..  drift=NONE                 parent=981f67a8af93..  ✓   (provisioned as declared)
+  commit #2  06e9a2fc75dd..  drift=RECONCILIABLE_DRIFT  parent=1e7df82f74c0..  ✓ changed=[vms]   (someone changed vms by hand)
+  commit #3  b9c217212b80..  drift=HARD_DRIFT           parent=06e9a2fc75dd..  ✓   (infrastructure torn down)
+  ✓ signed state chain verified — signatures valid, chain intact
+  ✗ (after tamper) signature verification failed — tamper-evident
+```
+
+That is §8.1–§8.3 end-to-end: signed chain + drift classification + tamper-evidence.
+
 ## Next (demo track)
 
-- Surface drift in `make demo` (in-sync → drift on a manual change → HARD_DRIFT on
-  delete), then the `intent/`-branch rollback + OIS gate (§8.4).
+- The `intent/`-branch rollback + OIS policy gate (§8.4) — the closing act.
