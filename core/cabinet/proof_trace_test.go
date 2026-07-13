@@ -7,6 +7,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestProofTraceStepFromActuation(t *testing.T) {
+	t.Run("maps audit facts into a step and folds into the chain hash", func(t *testing.T) {
+		step := ProofTraceStepFromActuation("trace-abc-123", "GET", "127.0.0.1", "reqhash", "resphash")
+		assert.Equal(t, "trace-abc-123", step.Name)
+		assert.Equal(t, "http-executor", step.Module)
+		assert.Equal(t, "reqhash", step.InputHash)
+		assert.Equal(t, "resphash", step.OutputHash)
+
+		// The actuation step folds into the same ProofTrace chain hash as any
+		// native/WASM step — the bridge lands in the existing audit vocabulary.
+		h := ComputeChainHashV1("wf", "src", []ProofTraceStep{step})
+		assert.NotEmpty(t, h)
+		assert.Len(t, h, 64)
+	})
+
+	t.Run("falls back to method and host when no trace id", func(t *testing.T) {
+		step := ProofTraceStepFromActuation("", "POST", "api.example", "i", "o")
+		assert.Equal(t, "POST api.example", step.Name)
+	})
+
+	t.Run("different body digests yield different chain hashes", func(t *testing.T) {
+		s1 := ProofTraceStepFromActuation("t", "GET", "h", "in1", "out")
+		s2 := ProofTraceStepFromActuation("t", "GET", "h", "in2", "out")
+		assert.NotEqual(t,
+			ComputeChainHashV1("wf", "src", []ProofTraceStep{s1}),
+			ComputeChainHashV1("wf", "src", []ProofTraceStep{s2}),
+		)
+	})
+}
+
 func TestComputeChainHash(t *testing.T) {
 	t.Run("all empty inputs produces deterministic hash", func(t *testing.T) {
 		h := ComputeChainHashV1("", "", nil)
