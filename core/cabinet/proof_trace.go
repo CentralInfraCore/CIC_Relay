@@ -31,6 +31,26 @@ type ProofTrace struct {
 	Timestamp    string           `json:"timestamp"`
 }
 
+// ProofTraceStepFromActuation projects an http-executor actuation's non-secret
+// audit facts (feature-009, carried across the Rust↔Go FFI boundary by run_flow)
+// into a ProofTraceStep, so a capability actuation folds into the same
+// hash-chained ProofTrace as native and WASM steps. The request/response body
+// SHA-256 digests become the step's input/output hashes; the step name is the
+// caller's traceID, or "<method> <host>" when no trace id was supplied. It
+// carries only digests — never the credential or any body contents.
+func ProofTraceStepFromActuation(traceID, method, host, requestBodySHA256, responseBodySHA256 string) ProofTraceStep {
+	name := traceID
+	if name == "" {
+		name = method + " " + host
+	}
+	return ProofTraceStep{
+		Name:       name,
+		Module:     "http-executor",
+		InputHash:  requestBodySHA256,
+		OutputHash: responseBodySHA256,
+	}
+}
+
 // hashValue returns the hex-encoded SHA-256 of the canonical JSON representation of v.
 func hashValue(v interface{}) (string, error) {
 	b, err := canonicaljson.ToJSON(v)

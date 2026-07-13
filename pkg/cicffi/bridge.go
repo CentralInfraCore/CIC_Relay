@@ -38,7 +38,7 @@ import (
 // It must match the linked staticlib's cic_ffi_abi_version(); a mismatch means
 // a stale or wrong libcic_ffi.a was linked. Kept in sync with CIC_FFI_ABI_VERSION
 // in ffi/src/lib.rs.
-const ExpectedABIVersion uint32 = 2
+const ExpectedABIVersion uint32 = 3
 
 // ABIVersion returns the C-ABI version of the linked cic-ffi staticlib.
 func ABIVersion() uint32 {
