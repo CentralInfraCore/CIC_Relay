@@ -33,7 +33,7 @@ const MAX_INPUT_LEN: usize = 1024 * 1024;
 /// C-ABI version of this staticlib. Bump on any breaking change to an export's
 /// signature or semantics; the Go side checks it against its own expectation to
 /// catch a stale or mismatched library link. v2 adds `cic_ffi_run_flow`.
-const CIC_FFI_ABI_VERSION: u32 = 2;
+const CIC_FFI_ABI_VERSION: u32 = 3;
 
 /// The safe core. Contains no `unsafe` and no raw pointers — every function here
 /// takes owned/borrowed-owned bytes and returns owned bytes, so it is ordinary,
@@ -97,13 +97,15 @@ mod logic {
 /// transit and opened only inside the module, never leaving as data.
 mod flow {
     use std::collections::BTreeMap;
-    use std::sync::OnceLock;
+    use std::sync::{Arc, OnceLock};
 
     use base64::Engine;
     use connections::vault::port::{Countersigner, InMemoryCountersigner};
     use connections::vault::{AuthScope, Cn, Connection, SecretRef};
     use executor::{ExecOutcome, ExecRequest, Method};
-    use http_executor::{EgressPolicy, HttpExecutor, Limits};
+    use http_executor::{
+        AuditDecision, ChainedEntry, EgressPolicy, HashChainedAuditSink, HttpExecutor, Limits,
+    };
     use module::{seal, ModuleIdentity};
     use secrecy::SecretString;
     use serde_json::{json, Value};
@@ -140,6 +142,9 @@ mod flow {
         body: Vec<u8>,
         allow_hosts: Vec<String>,
         insecure: bool,
+        /// Optional caller correlation id, echoed into the audit record so the
+        /// Go relay can bind the actuation to its own `ProofTrace`.
+        trace_id: Option<String>,
     }
 
     /// Parses the request JSON. Returns `None` (a clean rejection) on malformed
@@ -171,6 +176,11 @@ mod flow {
                 .get("insecure")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
+            trace_id: doc
+                .get("trace_id")
+                .and_then(Value::as_str)
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned),
         })
     }
 
@@ -223,7 +233,15 @@ mod flow {
 
     /// Runs the full pipeline, returning the actuation outcome and the scope the
     /// (mock) Relay countersigned. Every failure is a non-secret `String`.
-    fn execute_flow(input: &FlowInput) -> Result<(ExecOutcome, Vec<String>), String> {
+    /// One actuation's outcome plus its tamper-evident audit entry (the
+    /// `record_hash`-chained [`ChainedEntry`] the Go relay folds into its
+    /// `ProofTrace`).
+    struct Actuated {
+        outcome: ExecOutcome,
+        audit: ChainedEntry,
+    }
+
+    fn execute_flow(input: &FlowInput) -> Result<(Actuated, Vec<String>), String> {
         let subject = Cn::new(input.subject.clone());
 
         // 1. Module mints a per-request identity + CSR; the private key stays in.
@@ -253,27 +271,45 @@ mod flow {
         let credential = identity.open(connection.token()).map_err(err_string)?;
 
         // 5. Actuate over HTTP, applying the opened credential.
-        let outcome = actuate(input, &credential)?;
-        Ok((outcome, authorized))
+        let actuated = actuate(input, &credential)?;
+        Ok((actuated, authorized))
     }
 
     /// Actuates `input` over HTTP with the opened `credential`. Shared by the mock
     /// and live profiles — they differ only in *how* the credential is obtained.
-    fn actuate(input: &FlowInput, credential: &SecretString) -> Result<ExecOutcome, String> {
+    ///
+    /// A [`HashChainedAuditSink`] is attached so the actuation emits a
+    /// tamper-evident, non-secret audit entry; the head [`ChainedEntry`] is
+    /// returned alongside the outcome for the Go relay to fold into its
+    /// `ProofTrace`.
+    fn actuate(input: &FlowInput, credential: &SecretString) -> Result<Actuated, String> {
         let policy = if input.insecure {
             EgressPolicy::insecure_allowing(input.allow_hosts.clone())
         } else {
             EgressPolicy::allowing(input.allow_hosts.clone())
         };
-        let executor = HttpExecutor::with_limits(policy, Limits::default()).map_err(err_string)?;
+        let sink = Arc::new(HashChainedAuditSink::new());
+        let executor = HttpExecutor::with_limits(policy, Limits::default())
+            .map_err(err_string)?
+            .with_audit_sink(sink.clone());
         let mut req =
             ExecRequest::new(input.method, input.target.clone()).with_body(input.body.clone());
+        if let Some(trace_id) = &input.trace_id {
+            req = req.with_trace_id(trace_id.clone());
+        }
         for (name, value) in &input.headers {
             req = req.with_header(name.clone(), value.clone());
         }
-        runtime()
+        let outcome = runtime()
             .block_on(executor.execute(&req, credential))
-            .map_err(err_string)
+            .map_err(err_string)?;
+        // Exactly one entry is recorded per actuation on the success path.
+        let audit = sink
+            .entries()
+            .into_iter()
+            .next()
+            .ok_or_else(|| "audit sink recorded no entry".to_owned())?;
+        Ok(Actuated { outcome, audit })
     }
 
     /// Renders any flow error as its (non-secret) Display string.
@@ -288,7 +324,7 @@ mod flow {
         profile: &str,
         input: &FlowInput,
         doc: &Value,
-    ) -> Result<(ExecOutcome, Vec<String>), String> {
+    ) -> Result<(Actuated, Vec<String>), String> {
         match profile {
             "mock" => execute_flow(input),
             "live" => run_live(input, doc),
@@ -298,14 +334,39 @@ mod flow {
 
     /// Live profile — real Vault chain (see the `live` module).
     #[cfg(feature = "live-vault")]
-    fn run_live(input: &FlowInput, doc: &Value) -> Result<(ExecOutcome, Vec<String>), String> {
+    fn run_live(input: &FlowInput, doc: &Value) -> Result<(Actuated, Vec<String>), String> {
         live::execute_flow(input, doc)
     }
 
     /// Live profile is not compiled into this staticlib.
     #[cfg(not(feature = "live-vault"))]
-    fn run_live(_input: &FlowInput, _doc: &Value) -> Result<(ExecOutcome, Vec<String>), String> {
+    fn run_live(_input: &FlowInput, _doc: &Value) -> Result<(Actuated, Vec<String>), String> {
         Err("live profile not compiled in (build cic-ffi with --features live-vault)".to_owned())
+    }
+
+    /// Projects a [`ChainedEntry`] into the non-secret JSON the Go relay parses:
+    /// the audit facts, the `seq`, and the tamper-evident `record_hash`. Never the
+    /// credential, `Authorization`, a token, or any body contents.
+    fn audit_json(entry: &ChainedEntry) -> Value {
+        let record = &entry.record;
+        let decision = match &record.decision {
+            AuditDecision::Allowed => "allow".to_owned(),
+            AuditDecision::Denied(reason) => format!("deny:{reason}"),
+        };
+        json!({
+            "trace_id": record.trace_id,
+            "method": record.method.to_string(),
+            "host": record.host,
+            "decision": decision,
+            "status": record.status,
+            // Durations in ms fit u64 for any realistic actuation; saturate rather
+            // than cast (u128 has no serde_json number repr without extra features).
+            "duration_ms": u64::try_from(record.duration_ms).unwrap_or(u64::MAX),
+            "request_body_sha256": record.request_body_sha256,
+            "response_body_sha256": record.response_body_sha256,
+            "seq": entry.seq,
+            "record_hash": entry.record_hash,
+        })
     }
 
     /// The airlock core for `cic_ffi_run_flow`. Returns `None` only on malformed
@@ -319,11 +380,12 @@ mod flow {
             .unwrap_or("mock")
             .to_owned();
         let result = match run_profile(&profile, &parsed, &doc) {
-            Ok((outcome, scope)) => json!({
+            Ok((actuated, scope)) => json!({
                 "ok": true,
-                "status": outcome.status,
-                "body_base64": b64().encode(&outcome.body),
+                "status": actuated.outcome.status,
+                "body_base64": b64().encode(&actuated.outcome.body),
                 "scope": scope,
+                "audit": audit_json(&actuated.audit),
             }),
             Err(message) => json!({ "ok": false, "error": message }),
         };
@@ -338,10 +400,9 @@ mod flow {
     /// (M41.2) is a deferred edge.
     #[cfg(feature = "live-vault")]
     mod live {
-        use super::{actuate, err_string, runtime, FlowInput};
+        use super::{actuate, err_string, runtime, Actuated, FlowInput};
         use base64::Engine;
         use connections::vault::{Cn, SecretRef};
-        use executor::ExecOutcome;
         use module::{seal, ModuleIdentity};
         use p256::ecdsa::SigningKey;
         use p256::pkcs8::{EncodePrivateKey, LineEnding};
@@ -408,7 +469,7 @@ mod flow {
         pub fn execute_flow(
             input: &FlowInput,
             doc: &Value,
-        ) -> Result<(ExecOutcome, Vec<String>), String> {
+        ) -> Result<(Actuated, Vec<String>), String> {
             let cfg = parse_vault(doc)
                 .ok_or_else(|| "live profile requires a `vault` config".to_owned())?;
 
@@ -470,16 +531,19 @@ mod flow {
             let credential = identity.open(&read_back).map_err(err_string)?;
 
             // 4. Actuate over HTTP with the opened credential (shared path).
-            let outcome = actuate(input, &credential)?;
-            Ok((outcome, authorized))
+            let actuated = actuate(input, &credential)?;
+            Ok((actuated, authorized))
         }
     }
 
     #[cfg(test)]
     mod tests {
-        use super::{parse_allow_hosts, parse_headers, parse_method, parse_scope, run_flow};
+        use super::{
+            audit_json, parse_allow_hosts, parse_headers, parse_method, parse_scope, run_flow,
+        };
         use base64::Engine;
         use executor::Method;
+        use http_executor::{AuditDecision, AuditRecord, ChainedEntry};
         use serde_json::Value;
         use std::io::{Read, Write};
         use std::net::TcpListener;
@@ -586,6 +650,7 @@ mod flow {
                 "target": format!("http://127.0.0.1:{port}/x"),
                 "allow_hosts": ["127.0.0.1"],
                 "insecure": true,
+                "trace_id": "trace-abc-123",
             })
             .to_string();
 
@@ -600,6 +665,55 @@ mod flow {
             assert_eq!(v["scope"], serde_json::json!(["db.read"]));
             // The secret is sealed/opened internally and never crosses back out.
             assert!(!String::from_utf8_lossy(&out).contains("hvs.TOPSECRET"));
+
+            // The actuation carries its non-secret audit record across the seam:
+            // the caller's trace_id round-trips and the tamper-evident record_hash
+            // binds it, for the Go relay to fold into its ProofTrace.
+            let audit = &v["audit"];
+            assert_eq!(audit["trace_id"], "trace-abc-123");
+            assert_eq!(audit["method"], "GET");
+            assert_eq!(audit["host"], "127.0.0.1");
+            assert_eq!(audit["decision"], "allow");
+            assert_eq!(audit["status"], 200);
+            assert_eq!(audit["seq"], 0);
+            assert!(
+                audit["record_hash"].as_str().is_some_and(|h| h.len() == 64),
+                "record_hash must be a 64-hex-char SHA-256 digest"
+            );
+            // The audit carries only digests, never the credential/body contents.
+            assert!(audit["response_body_sha256"].is_string());
+        }
+
+        #[test]
+        fn audit_json_projects_facts_and_renders_a_denied_decision() {
+            // A denied actuation's record still projects to non-secret JSON (the
+            // deny-path emission is a follow-up; the projection is exercised here).
+            let entry = ChainedEntry {
+                seq: 3,
+                prev_hash: "prev".to_owned(),
+                record: AuditRecord {
+                    trace_id: Some("t-9".to_owned()),
+                    method: Method::Post,
+                    host: "example.test".to_owned(),
+                    decision: AuditDecision::Denied("host not allowed".to_owned()),
+                    status: None,
+                    duration_ms: 12,
+                    request_body_sha256: "req".to_owned(),
+                    response_body_sha256: None,
+                },
+                record_hash: "hash".to_owned(),
+                signature: None,
+            };
+            let v = audit_json(&entry);
+            assert_eq!(v["trace_id"], "t-9");
+            assert_eq!(v["method"], "POST");
+            assert_eq!(v["host"], "example.test");
+            assert_eq!(v["decision"], "deny:host not allowed");
+            assert!(v["status"].is_null());
+            assert_eq!(v["duration_ms"], 12);
+            assert!(v["response_body_sha256"].is_null());
+            assert_eq!(v["seq"], 3);
+            assert_eq!(v["record_hash"], "hash");
         }
 
         #[test]

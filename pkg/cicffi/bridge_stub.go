@@ -11,7 +11,7 @@ const disabled = "cicffi: built without the ffi_cgo build tag (CGO bridge disabl
 
 // ExpectedABIVersion is the C-ABI version this package targets (see the cgo
 // build for the checked value).
-const ExpectedABIVersion uint32 = 2
+const ExpectedABIVersion uint32 = 3
 
 // ABIVersion is unavailable in the default (non-cgo) build.
 func ABIVersion() uint32 {
