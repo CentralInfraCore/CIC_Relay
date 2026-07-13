@@ -1,0 +1,74 @@
+name: mutation
+
+# Mutation testing (gremlins for Go, cargo-mutants for Rust) is the slowest,
+# most minute-hungry gate and rarely catches anything the unit/coverage gates
+# miss on a per-commit basis. It is therefore NOT run on every push/PR — it runs
+# once a day on `main` and can be triggered manually. Run it locally before a
+# risky change (`make mutate-all`, `make mutate-rust`).
+#
+# NOTE: because this no longer runs on pull_request, remove `mutation` from the
+# branch-protection *required status checks* for `main`, or PRs will wait on a
+# check that never reports.
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Daily at 02:23 UTC (off the hour, per GitHub's scheduling guidance).
+    - cron: "23 2 * * *"
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.12"
+
+      - name: Go mod download
+        run: go mod download || true
+
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+
+      - name: Mutation — core/cabinet (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/cabinet
+
+      - name: Mutation — core/modules/schemapipeline (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/modules/schemapipeline
+
+      - name: Mutation — core/modules/schemacompile (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/modules/schemacompile
+
+      - name: Mutation — core/modules/httpcap (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/modules/httpcap
+
+      # Rust mutation testing (cargo-mutants). Fails if any viable mutant survives.
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Install cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+
+      - name: Mutation — Rust workspace (no surviving mutants)
+        run: cargo mutants --workspace
