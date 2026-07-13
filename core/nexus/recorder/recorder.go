@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/drift"
 	"centralrelay/core/nexus/types"
 )
 
@@ -84,10 +85,38 @@ func (r *GitStateRecorder) init() error {
 
 // RecordState persists the state to JSON files, signs it, and creates a git commit.
 func (r *GitStateRecorder) RecordState(ctx context.Context, expected types.ExpectedState, actual interface{}) (string, error) {
+	return r.signAndCommit(ctx, expected.RunID, expected, actual, nil)
+}
+
+// RecordDrift records an observed actual state against a declared desired state:
+// it classifies the drift (drift.Analyze) and commits it as a Vault-signed,
+// parent-linked state entry whose meta carries the verdict — so the drift itself
+// becomes an auditable, signed event (§8.2). `expected.json` holds the desired
+// state and `actual.json` the observed one, so the standard VerifyChain verifies
+// these commits unchanged. Returns the commit hash and the drift report.
+func (r *GitStateRecorder) RecordDrift(ctx context.Context, runID string, desired, actual map[string]interface{}) (string, drift.Report, error) {
+	report := drift.Analyze(desired, actual)
+	extra := map[string]interface{}{
+		"drift":         string(report.Type),
+		"drift_missing": report.Missing,
+		"drift_changed": report.Changed,
+		"drift_extra":   report.Extra,
+	}
+	commit, err := r.signAndCommit(ctx, runID, desired, actual, extra)
+	return commit, report, err
+}
+
+// signAndCommit writes expected.json (the declared state), actual.json (the
+// observed state), and meta.json — run_id, timestamp, the parent commit hash for
+// chain binding, plus any extraMeta fields — signs the manifest over them via
+// Vault, and commits. Shared by RecordState and RecordDrift.
+func (r *GitStateRecorder) signAndCommit(ctx context.Context, runID string, expected, actual interface{}, extraMeta map[string]interface{}) (string, error) {
+	if r.CryptoService == nil {
+		return "", fmt.Errorf("cryptoservice is not configured")
+	}
 	filesToWrite := make(map[string][]byte)
 	var err error
 
-	// 1. Serialize all data to be written
 	filesToWrite["expected.json"], err = json.MarshalIndent(expected, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal expected state: %w", err)
@@ -96,26 +125,28 @@ func (r *GitStateRecorder) RecordState(ctx context.Context, expected types.Expec
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal actual state: %w", err)
 	}
+
 	// The parent commit hash binds this record to its predecessor: it is part of
 	// the signed manifest, so the Vault signature covers the chain position — a
-	// tamper-evident signed chain (changing any earlier commit invalidates the
-	// git parent linkage that every later signature attests to). Empty only if
-	// there is no prior commit (never, since init() makes the .gitignore root).
+	// tamper-evident signed chain. Empty only if there is no prior commit (never,
+	// since init() makes the .gitignore root).
 	parent, err := r.getHeadHash()
 	if err != nil {
 		parent = ""
 	}
 	meta := map[string]interface{}{
-		"run_id":    expected.RunID,
+		"run_id":    runID,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 		"parent":    parent,
+	}
+	for k, v := range extraMeta {
+		meta[k] = v
 	}
 	filesToWrite["meta.json"], err = json.MarshalIndent(meta, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal meta: %w", err)
 	}
 
-	// 2. Create a manifest of files and their hashes for signing
 	manifest, err := r.createManifest(filesToWrite)
 	if err != nil {
 		return "", err
@@ -123,11 +154,6 @@ func (r *GitStateRecorder) RecordState(ctx context.Context, expected types.Expec
 	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal manifest: %w", err)
-	}
-
-	// 3. Sign the manifest hash
-	if r.CryptoService == nil {
-		return "", fmt.Errorf("cryptoservice is not configured")
 	}
 	manifestHash := sha256.Sum256(manifestBytes)
 	signature, err := r.CryptoService.Sign(ctx, manifestHash[:])
@@ -139,23 +165,18 @@ func (r *GitStateRecorder) RecordState(ctx context.Context, expected types.Expec
 		return "", fmt.Errorf("failed to marshal signature: %w", err)
 	}
 
-	// 4. Write all files to disk
 	for name, content := range filesToWrite {
 		if err := os.WriteFile(filepath.Join(r.RepoPath, name), content, 0644); err != nil {
 			return "", fmt.Errorf("failed to write %s: %w", name, err)
 		}
 	}
-
-	// 5. Git Add & Commit
 	if err := r.runGit("add", "."); err != nil {
 		return "", err
 	}
-	commitMsg := fmt.Sprintf("[AUTO] run-id: %s", expected.RunID)
+	commitMsg := fmt.Sprintf("[AUTO] run-id: %s", runID)
 	if err := r.runGit("commit", "--allow-empty", "-m", commitMsg); err != nil {
 		return "", err
 	}
-
-	// 6. Get and return commit hash
 	return r.getHeadHash()
 }
 

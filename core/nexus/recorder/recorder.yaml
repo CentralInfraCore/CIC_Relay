@@ -47,6 +47,29 @@ objects:
     a git commit.
   references:
   - types.ExpectedState
+  calls: []
+- name: RecordDrift
+  kind: method
+  receiver: GitStateRecorder
+  description: 'RecordDrift records an observed actual state against a declared desired
+    state: it classifies the drift (drift.Analyze) and commits it as a Vault-signed,
+    parent-linked state entry whose meta carries the verdict — so the drift itself
+    becomes an auditable, signed event (§8.2). `expected.json` holds the desired state
+    and `actual.json` the observed one, so the standard VerifyChain verifies these
+    commits unchanged. Returns the commit hash and the drift report.'
+  references:
+  - drift.Report
+  - drift.Analyze
+  calls:
+  - drift.Analyze
+- name: signAndCommit
+  kind: method
+  receiver: GitStateRecorder
+  description: signAndCommit writes expected.json (the declared state), actual.json
+    (the observed state), and meta.json — run_id, timestamp, the parent commit hash
+    for chain binding, plus any extraMeta fields — signs the manifest over them via
+    Vault, and commits. Shared by RecordState and RecordDrift.
+  references: []
   calls:
   - Errorf
   - Format
