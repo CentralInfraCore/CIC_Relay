@@ -241,7 +241,7 @@ mod flow {
         audit: ChainedEntry,
     }
 
-    fn execute_flow(input: &FlowInput) -> Result<(Actuated, Vec<String>), String> {
+    fn execute_flow(input: &FlowInput) -> Result<(Actuated, Vec<String>), FlowError> {
         let subject = Cn::new(input.subject.clone());
 
         // 1. Module mints a per-request identity + CSR; the private key stays in.
@@ -282,7 +282,7 @@ mod flow {
     /// tamper-evident, non-secret audit entry; the head [`ChainedEntry`] is
     /// returned alongside the outcome for the Go relay to fold into its
     /// `ProofTrace`.
-    fn actuate(input: &FlowInput, credential: &SecretString) -> Result<Actuated, String> {
+    fn actuate(input: &FlowInput, credential: &SecretString) -> Result<Actuated, FlowError> {
         let policy = if input.insecure {
             EgressPolicy::insecure_allowing(input.allow_hosts.clone())
         } else {
@@ -300,21 +300,60 @@ mod flow {
         for (name, value) in &input.headers {
             req = req.with_header(name.clone(), value.clone());
         }
-        let outcome = runtime()
-            .block_on(executor.execute(&req, credential))
-            .map_err(err_string)?;
-        // Exactly one entry is recorded per actuation on the success path.
-        let audit = sink
-            .entries()
-            .into_iter()
-            .next()
-            .ok_or_else(|| "audit sink recorded no entry".to_owned())?;
-        Ok(Actuated { outcome, audit })
+        let result = runtime().block_on(executor.execute(&req, credential));
+        // The executor records an audit entry on BOTH the allow and deny paths, so
+        // the entry is present whether the actuation succeeded or was refused
+        // (policy deny, SSRF block, limit) — a refused actuation is auditable.
+        let audit = sink.entries().into_iter().next();
+        match result {
+            Ok(outcome) => {
+                let audit = audit.ok_or_else(|| FlowError::msg("audit sink recorded no entry"))?;
+                Ok(Actuated { outcome, audit })
+            }
+            Err(e) => Err(FlowError {
+                message: err_string(e),
+                audit: audit.map(Box::new),
+            }),
+        }
     }
 
     /// Renders any flow error as its (non-secret) Display string.
     fn err_string(e: impl std::fmt::Display) -> String {
         e.to_string()
+    }
+
+    /// A flow failure: a non-secret message plus, when the failure happened
+    /// *during the actuation* (a policy deny, SSRF block, limit, transport
+    /// error), the tamper-evident audit entry the executor still recorded — so a
+    /// refused actuation is auditable, not silent. Failures *before* the actuation
+    /// (countersign/seal/open) carry no audit.
+    struct FlowError {
+        message: String,
+        // Boxed: a `ChainedEntry` is large, and keeping it inline would bloat the
+        // `Err` variant of every flow `Result` (clippy `result_large_err`).
+        audit: Option<Box<ChainedEntry>>,
+    }
+
+    impl FlowError {
+        /// A failure with no associated audit entry (pre-actuation, or a config
+        /// error). The message is non-secret.
+        fn msg(e: impl std::fmt::Display) -> Self {
+            Self {
+                message: e.to_string(),
+                audit: None,
+            }
+        }
+    }
+
+    /// So the many `.map_err(err_string)?` sites (and other `String` errors)
+    /// propagate into a `FlowError` unchanged, without an audit entry.
+    impl From<String> for FlowError {
+        fn from(message: String) -> Self {
+            Self {
+                message,
+                audit: None,
+            }
+        }
     }
 
     /// Dispatches to the requested execution profile. `mock` (default) runs the
@@ -324,24 +363,26 @@ mod flow {
         profile: &str,
         input: &FlowInput,
         doc: &Value,
-    ) -> Result<(Actuated, Vec<String>), String> {
+    ) -> Result<(Actuated, Vec<String>), FlowError> {
         match profile {
             "mock" => execute_flow(input),
             "live" => run_live(input, doc),
-            other => Err(format!("unknown profile: {other}")),
+            other => Err(FlowError::msg(format!("unknown profile: {other}"))),
         }
     }
 
     /// Live profile — real Vault chain (see the `live` module).
     #[cfg(feature = "live-vault")]
-    fn run_live(input: &FlowInput, doc: &Value) -> Result<(Actuated, Vec<String>), String> {
+    fn run_live(input: &FlowInput, doc: &Value) -> Result<(Actuated, Vec<String>), FlowError> {
         live::execute_flow(input, doc)
     }
 
     /// Live profile is not compiled into this staticlib.
     #[cfg(not(feature = "live-vault"))]
-    fn run_live(_input: &FlowInput, _doc: &Value) -> Result<(Actuated, Vec<String>), String> {
-        Err("live profile not compiled in (build cic-ffi with --features live-vault)".to_owned())
+    fn run_live(_input: &FlowInput, _doc: &Value) -> Result<(Actuated, Vec<String>), FlowError> {
+        Err(FlowError::msg(
+            "live profile not compiled in (build cic-ffi with --features live-vault)",
+        ))
     }
 
     /// Projects a [`ChainedEntry`] into the non-secret JSON the Go relay parses:
@@ -387,7 +428,14 @@ mod flow {
                 "scope": scope,
                 "audit": audit_json(&actuated.audit),
             }),
-            Err(message) => json!({ "ok": false, "error": message }),
+            // A refused actuation still carries its (deny) audit entry; a failure
+            // before the actuation carries none.
+            Err(FlowError { message, audit }) => match audit {
+                Some(entry) => {
+                    json!({ "ok": false, "error": message, "audit": audit_json(&entry) })
+                }
+                None => json!({ "ok": false, "error": message }),
+            },
         };
         serde_json::to_vec(&result).ok()
     }
@@ -400,7 +448,7 @@ mod flow {
     /// (M41.2) is a deferred edge.
     #[cfg(feature = "live-vault")]
     mod live {
-        use super::{actuate, err_string, runtime, Actuated, FlowInput};
+        use super::{actuate, err_string, runtime, Actuated, FlowError, FlowInput};
         use base64::Engine;
         use connections::vault::{Cn, SecretRef};
         use module::{seal, ModuleIdentity};
@@ -469,7 +517,7 @@ mod flow {
         pub fn execute_flow(
             input: &FlowInput,
             doc: &Value,
-        ) -> Result<(Actuated, Vec<String>), String> {
+        ) -> Result<(Actuated, Vec<String>), FlowError> {
             let cfg = parse_vault(doc)
                 .ok_or_else(|| "live profile requires a `vault` config".to_owned())?;
 
@@ -714,6 +762,69 @@ mod flow {
             assert!(v["response_body_sha256"].is_null());
             assert_eq!(v["seq"], 3);
             assert_eq!(v["record_hash"], "hash");
+        }
+
+        #[test]
+        fn denied_actuation_is_audited_not_silent() {
+            // A well-formed flow whose target host is not allowlisted: the policy
+            // refuses it before any dial. The refusal must NOT be silent — it
+            // carries a tamper-evident deny audit, the most audit-worthy case.
+            let input = serde_json::json!({
+                "subject": "relay.worker",
+                "scope": ["db.read"],
+                "secret": "hvs.TOPSECRET",
+                "target": "https://not-allowed.example/x",
+                "allow_hosts": ["127.0.0.1"],
+                "trace_id": "deny-trace-1",
+            })
+            .to_string();
+
+            let out = run_flow(input.as_bytes()).expect("produces a result");
+            let v: Value = serde_json::from_slice(&out).expect("json");
+            assert_eq!(v["ok"], false);
+            // The error message is the executor's non-secret Display, not empty.
+            assert!(v["error"]
+                .as_str()
+                .is_some_and(|e| e.contains("actuation denied")));
+
+            let audit = &v["audit"];
+            assert!(
+                audit.is_object(),
+                "a refused actuation must carry a deny audit"
+            );
+            assert_eq!(audit["trace_id"], "deny-trace-1");
+            assert_eq!(audit["host"], "not-allowed.example");
+            assert!(
+                audit["decision"]
+                    .as_str()
+                    .is_some_and(|d| d.starts_with("deny:")),
+                "decision must be a deny, got {:?}",
+                audit["decision"]
+            );
+            assert!(audit["record_hash"].as_str().is_some_and(|h| h.len() == 64));
+            // The secret never crosses back, even on the deny path.
+            assert!(!String::from_utf8_lossy(&out).contains("hvs.TOPSECRET"));
+        }
+
+        #[test]
+        fn failure_without_actuation_has_no_audit() {
+            // A failure that never reached the actuation (here: an unknown profile)
+            // carries no audit — there was nothing to audit.
+            let input = serde_json::json!({
+                "subject": "m", "scope": ["db.read"], "secret": "x",
+                "target": "https://h/x", "profile": "bogus",
+            })
+            .to_string();
+            let out = run_flow(input.as_bytes()).expect("produces a result");
+            let v: Value = serde_json::from_slice(&out).expect("json");
+            assert_eq!(v["ok"], false);
+            assert!(v["error"]
+                .as_str()
+                .is_some_and(|e| e.contains("unknown profile")));
+            assert!(
+                v["audit"].is_null(),
+                "a failure before any actuation must carry no audit"
+            );
         }
 
         #[test]
