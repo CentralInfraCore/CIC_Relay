@@ -24,6 +24,38 @@ objects:
     the hash-chain continuous from source to output.
   implements: []
   references: []
+- name: ActuationProof
+  kind: struct
+  description: 'ActuationProof is the durable, recordable proof of one http-executor
+    actuation (feature-009): the Go-side single-step ProofTrace (with its ChainHash)
+    plus the Rust-side tamper-evident record_hash anchor carried across the FFI seam.
+    Handed to an ExecutionRecorder, it is persisted as a Vault-signed Git commit (WorkflowRecorder
+    → GitStateRecorder), so an actuation becomes durable, cryptographically anchored
+    provenance — not just an in-memory fact. Both chains travel together: the Go ProofTrace
+    ChainHash and the Rust ChainedEntry record_hash.'
+  implements: []
+  references: []
+- name: ProofTraceStepFromActuation
+  kind: func
+  description: ProofTraceStepFromActuation projects an http-executor actuation's non-secret
+    audit facts (feature-009, carried across the Rust↔Go FFI boundary by run_flow)
+    into a ProofTraceStep, so a capability actuation folds into the same hash-chained
+    ProofTrace as native and WASM steps. The request/response body SHA-256 digests
+    become the step's input/output hashes; the step name is the caller's traceID,
+    or "<method> <host>" when no trace id was supplied. It carries only digests —
+    never the credential or any body contents.
+  references: []
+  calls: []
+- name: ProofFromActuation
+  kind: func
+  description: 'ProofFromActuation wraps a single actuation step into an ActuationProof:
+    a complete, recordable single-step ProofTrace (anchored to sourceDigest, with
+    the ChainHash and an injected timestamp) plus the Rust record_hash anchor. Build
+    step with ProofTraceStepFromActuation. Hand the result to an ExecutionRecorder
+    to persist it durably.'
+  references: []
+  calls:
+  - ComputeChainHashV1
 - name: hashValue
   kind: func
   description: hashValue returns the hex-encoded SHA-256 of the canonical JSON representation

@@ -1,0 +1,34 @@
+---
+package: cicffi
+description: ''
+tags:
+- parser
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ActuationAudit
+  kind: struct
+  description: 'ActuationAudit is the non-secret audit record the Rust run_flow emits
+    for an actuation (feature-009). It never carries the credential, the Authorization
+    header, a Vault token, or any body contents — only digests and facts, so it is
+    safe to log or fold into a ProofTrace. It mirrors http-executor''s ChainedEntry(AuditRecord):
+    RecordHash is the tamper-evident SHA-256 that binds this record to its position
+    in the audit chain.'
+  implements: []
+  references: []
+- name: RunFlowResult
+  kind: struct
+  description: RunFlowResult is the typed form of the run_flow JSON output. On success
+    OK is true and Status/BodyBase64/Scope/Audit are populated; on a flow failure
+    OK is false and Error carries the non-secret reason.
+  implements: []
+  references: []
+- name: ParseRunFlowResult
+  kind: func
+  description: ParseRunFlowResult decodes the JSON returned by RunFlow into a RunFlowResult.
+  references: []
+  calls:
+  - Errorf
+  - Unmarshal

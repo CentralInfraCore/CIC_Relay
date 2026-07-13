@@ -1,0 +1,32 @@
+---
+package: recorder
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestActuationProof_PersistsDurably
+  kind: func
+  description: 'TestActuationProof_PersistsDurably proves the recorder span of the
+    feature-009 audit bridge: an http-executor actuation, projected into a cabinet.ActuationProof
+    (Go ProofTrace + Rust record_hash anchor), is persisted through the real WorkflowRecorder
+    → GitStateRecorder as a Vault-signed Git commit.'
+  references:
+  - require.NoError
+  - cabinet.ProofTraceStepFromActuation
+  - cabinet.ProofFromActuation
+  - cabinet.ActuationProof
+  - require.NotNil
+  - assert.Equal
+  - require.Len
+  calls:
+  - assert.Equal
+  - cabinet.ProofFromActuation
+  - cabinet.ProofTraceStepFromActuation
+  - require.Len
+  - require.NoError
+  - require.NotNil

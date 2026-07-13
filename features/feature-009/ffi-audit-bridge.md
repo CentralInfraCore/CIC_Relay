@@ -58,15 +58,29 @@ outcome shape changed, so the C-ABI version is bumped **v2 → v3** (Go
   it into a `ProofTraceStep` + `ComputeChainHashV1`, and re-asserts the secret
   never crosses back.
 
+## Persistence — the recorder span (done)
+
+An actuation's audit is now **durably recordable**. `core/cabinet`:
+
+- `ProofFromActuation(workflowID, sourceDigest, timestamp, recordHash, step)`
+  wraps a single actuation step into an `ActuationProof` — a complete, recordable
+  single-step `ProofTrace` (with its `ChainHash`) **plus** the Rust-side
+  tamper-evident `record_hash` anchor. Both chains travel together.
+- Handed to the existing `ExecutionRecorder` (`WorkflowRecorder` →
+  `GitStateRecorder`), it is persisted as a **Vault-signed Git commit**: the
+  `actual.json` carries the `ProofTrace` `ChainHash` and the `record_hash`, and
+  the manifest hash is signed via `crypto.Sign` (Vault Transit).
+
+An integration test (`core/nexus/recorder/actuation_proof_test.go`) proves the
+full durable path against a temp Git repo + a mock signer; gremlins efficacy on
+`core/cabinet` stays ≥ 90% (no survivors in `proof_trace.go`).
+
 ## Still open (deliberate)
 
 - **Audit on the deny path**: today the `audit` object is emitted only on the
   success path (`ok:true`); a denied/failed actuation still returns
   `{"ok":false,"error":...}` without audit. Threading the audit through the error
   path is the next micro-slice.
-- **Persistence**: wiring the folded `ProofTraceStep` / the `record_hash` anchor
-  into the `core/nexus/recorder` (Git-audit + Vault-signed commit) so the chain
-  is durable — the recorder span of the bridge.
 - **Relay-driven actuation**: making the relay's `Setx` invoke the `http.request`
   capability through this seam (rather than the standalone PoC), so real
-  workflows produce these steps.
+  workflows produce and persist these steps automatically.
