@@ -75,12 +75,23 @@ An integration test (`core/nexus/recorder/actuation_proof_test.go`) proves the
 full durable path against a temp Git repo + a mock signer; gremlins efficacy on
 `core/cabinet` stays ≥ 90% (no survivors in `proof_trace.go`).
 
+## Deny-path audit (done)
+
+A refused actuation is no longer silent. `run_flow` threads the executor's audit
+entry through the error path (the executor records on **both** the allow and
+deny paths), so a policy-denied / SSRF-blocked / limited actuation returns
+`{"ok":false,"error":...,"audit":{...,"decision":"deny:..."}}` — the deny audit
+carries the same tamper-evident `record_hash` as a success. A failure *before*
+the actuation (countersign/seal/open, or an unknown profile) carries no audit,
+since nothing was actuated. Proven by a Rust `run_flow` deny test, a Go
+`ParseRunFlowResult` deny test, and a cgo end-to-end deny test (`make test-ffi`).
+
 ## Still open (deliberate)
 
-- **Audit on the deny path**: today the `audit` object is emitted only on the
-  success path (`ok:true`); a denied/failed actuation still returns
-  `{"ok":false,"error":...}` without audit. Threading the audit through the error
-  path is the next micro-slice.
-- **Relay-driven actuation**: making the relay's `Setx` invoke the `http.request`
-  capability through this seam (rather than the standalone PoC), so real
-  workflows produce and persist these steps automatically.
+- **Relay-driven actuation** is now live via the `http.request` capability (see
+  `http-request-capability.md`); its remaining deploy span is the bootstrap +
+  cgo actuator wiring.
+- **Deny audit through the capability**: a policy-denied capability call fails
+  the workflow step (the actuation is refused), so `Setx` aborts without
+  recording the deny `ProofTrace`. Surfacing the deny audit as a recorded
+  (failed) step — rather than only in the `run_flow` result — is a follow-up.

@@ -177,6 +177,51 @@ func TestRunFlowActuatesWithOpenedCredential(t *testing.T) {
 	}
 }
 
+// TestRunFlowDeniedActuationIsAudited proves the deny-path audit crosses the FFI
+// seam: a policy-refused actuation returns ok:false but still carries its
+// tamper-evident deny audit — the refusal is not silent.
+func TestRunFlowDeniedActuationIsAudited(t *testing.T) {
+	reqJSON, err := json.Marshal(map[string]any{
+		"subject":     "relay.worker",
+		"scope":       []string{"db.read"},
+		"secret":      "hvs.TOPSECRET",
+		"target":      "https://not-allowed.example/x",
+		"allow_hosts": []string{"127.0.0.1"}, // target host is not allowlisted
+		"trace_id":    "deny-e2e-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	out, err := RunFlow(reqJSON)
+	if err != nil {
+		t.Fatalf("RunFlow rejected valid input: %v", err)
+	}
+	res, err := ParseRunFlowResult(out)
+	if err != nil {
+		t.Fatalf("result not JSON: %v (%q)", err, out)
+	}
+	if res.OK {
+		t.Fatal("expected the actuation to be refused (ok:false)")
+	}
+	if res.Audit == nil {
+		t.Fatal("a refused actuation must carry a deny audit")
+	}
+	if res.Audit.TraceID != "deny-e2e-1" {
+		t.Errorf("audit trace_id: got %q", res.Audit.TraceID)
+	}
+	if len(res.Audit.Decision) < 5 || res.Audit.Decision[:5] != "deny:" {
+		t.Errorf("audit decision: got %q, want a deny", res.Audit.Decision)
+	}
+	if len(res.Audit.RecordHash) != 64 {
+		t.Errorf("audit record_hash: got %q", res.Audit.RecordHash)
+	}
+	// The secret never crosses back, even on the deny path.
+	if bytes.Contains(out, []byte("TOPSECRET")) {
+		t.Fatal("secret leaked into the FFI result on the deny path")
+	}
+}
+
 // TestRunFlowRejectsMalformed checks the seam's no-panic rejection contract for
 // run-flow: bad input yields an error, not a crash.
 func TestRunFlowRejectsMalformed(t *testing.T) {

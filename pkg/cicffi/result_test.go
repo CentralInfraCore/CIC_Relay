@@ -68,6 +68,38 @@ func TestParseRunFlowResultFailureHasNoAudit(t *testing.T) {
 	}
 }
 
+func TestParseRunFlowResultDeniedCarriesAudit(t *testing.T) {
+	// A refused actuation (ok:false) now carries its deny audit — the most
+	// audit-worthy case is no longer silent.
+	raw := []byte(`{
+		"ok": false,
+		"error": "actuation denied: host not allowlisted: not-allowed.example",
+		"audit": {
+			"trace_id": "deny-1", "method": "GET", "host": "not-allowed.example",
+			"decision": "deny:host not allowlisted", "status": null, "duration_ms": 0,
+			"request_body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"response_body_sha256": "", "seq": 0,
+			"record_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		}
+	}`)
+	res, err := ParseRunFlowResult(raw)
+	if err != nil {
+		t.Fatalf("ParseRunFlowResult: %v", err)
+	}
+	if res.OK {
+		t.Fatal("OK: got true, want false")
+	}
+	if res.Audit == nil {
+		t.Fatal("Audit: got nil, want the deny audit on a refused actuation")
+	}
+	if got := res.Audit.Decision; got != "deny:host not allowlisted" {
+		t.Errorf("Decision: got %q, want a deny", got)
+	}
+	if len(res.Audit.RecordHash) != 64 {
+		t.Errorf("RecordHash: got %q", res.Audit.RecordHash)
+	}
+}
+
 func TestParseRunFlowResultRejectsGarbage(t *testing.T) {
 	if _, err := ParseRunFlowResult([]byte("not json")); err == nil {
 		t.Fatal("expected an error for non-JSON input")
