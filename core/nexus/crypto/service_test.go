@@ -63,6 +63,54 @@ func TestVaultCryptoService_Sign(t *testing.T) {
 	})
 }
 
+func TestVaultCryptoService_Verify(t *testing.T) {
+	t.Run("valid signature", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, http.MethodPut, r.Method)
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{"valid": true},
+			})
+		})
+		_, svc := setupTestVault(t, handler)
+		ok, err := svc.Verify(context.Background(), []byte("test-data"), "vault:v1:sig")
+		require.NoError(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("invalid signature", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{"valid": false},
+			})
+		})
+		_, svc := setupTestVault(t, handler)
+		ok, err := svc.Verify(context.Background(), []byte("test-data"), "vault:v1:sig")
+		require.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("vault returns error", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		_, svc := setupTestVault(t, handler)
+		_, err := svc.Verify(context.Background(), []byte("test-data"), "vault:v1:sig")
+		assert.Error(t, err)
+	})
+
+	t.Run("missing valid field", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{}})
+		})
+		_, svc := setupTestVault(t, handler)
+		_, err := svc.Verify(context.Background(), []byte("test-data"), "vault:v1:sig")
+		assert.Error(t, err)
+	})
+}
+
 func TestVaultCryptoService_Decrypt(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -41,6 +41,15 @@ objects:
   - Called
   - Error
   - String
+- name: Verify
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+  calls:
+  - Bool
+  - Called
+  - Error
 - name: Decrypt
   kind: method
   receiver: MockCryptoService

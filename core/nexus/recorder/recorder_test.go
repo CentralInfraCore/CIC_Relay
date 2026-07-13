@@ -2,6 +2,8 @@ package recorder
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"math"
@@ -18,7 +20,8 @@ import (
 
 // MockCryptoService implements CryptoService for testing.
 type MockCryptoService struct {
-	SignFunc func(ctx context.Context, data []byte) (string, error)
+	SignFunc   func(ctx context.Context, data []byte) (string, error)
+	VerifyFunc func(ctx context.Context, data []byte, signature string) (bool, error)
 }
 
 func (m *MockCryptoService) Sign(ctx context.Context, data []byte) (string, error) {
@@ -28,12 +31,33 @@ func (m *MockCryptoService) Sign(ctx context.Context, data []byte) (string, erro
 	return "mock-signature-123", nil
 }
 
+func (m *MockCryptoService) Verify(ctx context.Context, data []byte, signature string) (bool, error) {
+	if m.VerifyFunc != nil {
+		return m.VerifyFunc(ctx, data, signature)
+	}
+	return signature == "mock-signature-123", nil
+}
+
 func (m *MockCryptoService) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
 func (m *MockCryptoService) HealthCheck(ctx context.Context) error {
 	return nil
+}
+
+// signingMock returns a mock whose signature deterministically binds the signed
+// data, so a real content tamper (which changes the manifest hash) makes Verify
+// fail — the property VerifyChain relies on.
+func signingMock() *MockCryptoService {
+	return &MockCryptoService{
+		SignFunc: func(_ context.Context, data []byte) (string, error) {
+			return "sig:" + hex.EncodeToString(data), nil
+		},
+		VerifyFunc: func(_ context.Context, data []byte, signature string) (bool, error) {
+			return signature == "sig:"+hex.EncodeToString(data), nil
+		},
+	}
 }
 
 func TestGitStateRecorder_RecordState_Success(t *testing.T) {
@@ -228,4 +252,152 @@ func TestGitStateRecorder_RecordState_WriteFileFails(t *testing.T) {
 	_, err = recorder.RecordState(context.Background(), types.ExpectedState{RunID: "r1"}, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to write")
+}
+
+// craftCommit hand-builds a signed state commit with a controllable parent, to
+// exercise VerifyChain's chain-linkage check independently of RecordState.
+func craftCommit(t *testing.T, r *GitStateRecorder, m *MockCryptoService, parent string) {
+	t.Helper()
+	files := map[string][]byte{
+		"expected.json": []byte(`{"RunID":"crafted"}`),
+		"actual.json":   []byte(`{"ok":true}`),
+	}
+	metaBytes, err := json.MarshalIndent(map[string]string{"run_id": "crafted", "parent": parent}, "", "  ")
+	require.NoError(t, err)
+	files["meta.json"] = metaBytes
+
+	manifest, err := r.createManifest(files)
+	require.NoError(t, err)
+	mb, err := json.MarshalIndent(manifest, "", "  ")
+	require.NoError(t, err)
+	h := sha256.Sum256(mb)
+	sig, err := m.Sign(context.Background(), h[:])
+	require.NoError(t, err)
+	sigBytes, err := json.MarshalIndent(map[string]string{"signature": sig}, "", "  ")
+	require.NoError(t, err)
+	files["signature.meta"] = sigBytes
+
+	for name, content := range files {
+		require.NoError(t, os.WriteFile(filepath.Join(r.RepoPath, name), content, 0644))
+	}
+	require.NoError(t, r.runGit("add", "."))
+	require.NoError(t, r.runGit("commit", "-m", "crafted"))
+}
+
+func TestVerifyChain_ValidChainVerifies(t *testing.T) {
+	ctx := context.Background()
+	r, err := NewGitStateRecorder(t.TempDir(), signingMock())
+	require.NoError(t, err)
+
+	// A chain of three recorded state transitions.
+	for i, run := range []string{"run-1", "run-2", "run-3"} {
+		_, err := r.RecordState(ctx, types.ExpectedState{RunID: run}, map[string]int{"step": i})
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, r.VerifyChain(ctx), "a well-formed signed chain must verify")
+}
+
+func TestVerifyChain_DetectsContentTampering(t *testing.T) {
+	ctx := context.Background()
+	tmp := t.TempDir()
+	r, err := NewGitStateRecorder(tmp, signingMock())
+	require.NoError(t, err)
+
+	_, err = r.RecordState(ctx, types.ExpectedState{RunID: "run-1"}, map[string]string{"a": "1"})
+	require.NoError(t, err)
+
+	// Tamper: commit an altered expected.json while the (now stale) signature.meta
+	// stays. The Vault signature no longer matches the manifest.
+	require.NoError(t, os.WriteFile(filepath.Join(tmp, "expected.json"), []byte(`{"RunID":"TAMPERED"}`), 0644))
+	require.NoError(t, r.runGit("add", "expected.json"))
+	require.NoError(t, r.runGit("commit", "-m", "tamper"))
+
+	err = r.VerifyChain(ctx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "signature verification failed")
+}
+
+func TestVerifyChain_DetectsBrokenChain(t *testing.T) {
+	ctx := context.Background()
+	m := signingMock()
+	r, err := NewGitStateRecorder(t.TempDir(), m)
+	require.NoError(t, err)
+
+	_, err = r.RecordState(ctx, types.ExpectedState{RunID: "run-1"}, nil)
+	require.NoError(t, err)
+
+	// A validly-signed commit whose signed parent points at the wrong commit.
+	craftCommit(t, r, m, "0000000000000000000000000000000000000000")
+
+	err = r.VerifyChain(ctx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "chain broken")
+}
+
+func TestVerifyChain_DetectsInvalidSignature(t *testing.T) {
+	ctx := context.Background()
+	// Signer that always reports invalid on verify.
+	m := &MockCryptoService{
+		SignFunc:   func(_ context.Context, _ []byte) (string, error) { return "whatever", nil },
+		VerifyFunc: func(_ context.Context, _ []byte, _ string) (bool, error) { return false, nil },
+	}
+	r, err := NewGitStateRecorder(t.TempDir(), m)
+	require.NoError(t, err)
+	_, err = r.RecordState(ctx, types.ExpectedState{RunID: "run-1"}, nil)
+	require.NoError(t, err)
+
+	err = r.VerifyChain(ctx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "signature verification failed")
+}
+
+func TestVerifyChain_NoSignedCommits(t *testing.T) {
+	// A fresh repo has only the .gitignore init commit — nothing signed to verify.
+	r, err := NewGitStateRecorder(t.TempDir(), signingMock())
+	require.NoError(t, err)
+	err = r.VerifyChain(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no signed state commits")
+}
+
+func TestVerifyChain_NilCryptoService(t *testing.T) {
+	r := &GitStateRecorder{RepoPath: t.TempDir()}
+	err := r.VerifyChain(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cryptoservice is not configured")
+}
+
+func TestVerifyChain_VerifyBackendError(t *testing.T) {
+	ctx := context.Background()
+	m := &MockCryptoService{
+		SignFunc:   func(_ context.Context, _ []byte) (string, error) { return "s", nil },
+		VerifyFunc: func(_ context.Context, _ []byte, _ string) (bool, error) { return false, errors.New("vault down") },
+	}
+	r, err := NewGitStateRecorder(t.TempDir(), m)
+	require.NoError(t, err)
+	_, err = r.RecordState(ctx, types.ExpectedState{RunID: "r1"}, nil)
+	require.NoError(t, err)
+
+	err = r.VerifyChain(ctx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "verify")
+}
+
+func TestVerifyChain_CorruptSignatureMeta(t *testing.T) {
+	ctx := context.Background()
+	tmp := t.TempDir()
+	r, err := NewGitStateRecorder(tmp, signingMock())
+	require.NoError(t, err)
+	_, err = r.RecordState(ctx, types.ExpectedState{RunID: "r1"}, nil)
+	require.NoError(t, err)
+
+	// Commit a signature.meta that is not valid JSON.
+	require.NoError(t, os.WriteFile(filepath.Join(tmp, "signature.meta"), []byte("not json"), 0644))
+	require.NoError(t, r.runGit("add", "signature.meta"))
+	require.NoError(t, r.runGit("commit", "-m", "corrupt"))
+
+	err = r.VerifyChain(ctx)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "signature.meta")
 }

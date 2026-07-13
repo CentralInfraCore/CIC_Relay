@@ -96,9 +96,19 @@ func (r *GitStateRecorder) RecordState(ctx context.Context, expected types.Expec
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal actual state: %w", err)
 	}
+	// The parent commit hash binds this record to its predecessor: it is part of
+	// the signed manifest, so the Vault signature covers the chain position — a
+	// tamper-evident signed chain (changing any earlier commit invalidates the
+	// git parent linkage that every later signature attests to). Empty only if
+	// there is no prior commit (never, since init() makes the .gitignore root).
+	parent, err := r.getHeadHash()
+	if err != nil {
+		parent = ""
+	}
 	meta := map[string]interface{}{
 		"run_id":    expected.RunID,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"parent":    parent,
 	}
 	filesToWrite["meta.json"], err = json.MarshalIndent(meta, "", "  ")
 	if err != nil {
@@ -185,4 +195,126 @@ func (r *GitStateRecorder) getHeadHash() (string, error) {
 		return "", fmt.Errorf("failed to get HEAD hash: %w", err)
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+// VerifyChain walks the recorded state commits oldest-to-newest and verifies, for
+// each, that (1) the Vault signature over the file manifest is valid — the
+// content is authentic and unaltered — and (2) the parent commit hash the record
+// signed matches its actual git parent — the chain is intact. Any tampering with
+// a committed file or any break in the chain is detected. The initial .gitignore
+// commit (which carries no signature) is skipped. Returns nil iff the whole chain
+// of state commits verifies; the signing key never leaves Vault.
+func (r *GitStateRecorder) VerifyChain(ctx context.Context) error {
+	if r.CryptoService == nil {
+		return fmt.Errorf("cryptoservice is not configured")
+	}
+	commits, err := r.listCommits()
+	if err != nil {
+		return err
+	}
+	verified := 0
+	for _, c := range commits {
+		sigRaw, err := r.showFileAtCommit(c, "signature.meta")
+		if err != nil {
+			continue // not a state commit (e.g. the initial .gitignore commit)
+		}
+		expected, err := r.showFileAtCommit(c, "expected.json")
+		if err != nil {
+			return fmt.Errorf("commit %s: missing expected.json: %w", c, err)
+		}
+		actual, err := r.showFileAtCommit(c, "actual.json")
+		if err != nil {
+			return fmt.Errorf("commit %s: missing actual.json: %w", c, err)
+		}
+		metaRaw, err := r.showFileAtCommit(c, "meta.json")
+		if err != nil {
+			return fmt.Errorf("commit %s: missing meta.json: %w", c, err)
+		}
+
+		// Recompute the signed manifest exactly as RecordState did.
+		manifest, err := r.createManifest(map[string][]byte{
+			"expected.json": expected,
+			"actual.json":   actual,
+			"meta.json":     metaRaw,
+		})
+		if err != nil {
+			return fmt.Errorf("commit %s: %w", c, err)
+		}
+		manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			return fmt.Errorf("commit %s: marshal manifest: %w", c, err)
+		}
+		manifestHash := sha256.Sum256(manifestBytes)
+
+		var sigDoc struct {
+			Signature string `json:"signature"`
+		}
+		if err := json.Unmarshal(sigRaw, &sigDoc); err != nil {
+			return fmt.Errorf("commit %s: invalid signature.meta: %w", c, err)
+		}
+		ok, err := r.CryptoService.Verify(ctx, manifestHash[:], sigDoc.Signature)
+		if err != nil {
+			return fmt.Errorf("commit %s: verify: %w", c, err)
+		}
+		if !ok {
+			return fmt.Errorf("commit %s: signature verification failed (content altered or wrong key)", c)
+		}
+
+		// Chain linkage: the parent the record signed must be the real git parent.
+		var m struct {
+			Parent string `json:"parent"`
+		}
+		if err := json.Unmarshal(metaRaw, &m); err != nil {
+			return fmt.Errorf("commit %s: invalid meta.json: %w", c, err)
+		}
+		gitParent, err := r.parentOf(c)
+		if err != nil {
+			return fmt.Errorf("commit %s: %w", c, err)
+		}
+		if m.Parent != gitParent {
+			return fmt.Errorf("commit %s: chain broken (signed parent %q != git parent %q)", c, m.Parent, gitParent)
+		}
+		verified++
+	}
+	if verified == 0 {
+		return fmt.Errorf("no signed state commits to verify")
+	}
+	return nil
+}
+
+// listCommits returns all commit hashes oldest-to-newest.
+func (r *GitStateRecorder) listCommits() ([]string, error) {
+	cmd := exec.Command("git", "log", "--reverse", "--format=%H")
+	cmd.Dir = r.RepoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list commits: %w", err)
+	}
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return nil, nil
+	}
+	return strings.Split(trimmed, "\n"), nil
+}
+
+// showFileAtCommit returns the content of file as it existed at commit.
+func (r *GitStateRecorder) showFileAtCommit(commit, file string) ([]byte, error) {
+	cmd := exec.Command("git", "show", commit+":"+file)
+	cmd.Dir = r.RepoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s at %s: %w", file, commit, err)
+	}
+	return out, nil
+}
+
+// parentOf returns the parent commit hash of commit, or "" if it is the root.
+func (r *GitStateRecorder) parentOf(commit string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--verify", "--quiet", commit+"^")
+	cmd.Dir = r.RepoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return "", nil // no parent → root commit
+	}
+	return strings.TrimSpace(string(out)), nil
 }

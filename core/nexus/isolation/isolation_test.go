@@ -33,6 +33,11 @@ func (m *MockCryptoService) Sign(ctx context.Context, data []byte) (string, erro
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockCryptoService) Verify(ctx context.Context, data []byte, signature string) (bool, error) {
+	args := m.Called(ctx, data, signature)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockCryptoService) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	args := m.Called(ctx, ciphertext)
 	if args.Get(0) == nil {
