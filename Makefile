@@ -496,6 +496,8 @@ mutate-all: ## Run mutation testing on all critical packages (efficacy ≥ 90%)
 		GOFLAGS="$(GOFLAGS)" gremlins unleash --workers $(GREMLINS_WORKERS) --threshold-efficacy 90 ./core/modules/schemapipeline; \
 		echo "--- core/modules/schemacompile ---"; \
 		GOFLAGS="$(GOFLAGS)" gremlins unleash --workers $(GREMLINS_WORKERS) --threshold-efficacy 90 ./core/modules/schemacompile; \
+		echo "--- core/modules/httpcap ---"; \
+		GOFLAGS="$(GOFLAGS)" gremlins unleash --workers $(GREMLINS_WORKERS) --threshold-efficacy 90 ./core/modules/httpcap; \
 		rm -rf /tmp/gremlins-run \
 	)
 

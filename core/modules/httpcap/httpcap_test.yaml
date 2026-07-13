@@ -1,0 +1,68 @@
+---
+package: httpcap
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestRequestFunc_SuccessReturnsNonSecretResult
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ActuatorFunc
+  - Background
+  - Fatal
+  - Fatalf
+  - Is
+  - New
+  - NewRequestFunc
+  - TestRequestFunc_ActuatorErrorPropagates
+  - TestRequestFunc_GarbageResultIsAnError
+  - TestRequestFunc_NilActuator
+  - TestRequestFunc_UnmarshalableInputIsAnError
+- name: TestRequestFunc_NilActuator
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Background
+  - Fatalf
+  - Is
+  - NewRequestFunc
+- name: TestRequestFunc_ActuatorErrorPropagates
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ActuatorFunc
+  - Background
+  - Fatal
+  - New
+  - NewRequestFunc
+- name: TestRequestFunc_GarbageResultIsAnError
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ActuatorFunc
+  - Background
+  - Fatal
+  - NewRequestFunc
+- name: TestRequestFunc_UnmarshalableInputIsAnError
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ActuatorFunc
+  - Background
+  - Fatal
+  - NewRequestFunc
+- name: okResult
+  kind: const
+  description: ''
+  references: []
