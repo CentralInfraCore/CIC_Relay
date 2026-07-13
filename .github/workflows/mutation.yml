@@ -2,18 +2,15 @@ name: mutation
 
 # Mutation testing (gremlins for Go, cargo-mutants for Rust) is the slowest,
 # most minute-hungry gate and rarely catches anything the unit/coverage gates
-# miss on a per-commit basis. It is therefore NOT run on every push/PR — it runs
-# once a day on `main` and can be triggered manually. Run it locally before a
-# risky change (`make mutate-all`, `make mutate-rust`).
+# miss on a per-commit basis. It is therefore NOT run on every push/PR, and NOT
+# on a schedule either — it is run **manually on demand** (workflow_dispatch),
+# and locally before risky changes (`make mutate-all`, `make mutate-rust`).
 #
-# NOTE: because this no longer runs on pull_request, remove `mutation` from the
+# NOTE: because this does not run on pull_request, remove `mutation` from the
 # branch-protection *required status checks* for `main`, or PRs will wait on a
 # check that never reports.
 on:
   workflow_dispatch: {}
-  schedule:
-    # Daily at 02:23 UTC (off the hour, per GitHub's scheduling guidance).
-    - cron: "23 2 * * *"
 
 concurrency:
   group: mutation-${{ github.ref }}
