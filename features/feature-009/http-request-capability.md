@@ -51,10 +51,29 @@ like any other step.
   `ProofTrace` step is produced (`module = http@1.0`), the `ChainHash` is
   reproducible, and the credential never reaches the trace.
 
-## Still open (the deploy span)
+## Deploy span (done)
 
-- **Bootstrap registration + cgo actuator**: registering `http@1.0` in
-  `cmd/relay/bootstrap.go` with a `cicffi.RunFlow`-backed `Actuator` behind the
-  `ffi_cgo` build tag (nil / capability-absent in the default build), so a
-  cgo-built relay serves the live capability end-to-end.
-- **Audit on the deny path** (unchanged from the bridge doc).
+The capability is now wired into the relay. `cmd/relay`:
+
+- `newActuator()` is build-tag split: `actuator_stub.go` (`!ffi_cgo`) returns
+  `nil`; `actuator_cgo.go` (`ffi_cgo`) returns an `ffiActuator` whose `RunFlow`
+  **is** `cicffi.RunFlow`. So the cabinet never imports cgo, and the default relay
+  is unchanged.
+- `registerHTTPCapability(ctx, svc, actuator)` (called from
+  `registerNativeComponents` with `newActuator()`) registers `http@1.0` with a
+  `request` function when an actuator is present, and is a no-op for `nil`. A
+  cgo-built relay therefore serves the live `http@1.0.request` capability
+  end-to-end; the default (non-cgo) relay omits it.
+
+Tested: default-build unit tests (`newActuator()` nil, `registerHTTPCapability`
+no-op / registers / error paths — cmd/relay coverage 89.7% ≥ 80) and a cgo test
+(`actuator_cgo_test.go`, run by `make test-ffi` against the linked staticlib):
+the actuator is non-nil and `http@1.0` is registered with `request`. The
+`registerNativeComponents` module-count assertion is adaptive (10, or 11 under
+`ffi_cgo`).
+
+## Still open (deliberate)
+
+- **Audit on the deny path through the capability** (see the bridge doc): a
+  refused capability call fails the workflow step, so `Setx` aborts without
+  recording the deny `ProofTrace`.

@@ -85,6 +85,26 @@ objects:
   - logrus.Info
   - schemacompile.NewAssertSourceFunc
   - schemacompile.NewSignArtifactFunc
+- name: registerHTTPCapability
+  kind: func
+  description: registerHTTPCapability registers the `http@1.0` native capability backed
+    by actuator. A nil actuator (a relay without the ffi_cgo bridge) is a no-op —
+    the capability is simply absent. Kept separate from the build-tag split so it
+    is fully testable in the default build with a mock actuator.
+  references:
+  - cabinet.Cabinet
+  - httpcap.Actuator
+  - cabinet.BaseBlock
+  - cabinet.NewModuleDescriptor
+  - cabinet.NativeFunctions
+  - httpcap.NewRequestFunc
+  - logrus.Info
+  - cabinet.Cabinet.PutModule
+  calls:
+  - cabinet.Cabinet.PutModule
+  - cabinet.NewModuleDescriptor
+  - httpcap.NewRequestFunc
+  - logrus.Info
 - name: loadEmbeddedComponents
   kind: func
   description: loadEmbeddedComponents loads schemas, workflows, and PKI assets from

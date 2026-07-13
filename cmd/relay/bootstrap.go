@@ -16,6 +16,7 @@ import (
 	"centralrelay/core/cabinet"
 	"centralrelay/core/modules/certselfsigned"
 	"centralrelay/core/modules/cibuild"
+	"centralrelay/core/modules/httpcap"
 	"centralrelay/core/modules/schemacompile"
 	"centralrelay/core/modules/schemapipeline"
 	"centralrelay/pkg/merkle"
@@ -233,6 +234,39 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	}
 
 	logrus.Info("Successfully registered all native components.")
+
+	// --- Register the http.request capability (feature-009) ---
+	// Registered last and only when an actuator is wired in — newActuator() is nil
+	// in the default build and FFI-backed under `ffi_cgo` (see actuator_stub.go /
+	// actuator_cgo.go). registerHTTPCapability no-ops for a nil actuator, so the
+	// default relay is unchanged. Returned directly so the default (nil) path has
+	// no dead error branch.
+	return registerHTTPCapability(ctx, svc, newActuator())
+}
+
+// registerHTTPCapability registers the `http@1.0` native capability backed by
+// actuator. A nil actuator (a relay without the ffi_cgo bridge) is a no-op — the
+// capability is simply absent. Kept separate from the build-tag split so it is
+// fully testable in the default build with a mock actuator.
+func registerHTTPCapability(ctx context.Context, svc cabinet.Cabinet, actuator httpcap.Actuator) error {
+	if actuator == nil {
+		return nil
+	}
+	httpMeta := cabinet.BaseBlock{
+		Name:        "http",
+		Version:     "1.0",
+		Description: "The http.request capability: an authenticated HTTP actuation through the feature-008/009 trust-flow, driven by Setx and folded into the ProofTrace.",
+	}
+	httpModule, err := cabinet.NewModuleDescriptor(ctx, httpMeta, "native/http", nil,
+		[]string{"status", "body_base64", "scope", "audit"}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create http module descriptor: %w", err)
+	}
+	httpModule.NativeImpl = cabinet.NativeFunctions{"request": httpcap.NewRequestFunc(actuator)}
+	if err := svc.PutModule(httpModule); err != nil {
+		return fmt.Errorf("failed to register http module: %w", err)
+	}
+	logrus.Info("Registered http.request capability (ffi bridge present).")
 	return nil
 }
 
