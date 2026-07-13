@@ -1,0 +1,37 @@
+---
+package: drift
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestClassify
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Classify
+  - Fatalf
+  - Run
+- name: TestAnalyze_ReportDetails
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Analyze
+  - DeepEqual
+  - Errorf
+  - Fatalf
+- name: TestAnalyze_Deterministic
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Analyze
+  - DeepEqual
+  - Fatal
+  - Fatalf
