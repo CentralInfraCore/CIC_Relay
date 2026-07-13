@@ -1,6 +1,7 @@
 package cabinet
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,44 @@ func TestProofTraceStepFromActuation(t *testing.T) {
 			ComputeChainHashV1("wf", "src", []ProofTraceStep{s2}),
 		)
 	})
+}
+
+func TestProofFromActuation(t *testing.T) {
+	step := ProofTraceStepFromActuation("trace-1", "GET", "127.0.0.1", "reqhash", "resphash")
+	proof := ProofFromActuation("cap-flow", "src-rev", "2026-07-13T00:00:00Z", "abc123recordhash", step)
+
+	require.NotNil(t, proof.ProofTrace)
+	assert.Equal(t, "cap-flow", proof.ProofTrace.WorkflowID)
+	assert.Equal(t, "src-rev", proof.ProofTrace.SourceDigest)
+	assert.Equal(t, "2026-07-13T00:00:00Z", proof.ProofTrace.Timestamp)
+	assert.Equal(t, "abc123recordhash", proof.RecordHash)
+	require.Len(t, proof.ProofTrace.Steps, 1)
+	assert.Equal(t, step, proof.ProofTrace.Steps[0])
+
+	// The ChainHash is the canonical hash over exactly this single-step trace.
+	want := ComputeChainHashV1("cap-flow", "src-rev", []ProofTraceStep{step})
+	assert.Equal(t, want, proof.ProofTrace.ChainHash)
+	assert.Len(t, proof.ProofTrace.ChainHash, 64)
+
+	t.Run("records through an ExecutionRecorder", func(t *testing.T) {
+		var got interface{}
+		var gotID string
+		rec := recorderFunc(func(_ context.Context, id string, trace interface{}) error {
+			gotID = id
+			got = trace
+			return nil
+		})
+		require.NoError(t, rec.Record(context.Background(), proof.ProofTrace.WorkflowID, proof))
+		assert.Equal(t, "cap-flow", gotID)
+		assert.Equal(t, proof, got)
+	})
+}
+
+// recorderFunc adapts a func to the ExecutionRecorder interface for testing.
+type recorderFunc func(ctx context.Context, workflowID string, trace interface{}) error
+
+func (f recorderFunc) Record(ctx context.Context, workflowID string, trace interface{}) error {
+	return f(ctx, workflowID, trace)
 }
 
 func TestComputeChainHash(t *testing.T) {
