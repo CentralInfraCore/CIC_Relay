@@ -4,8 +4,8 @@ on:
   # `pull_request` already runs this full suite on every branch (it's the
   # merge gate); scoping `push` to `main` avoids running the identical jobs
   # twice for the same commit whenever a branch has an open PR (only
-  # `mutation`/`coverage` differ between the two events — everything else
-  # was literally duplicated work).
+  # `coverage` differs between the two events — everything else was literally
+  # duplicated work). Mutation runs in its own scheduled workflow.
   push:
     branches: ["main"]
   pull_request:
@@ -170,62 +170,10 @@ jobs:
           name: coverage-report
           path: coverage.html
 
-  mutation:
-    # Gremlins mutation testing is too slow to run on every push — it's a
-    # merge gate only, not incremental feedback.
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25.12"
-
-      - name: Go mod download
-        run: go mod download || true
-
-      - name: Install gremlins
-        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
-
-      - name: Mutation — core/cabinet (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/cabinet
-
-      - name: Mutation — core/modules/schemapipeline (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/modules/schemapipeline
-
-      - name: Mutation — core/modules/schemacompile (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/modules/schemacompile
-
-      - name: Mutation — core/modules/httpcap (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/modules/httpcap
-
-      # Rust mutation testing (cargo-mutants) — same PR-only mutation gate as
-      # gremlins. Fails if any viable mutant survives.
-      - name: Install pinned Rust toolchain (rust-toolchain.toml)
-        run: rustup show active-toolchain || rustup toolchain install
-
-      - name: Install cargo-mutants
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-mutants
-
-      - name: Mutation — Rust workspace (no surviving mutants)
-        run: cargo mutants --workspace
+  # NOTE: mutation testing (gremlins + cargo-mutants) moved to its own workflow
+  # (.github/workflows/mutation.yml) — it runs daily on `main` and on demand
+  # (workflow_dispatch), not on every PR, to conserve Actions minutes. Run it
+  # locally before risky changes: `make mutate-all`, `make mutate-rust`.
 
   python:
     # Quality + test gate for the Python tooling (tools/, tests/). Mirrors the
