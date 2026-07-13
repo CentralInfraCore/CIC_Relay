@@ -9,6 +9,44 @@ used_in: []
 entrypoint: false
 related_nodes: []
 objects:
+- name: recorderFunc
+  kind: type
+  description: recorderFunc adapts a func to the ExecutionRecorder interface for testing.
+  references: []
+- name: TestProofTraceStepFromActuation
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.Len
+  - assert.NotEqual
+  calls:
+  - assert.Equal
+  - assert.Len
+  - assert.NotEmpty
+  - assert.NotEqual
+- name: TestProofFromActuation
+  kind: func
+  description: ''
+  references:
+  - require.NotNil
+  - assert.Equal
+  - require.Len
+  - assert.Len
+  - require.NoError
+  calls:
+  - assert.Equal
+  - assert.Len
+  - require.Len
+  - require.NoError
+  - require.NotNil
+- name: Record
+  kind: method
+  receiver: recorderFunc
+  description: ''
+  references: []
+  calls: []
 - name: TestComputeChainHash
   kind: func
   description: ''

@@ -1,0 +1,35 @@
+---
+package: cicffi
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestParseRunFlowResultSuccessWithAudit
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+  - Fatal
+  - Fatalf
+  - ParseRunFlowResult
+- name: TestParseRunFlowResultFailureHasNoAudit
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+  - Fatal
+  - Fatalf
+  - ParseRunFlowResult
+- name: TestParseRunFlowResultRejectsGarbage
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Fatal
+  - ParseRunFlowResult
