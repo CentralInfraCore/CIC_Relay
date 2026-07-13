@@ -37,8 +37,17 @@ The gate decides; the applier knows nothing about the policy — the Relay's
 wrong-actor / empty-actor / empty-ref / unknown-action refusals, the multi-actor
 allowlist, and the `Denied` error. Added to the CI mutation list.
 
-## Next (demo track — the closing act)
+## Rollback orchestration (done)
 
-- Rollback orchestration: extract a target verified commit's declared state, run
-  the OIS gate, and — if authorized — record the restored desired as a new signed
-  `intent`/state event, then surface it in `make demo` (§8.4).
+`GitStateRecorder.Rollback(ctx, actor, targetRef, reason, policy)` ties it
+together (§8.4): it builds the rollback `Intent`, authorizes it via the OIS
+`policy`, extracts the declared state at the target verified commit, and — if
+authorized — records that restored state as a new Vault-signed, parent-linked
+commit whose meta attests the rollback (`action`, `rollback_target`,
+`rollback_actor`, `rollback_reason`). A policy refusal surfaces as `*ois.Denied`.
+The physical re-apply (Terraform) is out of scope.
+
+`make demo` now closes with the full §8.4: an **intruder is denied**, then
+**`relay.operator` is authorized**, the state is restored, and `VerifyChain`
+confirms the rollback is itself a signed, attested event — the §8 trust chain is
+complete (record → sign → verify → drift → authorized, proven rollback).

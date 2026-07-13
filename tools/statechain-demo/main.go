@@ -20,6 +20,7 @@ import (
 
 	"centralrelay/core/nexus/crypto"
 	"centralrelay/core/nexus/drift"
+	"centralrelay/core/nexus/ois"
 	"centralrelay/core/nexus/recorder"
 )
 
@@ -67,10 +68,14 @@ func run() error {
 		{"scaled", map[string]interface{}{"network": "10.0.1.0/24", "vms": "5"}, "someone changed vms by hand"},
 		{"deleted", map[string]interface{}{}, "infrastructure torn down"},
 	}
+	var bootRef string
 	for i, obs := range observations {
 		commit, report, err := rec.RecordDrift(ctx, obs.label, desired, obs.actual)
 		if err != nil {
 			return fmt.Errorf("record %s: %w", obs.label, err)
+		}
+		if i == 0 {
+			bootRef = commit // the in-sync state we will roll back to
 		}
 		printDriftCommit(repo, i+1, commit, report, obs.note)
 	}
@@ -80,6 +85,22 @@ func run() error {
 		return fmt.Errorf("a freshly recorded chain must verify, but: %w", err)
 	}
 	fmt.Print("  ✓ signed state chain verified — signatures valid, chain intact\n\n")
+
+	// §8.4: an authorized rollback to the earlier verified state, OIS-gated.
+	policy := ois.NewAllowlistPolicy().Allow(ois.Rollback, "relay.operator")
+	fmt.Println("[*] rollback to the in-sync state, gated by OpenIntentSign (OIS):")
+	if _, _, err := rec.Rollback(ctx, "intruder", bootRef, "sneaky restore", policy); err != nil {
+		fmt.Printf("  ✗ intruder denied: %v\n", err)
+	}
+	rbCommit, restored, err := rec.Rollback(ctx, "relay.operator", bootRef, "restore stable state", policy)
+	if err != nil {
+		return fmt.Errorf("authorized rollback failed: %w", err)
+	}
+	fmt.Printf("  ✓ relay.operator authorized → restored %v as commit %s\n", restored, short(rbCommit))
+	if err := rec.VerifyChain(ctx); err != nil {
+		return fmt.Errorf("the chain must verify after rollback, but: %w", err)
+	}
+	fmt.Print("  ✓ chain still verifies — the rollback is itself a signed, attested event\n\n")
 
 	// Tamper: alter a committed state without re-signing. The Vault signature no
 	// longer matches the manifest.

@@ -62,6 +62,19 @@ objects:
   - drift.Analyze
   calls:
   - drift.Analyze
+- name: Rollback
+  kind: method
+  receiver: GitStateRecorder
+  description: 'Rollback restores the declared state recorded at targetRef, gated
+    by OIS (§8.4): it authorizes the rollback intent via policy, extracts the declared
+    state at the target commit, and — if authorized — records that restored state
+    as a new Vault-signed, parent-linked commit whose meta attests the authorized
+    rollback (the physical re-apply is out of scope). It returns the new commit hash
+    and the restored declared state; a policy refusal surfaces as the policy''s error
+    (e.g. *ois.Denied), so the caller can tell "not authorized" from a recording failure.'
+  references:
+  - ois.Policy
+  calls: []
 - name: signAndCommit
   kind: method
   receiver: GitStateRecorder

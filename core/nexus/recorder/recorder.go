@@ -15,6 +15,7 @@ import (
 
 	"centralrelay/core/nexus/crypto"
 	"centralrelay/core/nexus/drift"
+	"centralrelay/core/nexus/ois"
 	"centralrelay/core/nexus/types"
 )
 
@@ -104,6 +105,44 @@ func (r *GitStateRecorder) RecordDrift(ctx context.Context, runID string, desire
 	}
 	commit, err := r.signAndCommit(ctx, runID, desired, actual, extra)
 	return commit, report, err
+}
+
+// Rollback restores the declared state recorded at targetRef, gated by OIS
+// (§8.4): it authorizes the rollback intent via policy, extracts the declared
+// state at the target commit, and — if authorized — records that restored state
+// as a new Vault-signed, parent-linked commit whose meta attests the authorized
+// rollback (the physical re-apply is out of scope). It returns the new commit
+// hash and the restored declared state; a policy refusal surfaces as the policy's
+// error (e.g. *ois.Denied), so the caller can tell "not authorized" from a
+// recording failure.
+func (r *GitStateRecorder) Rollback(ctx context.Context, actor, targetRef, reason string, policy ois.Policy) (string, map[string]interface{}, error) {
+	if policy == nil {
+		return "", nil, fmt.Errorf("no OIS policy configured")
+	}
+	intent := ois.Intent{Actor: actor, Action: ois.Rollback, TargetRef: targetRef, Reason: reason}
+	if err := policy.Authorize(intent); err != nil {
+		return "", nil, err // e.g. *ois.Denied — the rollback is not authorized
+	}
+
+	expectedRaw, err := r.showFileAtCommit(targetRef, "expected.json")
+	if err != nil {
+		return "", nil, fmt.Errorf("no recorded state at %q: %w", targetRef, err)
+	}
+	var restored map[string]interface{}
+	if err := json.Unmarshal(expectedRaw, &restored); err != nil {
+		return "", nil, fmt.Errorf("state at %q is not a declarable object: %w", targetRef, err)
+	}
+
+	commit, err := r.signAndCommit(ctx, "rollback", restored, restored, map[string]interface{}{
+		"action":          string(ois.Rollback),
+		"rollback_target": targetRef,
+		"rollback_actor":  actor,
+		"rollback_reason": reason,
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	return commit, restored, nil
 }
 
 // signAndCommit writes expected.json (the declared state), actual.json (the

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"centralrelay/core/nexus/drift"
+	"centralrelay/core/nexus/ois"
 	"centralrelay/core/nexus/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -447,4 +448,59 @@ func TestRecordDrift_MixedWithRecordStateVerifies(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, r.VerifyChain(ctx), "a chain mixing RecordState and RecordDrift must verify")
+}
+
+func TestRollback_AuthorizedRestoresAndVerifies(t *testing.T) {
+	ctx := context.Background()
+	r, err := NewGitStateRecorder(t.TempDir(), signingMock())
+	require.NoError(t, err)
+
+	desired := map[string]interface{}{"network": "10.0.1.0/24", "vms": "3"}
+	stable, _, err := r.RecordDrift(ctx, "boot", desired, desired)
+	require.NoError(t, err)
+	_, _, err = r.RecordDrift(ctx, "scaled", desired, map[string]interface{}{"network": "10.0.1.0/24", "vms": "9"})
+	require.NoError(t, err)
+
+	policy := ois.NewAllowlistPolicy().Allow(ois.Rollback, "relay.operator")
+	commit, restored, err := r.Rollback(ctx, "relay.operator", stable, "restore stable", policy)
+	require.NoError(t, err)
+	assert.NotEmpty(t, commit)
+	assert.Equal(t, desired, restored)
+
+	// The rollback is attested in the signed meta (action + target).
+	metaRaw, err := os.ReadFile(filepath.Join(r.RepoPath, "meta.json"))
+	require.NoError(t, err)
+	assert.Contains(t, string(metaRaw), "rollback")
+	assert.Contains(t, string(metaRaw), stable)
+
+	// The whole chain — including the rollback commit — still verifies.
+	require.NoError(t, r.VerifyChain(ctx))
+}
+
+func TestRollback_DeniedByPolicy(t *testing.T) {
+	ctx := context.Background()
+	r, err := NewGitStateRecorder(t.TempDir(), signingMock())
+	require.NoError(t, err)
+	commit, _, err := r.RecordDrift(ctx, "boot", map[string]interface{}{"a": "1"}, map[string]interface{}{"a": "1"})
+	require.NoError(t, err)
+
+	policy := ois.NewAllowlistPolicy() // authorizes nobody
+	_, _, err = r.Rollback(ctx, "intruder", commit, "sneaky", policy)
+	var d *ois.Denied
+	require.ErrorAs(t, err, &d)
+}
+
+func TestRollback_NilPolicyAndBadTarget(t *testing.T) {
+	ctx := context.Background()
+	r, err := NewGitStateRecorder(t.TempDir(), signingMock())
+	require.NoError(t, err)
+
+	_, _, err = r.Rollback(ctx, "op", "abc", "x", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no OIS policy")
+
+	policy := ois.NewAllowlistPolicy().Allow(ois.Rollback, "op")
+	_, _, err = r.Rollback(ctx, "op", "0000000000000000000000000000000000000000", "x", policy)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no recorded state")
 }
