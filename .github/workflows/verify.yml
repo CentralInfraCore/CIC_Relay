@@ -132,6 +132,7 @@ jobs:
               */core/nexus/types) echo "$p: skip (types-only)"; continue ;;
               */embedded/pki)     echo "$p: skip (no test files)"; continue ;;
               */tools/sourcehash) echo "$p: skip (main entry only)"; continue ;;
+              */tools/statechain-demo) echo "$p: skip (live demo entry; exercised by make demo)"; continue ;;
               */pkg/cicffi)       echo "$p: skip (cgo bridge; tested in the ffi job under -tags ffi_cgo)"; continue ;;
             esac
             go test -coverprofile=/tmp/pkg_cover.out "$p" > /dev/null 2>&1 || continue

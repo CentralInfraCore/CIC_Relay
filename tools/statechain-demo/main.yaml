@@ -1,0 +1,74 @@
+---
+package: main
+description: 'Command statechain-demo is a live, self-contained demonstration of the
+  feature-010 signed state chain (§8.1 + §8.5 of the demo plan): it records a few
+  infrastructure-state transitions into a git repo, each committed with a Vault-Transit
+  signature over a manifest that binds the parent commit, then verifies the whole
+  chain — the signing key never leaves Vault. Finally it tampers a committed state
+  and re-verifies, showing the chain is tamper-evident. It expects VAULT_ADDR / VAULT_TOKEN
+  / VAULT_CACERT in the environment (set by scripts/statechain-demo.sh, which spins
+  a throwaway dev-tls OpenBao with a Transit `ecdsa-p256` key). Run it via `make demo`.'
+tags:
+- builder
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Exit
+  - Fprintf
+- name: run
+  kind: func
+  description: ''
+  references:
+  - crypto.NewVaultCryptoService
+  - recorder.NewGitStateRecorder
+  - types.ExpectedStateRunID
+  calls:
+  - crypto.NewVaultCryptoService
+  - recorder.NewGitStateRecorder
+- name: printCommit
+  kind: func
+  description: printCommit shows the just-recorded commit's identity, parent linkage,
+    and the (truncated) Vault signature, read from the working tree it was written
+    to.
+  references: []
+  calls:
+  - Join
+  - Printf
+- name: tamper
+  kind: func
+  description: tamper overwrites actual.json with different content and commits it,
+    leaving the (now stale) signature.meta in place.
+  references: []
+  calls:
+  - CombinedOutput
+  - Command
+  - Errorf
+  - Join
+  - WriteFile
+- name: readJSON
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ReadFile
+  - Unmarshal
+- name: short
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: envOr
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Getenv

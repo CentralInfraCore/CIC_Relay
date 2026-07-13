@@ -17,7 +17,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	infra-down infra.help \
 	mutate mutate-all \
 	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust \
-	ffi-staticlib test-ffi
+	ffi-staticlib test-ffi demo
 
 # Default to showing help
 all: help
@@ -398,6 +398,16 @@ test-ffi-live: ## Live FFI trust-flow (Go → Rust → live Vault → HTTP; need
 		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
 		go-builder /git-source/scripts/ffi-live-e2e.sh
 
+# Live demo of the feature-010 signed state chain: spins a throwaway dev-tls
+# OpenBao with a Transit signing key, records signed state transitions, verifies
+# the chain, and proves it is tamper-evident. Opt-in; not a CI gate.
+demo: ## Live signed-state-chain demo (throwaway dev-tls Vault; needs the vault/openbao binary)
+	@command -v vault >/dev/null 2>&1 || { echo "vault/openbao binary not found on host — install it to run the demo"; exit 1; }
+	@echo "Running the signed state-chain demo (throwaway dev-tls server)..."
+	docker compose run --rm --entrypoint bash \
+		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
+		go-builder -c 'cd /git-source && scripts/statechain-demo.sh'
+
 # =============================================================================
 # Code Quality — combined (Go + Python + Rust)
 # =============================================================================
@@ -530,6 +540,7 @@ coverage-check-pkgs: ## Fail if per-package coverage < threshold
 		    *"/core/nexus/types") continue ;; \
 		    *"/embedded/pki")     continue ;; \
 		    *"/tools/sourcehash") continue ;; \
+		    *"/tools/statechain-demo") continue ;; \
 		    *"/pkg/cicffi")       continue ;; \
 		  esac; \
 		  GO111MODULE=on GOFLAGS="$(GOFLAGS)" go test $$p -coverprofile=/tmp/cover.out >/dev/null 2>&1; \
