@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"centralrelay/core/nexus/drift"
 	"centralrelay/core/nexus/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -400,4 +401,50 @@ func TestVerifyChain_CorruptSignatureMeta(t *testing.T) {
 	err = r.VerifyChain(ctx)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "signature.meta")
+}
+
+func TestRecordDrift_ClassifiesSignsAndVerifies(t *testing.T) {
+	ctx := context.Background()
+	tmp := t.TempDir()
+	r, err := NewGitStateRecorder(tmp, signingMock())
+	require.NoError(t, err)
+
+	desired := map[string]interface{}{"network": "10.0.0.0/24", "vms": "3"}
+
+	// In sync → NONE.
+	_, rep, err := r.RecordDrift(ctx, "sync", desired, desired)
+	require.NoError(t, err)
+	assert.Equal(t, drift.None, rep.Type)
+
+	// A changed value → RECONCILIABLE_DRIFT, reported precisely.
+	drifted := map[string]interface{}{"network": "10.0.9.9/24", "vms": "3"}
+	_, rep, err = r.RecordDrift(ctx, "drifted", desired, drifted)
+	require.NoError(t, err)
+	assert.Equal(t, drift.ReconciliableDrift, rep.Type)
+	assert.Equal(t, []string{"network"}, rep.Changed)
+
+	// Deleted infra → HARD_DRIFT, and the verdict is persisted in the signed meta.
+	_, rep, err = r.RecordDrift(ctx, "deleted", desired, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, drift.HardDrift, rep.Type)
+
+	metaRaw, err := os.ReadFile(filepath.Join(tmp, "meta.json"))
+	require.NoError(t, err)
+	assert.Contains(t, string(metaRaw), "HARD_DRIFT")
+
+	// The whole chain — including the drift commits — still verifies (same layout).
+	require.NoError(t, r.VerifyChain(ctx))
+}
+
+func TestRecordDrift_MixedWithRecordStateVerifies(t *testing.T) {
+	ctx := context.Background()
+	r, err := NewGitStateRecorder(t.TempDir(), signingMock())
+	require.NoError(t, err)
+
+	_, err = r.RecordState(ctx, types.ExpectedState{RunID: "boot"}, map[string]string{"ok": "1"})
+	require.NoError(t, err)
+	_, _, err = r.RecordDrift(ctx, "observe", map[string]interface{}{"a": "1"}, map[string]interface{}{"a": "1", "b": "2"})
+	require.NoError(t, err)
+
+	require.NoError(t, r.VerifyChain(ctx), "a chain mixing RecordState and RecordDrift must verify")
 }

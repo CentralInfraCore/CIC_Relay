@@ -252,3 +252,25 @@ objects:
   - assert.Contains
   - require.Error
   - require.NoError
+- name: TestRecordDrift_ClassifiesSignsAndVerifies
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - drift.None
+  - drift.ReconciliableDrift
+  - drift.HardDrift
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - require.NoError
+- name: TestRecordDrift_MixedWithRecordStateVerifies
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  calls:
+  - require.NoError
