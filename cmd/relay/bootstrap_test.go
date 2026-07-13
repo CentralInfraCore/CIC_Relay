@@ -765,11 +765,19 @@ func emptyPKIAssets() *PKIAssets {
 func TestRegisterNativeComponents(t *testing.T) {
 	mockCabinet := new(mockCabinetService)
 
+	// core.test + ci.build + cic.source.assert + cic.schema.build +
+	// cic.artifact.sign + cert.selfsigned + 4 pipeline steps = 10; a relay built
+	// with the ffi_cgo bridge registers one more (the http.request capability).
+	expectedModules := 10
+	if newActuator() != nil {
+		expectedModules++
+	}
+
 	// Collect all registered modules in order.
 	var registeredModules []*cabinet.ModuleDescriptor
 	mockCabinet.On("PutModule", mock.Anything).Run(func(args mock.Arguments) {
 		registeredModules = append(registeredModules, args.Get(0).(*cabinet.ModuleDescriptor))
-	}).Return(nil).Times(10) // core.test + ci.build + cic.source.assert + cic.schema.build + cic.artifact.sign + cert.selfsigned + 4 pipeline steps
+	}).Return(nil).Times(expectedModules)
 
 	var registeredWorkflows []*cabinet.Workflow
 	mockCabinet.On("PutWorkflow", mock.Anything).Run(func(args mock.Arguments) {
@@ -780,7 +788,7 @@ func TestRegisterNativeComponents(t *testing.T) {
 	require.NoError(t, err, "registerNativeComponents should not return an error")
 	mockCabinet.AssertExpectations(t)
 
-	require.Len(t, registeredModules, 10, "expected ten native modules to be registered")
+	require.Len(t, registeredModules, expectedModules, "unexpected native module count")
 	require.Len(t, registeredWorkflows, 3, "expected three workflows to be registered")
 	assert.Equal(t, "cic.schema.compile@1.0", registeredWorkflows[0].ID())
 	assert.Equal(t, "cert.selfsigned@1.0", registeredWorkflows[1].ID())
