@@ -1,0 +1,53 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestRegisterHTTPCapability_NilActuatorIsNoOp
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - mock.Anything
+  calls:
+  - require.NoError
+- name: TestRegisterHTTPCapability_RegistersHTTPModule
+  kind: func
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor
+  - mock.Anything
+  - mock.Arguments
+  - require.NoError
+  - require.NotNil
+  - assert.Equal
+  - assert.True
+  - cabinet.ID
+  calls:
+  - assert.Equal
+  - assert.True
+  - cabinet.ID
+  - require.NoError
+  - require.NotNil
+- name: TestRegisterHTTPCapability_PutModuleErrorPropagates
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+- name: mockActuator
+  kind: var
+  description: A no-op actuator stands in for the FFI bridge in the default build,
+    so the registration path is fully exercised without cgo.
+  references: []

@@ -366,7 +366,10 @@ test-ffi: ffi-staticlib ## Test the live Go→Rust→Go bridge (cgo, ffi_cgo tag
 	$(call GO_EXEC, \
 		git config --global --add safe.directory /git-source 2>/dev/null || true; \
 		CGO_ENABLED=1 CGO_LDFLAGS="-L$(FFI_LIB_DIR)" \
-			go test -tags ffi_cgo -count=1 -v ./pkg/cicffi/...)
+			go test -tags ffi_cgo -count=1 -v ./pkg/cicffi/...; \
+		echo "Testing http.request capability deploy wiring (cgo relay)..."; \
+		CGO_ENABLED=1 CGO_LDFLAGS="-L$(FFI_LIB_DIR)" \
+			go test -tags ffi_cgo -count=1 ./cmd/relay/...)
 
 # Opt-in live-Vault end-to-end test of the full feature-008 trust-flow chain
 # (countersign → mTLS cert-auth login → read_sealed → open). Spins a throwaway
