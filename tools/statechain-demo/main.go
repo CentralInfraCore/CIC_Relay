@@ -17,11 +17,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 
 	"centralrelay/core/nexus/crypto"
+	"centralrelay/core/nexus/drift"
 	"centralrelay/core/nexus/recorder"
-	"centralrelay/core/nexus/types"
 )
 
 func main() {
@@ -53,21 +52,27 @@ func run() error {
 		return fmt.Errorf("git state recorder: %w", err)
 	}
 
-	fmt.Printf("[*] recording infrastructure-state transitions (key stays in Vault: %s/%s)\n\n", mount, key)
-	transitions := []struct {
-		run    string
-		actual map[string]string
+	// A declared desired state; we then observe how the actual state drifts from
+	// it, recording each observation as a signed, classified commit (§8.2–§8.3).
+	desired := map[string]interface{}{"network": "10.0.1.0/24", "vms": "3"}
+	fmt.Printf("[*] declared desired state: %v\n", desired)
+	fmt.Printf("[*] recording observed states against desired (key stays in Vault: %s/%s)\n\n", mount, key)
+
+	observations := []struct {
+		label  string
+		actual map[string]interface{}
+		note   string
 	}{
-		{"net-v1", map[string]string{"network": "10.0.0.0/24", "vms": "1"}},
-		{"net-v1-scaled", map[string]string{"network": "10.0.0.0/24", "vms": "3"}},
-		{"net-v2", map[string]string{"network": "10.0.1.0/24", "vms": "3"}},
+		{"boot", map[string]interface{}{"network": "10.0.1.0/24", "vms": "3"}, "provisioned as declared"},
+		{"scaled", map[string]interface{}{"network": "10.0.1.0/24", "vms": "5"}, "someone changed vms by hand"},
+		{"deleted", map[string]interface{}{}, "infrastructure torn down"},
 	}
-	for i, tr := range transitions {
-		commit, err := rec.RecordState(ctx, types.ExpectedState{RunID: tr.run, Timestamp: time.Now().UTC()}, tr.actual)
+	for i, obs := range observations {
+		commit, report, err := rec.RecordDrift(ctx, obs.label, desired, obs.actual)
 		if err != nil {
-			return fmt.Errorf("record %s: %w", tr.run, err)
+			return fmt.Errorf("record %s: %w", obs.label, err)
 		}
-		printCommit(repo, i+1, tr.run, commit)
+		printDriftCommit(repo, i+1, commit, report, obs.note)
 	}
 
 	fmt.Println("\n[*] VerifyChain (recompute manifest → Vault verify → parent linkage):")
@@ -92,9 +97,9 @@ func run() error {
 	return fmt.Errorf("tampering was NOT detected — this must not happen")
 }
 
-// printCommit shows the just-recorded commit's identity, parent linkage, and the
-// (truncated) Vault signature, read from the working tree it was written to.
-func printCommit(repo string, n int, desired, commit string) {
+// printDriftCommit shows the just-recorded commit's identity, drift verdict (with
+// the exact differing keys), parent linkage, and the (truncated) Vault signature.
+func printDriftCommit(repo string, n int, commit string, report drift.Report, note string) {
 	var meta struct {
 		Parent string `json:"parent"`
 	}
@@ -104,8 +109,19 @@ func printCommit(repo string, n int, desired, commit string) {
 	}
 	readJSON(filepath.Join(repo, "signature.meta"), &sig)
 
-	fmt.Printf("  commit #%d  %s  desired=%-14s parent=%s  sig=%s  ✓\n",
-		n, short(commit), desired, short(meta.Parent), short(sig.Signature))
+	var detail string
+	if len(report.Changed) > 0 {
+		detail += " changed=" + fmt.Sprint(report.Changed)
+	}
+	if len(report.Missing) > 0 {
+		detail += " missing=" + fmt.Sprint(report.Missing)
+	}
+	if len(report.Extra) > 0 {
+		detail += " extra=" + fmt.Sprint(report.Extra)
+	}
+
+	fmt.Printf("  commit #%d  %s  drift=%-19s parent=%s  sig=%s  ✓%s   (%s)\n",
+		n, short(commit), report.Type, short(meta.Parent), short(sig.Signature), detail, note)
 }
 
 // tamper overwrites actual.json with different content and commits it, leaving
