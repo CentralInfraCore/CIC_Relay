@@ -25,6 +25,7 @@ objects:
   - Decrypt
   - HealthCheck
   - Sign
+  - Verify
 - name: NewVaultCryptoService
   kind: func
   description: NewVaultCryptoService creates and configures a new service for signing.
@@ -42,6 +43,19 @@ objects:
   description: Sign uses the Vault Transit engine to sign the given data. It expects
     the data to be a hash (or raw data depending on Vault config), but typically for
     signing commits we sign the hash.
+  references: []
+  calls:
+  - EncodeToString
+  - Errorf
+  - Logical
+  - Sprintf
+  - WriteWithContext
+- name: Verify
+  kind: method
+  receiver: VaultCryptoService
+  description: Verify uses the Vault Transit engine to verify a signature over the
+    given data. The signature is the Vault wire form (e.g. "vault:v1:..."). The signing
+    key never leaves Vault. Returns true iff Vault reports the signature valid.
   references: []
   calls:
   - EncodeToString

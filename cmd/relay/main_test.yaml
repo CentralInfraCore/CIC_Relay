@@ -23,6 +23,12 @@ objects:
   description: ''
   references: []
   calls: []
+- name: Verify
+  kind: method
+  receiver: mockCryptoService
+  description: ''
+  references: []
+  calls: []
 - name: Decrypt
   kind: method
   receiver: mockCryptoService
@@ -35,6 +41,14 @@ objects:
   description: ''
   references: []
   calls: []
+- name: TestMockCryptoServiceVerify
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Background
+  - Fatalf
+  - Verify
 - name: TestMain
   kind: func
   description: ''

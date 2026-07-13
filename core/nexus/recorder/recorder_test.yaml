@@ -28,6 +28,13 @@ objects:
   references: []
   calls:
   - SignFunc
+- name: Verify
+  kind: method
+  receiver: MockCryptoService
+  description: ''
+  references: []
+  calls:
+  - VerifyFunc
 - name: Decrypt
   kind: method
   receiver: MockCryptoService
@@ -40,6 +47,14 @@ objects:
   description: ''
   references: []
   calls: []
+- name: signingMock
+  kind: func
+  description: signingMock returns a mock whose signature deterministically binds
+    the signed data, so a real content tamper (which changes the manifest hash) makes
+    Verify fail — the property VerifyChain relies on.
+  references: []
+  calls:
+  - EncodeToString
 - name: TestGitStateRecorder_RecordState_Success
   kind: func
   description: ''
@@ -130,6 +145,102 @@ objects:
   calls:
   - require.NoError
 - name: TestGitStateRecorder_RecordState_WriteFileFails
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: craftCommit
+  kind: func
+  description: craftCommit hand-builds a signed state commit with a controllable parent,
+    to exercise VerifyChain's chain-linkage check independently of RecordState.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestVerifyChain_ValidChainVerifies
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  calls:
+  - require.NoError
+- name: TestVerifyChain_DetectsContentTampering
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestVerifyChain_DetectsBrokenChain
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestVerifyChain_DetectsInvalidSignature
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestVerifyChain_NoSignedCommits
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestVerifyChain_NilCryptoService
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+- name: TestVerifyChain_VerifyBackendError
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - types.ExpectedStateRunID
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestVerifyChain_CorruptSignatureMeta
   kind: func
   description: ''
   references:

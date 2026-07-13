@@ -12,6 +12,9 @@ import (
 type CryptoService interface {
 	// Sign takes a data payload and returns a cryptographic signature.
 	Sign(ctx context.Context, data []byte) (string, error)
+	// Verify checks a signature over data against the signing key, returning true
+	// iff it is valid. The key never leaves the backend (e.g. Vault Transit).
+	Verify(ctx context.Context, data []byte, signature string) (bool, error)
 	// Decrypt takes an encrypted payload and returns the plaintext.
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 	// HealthCheck verifies that the service can communicate with its backend (e.g., Vault).
@@ -76,6 +79,33 @@ func (v *VaultCryptoService) Sign(ctx context.Context, data []byte) (string, err
 	}
 
 	return signature, nil
+}
+
+// Verify uses the Vault Transit engine to verify a signature over the given data.
+// The signature is the Vault wire form (e.g. "vault:v1:..."). The signing key
+// never leaves Vault. Returns true iff Vault reports the signature valid.
+func (v *VaultCryptoService) Verify(ctx context.Context, data []byte, signature string) (bool, error) {
+	inputBase64 := base64.StdEncoding.EncodeToString(data)
+
+	path := fmt.Sprintf("%s/verify/%s", v.mountPath, v.keyName)
+	secret, err := v.client.Logical().WriteWithContext(ctx, path, map[string]interface{}{
+		"input":     inputBase64,
+		"signature": signature,
+	})
+	if err != nil {
+		return false, fmt.Errorf("vault verify request failed: %w", err)
+	}
+
+	if secret == nil || secret.Data == nil {
+		return false, fmt.Errorf("vault returned empty response")
+	}
+
+	valid, ok := secret.Data["valid"].(bool)
+	if !ok {
+		return false, fmt.Errorf("vault response missing 'valid' field")
+	}
+
+	return valid, nil
 }
 
 // Decrypt uses the Vault Transit engine to decrypt the given ciphertext.

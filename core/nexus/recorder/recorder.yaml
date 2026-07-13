@@ -11,8 +11,7 @@ objects:
 - name: GitStateRecorder
   kind: struct
   description: GitStateRecorder implements StateRecorder using a local Git repository.
-  implements:
-  - StateRecorder
+  implements: []
   references:
   - crypto.CryptoService
 - name: StateRecorder
@@ -86,5 +85,52 @@ objects:
   calls:
   - Command
   - Errorf
+  - Output
+  - TrimSpace
+- name: VerifyChain
+  kind: method
+  receiver: GitStateRecorder
+  description: VerifyChain walks the recorded state commits oldest-to-newest and verifies,
+    for each, that (1) the Vault signature over the file manifest is valid — the content
+    is authentic and unaltered — and (2) the parent commit hash the record signed
+    matches its actual git parent — the chain is intact. Any tampering with a committed
+    file or any break in the chain is detected. The initial .gitignore commit (which
+    carries no signature) is skipped. Returns nil iff the whole chain of state commits
+    verifies; the signing key never leaves Vault.
+  references: []
+  calls:
+  - Errorf
+  - MarshalIndent
+  - Sum256
+  - Unmarshal
+  - Verify
+- name: listCommits
+  kind: method
+  receiver: GitStateRecorder
+  description: listCommits returns all commit hashes oldest-to-newest.
+  references: []
+  calls:
+  - Command
+  - Errorf
+  - Output
+  - Split
+  - TrimSpace
+- name: showFileAtCommit
+  kind: method
+  receiver: GitStateRecorder
+  description: showFileAtCommit returns the content of file as it existed at commit.
+  references: []
+  calls:
+  - Command
+  - Errorf
+  - Output
+- name: parentOf
+  kind: method
+  receiver: GitStateRecorder
+  description: parentOf returns the parent commit hash of commit, or "" if it is the
+    root.
+  references: []
+  calls:
+  - Command
   - Output
   - TrimSpace

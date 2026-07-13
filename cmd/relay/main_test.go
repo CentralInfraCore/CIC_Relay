@@ -23,12 +23,22 @@ type mockCryptoService struct{}
 func (m *mockCryptoService) Sign(_ context.Context, _ []byte) (string, error) {
 	return "mock-sig", nil
 }
+func (m *mockCryptoService) Verify(_ context.Context, _ []byte, _ string) (bool, error) {
+	return true, nil
+}
 func (m *mockCryptoService) Decrypt(_ context.Context, _ []byte) ([]byte, error) {
 	return []byte("decrypted"), nil
 }
 func (m *mockCryptoService) HealthCheck(_ context.Context) error { return nil }
 
 var _ crypto.CryptoService = (*mockCryptoService)(nil)
+
+func TestMockCryptoServiceVerify(t *testing.T) {
+	ok, err := (&mockCryptoService{}).Verify(context.Background(), []byte("x"), "sig")
+	if err != nil || !ok {
+		t.Fatalf("mock Verify: ok=%v err=%v", ok, err)
+	}
+}
 
 func TestMain(m *testing.M) {
 	// Disable log output for all tests in this package
