@@ -1,0 +1,27 @@
+---
+package: cabinet
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestSetx_HTTPRequestCapability
+  kind: func
+  description: 'TestSetx_HTTPRequestCapability proves the feature-009 relay-integration
+    span: the `http.request` capability, registered as a native cabinet module, is
+    driven by Setx as an ordinary workflow step — so its actuation folds into the
+    same hash-chained ProofTrace as any native/WASM step, with no special-casing.
+    The actuation is served by a mock Actuator (the real one is the cgo FFI, injected
+    at relay startup).'
+  references:
+  - httpcap.ActuatorFunc
+  - httpcap.NewRequestFunc
+  - require.NoError
+  calls:
+  - httpcap.ActuatorFunc
+  - httpcap.NewRequestFunc
+  - require.NoError
