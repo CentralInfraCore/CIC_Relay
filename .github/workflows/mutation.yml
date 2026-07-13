@@ -58,6 +58,12 @@ jobs:
             --workers 4 --threshold-efficacy 90 \
             ./core/modules/httpcap
 
+      - name: Mutation — core/nexus/ois (efficacy ≥ 90%)
+        run: |
+          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+            --workers 4 --threshold-efficacy 90 \
+            ./core/nexus/ois
+
       # Rust mutation testing (cargo-mutants). Fails if any viable mutant survives.
       - name: Install pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show active-toolchain || rustup toolchain install

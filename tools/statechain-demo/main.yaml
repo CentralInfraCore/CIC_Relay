@@ -30,19 +30,19 @@ objects:
   references:
   - crypto.NewVaultCryptoService
   - recorder.NewGitStateRecorder
-  - types.ExpectedStateRunID
   calls:
   - crypto.NewVaultCryptoService
   - recorder.NewGitStateRecorder
-- name: printCommit
+- name: printDriftCommit
   kind: func
-  description: printCommit shows the just-recorded commit's identity, parent linkage,
-    and the (truncated) Vault signature, read from the working tree it was written
-    to.
-  references: []
+  description: printDriftCommit shows the just-recorded commit's identity, drift verdict
+    (with the exact differing keys), parent linkage, and the (truncated) Vault signature.
+  references:
+  - drift.Report
   calls:
   - Join
   - Printf
+  - Sprint
 - name: tamper
   kind: func
   description: tamper overwrites actual.json with different content and commits it,
