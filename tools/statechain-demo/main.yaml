@@ -30,8 +30,12 @@ objects:
   references:
   - crypto.NewVaultCryptoService
   - recorder.NewGitStateRecorder
+  - ois.NewAllowlistPolicy
+  - ois.Rollback
   calls:
   - crypto.NewVaultCryptoService
+  - ois.NewAllowlistPolicy
+  - ois.Rollback
   - recorder.NewGitStateRecorder
 - name: printDriftCommit
   kind: func

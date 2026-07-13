@@ -1,0 +1,73 @@
+---
+package: ois
+description: 'Package ois implements the relay-side OpenIntentSign gate (demo §8.4):
+  before a state-changing intent — notably a rollback to an earlier, verified state
+  — is applied, it must be authorized by policy. This mirrors the countersign pattern
+  (a content-dependent authorization seam) for declarative intents: the policy is
+  where the Relay is "smart"; the applier knows nothing about it.'
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Intent
+  kind: struct
+  description: 'Intent is a declared, content-dependent request to change state: who
+    wants to do what, targeting which verified state, and why. It carries no secret.'
+  implements: []
+  references: []
+- name: Denied
+  kind: struct
+  description: Denied is a policy refusal. Its Reason is non-secret, so it is always
+    safe to log and to record in the ProofTrace.
+  implements: []
+  references: []
+- name: AllowlistPolicy
+  kind: struct
+  description: AllowlistPolicy authorizes an intent iff its Actor is on the allowlist
+    for its Action — the simplest content-dependent rule. Build it with NewAllowlistPolicy
+    and Allow.
+  implements: []
+  references: []
+- name: Policy
+  kind: interface
+  description: Policy decides whether an Intent is authorized. A real deployment plugs
+    richer rules (signed intents, RBAC, quorum) into the same seam; the trivial policy
+    is a per-action actor allowlist. Authorize returns nil when authorized, or a *Denied
+    when refused.
+  references: []
+  methods:
+  - Authorize
+- name: Action
+  kind: type
+  description: Action names the kind of state-changing intent.
+  references: []
+- name: Error
+  kind: method
+  receiver: Denied
+  description: ''
+  references: []
+  calls: []
+- name: NewAllowlistPolicy
+  kind: func
+  description: NewAllowlistPolicy returns an empty allowlist policy (authorizes nothing
+    until Allow is called).
+  references: []
+  calls: []
+- name: Allow
+  kind: method
+  receiver: AllowlistPolicy
+  description: Allow authorizes the given actors for the given action and returns
+    the policy for chaining.
+  references: []
+  calls: []
+- name: Authorize
+  kind: method
+  receiver: AllowlistPolicy
+  description: Authorize permits the intent iff its Actor is allowlisted for its Action.
+    A missing actor or target ref is always refused.
+  references: []
+  calls:
+  - Sprintf

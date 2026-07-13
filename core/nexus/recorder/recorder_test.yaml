@@ -17,8 +17,7 @@ objects:
 - name: mockStateRecorder
   kind: struct
   description: mockStateRecorder is a test double for StateRecorder.
-  implements:
-  - StateRecorder
+  implements: []
   references:
   - types.ExpectedState
 - name: Sign
@@ -274,3 +273,48 @@ objects:
   - types.ExpectedStateRunID
   calls:
   - require.NoError
+- name: TestRollback_AuthorizedRestoresAndVerifies
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - ois.NewAllowlistPolicy
+  - ois.Rollback
+  - assert.NotEmpty
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - assert.NotEmpty
+  - ois.NewAllowlistPolicy
+  - ois.Rollback
+  - require.NoError
+- name: TestRollback_DeniedByPolicy
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - ois.NewAllowlistPolicy
+  - ois.Denied
+  - require.ErrorAs
+  calls:
+  - ois.NewAllowlistPolicy
+  - require.ErrorAs
+  - require.NoError
+- name: TestRollback_NilPolicyAndBadTarget
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  - ois.NewAllowlistPolicy
+  - ois.Rollback
+  calls:
+  - assert.Contains
+  - ois.NewAllowlistPolicy
+  - ois.Rollback
+  - require.Error
+  - require.NoError
+equire.NoError
