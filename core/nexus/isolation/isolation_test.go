@@ -3,6 +3,7 @@ package isolation
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -227,7 +228,14 @@ func TestSubprocessWorker_Decrypt_NoResponse(t *testing.T) {
 	w := newSubprocessWorkerWithExe("true", nil, nil)
 	_, err := w.Decrypt(context.Background(), DecryptRequest{Payload: []byte("data")})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no response")
+	// `true` exits immediately, so — depending on timing — the failure surfaces
+	// either as "no response" on the read, or a "broken pipe" on the write (the
+	// subprocess closed stdin before we finished writing). Both mean the
+	// subprocess produced no answer; accept either to keep the test race-free.
+	msg := err.Error()
+	assert.True(t,
+		strings.Contains(msg, "no response") || strings.Contains(msg, "broken pipe"),
+		"expected a no-response / broken-pipe error, got %q", msg)
 }
 
 func TestSubprocessWorker_Decrypt_BadJSON(t *testing.T) {

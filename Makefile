@@ -17,7 +17,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	infra-down infra.help \
 	mutate mutate-all \
 	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust \
-	ffi-staticlib test-ffi demo
+	ffi-staticlib test-ffi demo demo-trustflow
 
 # Default to showing help
 all: help
@@ -408,6 +408,20 @@ demo: ## Live signed-state-chain demo (throwaway dev-tls Vault; needs the vault/
 		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
 		go-builder -c 'cd /git-source && scripts/statechain-demo.sh'
 
+# Live demo of the feature-008/009 FFI trust-flow: Go → Rust (cic-ffi live-vault)
+# → real Vault (module CSR → PKI countersign → mTLS cert-auth login → read_sealed
+# → open) → HTTP actuation. Builds the live staticlib (rust-builder), then runs
+# the demo in the go-builder against a throwaway dev-tls server. Opt-in; not a CI gate.
+demo-trustflow: ## Live FFI trust-flow demo (Go → Rust → live Vault → HTTP; needs the vault/openbao binary)
+	@command -v vault >/dev/null 2>&1 || { echo "vault/openbao binary not found on host — install it to run the demo"; exit 1; }
+	@echo "Building live-vault cic-ffi staticlib..."
+	$(call RUST_EXEC, cargo build -p cic-ffi --release --locked --features live-vault)
+	$(call RUST_EXEC, mkdir -p $(FFI_LIB_DIR) && cp /target/release/libcic_ffi.a $(FFI_LIB_DIR)/libcic_ffi.a)
+	@echo "Running the live FFI trust-flow demo (throwaway dev-tls server)..."
+	docker compose run --rm --entrypoint bash \
+		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
+		go-builder /git-source/scripts/trustflow-demo.sh
+
 # =============================================================================
 # Code Quality — combined (Go + Python + Rust)
 # =============================================================================
@@ -543,6 +557,7 @@ coverage-check-pkgs: ## Fail if per-package coverage < threshold
 		    *"/embedded/pki")     continue ;; \
 		    *"/tools/sourcehash") continue ;; \
 		    *"/tools/statechain-demo") continue ;; \
+		    *"/tools/trustflow-demo") continue ;; \
 		    *"/pkg/cicffi")       continue ;; \
 		  esac; \
 		  GO111MODULE=on GOFLAGS="$(GOFLAGS)" go test $$p -coverprofile=/tmp/cover.out >/dev/null 2>&1; \
