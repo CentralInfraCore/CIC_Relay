@@ -196,6 +196,18 @@ today. RSA is thus quarantined to the OCI API key; CIC-internal custody stays on
 P-256 (feature-008). Source: OCI "Required Keys and OCIDs"
 (`docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm`).
 
+**Relay wiring gap (found while proving the profile).** OCI's `rsa-sha256` is
+RSASSA-**PKCS#1 v1.5**. Vault Transit's RSA default is **PSS**, and
+`core/nexus/crypto.VaultCryptoService.Sign` sends no `signature_algorithm`, so the
+OCI signer must pass `signature_algorithm=pkcs1v15` (and `hash_algorithm=sha2-256`)
+— either as an option on the existing signer or a thin OCI-specific one. The
+profile itself (canonical header set + order, PKCS#1 v1.5, tamper-binding) is
+proven end-to-end by `tools/oci-sign-demo` (`make demo-oci-sign`): a fake OCI
+endpoint verifies the signature as OCI would, then rejects a tampered body. That
+demo uses an in-process RSA key (the Vault custody is already proven by
+`make demo-trustflow`); wiring the PKCS#1 v1.5 Vault signer is the remaining R2
+step.
+
 ### Decision (recorded) — a separate, pure-Go `cic-flow` host module
 
 **Where `run_flow` lives.** `run_flow` (`cic_ffi_run_flow`) is in the **`cic-ffi`

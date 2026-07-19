@@ -17,7 +17,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	infra-down infra.help \
 	mutate mutate-all \
 	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust \
-	ffi-staticlib test-ffi demo demo-trustflow
+	ffi-staticlib test-ffi demo demo-trustflow demo-oci-sign
 
 # Default to showing help
 all: help
@@ -421,6 +421,14 @@ demo-trustflow: ## Live FFI trust-flow demo (Go → Rust → live Vault → HTTP
 	docker compose run --rm --entrypoint bash \
 		-v "$$(command -v vault):/usr/local/bin/vault:ro" \
 		go-builder /git-source/scripts/trustflow-demo.sh
+
+# Proves the feature-011 OCI sign-then-send signing profile (draft-cavage
+# canonical string + RSA-SHA256 PKCS#1 v1.5) end to end, in-process — no relay,
+# no Vault, no cgo. A fake OCI endpoint verifies the signature as OCI would, then
+# a tampered body is rejected. Opt-in; not a CI gate.
+demo-oci-sign: ## OCI sign-then-send signing-profile proof (pure Go, no Vault)
+	@echo "Proving the OCI sign-then-send signing profile (feature-011)..."
+	$(call GO_EXEC, go run ./tools/oci-sign-demo)
 
 # =============================================================================
 # Code Quality — combined (Go + Python + Rust)
