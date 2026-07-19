@@ -1,0 +1,144 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: capabilityManifest
+  kind: struct
+  description: 'capabilityManifest is a module''s declared reach — the `capability_manifest`
+    block of its project.yaml. The module cannot widen it: it is part of the signed
+    artifact and the host enforces exactly this.'
+  implements: []
+  references: []
+- name: egressRule
+  kind: struct
+  description: egressRule is one permitted outbound reach. Host is an exact host or
+    a leading "*." suffix glob. Empty Methods / Paths / Ports mean any-method / any-path
+    / port 443.
+  implements: []
+  references: []
+- name: secretRule
+  kind: struct
+  description: secretRule is one secret handle the module may operate on — never the
+    value.
+  implements: []
+  references: []
+- name: moduleProject
+  kind: struct
+  description: moduleProject is the subset of a module's project.yaml the relay reads
+    at load.
+  implements: []
+  references: []
+- name: egressPolicy
+  kind: type
+  description: egressPolicy is the ordered set of egress rules; the first match permits.
+  references: []
+- name: keyResolver
+  kind: type
+  description: keyResolver maps a manifest secret handle (e.g. "oci/prod") to a signer
+    over the relay-provisioned Vault key behind it. The module never names key material;
+    provisioning the OCI key into Vault is a separate operator flow (r3-plan.md).
+  references: []
+- name: parseModuleProject
+  kind: func
+  description: parseModuleProject unmarshals a module's project.yaml.
+  references: []
+  calls:
+  - Errorf
+  - Unmarshal
+- name: allows
+  kind: method
+  receiver: egressPolicy
+  description: allows reports whether the policy permits method + host:port + path.
+    An empty policy allows nothing — egress is opt-in, never caller-widened.
+  references: []
+  calls: []
+- name: hostGlobMatch
+  kind: func
+  description: hostGlobMatch matches host against an exact host or a leading "*."
+    suffix glob. A bare "*" and any other/infix wildcard never match — unbounded egress
+    is rejected. "*.oraclecloud.com" matches "iaas.…oraclecloud.com" but not the apex
+    "oraclecloud.com" nor "evil-oraclecloud.com".
+  references: []
+  calls:
+  - Contains
+  - CutPrefix
+  - HasSuffix
+  - ToLower
+  - TrimSpace
+- name: methodAllowed
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: portAllowed
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: pathAllowed
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - HasPrefix
+- name: grantsSign
+  kind: method
+  receiver: capabilityManifest
+  description: grantsSign reports whether the manifest declares a secret usable for
+    signing.
+  references: []
+  calls: []
+- name: signHandle
+  kind: method
+  receiver: capabilityManifest
+  description: signHandle returns the first secret handle carrying a `sign` op.
+  references: []
+  calls: []
+- name: bindCICFlowDeps
+  kind: func
+  description: 'bindCICFlowDeps builds the per-module host deps from the verified
+    manifest: the egress policy, and a sign-only signer resolved from the manifest''s
+    sign handle. A nil resolver or an absent sign handle yields a nil signer (sign
+    stays inert).'
+  references: []
+  calls:
+  - Errorf
+- name: cicFlowImports
+  kind: method
+  receiver: moduleProject
+  description: cicFlowImports returns the set of cic-flow functions the module imports.
+  references: []
+  calls: []
+- name: checkImportsWithinManifest
+  kind: method
+  receiver: moduleProject
+  description: 'checkImportsWithinManifest rejects a module whose cic-flow imports
+    exceed its capability_manifest: importing `sign` requires a secrets entry with
+    ops:[sign]; importing `actuate` requires at least one egress entry. Enforced at
+    load, not at call time.'
+  references: []
+  calls:
+  - Errorf
+- name: verifyBuildHash
+  kind: method
+  receiver: moduleProject
+  description: 'verifyBuildHash checks the loaded wasm against the module''s declared
+    buildHash (integrity: the artifact the signature covers is the one being loaded).'
+  references: []
+  calls:
+  - EncodeToString
+  - Errorf
+  - Sum256
+- name: containsFold
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - EqualFold

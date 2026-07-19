@@ -12,8 +12,7 @@ objects:
   kind: struct
   description: VaultCryptoService implements CryptoService using HashiCorp Vault's
     Transit engine.
-  implements:
-  - CryptoService
+  implements: []
   references:
   - api.Client
 - name: CryptoService
@@ -50,6 +49,23 @@ objects:
   - Logical
   - Sprintf
   - WriteWithContext
+- name: SignOCI
+  kind: method
+  receiver: VaultCryptoService
+  description: 'SignOCI signs data with the Transit key using RSASSA-PKCS#1 v1.5 over
+    SHA-256 — OCI''s request-signing scheme (draft-cavage `rsa-sha256`) — and returns
+    the raw base64 signature the OCI `Authorization: Signature` header needs, with
+    Vault''s `vault:v<N>:` version prefix stripped. Unlike [VaultCryptoService.Sign],
+    which lets Vault default to PSS for RSA keys, this pins `pkcs1v15` / `sha2-256`
+    as OCI requires. The key never leaves Vault. See features/feature-011-oci-provider.'
+  references: []
+  calls:
+  - EncodeToString
+  - Errorf
+  - LastIndexByte
+  - Logical
+  - Sprintf
+  - WriteWithContext
 - name: Verify
   kind: method
   receiver: VaultCryptoService
@@ -83,4 +99,6 @@ objects:
   calls:
   - Errorf
   - Health
+  - Sys
+Health
   - Sys

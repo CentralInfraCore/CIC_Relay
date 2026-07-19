@@ -1,0 +1,107 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: cicFlowDeps
+  kind: struct
+  description: 'cicFlowDeps are the host-side capabilities the cic-flow module exposes.
+    They are the relay''s, not the guest''s: the guest can only express what to sign
+    and what to send — never name the key or widen the egress allowlist. Zero value
+    is deliberately inert and safe: a nil signer makes `sign` a clean error, and an
+    empty egress set denies every `actuate`. Real deps are bound per-module from the
+    signed capability manifest once R3 lands.'
+  implements: []
+  references: []
+- name: signer
+  kind: interface
+  description: 'signer is the subset of core/nexus/crypto.CryptoService that cic-flow.sign
+    needs: sign caller-built bytes with a key that never leaves the backend (Vault
+    Transit). *crypto.VaultCryptoService satisfies it.'
+  references: []
+  methods:
+  - Sign
+- name: httpDoer
+  kind: interface
+  description: httpDoer is the egress transport cic-flow.actuate uses. *http.Client
+    satisfies it; tests inject a double.
+  references: []
+  methods:
+  - Do
+- name: makeCICFlowHostSetupFn
+  kind: func
+  description: makeCICFlowHostSetupFn returns a HostSetupFn that registers the "cic-flow"
+    host module on the wazero runtime.
+  references:
+  - wazero.Runtime
+  calls: []
+- name: registerCICFlowHostFunctions
+  kind: func
+  description: 'registerCICFlowHostFunctions instantiates the "cic-flow" host module.
+    Each exported function follows the same uniform ABI as the `git` host module:
+    (req_ptr i32, req_len i32, out_ptr i32, out_len i32) -> i32 A JSON request is
+    read from linear memory at (req_ptr, req_len); the JSON response is written to
+    (out_ptr, out_len); the return value is bytes written, or -1 on a memory/marshal
+    error.'
+  references:
+  - wazero.Runtime
+  - wazero.Runtime.NewHostModuleBuilder
+  calls:
+  - wazero.Runtime.NewHostModuleBuilder
+- name: makeSignFn
+  kind: func
+  description: makeSignFn signs the caller-built canonical string (base64 in `data_base64`)
+    with the scoped Vault key. The guest never names the key; the returned signature
+    is not secret. The plaintext canonical string is opaque to the host.
+  references:
+  - api.Module
+  calls:
+  - DecodeString
+  - Error
+  - Sign
+- name: makeActuateFn
+  kind: func
+  description: 'makeActuateFn performs egress-policed HTTP carrying the caller''s
+    own headers — the caller''s Authorization is forwarded verbatim, never stripped
+    or replaced (this is the core of R2: the guest''s `Authorization: Signature …`
+    is the authenticator). The egress allowlist is the host''s, not the request''s:
+    a host outside it is a typed error, not a send.'
+  references:
+  - api.Module
+  calls:
+  - Close
+  - DecodeString
+  - Do
+  - EncodeToString
+  - Error
+  - Get
+  - Hostname
+  - NewReader
+  - NewRequestWithContext
+  - Parse
+  - ReadAll
+  - Set
+  - ToLower
+- name: portOf
+  kind: func
+  description: 'portOf returns the request''s TCP port: the explicit URL port, else
+    the scheme default (443 for https, 80 for http).'
+  references: []
+  calls:
+  - Atoi
+  - Port
+- name: combineHostSetups
+  kind: func
+  description: combineHostSetups returns a HostSetupFn that runs each setup in order,
+    so several host modules (e.g. "git" and "cic-flow") register on one runtime. The
+    first error stops the chain; nil setups are skipped.
+  references:
+  - wazero.Runtime
+  calls: []
