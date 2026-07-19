@@ -650,7 +650,15 @@ func main() {
 		logger.WithField("repo_id", "iac-config").Debug("git: registered iac-config repo")
 	}
 	gitOps := git.NewExecGitOps(gitRegistry)
-	wasmConfig.HostSetupFn = makeGitHostSetupFn(gitOps)
+	// Register the "git" host module and the "cic-flow" host module (feature-011:
+	// the decomposed sign-then-send provider capability). cic-flow is registered
+	// but INERT by default — empty egress denies every actuate, nil signer makes
+	// sign a clean error — until R3 binds a per-module signer + egress allowlist
+	// from the signed capability manifest.
+	wasmConfig.HostSetupFn = combineHostSetups(
+		makeGitHostSetupFn(gitOps),
+		makeCICFlowHostSetupFn(cicFlowDeps{}),
+	)
 
 	logrusSink := obs.NewLogrusSink(logger)
 	// promSink aggregates the same metric points for the /metrics endpoint,
