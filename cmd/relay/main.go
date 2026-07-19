@@ -657,7 +657,10 @@ func main() {
 	// capability is denied — fail-closed. `resolve` is nil for now: egress binds
 	// per-module, but the signer stays inert until the OCI-key provisioning path
 	// wires a resolver (r3-plan.md).
-	cicFlowReg := newCICFlowRegistry(nil, nil)
+	// resolve maps a module's oci/... handle to a SignOCI signer over the
+	// relay-provisioned Vault key when CIC_OCI_SIGN_MOUNT/_KEY are set; nil (sign
+	// inert) otherwise.
+	cicFlowReg := newCICFlowRegistry(buildOCIKeyResolver(), nil)
 	// loadModule binds each verified module's cic-flow capability into this
 	// registry via the package-level hook (fail-closed: only verified modules).
 	registerModuleCapability = cicFlowReg.registerVerified
