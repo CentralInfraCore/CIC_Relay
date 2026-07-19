@@ -152,10 +152,18 @@ fail-closed: no verified provenance/entitlement → no capability.
 against the embedded CICDeveloperCA (`bootstrap.go`). **R3b replaces it** with
 CICSourceCA (provenance) + CICLicenseCA (entitlement) via their runtime path.
 
-**R3b — pending** the CICSourceCA (binary-adjacent) + CICLicenseCA (from-license)
-runtime provisioning path. `pki_verify.go` is already wired and active (dev anchor:
-embedded CICDeveloperCA) — R3b delivers the SourceCA/LicenseCA pools and gates the
-R3a binding on their verification; it is **not** blocked on a CA-chain bootstrap.
+**R3b provenance — landed** (`cmd/relay/pki_companion.go`): CICSourceCA is
+loaded from a **detached companion** (`CIC_SOURCE_CA_BUNDLE`, beside the binary —
+never embedded, so signing it after the build never perturbs the binary hash), and
+`verifyCICFlowProvenance` gates the cic-flow binding on the module's cert chaining
+to it (EKU CodeSigning + CRL, via the already-wired `pki_verify.go`). No SourceCA /
+no chain → the module loads but gets no capability (fail-closed, audited "skipped").
+CICLicenseCA is loaded the same detached way (`CIC_LICENSE_CA_BUNDLE`, from the
+license).
+
+**R3b entitlement — pending** the per-module license-artifact format: the
+CICLicenseCA anchor is loaded, but the entitlement *check* (verify a module's
+license attestation against it) wires in once that artifact is specified.
 
 ## Reuses / touches
 
