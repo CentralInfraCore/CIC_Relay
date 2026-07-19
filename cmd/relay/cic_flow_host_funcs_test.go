@@ -118,7 +118,7 @@ func TestMakeSignFn_SignerError(t *testing.T) {
 
 func TestMakeActuateFn_Success_CarriesAuthorization(t *testing.T) {
 	doer := &stubDoer{resp: okResponse(200, "pong", map[string]string{"etag": "e1", "opc-request-id": "r1"})}
-	deps := cicFlowDeps{doer: doer, egress: map[string]struct{}{"api.example.com": {}}}
+	deps := cicFlowDeps{doer: doer, egress: egressPolicy{{Host: "api.example.com"}}}
 	mod := newMod(16384)
 
 	const outOff = 8192
@@ -154,7 +154,7 @@ func TestMakeActuateFn_Success_CarriesAuthorization(t *testing.T) {
 func TestMakeActuateFn_EgressDenied(t *testing.T) {
 	doer := &stubDoer{resp: okResponse(200, "", nil)}
 	mod := newMod(8192)
-	_, out := invoke(makeActuateFn(cicFlowDeps{doer: doer, egress: map[string]struct{}{"allowed.example": {}}}), mod, map[string]interface{}{
+	_, out := invoke(makeActuateFn(cicFlowDeps{doer: doer, egress: egressPolicy{{Host: "allowed.example"}}}), mod, map[string]interface{}{
 		"method": "GET", "url": "https://evil.example/x",
 	})
 	assert.Contains(t, out["error"], "egress denied")
@@ -181,13 +181,13 @@ func TestMakeActuateFn_BadJSON(t *testing.T) {
 
 func TestMakeActuateFn_InvalidURL(t *testing.T) {
 	mod := newMod(8192)
-	_, out := invoke(makeActuateFn(cicFlowDeps{doer: &stubDoer{}, egress: map[string]struct{}{"x": {}}}), mod, map[string]interface{}{"url": "ftp://nope"})
+	_, out := invoke(makeActuateFn(cicFlowDeps{doer: &stubDoer{}, egress: egressPolicy{{Host: "x"}}}), mod, map[string]interface{}{"url": "ftp://nope"})
 	assert.Contains(t, out["error"], "invalid url")
 }
 
 func TestMakeActuateFn_BadBodyBase64(t *testing.T) {
 	mod := newMod(8192)
-	_, out := invoke(makeActuateFn(cicFlowDeps{doer: &stubDoer{}, egress: map[string]struct{}{"api.example.com": {}}}), mod, map[string]interface{}{
+	_, out := invoke(makeActuateFn(cicFlowDeps{doer: &stubDoer{}, egress: egressPolicy{{Host: "api.example.com"}}}), mod, map[string]interface{}{
 		"method": "POST", "url": "https://api.example.com/x", "body_base64": "!!bad!!",
 	})
 	assert.Contains(t, out["error"], "not valid base64")
@@ -195,20 +195,10 @@ func TestMakeActuateFn_BadBodyBase64(t *testing.T) {
 
 func TestMakeActuateFn_DoerError(t *testing.T) {
 	mod := newMod(8192)
-	_, out := invoke(makeActuateFn(cicFlowDeps{doer: &stubDoer{err: errors.New("dial fail")}, egress: map[string]struct{}{"api.example.com": {}}}), mod, map[string]interface{}{
+	_, out := invoke(makeActuateFn(cicFlowDeps{doer: &stubDoer{err: errors.New("dial fail")}, egress: egressPolicy{{Host: "api.example.com"}}}), mod, map[string]interface{}{
 		"method": "GET", "url": "https://api.example.com/x",
 	})
 	assert.Contains(t, out["error"], "dial fail")
-}
-
-// --- hostAllowed ---
-
-func TestHostAllowed(t *testing.T) {
-	assert.False(t, hostAllowed(nil, "a.com"))
-	assert.False(t, hostAllowed(map[string]struct{}{}, "a.com"))
-	assert.True(t, hostAllowed(map[string]struct{}{"a.com": {}}, "a.com"))
-	assert.True(t, hostAllowed(map[string]struct{}{"a.com": {}}, "A.COM")) // case-insensitive
-	assert.False(t, hostAllowed(map[string]struct{}{"a.com": {}}, "b.com"))
 }
 
 // --- registration / setup / combine ---

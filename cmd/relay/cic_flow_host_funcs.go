@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/tetratelabs/wazero"
@@ -48,9 +49,9 @@ type httpDoer interface {
 // error, and an empty egress set denies every `actuate`. Real deps are bound
 // per-module from the signed capability manifest once R3 lands.
 type cicFlowDeps struct {
-	sign   signer              // Vault Transit signer; nil → sign returns a typed error
-	doer   httpDoer            // egress transport; nil → http.DefaultClient
-	egress map[string]struct{} // allow-listed egress hosts (lowercased); empty → deny all
+	sign   signer       // Vault Transit signer; nil → sign returns a typed error
+	doer   httpDoer     // egress transport; nil → http.DefaultClient
+	egress egressPolicy // per-module egress policy (host/method/path/port); empty → deny all
 }
 
 // makeCICFlowHostSetupFn returns a HostSetupFn that registers the "cic-flow"
@@ -141,8 +142,12 @@ func makeActuateFn(deps cicFlowDeps) func(context.Context, api.Module, uint32, u
 		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Hostname() == "" {
 			return gitWriteError(mod, outPtr, outLen, "invalid url")
 		}
-		if !hostAllowed(deps.egress, u.Hostname()) {
-			return gitWriteError(mod, outPtr, outLen, "egress denied: host not allow-listed")
+		method := req.Method
+		if method == "" {
+			method = http.MethodGet
+		}
+		if !deps.egress.allows(method, u.Hostname(), portOf(u), u.Path) {
+			return gitWriteError(mod, outPtr, outLen, "egress denied: not permitted by the module manifest")
 		}
 		var body io.Reader
 		if req.BodyBase64 != "" {
@@ -151,10 +156,6 @@ func makeActuateFn(deps cicFlowDeps) func(context.Context, api.Module, uint32, u
 				return gitWriteError(mod, outPtr, outLen, "body_base64 not valid base64")
 			}
 			body = bytes.NewReader(raw)
-		}
-		method := req.Method
-		if method == "" {
-			method = http.MethodGet
 		}
 		httpReq, err := http.NewRequestWithContext(ctx, method, req.URL, body)
 		if err != nil {
@@ -184,14 +185,18 @@ func makeActuateFn(deps cicFlowDeps) func(context.Context, api.Module, uint32, u
 	}
 }
 
-// hostAllowed reports whether host is in the allowlist (exact, case-insensitive).
-// An empty allowlist denies everything — egress is opt-in, never caller-widened.
-func hostAllowed(allow map[string]struct{}, host string) bool {
-	if len(allow) == 0 {
-		return false
+// portOf returns the request's TCP port: the explicit URL port, else the scheme
+// default (443 for https, 80 for http).
+func portOf(u *url.URL) int {
+	if p := u.Port(); p != "" {
+		if n, err := strconv.Atoi(p); err == nil {
+			return n
+		}
 	}
-	_, ok := allow[strings.ToLower(host)]
-	return ok
+	if u.Scheme == "http" {
+		return 80
+	}
+	return 443
 }
 
 // combineHostSetups returns a HostSetupFn that runs each setup in order, so

@@ -103,6 +103,20 @@ no verified provenance → no capability.
    dev/insecure opt-in is added; the existing dev/insecure escape hatches are to be
    **phased out** over time. Unverified provenance → no capability.
 
+## Implementation status
+
+**R3a machinery — landed** (`cmd/relay/cic_flow_manifest.go`, tested 100%): the
+`capabilityManifest` / `moduleProject` types + `parseModuleProject`; the
+`egressPolicy` (host suffix-glob + method + path + port, empty = deny-all);
+`bindCICFlowDeps(manifest, keyResolver, doer)`; `checkImportsWithinManifest`
+(`abi.imports ⊆ manifest`); `verifyBuildHash`. `cic-flow`'s `egress` field is now
+this policy (was an exact-host set). **Not yet wired into the module-load path** —
+that integration (read each module's `project.yaml`, call `bindCICFlowDeps` with a
+real `keyResolver`, gate activation on the cicSign check) is the next slice, and
+stays **fail-closed** until R3b verifies `cicSign`.
+
+**R3b — pending**, blocked on the CA-chain bootstrap (`pki_verify.go`).
+
 ## Reuses / touches
 
 - `cmd/relay/cic_flow_host_funcs.go` — `cicFlowDeps`, `hostAllowed` (→ glob).
