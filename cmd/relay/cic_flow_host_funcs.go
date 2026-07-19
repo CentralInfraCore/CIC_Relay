@@ -55,13 +55,10 @@ type cicFlowDeps struct {
 }
 
 // makeCICFlowHostSetupFn returns a HostSetupFn that registers the "cic-flow"
-// host module on the wazero runtime.
-func makeCICFlowHostSetupFn(deps cicFlowDeps) func(ctx context.Context, r wazero.Runtime) error {
-	if deps.doer == nil {
-		deps.doer = http.DefaultClient
-	}
+// host module on the wazero runtime, backed by a per-module capability registry.
+func makeCICFlowHostSetupFn(reg *cicFlowRegistry) func(ctx context.Context, r wazero.Runtime) error {
 	return func(ctx context.Context, r wazero.Runtime) error {
-		return registerCICFlowHostFunctions(ctx, r, deps)
+		return registerCICFlowHostFunctions(ctx, r, reg)
 	}
 }
 
@@ -72,24 +69,39 @@ func makeCICFlowHostSetupFn(deps cicFlowDeps) func(ctx context.Context, r wazero
 //
 // A JSON request is read from linear memory at (req_ptr, req_len); the JSON
 // response is written to (out_ptr, out_len); the return value is bytes written,
-// or -1 on a memory/marshal error.
-func registerCICFlowHostFunctions(ctx context.Context, r wazero.Runtime, deps cicFlowDeps) error {
+// or -1 on a memory/marshal error. Each call resolves the *calling* guest's deps
+// from reg by module name; an unregistered module is denied (fail-closed).
+func registerCICFlowHostFunctions(ctx context.Context, r wazero.Runtime, reg *cicFlowRegistry) error {
 	b := r.NewHostModuleBuilder("cic-flow")
 
 	b.NewFunctionBuilder().
-		WithFunc(makeSignFn(deps)).
+		WithFunc(perModule(reg, makeSignFn)).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("sign")
 
 	b.NewFunctionBuilder().
-		WithFunc(makeActuateFn(deps)).
+		WithFunc(perModule(reg, makeActuateFn)).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("actuate")
 
 	_, err := b.Instantiate(ctx)
 	return err
+}
+
+// perModule wraps a deps-bound host-function factory so the exported host
+// function resolves the *calling* guest's deps from the registry by `mod.Name()`
+// (the guest is instantiated `WithName(moduleID)`). A module with no verified
+// capability is denied — fail-closed.
+func perModule(reg *cicFlowRegistry, make func(cicFlowDeps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
+	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
+		deps, ok := reg.lookup(mod.Name())
+		if !ok {
+			return gitWriteError(mod, outPtr, outLen, "cic-flow: module has no verified capability")
+		}
+		return make(deps)(ctx, mod, reqPtr, reqLen, outPtr, outLen)
+	}
 }
 
 // --- host function factories ---

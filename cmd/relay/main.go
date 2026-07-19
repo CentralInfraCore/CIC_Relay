@@ -651,13 +651,19 @@ func main() {
 	}
 	gitOps := git.NewExecGitOps(gitRegistry)
 	// Register the "git" host module and the "cic-flow" host module (feature-011:
-	// the decomposed sign-then-send provider capability). cic-flow is registered
-	// but INERT by default — empty egress denies every actuate, nil signer makes
-	// sign a clean error — until R3 binds a per-module signer + egress allowlist
-	// from the signed capability manifest.
+	// the decomposed sign-then-send provider capability). cic-flow deps are bound
+	// per-module from each module's verified manifest at load
+	// (loadEmbeddedComponents populates cicFlowReg); a module with no verified
+	// capability is denied — fail-closed. `resolve` is nil for now: egress binds
+	// per-module, but the signer stays inert until the OCI-key provisioning path
+	// wires a resolver (r3-plan.md).
+	cicFlowReg := newCICFlowRegistry(nil, nil)
+	// loadModule binds each verified module's cic-flow capability into this
+	// registry via the package-level hook (fail-closed: only verified modules).
+	registerModuleCapability = cicFlowReg.registerVerified
 	wasmConfig.HostSetupFn = combineHostSetups(
 		makeGitHostSetupFn(gitOps),
-		makeCICFlowHostSetupFn(cicFlowDeps{}),
+		makeCICFlowHostSetupFn(cicFlowReg),
 	)
 
 	logrusSink := obs.NewLogrusSink(logger)

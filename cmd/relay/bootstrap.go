@@ -515,6 +515,16 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 					"signer_subject": cert.Subject.String(),
 					"chain_length":   len(chains[0]),
 				}).Info("Certificate chain verified.")
+
+				// R3a: the module's provenance verified — bind its cic-flow
+				// capability from the signed manifest (feature-011). Fail-closed:
+				// a module that over-declares its cic-flow imports is rejected here.
+				if registerModuleCapability != nil {
+					if err := registerModuleCapability(moduleID, yamlContent); err != nil {
+						auditLogger.WithField("outcome", "rejected").WithError(err).Error("cic-flow capability binding failed — module rejected.")
+						return fmt.Errorf("cic-flow capability binding failed for %q: %w", moduleID, err)
+					}
+				}
 			}
 		}
 	}

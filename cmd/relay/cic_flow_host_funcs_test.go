@@ -207,14 +207,41 @@ func TestRegisterCICFlowHostFunctions(t *testing.T) {
 	ctx := context.Background()
 	r := wazero.NewRuntime(ctx)
 	defer func() { _ = r.Close(ctx) }()
-	require.NoError(t, registerCICFlowHostFunctions(ctx, r, cicFlowDeps{}))
+	require.NoError(t, registerCICFlowHostFunctions(ctx, r, newCICFlowRegistry(nil, nil)))
 }
 
-func TestMakeCICFlowHostSetupFn_DefaultsDoer(t *testing.T) {
+func TestMakeCICFlowHostSetupFn(t *testing.T) {
 	ctx := context.Background()
 	r := wazero.NewRuntime(ctx)
 	defer func() { _ = r.Close(ctx) }()
-	require.NoError(t, makeCICFlowHostSetupFn(cicFlowDeps{})(ctx, r)) // nil doer → defaulted
+	require.NoError(t, makeCICFlowHostSetupFn(newCICFlowRegistry(nil, nil))(ctx, r))
+}
+
+// perModule resolves the calling guest's deps by mod.Name() from the registry;
+// an unregistered module is denied (fail-closed), a registered one gets its deps.
+func TestPerModule_Resolution(t *testing.T) {
+	reg := newCICFlowRegistry(nil, &stubDoer{resp: okResponse(200, "ok", nil)})
+	reg.deps["mod-a@1.0"] = cicFlowDeps{doer: reg.doer, egress: egressPolicy{{Host: "api.example.com"}}}
+
+	fn := perModule(reg, makeActuateFn)
+
+	// registered module → egress policy applies (allowed host permitted)
+	mod := newMod(8192)
+	mod.name = "mod-a@1.0"
+	_, out := invoke(fn, mod, map[string]interface{}{"method": "GET", "url": "https://api.example.com/x"})
+	assert.Equal(t, float64(200), out["status"])
+
+	// registered module, host outside its policy → denied
+	mod2 := newMod(8192)
+	mod2.name = "mod-a@1.0"
+	_, out = invoke(fn, mod2, map[string]interface{}{"method": "GET", "url": "https://evil.example/x"})
+	assert.Contains(t, out["error"], "egress denied")
+
+	// unregistered module → no verified capability
+	mod3 := newMod(8192)
+	mod3.name = "unknown@1.0"
+	_, out = invoke(fn, mod3, map[string]interface{}{"method": "GET", "url": "https://api.example.com/x"})
+	assert.Contains(t, out["error"], "no verified capability")
 }
 
 func TestCombineHostSetups(t *testing.T) {
