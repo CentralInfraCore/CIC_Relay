@@ -134,15 +134,23 @@ fail-closed: no verified provenance/entitlement → no capability.
 
 ## Implementation status
 
-**R3a machinery — landed** (`cmd/relay/cic_flow_manifest.go`, tested 100%): the
-`capabilityManifest` / `moduleProject` types + `parseModuleProject`; the
-`egressPolicy` (host suffix-glob + method + path + port, empty = deny-all);
-`bindCICFlowDeps(manifest, keyResolver, doer)`; `checkImportsWithinManifest`
-(`abi.imports ⊆ manifest`); `verifyBuildHash`. `cic-flow`'s `egress` field is now
-this policy (was an exact-host set). **Not yet wired into the module-load path** —
-that integration (read each module's `project.yaml`, call `bindCICFlowDeps` with a
-real `keyResolver`, gate activation on the cicSign check) is the next slice, and
-stays **fail-closed** until R3b verifies `cicSign`.
+**R3a — landed and live-wired** (`cmd/relay/cic_flow_manifest.go` +
+`cic_flow_registry.go`, new code tested 100%):
+
+- the `capabilityManifest` / `moduleProject` types; `egressPolicy` (host
+  suffix-glob + method + path + port, empty = deny-all); `bindCICFlowDeps`;
+  `checkImportsWithinManifest` (`abi.imports ⊆ manifest`); `verifyBuildHash`.
+- **`cicFlowRegistry`** (moduleID → deps): the shared `cic-flow` host module
+  resolves the *calling* guest's deps by `mod.Name()` (guests instantiate
+  `WithName(moduleID)`); an unregistered module is denied — fail-closed.
+- **live wiring**: `loadModule` binds a module's capability via a package-level
+  hook, called **only in the cert-verified branch** — an untrusted module never
+  gets one. `main` wires the hook to the registry. `resolve` is nil for now:
+  egress binds per-module, the signer stays inert until the OCI-key path lands.
+
+**The trust gate is a placeholder**: today it is the existing dev cert-chain verify
+against the embedded CICDeveloperCA (`bootstrap.go`). **R3b replaces it** with
+CICSourceCA (provenance) + CICLicenseCA (entitlement) via their runtime path.
 
 **R3b — pending** the CICSourceCA (binary-adjacent) + CICLicenseCA (from-license)
 runtime provisioning path. `pki_verify.go` is already wired and active (dev anchor:
