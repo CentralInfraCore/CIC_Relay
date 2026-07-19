@@ -651,13 +651,22 @@ func main() {
 	}
 	gitOps := git.NewExecGitOps(gitRegistry)
 	// Register the "git" host module and the "cic-flow" host module (feature-011:
-	// the decomposed sign-then-send provider capability). cic-flow is registered
-	// but INERT by default — empty egress denies every actuate, nil signer makes
-	// sign a clean error — until R3 binds a per-module signer + egress allowlist
-	// from the signed capability manifest.
+	// the decomposed sign-then-send provider capability). cic-flow deps are bound
+	// per-module from each module's verified manifest at load
+	// (loadEmbeddedComponents populates cicFlowReg); a module with no verified
+	// capability is denied — fail-closed. `resolve` is nil for now: egress binds
+	// per-module, but the signer stays inert until the OCI-key provisioning path
+	// wires a resolver (r3-plan.md).
+	// resolve maps a module's oci/... handle to a SignOCI signer over the
+	// relay-provisioned Vault key when CIC_OCI_SIGN_MOUNT/_KEY are set; nil (sign
+	// inert) otherwise.
+	cicFlowReg := newCICFlowRegistry(buildOCIKeyResolver(), nil)
+	// loadModule binds each verified module's cic-flow capability into this
+	// registry via the package-level hook (fail-closed: only verified modules).
+	registerModuleCapability = cicFlowReg.registerVerified
 	wasmConfig.HostSetupFn = combineHostSetups(
 		makeGitHostSetupFn(gitOps),
-		makeCICFlowHostSetupFn(cicFlowDeps{}),
+		makeCICFlowHostSetupFn(cicFlowReg),
 	)
 
 	logrusSink := obs.NewLogrusSink(logger)
@@ -689,6 +698,13 @@ func main() {
 		"trust_mode":         trustMode,
 		"trust_store_loaded": pkiAssets.TrustStoreLoaded,
 	}).Info("PKI trust store ready")
+
+	// R3b: load the detached cic-flow provenance/entitlement anchors (CICSourceCA
+	// beside the binary, CICLicenseCA from the license). Absent → cic-flow
+	// fail-closed. A configured-but-unreadable bundle is fatal.
+	if err := loadProvenanceAnchors(pkiAssets, logger); err != nil {
+		logger.WithError(err).Fatal("FATAL: cic-flow trust anchor load failed")
+	}
 
 	// M34+M36: build context for Merkle-root verification hash.
 	// ToolchainDigest: sha256 of the Go runtime version string (stable, no external dep).

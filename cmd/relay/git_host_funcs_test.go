@@ -42,10 +42,12 @@ func (m *fixedMem) Write(offset uint32, v []byte) bool {
 
 type minMod struct {
 	api.Module
-	mem *fixedMem
+	mem  *fixedMem
+	name string
 }
 
 func (m *minMod) Memory() api.Memory { return m.mem }
+func (m *minMod) Name() string       { return m.name }
 
 func newMod(size int) *minMod {
 	return &minMod{mem: &fixedMem{buf: make([]byte, size)}}

@@ -22,7 +22,7 @@ CIC:    verify checksum == buildHash, review manifest      # finalize_release.py
         cicSign = CIC counter-signature                    # cicSignedCA.certificate (CIC Root CA)
    ↓ deploy
 RELAY (load, this plan):
-   verify cicSign against the CIC Root CA        ← pki_verify.go (SCAFFOLD)
+   verify module provenance/entitlement (CICSourceCA + CICLicenseCA)  ← pki_verify.go (wired)
    verify buildHash == sha256(loaded wasm)
    verify abi.imports ⊆ capability_manifest
    bind per-module cicFlowDeps from capability_manifest
@@ -35,36 +35,65 @@ actuate]`) + `capability_manifest` (`egress`, `secrets`). The module's own
 wasm, MANIFEST.sha256) but **explicitly performs no cryptographic signature
 verification** (check 5 is status-only) — that crypto step is *the relay's R3 job*.
 
+## Trust anchors (corrected)
+
+Earlier drafts said R3b is "blocked on a CA-chain bootstrap" and that
+`pki_verify.go` is scaffold. **Both are wrong** (verified against the code and the
+`EEC/` CA hierarchy):
+
+- The CA hierarchy **exists** (`EEC/`: Root CA, `CICPlatformCA`, `CICDeveloperCA`,
+  `CICSourceCA`, `CICLicenseCA`) and `core/cabinet/pki_verify.go` is **wired and
+  active** — `cmd/relay/bootstrap.go:79`,`:508` call `VerifyCertificateChain`
+  against the pool `bootstrapPKI` loads (`main.go:684`). In `CIC_TRUST_MODE=dev`
+  (default) the embedded **CICDeveloperCA** is the anchor and a module with a bad
+  chain is rejected at load.
+- **But the embedded dev CA and the module-sidecar `.pem` are *not* the planned
+  module-trust for `cic-flow`.** By design the anchors are two separate axes,
+  each delivered by its own runtime path (not `go:embed`, not the sidecar `.pem`):
+  - **CICSourceCA** — build/source provenance; arrives **alongside the relay
+    binary**, loaded at startup.
+  - **CICLicenseCA** — entitlement; **extracted from the license** at startup.
+- So the module release is verified on **two** axes: `cicSign`/provenance against
+  **CICSourceCA**, and entitlement against **CICLicenseCA**. The certs exist in
+  `EEC/` but are **not embedded** — deliberately, because they come via those
+  runtime channels.
+
+**R3b's real precondition is therefore the CICSourceCA (binary-adjacent) +
+CICLicenseCA (from-license) runtime provisioning path — a distinct planned piece —
+not a CA-chain bootstrap.** `pki_verify.go` itself is ready to consume those pools.
+
 ## What the relay does at load — target sequence
 
 | # | Step | Status |
 |---|---|---|
 | 1 | Load wasm + its `project.yaml` (`abi`, `capability_manifest`, `metadata`) | concept |
 | 2 | **buildHash integrity**: `sha256(wasm) == metadata.buildHash` | buildable now |
-| 3 | **cicSign verification**: `metadata.cicSign` valid against the CIC Root CA (`cicSignedCA`) | **scaffold** — `pki_verify.go`, blocked on CA bootstrap |
+| 3 | **provenance/entitlement verification**: module verified against **CICSourceCA** (build/source) + **CICLicenseCA** (license) | `pki_verify.go` **wired** (dev uses embedded CICDeveloperCA); waits on the **SourceCA/LicenseCA runtime provisioning path** |
 | 4 | **`abi.imports ⊆ capability_manifest`**: `cic-flow.sign` requires a `secrets` entry with `ops:[sign]`; `cic-flow.actuate` requires `egress`. Reject at load on mismatch | buildable now |
 | 5 | **Bind per-module `cicFlowDeps`** from the manifest: `egress` → egress allowlist; `secrets oci/* ops:[sign]` → `SignOCI` bound to the module's OCI key, sign-only | buildable now |
 | 6 | **Enforce** every host call; a call outside the manifest → typed `permission` error, denied | buildable now (ProofTrace fold = R4) |
 
-## Fail-closed posture (respecting the scaffold)
+## Fail-closed posture
 
-Step 3 (cicSign) is blocked on the `CICRootCA → Intermediate → leaf` bootstrap —
-the same precondition that keeps `pki_verify.go` scaffold and produces the
-existing bootstrap audit `outcome: "skipped", reason: "trust ecosystem not
-bootstrapped"`. Until it lands, a module is **not cryptographically trusted**, so
+Step 3 gates the capability: a module is trusted only once its provenance
+(CICSourceCA) and entitlement (CICLicenseCA) verify. Until those anchors are
+provisioned via their runtime path, a module is **not fully trusted**, so
 `cic-flow` stays **inert** (the current default `cicFlowDeps{}`) — deny, not
-allow. R3 builds the machinery; the cicSign check flips it on. This is fail-closed:
-no verified provenance → no capability.
+allow, matching the existing bootstrap audit `outcome: "skipped", reason: "trust
+ecosystem not bootstrapped"`. R3 builds the machinery; step 3 flips it on. This is
+fail-closed: no verified provenance/entitlement → no capability.
 
 ## Split
 
-- **R3a — buildable now (no CA bootstrap):** manifest parse + `abi.imports ⊆
-  manifest` + buildHash integrity + per-module `cicFlowDeps` binding + call-time
-  enforcement. Unit-testable in isolation; fail-closed until R3b. Reuses R1
-  (`cicFlowDeps`, `hostAllowed`) and R2 (`SignOCI`).
-- **R3b — blocked on CA bootstrap:** activate `pki_verify.go` to verify `cicSign`
-  against the CIC Root CA. This is the same activation the scaffold map already
-  tracks; R3 is a first concrete consumer of it.
+- **R3a — buildable now:** manifest parse + `abi.imports ⊆ manifest` + buildHash
+  integrity + per-module `cicFlowDeps` binding + call-time enforcement.
+  Unit-testable in isolation; fail-closed until R3b. Reuses R1 (`cicFlowDeps`,
+  egress policy) and R2 (`SignOCI`).
+- **R3b — waits on the SourceCA/LicenseCA runtime provisioning path** (a distinct
+  planned piece, not a CA bootstrap): deliver CICSourceCA (binary-adjacent) +
+  CICLicenseCA (from-license) into the running relay, then verify the module's
+  provenance + entitlement through the already-wired `pki_verify.go`, and gate the
+  R3a binding on it.
 
 ## Concrete relay artifacts (R3a)
 
@@ -105,21 +134,44 @@ no verified provenance → no capability.
 
 ## Implementation status
 
-**R3a machinery — landed** (`cmd/relay/cic_flow_manifest.go`, tested 100%): the
-`capabilityManifest` / `moduleProject` types + `parseModuleProject`; the
-`egressPolicy` (host suffix-glob + method + path + port, empty = deny-all);
-`bindCICFlowDeps(manifest, keyResolver, doer)`; `checkImportsWithinManifest`
-(`abi.imports ⊆ manifest`); `verifyBuildHash`. `cic-flow`'s `egress` field is now
-this policy (was an exact-host set). **Not yet wired into the module-load path** —
-that integration (read each module's `project.yaml`, call `bindCICFlowDeps` with a
-real `keyResolver`, gate activation on the cicSign check) is the next slice, and
-stays **fail-closed** until R3b verifies `cicSign`.
+**R3a — landed and live-wired** (`cmd/relay/cic_flow_manifest.go` +
+`cic_flow_registry.go`, new code tested 100%):
 
-**R3b — pending**, blocked on the CA-chain bootstrap (`pki_verify.go`).
+- the `capabilityManifest` / `moduleProject` types; `egressPolicy` (host
+  suffix-glob + method + path + port, empty = deny-all); `bindCICFlowDeps`;
+  `checkImportsWithinManifest` (`abi.imports ⊆ manifest`); `verifyBuildHash`.
+- **`cicFlowRegistry`** (moduleID → deps): the shared `cic-flow` host module
+  resolves the *calling* guest's deps by `mod.Name()` (guests instantiate
+  `WithName(moduleID)`); an unregistered module is denied — fail-closed.
+- **live wiring**: `loadModule` binds a module's capability via a package-level
+  hook, called **only in the cert-verified branch** — an untrusted module never
+  gets one. `main` wires the hook to the registry. `resolve` is nil for now:
+  egress binds per-module, the signer stays inert until the OCI-key path lands.
+
+**The trust gate is a placeholder**: today it is the existing dev cert-chain verify
+against the embedded CICDeveloperCA (`bootstrap.go`). **R3b replaces it** with
+CICSourceCA (provenance) + CICLicenseCA (entitlement) via their runtime path.
+
+**R3b provenance — landed** (`cmd/relay/pki_companion.go`): CICSourceCA is
+loaded from a **detached companion** (`CIC_SOURCE_CA_BUNDLE`, beside the binary —
+never embedded, so signing it after the build never perturbs the binary hash), and
+`verifyCICFlowProvenance` gates the cic-flow binding on the module's cert chaining
+to it (EKU CodeSigning + CRL, via the already-wired `pki_verify.go`). No SourceCA /
+no chain → the module loads but gets no capability (fail-closed, audited "skipped").
+CICLicenseCA is loaded the same detached way (`CIC_LICENSE_CA_BUNDLE`, from the
+license).
+
+**R3b entitlement — pending** the per-module license-artifact format: the
+CICLicenseCA anchor is loaded, but the entitlement *check* (verify a module's
+license attestation against it) wires in once that artifact is specified.
 
 ## Reuses / touches
 
 - `cmd/relay/cic_flow_host_funcs.go` — `cicFlowDeps`, `hostAllowed` (→ glob).
 - `core/nexus/crypto` — `SignOCI` (the per-module signer).
-- `core/cabinet/pki_verify.go` — **scaffold**, the cicSign verifier (R3b).
+- `core/cabinet/pki_verify.go` — **wired/active** (`VerifyCertificateChain`, called
+  from `bootstrap.go:79`/`:508`); R3b feeds it the SourceCA/LicenseCA pools.
+- `cmd/relay/pki_bootstrap.go` + `cmd/relay/embedded/pki/` — the dev trust anchor
+  (embedded CICDeveloperCA); `EEC/` holds the full CA hierarchy incl. CICSourceCA /
+  CICLicenseCA (not embedded — delivered at runtime by design).
 - the existing bootstrap-audit "skipped / trust ecosystem not bootstrapped" posture.

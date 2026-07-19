@@ -278,6 +278,16 @@ type PKIAssets struct {
 	TrustStoreLoaded bool   // true when at least one root CA was loaded
 	CAFingerprint    string // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
 	CertChainHash    string // sha256 of all loaded CA cert DER bytes concatenated, "sha256:<hex>"
+
+	// R3b (feature-011): the cic-flow provenance/entitlement anchors, delivered by
+	// their own detached-companion path — NOT embedded, so the relay binary's hash
+	// stays stable (r3-plan.md). SourceRoots = CICSourceCA (build/source
+	// provenance), loaded from a companion beside the binary; LicenseRoots =
+	// CICLicenseCA (entitlement), from the license.
+	SourceRoots   *x509.CertPool
+	SourceLoaded  bool
+	LicenseRoots  *x509.CertPool
+	LicenseLoaded bool
 }
 
 // ComponentHeader defines the common fields for identifying a component type.
@@ -515,6 +525,20 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 					"signer_subject": cert.Subject.String(),
 					"chain_length":   len(chains[0]),
 				}).Info("Certificate chain verified.")
+
+				// R3a/R3b: bind the module's cic-flow capability from its signed
+				// manifest — but only once its provenance verifies against the
+				// CICSourceCA anchor (feature-011). No SourceCA / no provenance →
+				// the module loads but gets no capability (fail-closed). A verified
+				// module that over-declares its cic-flow imports is rejected.
+				if registerModuleCapability != nil {
+					if provErr := verifyCICFlowProvenance(cert, pkiAssets); provErr != nil {
+						auditLogger.WithField("outcome", "skipped").WithError(provErr).Warn("cic-flow capability not bound — provenance not verified.")
+					} else if err := registerModuleCapability(moduleID, yamlContent); err != nil {
+						auditLogger.WithField("outcome", "rejected").WithError(err).Error("cic-flow capability binding failed — module rejected.")
+						return fmt.Errorf("cic-flow capability binding failed for %q: %w", moduleID, err)
+					}
+				}
 			}
 		}
 	}
