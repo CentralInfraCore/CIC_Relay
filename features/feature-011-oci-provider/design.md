@@ -253,7 +253,12 @@ error) until R3 binds a per-module signer + egress from the signed manifest. R4
 (fold host-call audit into the ProofTrace on this path) is the paired follow-up.
 
 Module-side specs (read-only from here): `relay-requirements.md` (R1–R4),
-`specs/relay-sign-send-interface.md`, `specs/host-functions.md`.
+`specs/relay-sign-send-interface.md`, `specs/host-functions.md`,
+`specs/capability-manifest.md`.
+
+**R3 plan** — binding the per-module signer + egress from the *signed* capability
+manifest, and where `cicSign` verification activates `pki_verify.go`: see
+[`r3-plan.md`](r3-plan.md).
 
 ## ProofTrace binding
 
