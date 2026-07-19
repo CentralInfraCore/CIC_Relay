@@ -70,29 +70,38 @@ no verified provenance → no capability.
 
 - a `capabilityManifest` type + loader: `egress` (host glob + methods) and
   `secrets` (handle + ops), read from the module's `project.yaml`.
-- **glob egress matching** — extend `hostAllowed` (today exact, case-insensitive)
-  to a suffix glob so `*.oraclecloud.com` matches `iaas.eu-frankfurt-1.oraclecloud.com`.
-  Bounded: no bare `*`, no infix wildcards (mirrors the module review rule "egress:
-  `*` is rejected").
-- `bindCICFlowDeps(manifest, keyResolver) cicFlowDeps` — builds the egress set and
-  the sign-only signer (`SignOCI` over the handle's resolved OCI key). `actuate`
-  method allow-list from `egress[].methods`.
+- **egress matching** — extend `hostAllowed` (today exact, case-insensitive) to a
+  host suffix glob (`*.oraclecloud.com` matches `iaas.…oraclecloud.com`) plus
+  per-entry **method / path / port** checks. Bounded: no bare `*`, no infix
+  wildcards (mirrors the module review rule "egress: `*` is rejected").
+- `bindCICFlowDeps(manifest, keyResolver) cicFlowDeps` — builds the egress policy
+  (host / method / path / port) and the sign-only signer (`SignOCI` over the key
+  the `keyResolver` maps the handle to — a **relay-provisioned Vault key**, not
+  shipped with the module).
 - `abi.imports ⊆ manifest` check → typed load-time rejection.
 - buildHash check: `sha256(loaded wasm) == metadata.buildHash`.
 - wiring: `main.go`'s inert `cicFlowDeps{}` becomes per-module binding, **gated on
   step 3** (cicSign verified) — so production stays fail-closed until R3b.
 
-## Open decisions (to settle before building R3a)
+## Decisions (settled)
 
-1. **Egress match surface**: suffix glob (`*.oraclecloud.com`) + methods only, or
-   also paths/ports? (schema allows `paths`, `ports`; default 443.)
-2. **Manifest source at runtime**: the module's `project.yaml` shipped alongside
-   the wasm, or the manifest the guest returns from `describe()` (cross-checked
-   against the signed one)?
-3. **`handle → key` resolution** (the `keyResolver`): `oci/*` → which Vault Transit
-   RSA key/mount for this module? This is the per-module key binding.
-4. **Dev/insecure opt-in** to exercise R3a before R3b lands (like the throwaway-Vault
-   demos) — explicit flag, never the default, always audited as "unverified".
+1. **Egress match surface** — host suffix-glob (`*.oraclecloud.com`) **plus
+   methods, paths, and ports**. The full `egress` entry is enforced, not just
+   host+methods; default port 443 when omitted. Still bounded: no bare `*` host,
+   no infix wildcards.
+2. **Manifest source** — the **signed `project.yaml` only**. No extra layer: the
+   guest's `describe()` is *not* a second source of truth to reconcile against.
+   The `capability_manifest` block in the verified `project.yaml` is authoritative.
+3. **Key lifecycle** — the OCI cloud-access key is **relay-managed, not shipped
+   with the module**. The relay separately obtains the OCI API key and stores it in
+   Vault; the manifest's `oci/*` handle is a *logical* reference the `keyResolver`
+   maps to that relay-provisioned Vault key. The module never carries or names key
+   material — only the handle. Provisioning the OCI key into Vault is a distinct
+   operator flow (separate task); R3a's `keyResolver` assumes the key is already in
+   Vault.
+4. **No dev/insecure bypass** — R3a is **fail-closed, period**. No new
+   dev/insecure opt-in is added; the existing dev/insecure escape hatches are to be
+   **phased out** over time. Unverified provenance → no capability.
 
 ## Reuses / touches
 
