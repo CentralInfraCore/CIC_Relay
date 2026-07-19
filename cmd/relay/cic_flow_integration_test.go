@@ -51,6 +51,15 @@ func newCabinetForTest(t *testing.T) cabinet.Cabinet {
 	return svc
 }
 
+// loadedPKIWithSource returns a loaded trust store whose CICSourceCA provenance
+// anchor is the same pool (the test module ee chains to it), so verifyCICFlowProvenance passes.
+func loadedPKIWithSource(t *testing.T) *PKIAssets {
+	a := buildLoadedPKIAssets(t)
+	a.SourceRoots = a.Roots
+	a.SourceLoaded = true
+	return a
+}
+
 // A verified module that declares cic-flow imports + a matching manifest has its
 // capability bound into the registry at load (the load → hook → register path).
 func TestLoadModule_BindsCICFlowCapability(t *testing.T) {
@@ -72,13 +81,42 @@ capability_manifest:
 	defer func() { registerModuleCapability = nil }()
 
 	err := loadModule(context.Background(), newCabinetForTest(t), moduleFS, "m.yaml", yamlContent,
-		buildLoadedPKIAssets(t), int64(16*1024*1024), newDiscardLogger())
+		loadedPKIWithSource(t), int64(16*1024*1024), newDiscardLogger())
 	require.NoError(t, err)
 
 	deps, ok := reg.lookup("oci.mod@1.0")
 	require.True(t, ok, "a verified module's cic-flow capability must be bound")
 	require.Len(t, deps.egress, 1)
 	assert.Equal(t, "*.oraclecloud.com", deps.egress[0].Host)
+}
+
+// Without the CICSourceCA provenance anchor, a cic-flow module still loads but
+// gets no capability — fail-closed (R3b).
+func TestLoadModule_CICFlow_FailClosedWithoutSourceCA(t *testing.T) {
+	const manifest = `abi:
+  imports:
+    - module: cic-flow
+      functions: [sign, actuate]
+capability_manifest:
+  egress:
+    - host: "*.oraclecloud.com"
+  secrets:
+    - handle: "oci/*"
+      ops: [sign]
+`
+	moduleFS, yamlContent := moduleFSWith(t, "oci.mod", manifest)
+
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	registerModuleCapability = reg.registerVerified
+	defer func() { registerModuleCapability = nil }()
+
+	// buildLoadedPKIAssets has no SourceRoots → provenance not verified.
+	err := loadModule(context.Background(), newCabinetForTest(t), moduleFS, "m.yaml", yamlContent,
+		buildLoadedPKIAssets(t), int64(16*1024*1024), newDiscardLogger())
+	require.NoError(t, err) // module loads
+
+	_, ok := reg.lookup("oci.mod@1.0")
+	assert.False(t, ok, "no SourceCA → cic-flow capability must not be bound (fail-closed)")
 }
 
 // A verified module that over-declares its cic-flow imports (imports sign but
@@ -99,7 +137,7 @@ capability_manifest:
 	defer func() { registerModuleCapability = nil }()
 
 	err := loadModule(context.Background(), newCabinetForTest(t), moduleFS, "m.yaml", yamlContent,
-		buildLoadedPKIAssets(t), int64(16*1024*1024), newDiscardLogger())
+		loadedPKIWithSource(t), int64(16*1024*1024), newDiscardLogger())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "capability binding failed")
 	_, ok := reg.lookup("bad.mod@1.0")

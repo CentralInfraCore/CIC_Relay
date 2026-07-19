@@ -699,6 +699,13 @@ func main() {
 		"trust_store_loaded": pkiAssets.TrustStoreLoaded,
 	}).Info("PKI trust store ready")
 
+	// R3b: load the detached cic-flow provenance/entitlement anchors (CICSourceCA
+	// beside the binary, CICLicenseCA from the license). Absent → cic-flow
+	// fail-closed. A configured-but-unreadable bundle is fatal.
+	if err := loadProvenanceAnchors(pkiAssets, logger); err != nil {
+		logger.WithError(err).Fatal("FATAL: cic-flow trust anchor load failed")
+	}
+
 	// M34+M36: build context for Merkle-root verification hash.
 	// ToolchainDigest: sha256 of the Go runtime version string (stable, no external dep).
 	// DockerImageChecksum: injected via -X main.BuilderImageDigest at build time.
