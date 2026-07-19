@@ -566,6 +566,7 @@ coverage-check-pkgs: ## Fail if per-package coverage < threshold
 		    *"/tools/sourcehash") continue ;; \
 		    *"/tools/statechain-demo") continue ;; \
 		    *"/tools/trustflow-demo") continue ;; \
+		    *"/tools/oci-sign-demo") continue ;; \
 		    *"/pkg/cicffi")       continue ;; \
 		  esac; \
 		  GO111MODULE=on GOFLAGS="$(GOFLAGS)" go test $$p -coverprofile=/tmp/cover.out >/dev/null 2>&1; \
