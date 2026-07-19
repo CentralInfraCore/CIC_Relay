@@ -63,6 +63,59 @@ func TestVaultCryptoService_Sign(t *testing.T) {
 	})
 }
 
+func TestVaultCryptoService_SignOCI(t *testing.T) {
+	t.Run("success — pkcs1v15/sha2-256, raw base64 (prefix stripped)", func(t *testing.T) {
+		var gotBody map[string]interface{}
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, http.MethodPut, r.Method)
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]string{"signature": "vault:v1:QUJD"},
+			})
+		})
+		_, svc := setupTestVault(t, handler)
+		sig, err := svc.SignOCI(context.Background(), []byte("canonical"))
+		require.NoError(t, err)
+		assert.Equal(t, "QUJD", sig) // "vault:v1:" prefix stripped
+		assert.Equal(t, "pkcs1v15", gotBody["signature_algorithm"])
+		assert.Equal(t, "sha2-256", gotBody["hash_algorithm"])
+		assert.Equal(t, base64.StdEncoding.EncodeToString([]byte("canonical")), gotBody["input"])
+	})
+
+	t.Run("signature without version prefix returned as-is", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]string{"signature": "rawbase64nocolon"},
+			})
+		})
+		_, svc := setupTestVault(t, handler)
+		sig, err := svc.SignOCI(context.Background(), []byte("x"))
+		require.NoError(t, err)
+		assert.Equal(t, "rawbase64nocolon", sig)
+	})
+
+	t.Run("vault returns error", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		_, svc := setupTestVault(t, handler)
+		_, err := svc.SignOCI(context.Background(), []byte("x"))
+		assert.Error(t, err)
+	})
+
+	t.Run("missing signature field", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{}})
+		})
+		_, svc := setupTestVault(t, handler)
+		_, err := svc.SignOCI(context.Background(), []byte("x"))
+		assert.Error(t, err)
+	})
+}
+
 func TestVaultCryptoService_Verify(t *testing.T) {
 	t.Run("valid signature", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

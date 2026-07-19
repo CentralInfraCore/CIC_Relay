@@ -1,0 +1,117 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestParseModuleProject
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Len
+  calls:
+  - assert.Equal
+  - require.Len
+  - require.NoError
+- name: TestParseModuleProject_BadYAML
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - assert.Error
+- name: TestHostGlobMatch
+  kind: func
+  description: ''
+  references:
+  - assert.Equalf
+  calls:
+  - assert.Equalf
+- name: TestEgressPolicy_Allows
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.False
+  calls:
+  - assert.False
+  - assert.True
+- name: TestEgressPolicy_Defaults
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.False
+  calls:
+  - assert.False
+  - assert.True
+- name: TestBindCICFlowDeps
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotNil
+  - assert.Nil
+  - assert.Len
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - assert.Len
+  - assert.Nil
+  - assert.NotNil
+  - require.Error
+  - require.NoError
+- name: TestCheckImportsWithinManifest
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestVerifyBuildHash
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  - assert.Error
+  calls:
+  - assert.Contains
+  - assert.Error
+  - require.Error
+  - require.NoError
+- name: TestGrantsSignAndHandle
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.Equal
+  - assert.False
+  calls:
+  - assert.Equal
+  - assert.False
+  - assert.True
+- name: _
+  kind: var
+  description: ensure keyResolver stays type-compatible with the signer interface.
+  references: []
+- name: ociProjectYAML
+  kind: const
+  description: A project.yaml shaped like cic-module-oracle-cloud's.
+  references: []

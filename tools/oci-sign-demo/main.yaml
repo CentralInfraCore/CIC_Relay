@@ -1,0 +1,119 @@
+---
+package: main
+description: 'Command oci-sign-demo proves the feature-011 OCI *sign-then-send* signing
+  profile end to end, with no relay, no Vault, and no cgo — the smallest thing that
+  de-risks R2 (#88) before wiring the real capability. It builds the OCI draft-cavage
+  HTTP-Signatures canonical string for a sample `PUT /vcns/{id}`, signs it RSA-SHA256
+  (PKCS#1 v1.5) — the exact operation `cic-flow.sign` performs, here over an in-process
+  RSA key that stands in for the scoped Vault Transit key (in production the key never
+  leaves Vault) — assembles the `Authorization: Signature …` header, and actuates
+  against a fake OCI endpoint that **verifies the signature against the RSA public
+  key exactly as OCI would**. It then tampers the body and shows the endpoint reject
+  it, so the signature demonstrably binds the request. This isolates the crypto profile
+  (canonical header set + order, RSA-SHA256 PKCS#1 v1.5) — the highest-risk unknown
+  — from the wazero plumbing (already unit-tested) and the Vault custody (already
+  proven by `make demo-trustflow`). Run: `make demo-oci-sign` (opt-in, not a CI gate).'
+tags:
+- builder
+- core
+- gateway
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Exit
+  - Fprintf
+- name: run
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Close
+  - Errorf
+  - Format
+  - GenerateKey
+  - HandlerFunc
+  - Itoa
+  - NewServer
+  - Now
+  - Printf
+  - Println
+  - Split
+  - UTC
+- name: ociStringToSign
+  kind: func
+  description: ociStringToSign builds the draft-cavage canonical string over signedHeaders.
+    (request-target) = "<lowercase-method> <path>"; host from the wire host; the rest
+    from the request headers.
+  references: []
+  calls:
+  - Fprintf
+  - String
+  - ToLower
+  - WriteByte
+- name: ociAuthorization
+  kind: func
+  description: ociAuthorization assembles the OCI `Signature` Authorization header.
+  references: []
+  calls:
+  - Join
+  - Sprintf
+- name: signRSASHA256
+  kind: func
+  description: signRSASHA256 signs the string RSA-SHA256 with PKCS#1 v1.5 — OCI's
+    scheme, and what the OCI cic-flow signer must ask Vault Transit for (signature_algorithm=
+    pkcs1v15; Vault's RSA default is PSS, which OCI rejects — see design.md).
+  references: []
+  calls:
+  - EncodeToString
+  - SignPKCS1v15
+  - Sum256
+- name: actuate
+  kind: func
+  description: 'actuate is the cic-flow.actuate step: send the request carrying the
+    caller''s own Authorization header verbatim. Returns the HTTP status.'
+  references: []
+  calls:
+  - Close
+  - Do
+  - NewReader
+  - NewRequest
+  - Set
+- name: ociVerifyHandler
+  kind: func
+  description: ociVerifyHandler returns an HTTP handler that re-derives the canonical
+    string from the received request and verifies the RSA-SHA256 signature against
+    pub, exactly as OCI's control plane would. 200 iff valid, else 401.
+  references: []
+  calls:
+  - DecodeString
+  - FindStringSubmatch
+  - Get
+  - ReadAll
+  - RequestURI
+  - Sum256
+  - VerifyPKCS1v15
+  - Write
+  - WriteHeader
+- name: b64sha
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - EncodeToString
+  - Sum256
+- name: signedHeaders
+  kind: var
+  description: signedHeaders is the OCI header set + order for body methods (POST/PUT/PATCH).
+  references: []
+- name: sigParamRE
+  kind: var
+  description: ''
+  references: []

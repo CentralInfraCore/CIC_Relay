@@ -1,0 +1,167 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: stubSigner
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: stubDoer
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: hostFn
+  kind: type
+  description: hostFn is the uniform (req_ptr,req_len,out_ptr,out_len)->i32 host-function
+    type.
+  references: []
+- name: Sign
+  kind: method
+  receiver: stubSigner
+  description: ''
+  references: []
+  calls: []
+- name: Do
+  kind: method
+  receiver: stubDoer
+  description: ''
+  references: []
+  calls: []
+- name: okResponse
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - NewReader
+  - NopCloser
+  - Set
+- name: invoke
+  kind: func
+  description: invoke runs a host fn with req at offset 0 and the output buffer at
+    offset 4096, returning n and the decoded response JSON.
+  references: []
+  calls: []
+- name: TestMakeSignFn_Success
+  kind: func
+  description: ''
+  references:
+  - require.Positive
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Positive
+- name: TestMakeSignFn_NoSigner
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
+- name: TestMakeSignFn_BadJSON
+  kind: func
+  description: ''
+  references:
+  - require.Positive
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Positive
+- name: TestMakeSignFn_BadBase64
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
+- name: TestMakeSignFn_SignerError
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
+- name: TestMakeActuateFn_Success_CarriesAuthorization
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.Nil
+  calls:
+  - assert.Contains
+  - assert.Nil
+- name: TestMakeActuateFn_EmptyEgressDeniesAll
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - wazero.NewRuntime
+  - require.NoError
+  - wazero.Runtime
+  - assert.Equal
+  - require.Error
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - require.Error
+  - require.NoError
+  - wazero.NewRuntime
+- name: TestMakeActuateFn_BadBodyBase64
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
+- name: TestRegisterCICFlowHostFunctions
+  kind: func
+  description: ''
+  references:
+  - wazero.NewRuntime
+  - require.NoError
+  calls:
+  - require.NoError
+  - wazero.NewRuntime
+- name: TestMakeCICFlowHostSetupFn_DefaultsDoer
+  kind: func
+  description: ''
+  references:
+  - wazero.NewRuntime
+  - require.NoError
+  calls:
+  - require.NoError
+  - wazero.NewRuntime
+- name: TestCombineHostSetups
+  kind: func
+  description: ''
+  references:
+  - wazero.NewRuntime
+  - wazero.Runtime
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.NoError
+  - wazero.NewRuntime
+- name: TestCombineHostSetups_StopsOnError
+  kind: func
+  description: ''
+  references:
+  - wazero.NewRuntime
+  - wazero.Runtime
+  - require.Error
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Error
+  - wazero.NewRuntime
