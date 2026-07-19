@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -79,6 +80,40 @@ func (v *VaultCryptoService) Sign(ctx context.Context, data []byte) (string, err
 	}
 
 	return signature, nil
+}
+
+// SignOCI signs data with the Transit key using RSASSA-PKCS#1 v1.5 over SHA-256 —
+// OCI's request-signing scheme (draft-cavage `rsa-sha256`) — and returns the raw
+// base64 signature the OCI `Authorization: Signature` header needs, with Vault's
+// `vault:v<N>:` version prefix stripped. Unlike [VaultCryptoService.Sign], which
+// lets Vault default to PSS for RSA keys, this pins `pkcs1v15` / `sha2-256` as OCI
+// requires. The key never leaves Vault. See features/feature-011-oci-provider.
+func (v *VaultCryptoService) SignOCI(ctx context.Context, data []byte) (string, error) {
+	path := fmt.Sprintf("%s/sign/%s", v.mountPath, v.keyName)
+	secret, err := v.client.Logical().WriteWithContext(ctx, path, map[string]interface{}{
+		"input":               base64.StdEncoding.EncodeToString(data),
+		"signature_algorithm": "pkcs1v15",
+		"hash_algorithm":      "sha2-256",
+	})
+	if err != nil {
+		return "", fmt.Errorf("vault OCI sign request failed: %w", err)
+	}
+
+	if secret == nil || secret.Data == nil {
+		return "", fmt.Errorf("vault returned empty response")
+	}
+
+	wire, ok := secret.Data["signature"].(string)
+	if !ok {
+		return "", fmt.Errorf("vault response missing 'signature' field")
+	}
+
+	// Vault wire form is "vault:v<N>:<base64>"; OCI needs the raw base64. Base64
+	// contains no ':', so the last ':' delimits the version prefix from the value.
+	if i := strings.LastIndexByte(wire, ':'); i >= 0 {
+		return wire[i+1:], nil
+	}
+	return wire, nil
 }
 
 // Verify uses the Vault Transit engine to verify a signature over the given data.
