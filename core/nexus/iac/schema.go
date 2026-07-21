@@ -20,6 +20,7 @@ import "sort"
 // collection topology plus the per-element field behaviors (relative paths).
 type SchemaField struct {
 	Path       string
+	FieldID    FieldID // stable identity (schema.field_id); survives a path rename
 	Compare    CompareType
 	Mode       FieldMode
 	Collection *Collection
@@ -85,6 +86,12 @@ func parseSchemaField(path string, raw interface{}) SchemaField {
 	m, ok := raw.(map[string]interface{})
 	if !ok {
 		return f // bare/unknown descriptor → writable, exact
+	}
+
+	if schema, ok := m["schema"].(map[string]interface{}); ok {
+		if id, ok := schema["field_id"].(string); ok {
+			f.FieldID = FieldID(id)
+		}
 	}
 
 	if behavior, ok := m["behavior"].(map[string]interface{}); ok {
