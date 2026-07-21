@@ -1,0 +1,35 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestBuildOCIKeyResolver_Unconfigured
+  kind: func
+  description: ''
+  references:
+  - assert.Nil
+  calls:
+  - assert.Nil
+- name: TestBuildOCIKeyResolver_Configured
+  kind: func
+  description: ''
+  references:
+  - require.NotNil
+  - require.Error
+  - assert.Contains
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - require.Error
+  - require.NoError
+  - require.NotNil

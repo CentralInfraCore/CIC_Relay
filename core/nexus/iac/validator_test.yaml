@@ -138,3 +138,48 @@ objects:
   - require.NoError
   calls:
   - require.NoError
+- name: TestIaCValidator_SpecStructure
+  kind: func
+  description: A bare (write-defaulted) spec passes; an explicitly non-writable field
+    in an intent spec is a structural error.
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestIaCValidator_DependencyIntegrity
+  kind: func
+  description: A dependency resolves iff a resource with that name exists in the graph.
+  references:
+  - types.ResourceMetaName
+  - types.GraphServices
+  - types.Service
+  - types.ServiceSpecResources
+  - types.ResourceSpecsubnet
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestIaCValidator_FieldReference
+  kind: func
+  description: A field-level object reference resolves iff the target exists and its
+    kind (when named) matches.
+  references:
+  - types.ResourceMetaName
+  - types.GraphServices
+  - types.Service
+  - types.ServiceSpecResources
+  - types.ResourceSpecrt
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error
+  - require.NoError

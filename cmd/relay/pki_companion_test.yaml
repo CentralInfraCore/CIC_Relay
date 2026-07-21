@@ -1,0 +1,65 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: writeTempPEM
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: rootCAPEM
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestLoadCompanionCAPool
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotNil
+  - assert.Error
+  calls:
+  - assert.Error
+  - assert.NotNil
+  - require.NoError
+- name: TestLoadProvenanceAnchors
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.False
+  - assert.True
+  - assert.NotNil
+  - assert.Error
+  calls:
+  - assert.Error
+  - assert.False
+  - assert.NotNil
+  - assert.True
+  - require.NoError
+- name: TestVerifyCICFlowProvenance
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.Error
+  - assert.NoError
+  calls:
+  - assert.Error
+  - assert.NoError
+  - require.NoError
+  - require.NotNil

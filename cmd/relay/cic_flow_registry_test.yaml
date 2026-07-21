@@ -1,0 +1,86 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestNewCICFlowRegistry_DefaultsDoer
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.False
+  calls:
+  - assert.Equal
+  - assert.False
+- name: TestCICFlowRegistry_RegisterVerified_Binds
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.True
+  - require.Len
+  - assert.Equal
+  - assert.Nil
+  calls:
+  - assert.Equal
+  - assert.Nil
+  - require.Len
+  - require.NoError
+  - require.True
+- name: TestCICFlowRegistry_RegisterVerified_BindsSigner
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - require.True
+  - assert.NotNil
+  calls:
+  - assert.Equal
+  - assert.NotNil
+  - require.NoError
+  - require.True
+- name: TestCICFlowRegistry_RegisterVerified_NoCICFlowImports
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.False
+  calls:
+  - assert.False
+  - require.NoError
+- name: TestCICFlowRegistry_RegisterVerified_OverDeclared
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+  - assert.False
+  calls:
+  - assert.Contains
+  - assert.False
+  - require.Error
+- name: TestCICFlowRegistry_RegisterVerified_BadYAML
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - assert.Error
+- name: TestCICFlowRegistry_RegisterVerified_ResolverError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.Error

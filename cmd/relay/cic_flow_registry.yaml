@@ -1,0 +1,63 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: cicFlowRegistry
+  kind: struct
+  description: 'R3a live wiring (feature-011, r3-plan.md). The `cic-flow` host module
+    is a single shared instance on the wazero runtime, but capabilities are per-module:
+    each guest is instantiated `WithName(moduleID)` (core/cabinet/cicwasm.go), so
+    a host function resolves the *calling* guest''s deps by `mod.Name()` from this
+    registry. A module with no entry is denied — fail-closed. The registry is populated
+    at module load (bootstrap.go `loadModule`) ONLY after the module''s provenance
+    verified, so an untrusted module never gets a capability. (Today the gate is the
+    existing dev cert-chain verify against the embedded CICDeveloperCA; R3b replaces
+    it with CICSourceCA provenance + CICLicenseCA entitlement — see r3-plan.md.)'
+  implements: []
+  references: []
+- name: newCICFlowRegistry
+  kind: func
+  description: newCICFlowRegistry builds an empty registry. A nil doer defaults to
+    http.DefaultClient; a nil resolve leaves every module's signer nil (sign inert)
+    until the OCI-key provisioning path wires a real resolver.
+  references: []
+  calls: []
+- name: lookup
+  kind: method
+  receiver: cicFlowRegistry
+  description: lookup returns the deps bound for moduleID, or false if the module
+    is not registered (→ the host function denies the call, fail-closed).
+  references: []
+  calls:
+  - RLock
+  - RUnlock
+- name: registerVerified
+  kind: method
+  receiver: cicFlowRegistry
+  description: registerVerified parses the module's signed project.yaml, checks its
+    cic-flow imports against the declared manifest, binds per-module deps, and registers
+    them under moduleID. It must be called only after the module's provenance has
+    verified (the caller's fail-closed gate). - A module that does not import cic-flow
+    registers nothing (returns nil). - A module that imports cic-flow but under-declares
+    its manifest is rejected (error) — the load path surfaces this as a module-load
+    failure.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: registerModuleCapability
+  kind: var
+  description: registerModuleCapability, if set, is called by the module-load path
+    (`loadModule`) after a module's provenance verifies, to bind its cic-flow capability.
+    `main` wires it to a registry's registerVerified; it stays nil in tests that do
+    not exercise capability binding. A non-nil error rejects the module at load (fail-closed).
+    It is set once at startup before any load.
+  references: []

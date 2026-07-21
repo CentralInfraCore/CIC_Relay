@@ -1,0 +1,25 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestObservation_Coverage
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestObservation_ClassifyField
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal

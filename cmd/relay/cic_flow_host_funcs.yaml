@@ -38,7 +38,7 @@ objects:
 - name: makeCICFlowHostSetupFn
   kind: func
   description: makeCICFlowHostSetupFn returns a HostSetupFn that registers the "cic-flow"
-    host module on the wazero runtime.
+    host module on the wazero runtime, backed by a per-module capability registry.
   references:
   - wazero.Runtime
   calls: []
@@ -49,12 +49,23 @@ objects:
     (req_ptr i32, req_len i32, out_ptr i32, out_len i32) -> i32 A JSON request is
     read from linear memory at (req_ptr, req_len); the JSON response is written to
     (out_ptr, out_len); the return value is bytes written, or -1 on a memory/marshal
-    error.'
+    error. Each call resolves the *calling* guest''s deps from reg by module name;
+    an unregistered module is denied (fail-closed).'
   references:
   - wazero.Runtime
   - wazero.Runtime.NewHostModuleBuilder
   calls:
   - wazero.Runtime.NewHostModuleBuilder
+- name: perModule
+  kind: func
+  description: perModule wraps a deps-bound host-function factory so the exported
+    host function resolves the *calling* guest's deps from the registry by `mod.Name()`
+    (the guest is instantiated `WithName(moduleID)`). A module with no verified capability
+    is denied — fail-closed.
+  references:
+  - api.Module
+  calls:
+  - Name
 - name: makeSignFn
   kind: func
   description: makeSignFn signs the caller-built canonical string (base64 in `data_base64`)

@@ -1,0 +1,72 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestExpandField_ThreeFormsEquivalent
+  kind: func
+  description: 'The three forms of a parameter are equivalent — the determinism contract:
+    a compact scalar and a fully-written descriptor expand to the same Field.'
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestExpandField_ScalarKinds
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestExpandField_Default
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.Equal
+  - assert.False
+  calls:
+  - assert.Equal
+  - assert.False
+  - assert.True
+- name: TestExpandField_PartialMode
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.False
+  - assert.True
+  calls:
+  - assert.Equal
+  - assert.False
+  - assert.True
+- name: TestExpandField_MapWithoutValueIsOpaque
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestExpandSpec
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - assert.Len
+  calls:
+  - assert.Equal
+  - assert.False
+  - assert.Len
+  - assert.True
+- name: allTrue
+  kind: var
+  description: ''
+  references: []

@@ -1,0 +1,18 @@
+---
+package: main
+description: Package main — default (non-cgo) stub. The real demo needs the Rust FFI
+  bridge and is compiled only under the `ffi_cgo` build tag; this stub keeps the default
+  `go build ./...` working. Run the demo via `make demo-trustflow`.
+tags:
+- builder
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Println

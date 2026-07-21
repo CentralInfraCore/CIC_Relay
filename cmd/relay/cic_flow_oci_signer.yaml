@@ -1,0 +1,36 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: ociVaultSigner
+  kind: struct
+  description: ociVaultSigner adapts VaultCryptoService.SignOCI (pkcs1v15 / sha2-256,
+    raw base64) to the cic-flow signer interface. The OCI API key never leaves Vault.
+  implements: []
+  references:
+  - crypto.VaultCryptoService
+- name: Sign
+  kind: method
+  receiver: ociVaultSigner
+  description: ''
+  references: []
+  calls:
+  - SignOCI
+- name: buildOCIKeyResolver
+  kind: func
+  description: buildOCIKeyResolver returns a keyResolver that maps a module's `oci/...`
+    secret handle to a SignOCI signer over the relay-provisioned Vault Transit key,
+    when the OCI signing key is configured (CIC_OCI_SIGN_MOUNT + CIC_OCI_SIGN_KEY).
+    Returns nil when unconfigured, leaving cic-flow.sign inert (fail-closed) until
+    the key is provisioned.
+  references:
+  - crypto.NewVaultCryptoService
+  calls:
+  - crypto.NewVaultCryptoService
