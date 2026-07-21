@@ -143,8 +143,10 @@ namespace split is the next small refinement when the layers land.
 | Observation completeness (`observation.go`, spec #4) — coverage envelope + coverage-aware verdicts | **landed** |
 | ACL algorithm (spec #2) | concept — no `ACL` / `Permission` / `Principal` symbol in repo |
 | Stable `field_id` / `$value`+`$cic` namespace (spec #5) | concept — no `ValueKind` / `ObjectRef` / `ResolvedSchemaRef` symbol in repo |
-| Intent↔state conformance plan (Task 1) — compiled from schema; feeds `ClassifyField`'s `matched` | concept — no `ConformanceSurface` / `ReconciliationContract` / `Comparator` / `Reconcile` symbol in repo |
-| OCI vertical slice (VM + 2 NICs + 2 subnets + collection + observation) | concept |
+| Intent↔state comparator (Task 1, `compare.go`) — exact / numeric; produces `ClassifyField`'s `matched`; `NOT_COMPARABLE` on kind mismatch | **landed**, tested (schema-compiled plan still deferred) |
+| OCI vertical slice (`conformance.go`) — object verdict over VM + 2 NICs + 2 subnets + map collection + observation | **landed**, tested (CONFORMANT / DRIFT / NOT_COMPARABLE / UNOBSERVED / OBSERVED_ABSENT proven end-to-end) |
+| Conformance plan compiled from schema behavior annotations (the `Evaluate` seam's input) | concept |
+| Drift-engine rewire onto the new model (`core/nexus/iac` ↔ `core/nexus/drift` bridge) | concept |
 
 Per the scheduling above, this is the base off the PoC critical path; the OCI
 vertical proves it, and the general Node IR / cross-language test vectors come last.
