@@ -141,7 +141,7 @@ namespace split is the next small refinement when the layers land.
 | Collection topology (`collection.go`, spec #3) — atomic/set/map + element identity | **partial** (identity landed; merge/ownership use later) |
 | Canonical digest (`digest.go`, spec #1) — determinism proven (form-equivalence + golden vector) | **landed** — number normalization (`number.go`): `4`/`4.0`/`4e0` collapse, `-0`→`0`, integer precision preserved; Rust peer `cic-canonical` mirrors the Go vectors byte-for-byte |
 | Observation completeness (`observation.go`, spec #4) — coverage envelope + coverage-aware verdicts | **landed** |
-| ACL algorithm (spec #2) | concept — no `ACL` / `Permission` / `Principal` symbol in repo |
+| ACL algorithm (spec #2, `acl.go`) — cic-acl/v1: default-deny + owner/group/other + named allow + mask + inherit, no explicit deny; keys on `field_id` | **landed**, tested (POSIX most-specific-class-wins semantics) |
 | Stable `field_id` (spec #5, `field_id.go`) — proof/ownership re-key on `field_id`, surviving a path rename; collection element id = field id + element key | **landed**, tested (rename-stability proof) |
 | `$value`+`$cic` namespace split + rich `ValueKind` / `ObjectRef` IR (spec #5 cont.) | concept |
 | Intent↔state comparator (Task 1, `compare.go`) — exact / numeric; produces `ClassifyField`'s `matched`; `NOT_COMPARABLE` on kind mismatch | **landed**, tested (schema-compiled plan still deferred) |
