@@ -141,13 +141,44 @@ namespace split is the next small refinement when the layers land.
 | Collection topology (`collection.go`, spec #3) — atomic/set/map + element identity | **partial** (identity landed; merge/ownership use later) |
 | Canonical digest (`digest.go`, spec #1) — determinism proven (form-equivalence + golden vector) | **partial** (number normalization + Rust vectors deferred) |
 | Observation completeness (`observation.go`, spec #4) — coverage envelope + coverage-aware verdicts | **landed** |
-| ACL algorithm (spec #2) | concept |
-| Stable `field_id` / `$value`+`$cic` namespace (spec #5) | concept |
-| Intent↔state conformance plan (Task 1) — compiled from schema; feeds `ClassifyField`'s `matched` | concept |
+| ACL algorithm (spec #2) | concept — no `ACL` / `Permission` / `Principal` symbol in repo |
+| Stable `field_id` / `$value`+`$cic` namespace (spec #5) | concept — no `ValueKind` / `ObjectRef` / `ResolvedSchemaRef` symbol in repo |
+| Intent↔state conformance plan (Task 1) — compiled from schema; feeds `ClassifyField`'s `matched` | concept — no `ConformanceSurface` / `ReconciliationContract` / `Comparator` / `Reconcile` symbol in repo |
 | OCI vertical slice (VM + 2 NICs + 2 subnets + collection + observation) | concept |
 
 Per the scheduling above, this is the base off the PoC critical path; the OCI
 vertical proves it, and the general Node IR / cross-language test vectors come last.
+
+### RepoWise symbol-graph audit (2026-07-21)
+
+Cross-checked the table against a whole-repo RepoWise index (690 files, full symbol
+graph), not file reading. Findings:
+
+- **Landed rows confirmed** as symbols in `core/nexus/iac`: `ExpandField` /
+  `FieldMode` (`field.go`), `Observation` / `CoverageState` / `ClassifyField` /
+  `FieldVerdict` (`observation.go`), `Collection` / `CollectionTopology` /
+  `ElementKey` (`collection.go`), `IaCValidator` (`validator.go`), `Reference`,
+  `Digest`.
+- **Concept rows confirmed empty repo-wide** — the annotated symbols above return
+  *no* match anywhere in the codebase (not just outside `iac`). `Node` / `Value` /
+  `SecretRef` exist only in the Rust `connections/` and `pkg/merkle`, i.e. **not**
+  the IaC object model.
+- **The surface layer** (`ConfigSurface` / `StateSurface` / `BindingSurface` /
+  `ManagedEntity`) the thread calls "already built" is **not in this repo** — it
+  lives in the separate `schemas.tar` / `cic-module-oracle-cloud` artifact.
+- **The bridge is absent.** The existing drift engine is `core/nexus/drift`
+  (`SoftDrift` / `HardDrift` / `ReconciliableDrift`, the `DeepEqual` classifier the
+  scheduling above keeps on the PoC path). There are **0 graph edges between
+  `core/nexus/iac` and `core/nexus/drift`** — the migration of the drift engine onto
+  the new semantic model has **not started**. The conformance plan (Task 1) is the
+  load-bearing missing link.
+
+Net: the foundation third (field-mode + observation-coverage + verdict +
+digest/collection/reference/validator) is landed and tested; the upper two-thirds
+(conformance contract, comparator plan, rich Node/Value IR with secret+ACL
+invariants, and the drift-engine rewire) is concept with no code counterpart. The
+`iac` package is imported by `cmd/relay/main.go`, but the feature-011 symbols do not
+yet drive a live conformance verdict.
 
 ## Reference
 
