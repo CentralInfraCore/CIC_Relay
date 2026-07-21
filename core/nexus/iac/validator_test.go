@@ -107,3 +107,47 @@ func TestIaCValidator_Validate_EmptyGraph(t *testing.T) {
 	graph := &types.Graph{Services: map[string]*types.Service{}}
 	require.NoError(t, v.Validate(context.Background(), graph))
 }
+
+// A bare (write-defaulted) spec passes; an explicitly non-writable field in an
+// intent spec is a structural error.
+func TestIaCValidator_SpecStructure(t *testing.T) {
+	v := NewIaCValidator(newStubCabinet("core.test@1.0"))
+
+	ok := makeTestResource("core.test", "1.0")
+	ok.Spec = map[string]interface{}{"display_name": "x"} // bare → write:true
+	require.NoError(t, v.ValidateResource(context.Background(), ok))
+
+	bad := makeTestResource("core.test", "1.0")
+	bad.Spec = map[string]interface{}{
+		"provider_id": map[string]interface{}{"value": "ocid1", "mode": map[string]interface{}{"write": false}},
+	}
+	err := v.ValidateResource(context.Background(), bad)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-writable")
+	assert.Contains(t, err.Error(), "provider_id")
+}
+
+// A dependency resolves iff a resource with that name exists in the graph.
+func TestIaCValidator_DependencyIntegrity(t *testing.T) {
+	v := NewIaCValidator(newStubCabinet("core.test@1.0"))
+
+	subnet := makeTestResource("core.test", "1.0")
+	subnet.Meta = types.ResourceMeta{Name: "subnet-a"}
+
+	vm := makeTestResource("core.test", "1.0")
+	vm.Meta = types.ResourceMeta{Name: "vm-01"}
+	vm.Dependencies = []string{"subnet-a"} // resolves
+
+	graph := &types.Graph{Services: map[string]*types.Service{
+		"svc": {Spec: types.ServiceSpec{Resources: []types.ResourceSpec{subnet, vm}}},
+	}}
+	require.NoError(t, v.Validate(context.Background(), graph))
+
+	// dangling dependency → error
+	vm.Dependencies = []string{"subnet-a", "does-not-exist"}
+	graph.Services["svc"].Spec.Resources = []types.ResourceSpec{subnet, vm}
+	err := v.Validate(context.Background(), graph)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does-not-exist")
+	assert.Contains(t, err.Error(), "does not resolve")
+}
