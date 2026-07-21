@@ -28,6 +28,12 @@ package iac
 //
 // The set is intentionally extensible; unknown flags in the source are ignored by
 // the typed [FieldMode] but preserved conceptually for later rounds.
+//
+// This Field is the `$cic.behavior` core of the fuller layered field model
+// (schema.field_id / behavior.compare+sensitive / access.acl / collection.topology,
+// plus object-level managedFields/observation/proof) — deferred, sequenced, and
+// specified in features/feature-011-oci-provider/iac-object-model.md. The `mode`
+// set here is the validated foundation; the layers wrap it later.
 
 // FieldMode is the per-field capability/status flags. A bare scalar expands with
 // every flag true; a partially-specified mode fills missing flags as true.

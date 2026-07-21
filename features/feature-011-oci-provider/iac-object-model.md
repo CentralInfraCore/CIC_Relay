@@ -1,0 +1,138 @@
+# IaC object/field model (feature-011)
+
+Status: **concept / spec**. Distilled from `thread-object-model.txt` (2026-07-20),
+which hardened the field model against Kubernetes SSA, Terraform, and Crossplane
+prior art and absorbed an external architecture review. The guiding conclusion
+(from the thread's own synthesis): **do not redesign the concept — specify its
+boundaries and internal layers, and keep the full engine off the PoC critical
+path.**
+
+## The core (already built)
+
+Every parameter is, at bottom, a rich descriptor; the scalar is sugar:
+
+```
+key: VALUE  ≡  key: { $value: VALUE, $cic: { … } }
+```
+
+`core/nexus/iac/field.go` implements the base — `Field{Value, Default, Mode}` with
+`ExpandField` normalizing the three equivalent forms to one canonical value
+(determinism). **The `mode` set (`read` / `write` / `implemented` / `visible`) is
+confirmed by the thread** and is the field-level capability/status surface —
+including the CIC three-status (`implemented`) at field granularity.
+
+## The layered `$cic` (refined target)
+
+`$value` (business data) stays strictly separate from `$cic` (metadata). `$cic` is
+**not a flat bag** — it is layered:
+
+```yaml
+key:
+  $value: VALUE
+  $cic:
+    schema:                       # WHAT is it
+      field_id: cic:namespace:object:field   # STABLE identity, survives path rename
+      ref: cic://schemas/…
+      digest: sha256:…
+    behavior:                     # HOW it works   ← field.go is this layer's core
+      default: false
+      mode: { read: true, write: true, implemented: true, visible: true }
+      compare: { type: exact }    # semantic equality (Terraform-style)
+      sensitive: { type: none }   # secret custody/placement policy
+    access:                       # WHO
+      acl: { inherit: true }
+    collection:                   # STRUCTURE
+      topology: atomic            # atomic | set | map(keys: […])
+```
+
+### Object-level indices (NOT per-field)
+
+Kept out of the field tree, at object/envelope level:
+
+- **`managedFields`** — SSA-like multi-writer ownership (`manager`, `operation`,
+  `fields[]`); who currently owns/claims a field, conflict detection.
+- **`observation`** — coverage as an explicit, signable fieldset:
+  `observed` / `authoritative_absent` / (implicit) `unobserved`.
+- **`proof`** — `schema_digest`, `conformance_plan_digest`, `observation_digest`,
+  `object_digest`, `signature`.
+
+## Intent ↔ State — the tension resolved
+
+Same canonical type system for both; **intent = partially-filled**, **state =
+observed + provider-extended**. Not two hand-maintained schemas, and **no
+hand-written ConformanceSurface** — the conformance plan is **compiled from the
+schema's behavior annotations** (mode/compare/collection), and its digest goes in
+the proof so a verdict cites the rule-set that produced it. The `mode.read/write`
+split is the field-level expression of the intent(config)/state(observed) sides.
+
+## Prior art (mechanisms borrowed; the composition + trust model is CIC)
+
+| Source | What CIC takes | Maps to |
+|---|---|---|
+| Terraform | attribute behavior (Required/Optional/**Computed**/Sensitive), semantic equality | `behavior.mode`, `behavior.compare` |
+| K8s **SSA** managedFields | multi-writer ownership, conflict, omission, list **collection topology** (atomic/set/map) | `collection`, `managedFields` |
+| Crossplane | late-initialization (provider-filled values back into spec) | provider-ID re-lift into intent |
+| POSIX / NFSv4 ACL | hierarchical access precedent | `access.acl` |
+
+None of these *together* give field-level ACL partner-projection, multi-management
+secret placement, intent/state branches, a schema-object graph, provider-binding
+proof, and cryptographically-proven verdicts. **The mechanisms are prior art; the
+composition and trust model are CIC's.**
+
+## Five specs to write before the general engine (the review's load-bearing gaps)
+
+These are named-but-unspecified today; the engine will diverge exactly here:
+
+1. **CIC Canonical Object Encoding v1** — number normalization (`1` vs `1.0` vs
+   `1e0`, `-0`), map key order, set order, null vs absent, URI/path normalization,
+   schema digest. Language-neutral, with **Go + Rust test vectors** (JCS / RFC 8785
+   or deterministic CBOR as a base — a CIC profile, not an ad-hoc format).
+2. **ACL evaluation algorithm** — pick **one** formal model (not POSIX + NFSv4 +
+   RBAC mixed). v1: default-deny + owner/group/other + named allow + mask +
+   inherit; **no explicit deny yet** (that is a `cic-acl/v2`).
+3. **Collection topology / list-element identity** — atomic / set / map(keys);
+   element identity = `field_id + collection key` (e.g.
+   `cic:compute:vm:network-interfaces/{name=nic-0}`); drives merge, ownership,
+   drift, deletion, and proof paths.
+4. **Observation completeness** — `observed` / `authoritative-absent` /
+   `unobserved`; the verdict distinguishes `CONFORMANT` / `DRIFT` /
+   `OBSERVED_ABSENT` / `UNOBSERVED` / `NOT_COMPARABLE`, so it never claims
+   conformance for a field the observe never saw.
+5. **Schema evolution + stable field identity** — `field_id` survives a path
+   rename; ownership / ACL / proof / observation key on `field_id`, not the path.
+
+## Secret custody (from the thread's `sensitive` discussion)
+
+`behavior.sensitive` is a **placement/custody policy, not an ACL**: `exposure`
+(`local` = plaintext only in the local custody boundary / `remote` = only a
+capability handle) + per-management-scope `backup` levels (transit / store /
+restore) + envelope encryption (ciphertext + per-scope wrapped DEK). The general
+`access.acl` says *who may reference/rotate/use*; `sensitive` says *where the
+secret may live*. Keep the two separate.
+
+## Scheduling — keep the engine off the PoC critical path
+
+- The PoC runs on the **current** drift mechanism (`reflect.DeepEqual`), not the
+  full model.
+- `field.go` is the validated **foundation** (the `behavior` core). Do **not** pull
+  the full Node IR / ACL engine / cross-language test vectors into the PoC.
+- Next slice: **one OCI vertical** — a VM + 2 NICs + 2 subnets + provider ID +
+  read/write/computed fields + one map-topology collection + observation coverage +
+  a simple ACL projection. Prove the model on that.
+- Then Go + Rust common test vectors; only *then* a general Node IR migration.
+
+## How the current code maps
+
+`core/nexus/iac/field.go` `Field{Value, Default, Mode}` is the `$cic.behavior` core
+(value + default + mode). The remaining layers — `schema.field_id`,
+`behavior.compare` / `sensitive`, `access.acl`, `collection.topology` — and the
+object-level `managedFields` / `observation` / `proof` indices are the **deferred
+build**, sequenced per the scheduling above. `ExpandField`'s scalar-sugar +
+three-forms determinism is the base those layers wrap; the `$value`/`$cic`
+namespace split is the next small refinement when the layers land.
+
+## Reference
+
+`thread-object-model.txt` (raw) — the field-wrapping model, the secret
+custody/backup-placement policy, and the SSA / Terraform / Crossplane comparison
+with the external architecture review.
