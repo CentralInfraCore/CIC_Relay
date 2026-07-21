@@ -1,0 +1,48 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: vmSchemaDoc
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestRekeyByFieldID_SurvivesPathRename
+  kind: func
+  description: 'The headline of spec #5: identity survives a path rename. Two schema
+    versions that differ only in a field''s path but share its field_id yield different
+    path-keyed verdicts but the SAME field_id-keyed verdict for the same object.'
+  references: []
+  calls:
+  - CompilePlan
+  - DeepEqual
+  - Errorf
+  - Fatalf
+  - ParseSchema
+  - RekeyByFieldID
+- name: TestRekeyByFieldID_ElementKey
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - CompilePlan
+  - Fatalf
+  - ParseSchema
+  - RekeyByFieldID
+- name: TestRekeyByFieldID_FallbackToPath
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - CompilePlan
+  - Fatalf
+  - ParseSchema
+  - RekeyByFieldID

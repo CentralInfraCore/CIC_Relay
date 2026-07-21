@@ -54,6 +54,7 @@ objects:
   calls:
   - CollectionTopology
   - CompareType
+  - FieldID
   - Strings
 - name: asString
   kind: func
