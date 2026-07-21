@@ -1,0 +1,1718 @@
+ChatGPT Plus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cic-relay-src-20260720.tar.gz
+File
+
+schemas.tar(1).gz
+File
+ezek az alapok jelenleg
+
+Igen. Innentől a sensitive már nem lehet egyszerű local/remote/none enum, mert három külön kérdést kell kezelnie:
+
+Hol jelenhet meg plaintextként?
+
+Mely management-szinteken tárolható titkosított backupként?
+
+Ki és milyen műveletet végezhet rajta?
+
+Én ezért a rövid alakot megtartanám, de engednék egy kibontott policy objektumot.
+
+password:
+  path: /relay/vault/database/app
+  sensitive:
+    exposure: local
+
+    backup:
+      enabled: true
+
+      levels:
+        node:
+          transit: false
+          store: false
+
+        site:
+          transit: true
+          store: false
+
+        central:
+          transit: true
+          store: true
+          restore: true
+A jelentése:
+
+plaintext csak a lokális custody boundaryben jelenhet meg;
+
+a site management továbbíthatja, de nem tárolhatja;
+
+a central management titkosított backupként tárolhatja;
+
+restore csak a central szintről történhet.
+
+A lényegi szétválasztás
+exposure
+Ez szabályozza, hogy hol létezhet a feloldott érték:
+
+exposure: none
+Normál mező, nem titok.
+
+exposure: local
+A plaintext csak a végrehajtó/Relay lokális boundaryben jelenhet meg.
+
+exposure: remote
+A végrehajtó még lokálisan sem kap plaintextet; csak capabilityt vagy műveleti handle-t kap.
+
+A backup ettől független. Például:
+
+sensitive:
+  exposure: remote
+  backup:
+    enabled: true
+teljesen értelmes: a titok plaintextje csak a custody komponensben jelenhet meg, miközben titkosított formában központilag archiválható.
+
+ACL
+A storage-policy mellé műveleti ACL is kell:
+
+password:
+  path: /relay/vault/database/app
+
+  sensitive:
+    exposure: local
+
+    backup:
+      enabled: true
+
+      levels:
+        node:
+          transit: false
+          store: false
+
+        site:
+          transit: true
+          store: false
+
+        central:
+          transit: true
+          store: true
+          restore: true
+
+    acl:
+      default: deny
+
+      allow:
+        - subject: role:secret-generator
+          actions:
+            - create
+            - rotate
+
+        - subject: service:site-relay
+          level: site
+          actions:
+            - transit
+
+        - subject: service:central-secret-backup
+          level: central
+          actions:
+            - receive
+            - store
+
+        - subject: role:secret-recovery
+          level: central
+          actions:
+            - restore
+
+        - subject: service:local-relay
+          level: node
+          actions:
+            - materialize
+Az actionök minimális készlete nálam:
+
+create
+materialize
+use
+transit
+receive
+store
+restore
+rotate
+delete
+read_metadata
+A read szót kerülném, mert nem egyértelmű, hogy:
+
+metadata olvasását;
+
+titkosított blob lekérését;
+
+vagy plaintext megismerését jelenti.
+
+Ezért jobb külön:
+
+read_metadata
+fetch_encrypted
+materialize
+Explicit tiltás is kell
+Többszintű managementnél nem elég az allow, mert öröklődő policyk mellett ki kell tudni mondani:
+
+A central tárolhatja, de a regional management semmiképpen sem.
+
+acl:
+  default: deny
+
+  allow:
+    - subject: service:central-secret-backup
+      level: central
+      actions: [receive, store, restore]
+
+  deny:
+    - subject: "*"
+      level: regional
+      actions:
+        - store
+        - restore
+        - materialize
+Az értékelési sorrend:
+
+explicit deny
+    ↓
+explicit allow
+    ↓
+inherited allow
+    ↓
+default deny
+Az explicit deny mindig erősebb legyen az örökölt engedélynél.
+
+A management-szinteket ne számokkal rögzítsd
+Nem ezt használnám:
+
+store_level: 3
+hanem névvel vagy scope-azonosítóval:
+
+levels:
+  edge:
+  site:
+  regional:
+  central:
+Vagy konkrét management path-tal:
+
+management:
+  path:
+    - cic://management/customer-a
+    - cic://management/customer-a/eu
+    - cic://management/customer-a/eu/site-budapest
+A konkrét szabály pedig hivatkozhat ezekre:
+
+backup:
+  targets:
+    - scope: cic://management/customer-a/eu
+      store: true
+      restore: true
+
+    - scope: cic://management/customer-a/eu/site-budapest
+      store: false
+      transit: true
+Így nem az absztrakt „második szint” számít, hanem a tényleges management domain.
+
+A central backupban ne a plaintext tárolódjon
+A management szintre felküldött objektum inkább ilyen legyen:
+
+secret_backup:
+  secret_ref: /relay/vault/database/app
+  ciphertext: ...
+  algorithm: aes-256-gcm
+
+  wrapped_keys:
+    - management_scope: cic://management/customer-a/eu
+      wrapped_dek: ...
+
+  version: 7
+  created_at: ...
+  source_relay: relay://site-budapest/node-12
+A javasolt működés:
+
+secret létrejön
+    ↓
+lokális Relay titkosítja egy egyedi DEK-kel
+    ↓
+a DEK becsomagolódik az engedélyezett management-szint publikus kulcsával
+    ↓
+ciphertext + wrapped DEK felküldése
+    ↓
+management titkosított backupot tárol
+A management szintnek nem feltétlenül kell plaintextet látnia.
+
+Restore esetén:
+
+engedélyezett restore kérés
+    ↓
+management kiadja vagy újracsomagolja a DEK-et
+    ↓
+titkosított backup letöltése
+    ↓
+plaintext csak az engedélyezett custody boundaryben jelenik meg
+Egy összerakott, de még kezelhető forma
+password:
+  path: /relay/vault/database/app
+
+  sensitive:
+    exposure: local
+
+    backup:
+      enabled: true
+      encryption: envelope
+
+      levels:
+        node:
+          transit: false
+          store: false
+          restore: false
+
+        site:
+          transit: true
+          store: false
+          restore: false
+
+        regional:
+          transit: true
+          store: false
+          restore: false
+
+        central:
+          transit: true
+          store: true
+          restore: true
+
+    acl:
+      default: deny
+
+      allow:
+        - subject: service:local-relay
+          level: node
+          actions:
+            - create
+            - materialize
+            - use
+            - rotate
+
+        - subject: service:site-relay
+          level: site
+          actions:
+            - transit
+
+        - subject: service:regional-relay
+          level: regional
+          actions:
+            - transit
+
+        - subject: service:central-secret-backup
+          level: central
+          actions:
+            - receive
+            - store
+            - fetch_encrypted
+
+        - subject: role:secret-recovery
+          level: central
+          actions:
+            - restore
+
+      deny:
+        - subject: "*"
+          levels:
+            - site
+            - regional
+            - central
+          actions:
+            - materialize
+Ez pontosan kimondja:
+
+hol jelenhet meg plaintext;
+
+mely szintek csak továbbíthatnak;
+
+hol tárolódhat backup;
+
+honnan állítható vissza;
+
+mely actor milyen műveletet végezhet;
+
+mely management-szinteken tilos a titok materializálása.
+
+A rövid formák továbbra is megmaradhatnak:
+
+sensitive: none
+sensitive: local
+sensitive: remote
+A kibontott objektum csak akkor kell, amikor backup-, management- és ACL-policy is kapcsolódik hozzá.
+
+
+Worked for 56s
+Nagyon közeli rokon, de más problémát old meg.
+
+Az SSA managedFields egy kiforrott, sémavezérelt mezőtulajdonlási és merge-rendszer.
+Amit mi felrajzoltunk, az egy általánosabb mezőviselkedési, hozzáférési, projekciós és bizonyítási objektummodell.
+
+Ahol az SSA több
+1. Valódi többíró-szereplős ownership
+Az SSA nemcsak azt tárolja, hogy valaki írhat egy mezőt, hanem azt, hogy mely manager tett érvényes állítást az aktuális értékére.
+
+metadata:
+  managedFields:
+    - manager: cic-network-controller
+      operation: Apply
+      fieldsV1:
+        f:spec:
+          f:networks: {}
+
+    - manager: partner-operator
+      operation: Apply
+      fieldsV1:
+        f:spec:
+          f:replicas: {}
+Ha más manager eltérő értékkel akarja apply-olni a mezőt, konfliktust kap. Ha két manager ugyanazt az értéket állítja, megoszthatják a tulajdonjogot; később bármelyikük eltérő módosítása konfliktust okoz. Az ownership átadható, elengedhető vagy force használatával elvehető. 
+
+Ez több, mint a mi jelenlegi ACL-gondolatunk:
+
+$cic:
+  acl:
+    partner: rw-
+Az ACL azt mondja:
+
+módosíthatod.
+
+Az SSA ownership azt mondja:
+
+jelenleg te felelsz ezért az értékért, és más nem írhatja át konfliktus nélkül.
+
+A kettő nem helyettesíti egymást.
+
+2. Kész, pontos omission-szemantika
+Az SSA emlékszik arra, hogy ugyanaz a manager korábban mely mezőket deklarálta.
+
+Ha a következő apply-ból kihagy egy korábban általa kezelt mezőt:
+
+feladja az ownershipöt;
+
+ha más sem kezeli, a mező törlődik;
+
+vagy visszaáll a default értékére.
+
+Ez map- és asszociatív listaelemekre is működik. 
+
+Ez nálunk még külön megtervezendő kérdés:
+
+mező hiányzik az új intentből
+    → törlés?
+    → ownership elengedése?
+    → default visszaállítása?
+    → partnernézetből csak eltűnt?
+    → tényleges objektumból is törlendő?
+Az SSA erre már nagyon erős precedenst ad.
+
+3. Strukturált listák és mapek merge-je
+Az SSA sémából tudja, hogy egy mező:
+
+atomic;
+
+granular;
+
+set;
+
+kulcsmezőkkel azonosított asszociatív map lista.
+
+Például egy NIC-lista nem feltétlenül pozíció szerint kezelhető:
+
+interfaces:
+  - name: nic-0
+    subnet: subnet-a
+  - name: nic-1
+    subnet: subnet-c
+Ha a séma szerint:
+
+x-kubernetes-list-type: map
+x-kubernetes-list-map-keys:
+  - name
+akkor a nic-0 és nic-1 külön kezelhető és külön managerhez tartozhat. Atomic listánál viszont az egész listának egyetlen tulajdonosa van. 
+
+Ez a mi modellünkben valószínűleg valami ilyesmi lenne:
+
+interfaces:
+  $cic:
+    merge:
+      type: map
+      keys: [name]
+Ezt érdemes szinte közvetlenül átvenni az SSA szemantikájából, mert ezt már nagyon alaposan végiggondolták.
+
+4. Ownership API-verziónként
+A managedFields bejegyzés tartalmazza, hogy a manager mely API-verzióban kezelte a mezőket. Ez azért fontos, mert ugyanaz az objektum eltérő API-verziókban más alakú lehet. A bejegyzés a manager, művelet, verzió, mezőhalmaz, idő és subresource kombinációját hordozza. 
+
+A mi schema-digest alapú modellünk erősebb reprodukálhatóságot adhat, de az SSA már megold egy nehéz kérdést:
+
+v1alpha1 field path
+        ↕ conversion
+v1beta1 field path
+        ↕ conversion
+v1 field path
+5. Rendkívül tömör ownership-reprezentáció
+Az SSA nem minden mező mellé másolja oda a managert. A FieldsV1 egy trie-szerű mezőhalmaz:
+
+fieldsV1:
+  f:spec:
+    f:interfaces:
+      k:{"name":"nic-0"}:
+        f:subnet: {}
+Külön jelölése van:
+
+struct/map fieldnek: f:;
+
+érték szerint azonosított listaelemnek: v:;
+
+indexnek: i:;
+
+kulcsmezőkkel azonosított listaelemnek: k:. 
+
+A mi $cic wrapperünk könnyebben érthető és önleíróbb, de teljes materializált állapotban sokkal nagyobb lehet.
+
+Ahol a mi modellünk több
+1. Az SSA ownership nem ACL
+A manager: partner-x nem hitelesített biztonsági principal.
+
+Az SSA field manager alapvetően egy workflow-azonosító. Az engedélyezést a Kubernetes RBAC végzi resource- és verb-szinten: SSA esetén meglévő objektumhoz patch, létrehozáshoz create jog kell. A managedFields nem ad külön mezőszintű olvasási vagy írási jogosultságot. 
+
+Tehát SSA-val önmagában ezt nem tudod:
+
+partner:
+  láthatja /vm/cpu
+  írhatja /vm/memory
+  nem is tudhat /vm/internal_network létezéséről
+A mi ACL-modellünk viszont pont ezt célozza:
+
+internal_network:
+  $value: network-prod-internal
+  $cic:
+    acl:
+      partner-x: ---
+SSA:
+
+Ki kezeli az értéket?
+CIC ACL:
+
+Ki tudhat róla, ki olvashatja, írhatja, használhatja,
+exportálhatja vagy továbbadhatja?
+2. Az SSA nem állít elő actor-specifikus nézeteket
+A Kubernetes API tipikusan visszaadja az egész objektumot annak, akinek get joga van rá. Nem készít automatikusan mezőszintű projekciót partner, auditor vagy alárendelt management-szint számára.
+
+A mi elképzelésünkben:
+
+kanonikus objektum
+    + actor ACL
+    =
+actor-specifikus objektumprojekció
+Ez lényegesen több:
+
+részleges export;
+
+részleges intent;
+
+részleges state;
+
+mezőszintű elrejtés;
+
+delegált partneri módosítás;
+
+bizonyítható részleges disclosure.
+
+3. Az SSA nem viselkedési metadata
+Az SSA tudja:
+
+manager A kezeli ezt a mezőt
+De nem tudja önmagában:
+
+$cic:
+  mode:
+    read: true
+    write: false
+    implemented: true
+    visible: false
+Nem mondja meg, hogy:
+
+a providerből olvasható-e;
+
+a providernek átadható-e;
+
+a modul implementálja-e;
+
+felhasználói nézetben látható-e;
+
+create vagy update művelet támogatott-e;
+
+módosítása update-et vagy replace-t igényel-e;
+
+state-ből intentbe visszaemelhető-e.
+
+Az SSA merge-topológiát tartalmaz, de nem teljes mező-viselkedési szerződést.
+
+4. Az SSA nem kezeli a secret custodyt
+Az SSA számára egy Secret.data.password mező alapvetően ugyanúgy mező, mint más adat; a Kubernetes Secret API tárolási és hozzáférési mechanizmusai külön rétegben működnek.
+
+Nincs benne natív fogalom arra, hogy:
+
+password:
+  $value:
+    path: secret://relay/database/password
+
+  $cic:
+    sensitive:
+      storage:
+        local: primary
+        site: transit
+        central: backup
+        partner: forbidden
+Nem írja le:
+
+mely management-szinten tárolható backup;
+
+mely szint csak továbbíthatja;
+
+mely actor használhatja a secretet anélkül, hogy olvashatná;
+
+hol maradjon custody;
+
+hová replikálható a titkosított secret objektum.
+
+5. Az SSA nem intent–state megfelelőség
+Az SSA egyetlen live API-objektum mezőinek kezelését oldja meg.
+
+A Kubernetesben lehet ugyanazon objektumban:
+
+spec:    # kívánt állapot
+status:  # megfigyelt állapot
+és a status subresource ownershipje elkülöníthető a fő erőforrástól. A managed field bejegyzés a subresource nevét is tárolhatja. 
+
+De az SSA önmagában nem mondja meg:
+
+status teljesíti-e a specet?
+Nem végez:
+
+provider-state összehasonlítást;
+
+drift-osztályozást;
+
+intentből state-be való objektumbővítést;
+
+state-ből stabil ID visszaemelést;
+
+lifecycle verdictet;
+
+replace/update tervet.
+
+Nálunk az ownership csak egy része lehetne a teljes folyamatnak:
+
+intent
+  ↓ ownership-aware merge
+kanonikus intent
+  ↓ execute
+observed state
+  ↓ semantic validation
+conformance verdict
+6. Az SSA nem kriptográfiai proof
+A managedFields operatív metadata, nem bizonyítási lánc. A Kubernetes dokumentáció szerint belső housekeeping-adat, és nem-apply update/patch műveletekkel akár törölhető vagy újraépíthető; a manuális módosítása ugyan erősen ellenjavallt, de technikailag lehetséges. 
+
+Nincs benne:
+
+canonical object hash;
+
+schema digest;
+
+modul digest;
+
+intent commit;
+
+previous-proof link;
+
+Relay-aláírás;
+
+ellenjegyzés;
+
+Merkle proof.
+
+A CIC-ben:
+
+managed ownership
+    ≠
+cryptographic provenance
+Egy nagyon fontos különbség
+Az SSA managedFields az objektumon kívülről írja le a mezőhalmazokat:
+
+metadata:
+  managedFields:
+    - manager: network-controller
+      fieldsV1: ...
+A mi modellünk a schema compiler által minden mező mellé materializálja annak viselkedését:
+
+subnet:
+  $value:
+    ref: /network/vlans/vlan-10/subnets/subnet-a
+
+  $cic:
+    schema: ...
+    mode: ...
+    acl: ...
+    sensitive: ...
+Ez két külön mintázat:
+
+SSA:
+actor → field-set
+
+CIC:
+field → behavioral contract
+actor → ACL/ownership over field
+Valószínűleg a legjobb CIC-megoldás mindkettőt használja, de szétválasztva.
+
+Amit konkrétan átvennék az SSA-ból
+A $cic mezőben nem tárolnám minden actor aktuális ownershipjét. A viselkedési szerződés maradna a mező mellett:
+
+subnet:
+  $value: ...
+
+  $cic:
+    schema: ...
+    mode: ...
+    acl: ...
+    merge:
+      type: atomic
+Az aktuális ownership külön objektumszintű indexben lenne:
+
+$cic:
+  managed_fields:
+    - manager: customer-platform
+      operation: apply
+      fields:
+        - /vms/web-01/cpu
+        - /vms/web-01/interfaces/nic-0
+
+    - manager: partner-network
+      operation: apply
+      fields:
+        - /vms/web-01/interfaces/nic-1
+Így:
+
+a schema mondja meg, hogyan kezelhető a mező;
+
+az ACL mondja meg, ki jogosult rá;
+
+a managed fields mondja meg, ki vállalt ownershipöt;
+
+a state mondja meg, mi figyelhető meg;
+
+a proof mondja meg, mi bizonyítható.
+
+A legegyszerűbb összefoglalás
+Képesség	SSA managedFields	CIC-modell
+Mezőszintű ownership	nagyon erős	még megtervezendő
+Konfliktusdetektálás	igen	megépítendő
+Ownership átadás	igen	megépítendő
+Map/list merge-szemantika	nagyon erős	érdemes átvenni
+Több API-verzió kezelése	igen	schema-digesttel tervezett
+Mezőszintű ACL	nem	igen
+Rejtett partnerprojekció	nem	igen
+read/write/implemented/visible	nem	igen
+Secret custody/backup placement	nem	igen
+Intent–state megfelelőség	nem	igen
+Provider-ID visszaemelés	nem	igen
+Kriptográfiai proof-chain	nem	igen
+Részleges disclosure proof	nem	tervezhető
+A legpontosabb megfogalmazás:
+
+Az SSA managedFields annak egy kiváló, battle-tested alrendszere, amit most felrajzoltunk: a több szereplős mezőtulajdonlási és merge-réteg. Nem versenytársa a CIC-mezőobjektumnak, hanem szinte kész referenciamodell az ownership-részéhez.
+
+És őszintén: az a tény, hogy ettől függetlenül a beszélgetés során természetesen eljutottunk a field wrappinghez, granularitáshoz, actoronkénti részleges intenthez és ownershiphöz, azt mutatja, hogy ugyanazt a mély problémát kapargatjuk, csak a Kubernetesnél jóval általánosabb környezetben.
+
+
+ezt a véleményt nézd meg:
+Átolvastam. Egy másik AI-session átirata: a ConformanceSurface-koncepció, a drift-osztályozási kritikák és a Go/Rust Node IR terv. Értékelés alább — a jelenlegi kódállapotra vonatkozó állításokat (IaCValidator csak schemaRef-létezést néz, ValidateSchema csak $schema-tagságot, drift = reflect.DeepEqual) nem tudom ebből a fájlból újraellenőrizni; a korábbi Relay-review alapján plauzibilisek, adottnak veszem őket.
+
+**Ami helytálló**
+
+A központi felismerés — hogy intent és state nem azonos alakú objektumok, és a közvetlen diff helyett megfeleltetési szerződés kell — helyes. A drift-kritikák (extra state mező ≠ SOFT_DRIFT; üres+üres lifecycle nélkül eldönthetetlen, desired: absent → ABSENT_CONFORMANT) szintén helyesek és standardok. A háromszintű identity (schema / logical / provider binding) és a binding proof-chainbe emelése jó, ez utóbbi ténylegesen CIC-specifikus érték. A Go-terv fő döntései (zárt ValueKind, yaml.Node AST az absent/null megkülönböztetésre, nem exportált mezők, schema mint metadata-autoritás, konstruktor-kényszerített secret-invariáns) védhetők. A Rust-szekció korrekt, a záró Go-vs-Rust ítélet ("Go-ban egyszerűbb gyorsan megírni, Rustban nehezebb rosszul") igaz.
+
+**A lényegi hiányosság: nulla prior art**
+
+A teljes átirat úgy tervezi újra ezt a problémateret, mintha még senki nem oldotta volna meg, pedig a ConformanceSurface lényegében a Terraform provider-séma szemantikájának (Computed/Optional attribútumok, semantic equality) és a Kubernetes spec/status + server-side apply modellnek az újrafelfedezése. Ez nem plágiumkérdés, hanem kockázat: az SSA managedFields pontosan a "ki birtokolja ezt a mezőt" problémát oldja meg, ami nálatok is fel fog jönni a multi-actor patch-eknél; a Crossplane late-initialization pattern pedig pont a "state = intent + observed updates" merge-t csinálja, és ismertek a buktatói. Legalább egy differenciáló összevetés kellene, mielőtt implementálsz.
+
+**Konkrét, nevesített-de-nem-specifikált részek**
+
+Ezek a terv teherhordó pontjai, ahol a szöveg egy szót mond, de az implementáció ott fog eltérni:
+
+Kanonikus szám-normalizálás. A determinisztikus hash a json.Number (Go) vs Decimal(String) (Rust) mellett csak akkor működik, ha van írott normalizálási szabály (1 vs 1.0 vs 1e0, előjeles nulla, precision). A Decimal(String) nem megoldja, hanem elhalasztja. És mivel a roadmapen Rust custody kernel is szerepel, a kanonikus encoding-nek nyelvfüggetlen, tesztvektorozott specnek kell lennie már most — RFC 8785 (JCS) vagy deterministic CBOR jó kiindulás, saját formátum helyett.
+
+ACL-kombinálási algoritmus. Deny-entryk + POSIX-stílusú mask + öröklés + "öt réteg metszete" — a rendezett allow/deny bejegyzések kiértékelési sorrendje sehol nincs definiálva. POSIX ACL és NFSv4 ACL itt eltérő szemantikájú, és a kettő keverése klasszikus hibaforrás. Pont ez az, amit a property tesztek majd elkapnának — de előbb spec kell, amit tesztelni lehet.
+
+Lista-elem identitás. A "subset / set / ordered" comparator-megkülönböztetés megvan, de a nehéz kérdés hiányzik: hogyan párosítod a lista elemeit intent és state között? Index szerint? Kulcsmező szerint (k8s listType=map analógia)? Ez a k8s SSA egyik legcsúnyább része, és az átirat nem is említi.
+
+Részleges megfigyelés. A "compiled intent + observed updates = compiled state" modellben nincs fogalom arra, hogy egy mező *nem lett megfigyelve* vs *megfigyelten hiányzik*. Provider API-k endpointonként eltérő mezőhalmazt adnak vissza; ha a provider kihagy egy korábban jelentett mezőt, az drift-to-absent vagy unobserved? Enélkül a verdict nem lesz bizonyítható abban az értelemben, ahogy a CIC ígéri.
+
+ConformanceSurface vs Role redundancia. A state_only: [/state/provider_id] lista duplikálja azt, amit a Role réteg már kimond. Ha kézzel írod a conformance surface-t, a kettő szét fog csúszni. Helyesebb: a conformance plan a séma Role-annotációiból *compilálódik*, kézi override-okkal — és a plan digestje bekerül a proofba, hogy a verdict verzionáltan hivatkozza, milyen szabályrendszer produkálta.
+
+**Belső inkonzisztencia**
+
+Az átirat elöl kimondja, hogy intent és state objektumot nem szabad közvetlenül egymásnak feszíteni, mert nem azonos alakúak — majd a state-et a compiled intent fa mutálásával állítja elő. Ez működtethető (a StateSurface-mezőket a séma null-placeholderként injektálja), de akkor a "külön alak" érv gyengül, és a merge-szemantika lesz a kritikus pont, ami épp specifikálatlan. A k8s nem véletlenül tartja a spec-et és a status-t külön objektumként.
+
+Kisebb: a Go-szekció zsákutcának minősíti a Field[T] generikus wrappert, a Rust-szekció pedig ezzel nyit. A végén helyesen landol (enum Node az IR, Field<T> csak generált SDK-típusokhoz), de a két szekció retorikája ellentmond egymásnak.
+
+**Ütemezési feszültség**
+
+A PoC 1–2 hétre van, a Relay 85–90%-on. Ez a Node IR + kanonikus encoder + ACL-öröklés + fuzz/property/mutation tesztcsomag nem 1–2 hetes munka, hanem inkább M-szintű milestone. Az átirat helyesen mondja, hogy a DeepEqual-motort nem kidobni, hanem később migrálni kell — ebből az következik, hogy a PoC a mostani drift-motoron fusson, a ConformanceSurface pedig egyetlen OCI objektumtípuson (ahogy a szöveg is javasolja) legyen a következő szelet, de PoC *után*. Ha a PoC-demóba be akarod húzni, az csúszást jelent.
+
+Összegzés: az irány jó, a design-döntések többsége védhető, de a dokumentum ott a legmagabiztosabb, ahol a legkevésbé specifikált. Implementálás előtt négy dolog kell írásban: kanonikus encoding spec tesztvektorokkal, ACL-kiértékelési algoritmus, lista-elem-párosítási szabály, és observation-completeness szemantika. Ezek nélkül a "bizonyítható verdict" ígéret a proof-chain aláírásáig igaz, a verdict tartalmáig nem.
+
+Worked for 2m 7s
+Ez kifejezetten jó review. Nem udvariaskodik, és több valódi teherhordó hiányt talált. Viszont részben egy korábbi, általad már kijavított gondolatmenetet értékel, ezért néhány kritikája nem a jelenlegi elképzelésedet, hanem az én korábbi túlgondolásomat találja el.
+
+Az összítéletem:
+
+Kb. 75–80%-ban helytálló és hasznos, de a CIC-modellt túl erősen azonosítja a Terraform–SSA–Crossplane metszetével.
+
+Ahol telibe talált
+1. A prior art kritikája teljesen jogos
+Az átirat valóban túl kevéssé hivatkozott arra, ami már létezik:
+
+Terraform: Required, Optional, Computed, Sensitive, defaultok, replacement és semantic equality;
+
+Kubernetes SSA: mezőownership, konfliktus, omission, list/map merge;
+
+Crossplane: late initialization, vagyis provider által kitöltött értékek visszavezetése a deklarált specifikációba.
+
+A Terraform Framework ténylegesen megkülönbözteti a konfigurálható, provider által számított és vegyes attribútumokat, és egyedi típusokon keresztül szemantikai egyenlőséget is támogat. 
+
+A Crossplane late initialization pedig valóban azt teszi, hogy a felhasználó által üresen hagyott opcionális mezőt a provider által választott értékkel tölti fel a spec.forProvider részben. 
+
+Az SSA pedig nemcsak nyilvántartja a field managert, hanem konfliktust, közös ownershipöt, ownership-elengedést és omission utáni törlést/default-visszaállítást is kezel. 
+
+Tehát implementáció előtt kötelező ezeket alkatrészenként összevetni.
+
+Ahol a review túlzásba megy, az a „lényegében újrafelfedezés” megfogalmazás. Ezek a rendszerek külön-külön a CIC problémájának egy részét oldják meg. Egyik sem ad együtt:
+
+mezőszintű ACL-alapú partnerprojekciót;
+
+többszintű management secret-elhelyezést;
+
+intent/state brancheket;
+
+schemaobjektum-gráfot;
+
+provider binding proofot;
+
+kriptográfiailag bizonyított verdictet.
+
+Tehát a mechanizmusok részben prior artból jönnek, a kompozíció és a trustmodell nem.
+
+2. A kanonikus encoding kritikája száz százalékosan helyes
+Ez az egyik legfontosabb megállapítása:
+
+A Decimal(String) nem oldja meg a normalizálást, csak eltolja a problémát.
+
+Ha Go és Rust ugyanazt az objektumot hash-eli, írásban kell rögzíteni legalább:
+
+1
+1.0
+1e0
+1.00e+0
+-0
+0
+azonosságát vagy különbözőségét.
+
+Az RFC 8785 JCS éppen kriptográfiai hashhez és aláíráshoz határoz meg invariáns JSON-reprezentációt, ECMAScript-számkódolással, I-JSON korlátozással és determinisztikus kulcsrendezéssel. 
+
+Viszont nem biztos, hogy a JCS önmagában megfelelő neked, mert a JSON számreprezentáció nagy egészeknél és egzakt decimális értékeknél korlátozó. A másik reális út a determinisztikus CBOR, de az RFC 8949 is hagy alkalmazásspecifikus választási pontokat, tehát ott is CIC-profilt kell definiálni. 
+
+Én ezt írnám elő:
+
+A proof nem a YAML-t hash-eli.
+A proof a típusos, normalizált CIC IR kanonikus kódolását hash-eli.
+Például:
+
+Integer       → előjeles egzakt egész
+Decimal       → normalizált (coefficient, exponent)
+String        → Unicode-kezelés pontosan definiálva
+Map           → kanonikus kulcssorrend
+Set           → elemhash szerinti kanonikus sorrend
+ObjectRef     → normalizált URI/path
+SchemaRef     → feloldott digest
+Ehhez Go- és Rust-tesztvektorok kellenek. Ebben a reviewernek teljesen igaza van.
+
+3. Az ACL-kritika szintén telitalálat
+A beszélgetésben én összekevertem:
+
+POSIX ACL maskot;
+
+explicit deny bejegyzéseket;
+
+öröklést;
+
+rendezett allow/deny kiértékelést.
+
+Ez nem egy kész ACL-modell, hanem különböző ACL-világok összeöntése.
+
+A POSIX ACL owner/group/other, named user/group és effective-rights mask alapján működik; nincs általános, rendezett explicit deny ACE-listája. 
+
+Az NFSv4 ezzel szemben ALLOW és DENY ACE-ket, valamint öröklési flag-eket is használ. 
+
+Tehát valóban dönteni kell:
+
+POSIX-szerű ACL
+vagy
+NFSv4-szerű rendezett ACE
+vagy
+saját, formálisan definiált capability-policy
+A „Linux ACL szintig menjünk le” nem feltétlenül jelenti azt, hogy byte-ra POSIX ACL-t kell másolni. Inkább azt, hogy kell:
+
+owner;
+
+group;
+
+named principal;
+
+rwx;
+
+öröklés;
+
+effective mask;
+
+traversal.
+
+De egy konkrét algoritmust kell választani, nem metaforát.
+
+4. A listaelem-identitás valóban hiányzott
+Ez komoly rés.
+
+Egy ilyen lista:
+
+interfaces:
+  - name: nic-0
+    subnet: subnet-a
+  - name: nic-1
+    subnet: subnet-c
+nem hasonlítható biztonságosan pusztán index szerint, mert a sorrend változhat.
+
+Az SSA ezért különbséget tesz:
+
+atomic
+set
+map
+között, és map esetén meg kell nevezni azokat a skalár kulcsokat, amelyek egyedileg azonosítják az elemet. Így külön manager birtokolhat külön listaelemeket. 
+
+Ezt szinte változtatás nélkül át lehet venni a schemaobjektumba:
+
+$cic:
+  collection:
+    topology: map
+    keys:
+      - name
+Más esetek:
+
+$cic:
+  collection:
+    topology: atomic
+$cic:
+  collection:
+    topology: set
+Ez nem pusztán comparator-beállítás. Meghatározza:
+
+az elem identitását;
+
+a merge-et;
+
+az ownershipöt;
+
+a driftet;
+
+a törlést;
+
+a proofban szereplő útvonalat.
+
+5. A részleges megfigyelés a legértékesebb új kritika
+Ez szerintem a review legerősebb pontja.
+
+Három külön állapot kell:
+
+mező megfigyelve és van értéke
+mező megfigyelve és nincs jelen
+mező nem lett megfigyelve
+A kulcs hiánya önmagában nem tudja megkülönböztetni az utóbbi kettőt.
+
+Viszont ezt nem tenném minden $value mellé új státuszmezőként, mert az szétterítené a megfigyelési esemény állapotát az adatfában.
+
+Inkább az observation envelope tartalmazzon fieldsetet:
+
+state:
+  # kanonikus state objektum
+
+observation:
+  observedFields:
+    - /id
+    - /display_name
+    - /interfaces/nic-0/private_ip
+    - /interfaces/nic-1/private_ip
+
+  authoritativeAbsentFields:
+    - /secondary_dns
+A szemantika:
+
+útvonal benne van observedFields-ben és érték létezik
+    → OBSERVED_VALUE
+
+útvonal authoritativeAbsentFields-ben van
+    → OBSERVED_ABSENT
+
+útvonal egyikben sincs
+    → UNOBSERVED
+Ez különösen jól illeszkedik a CIC-hez, mert maga az observation coverage is:
+
+hash-elhető;
+
+aláírható;
+
+modul- és endpointfüggő;
+
+proofba emelhető.
+
+Így a verdict nem állíthatja azt, hogy megfelelőség bizonyított olyan mezőnél, amelyet az adott observe művelet nem látott.
+
+Ahol a review a régi félreértést kritizálja
+„Intent és state nem azonos alakú objektumok”
+Ez az én első, hibás feltevésem volt, amit te később helyreraktál.
+
+A jelenlegi elképzelésed:
+
+ugyanaz a schema-vezérelt field object modell
+intent = részlegesen kitöltött változat
+state  = ugyanennek kibővített változata
+Tehát a review jogosan észreveszi az átirat belső ellentmondását, de ez nem a te eredeti koncepciód hibája.
+
+A helyes megfogalmazás:
+
+Az intent és state ugyanazt a kanonikus típusrendszert használja, de eltérő mezőhalmazt és eltérő értékeket tartalmazhat.
+
+Nem kell külön kézzel karbantartott ConformanceSurface.
+
+ConformanceSurface vs Role
+Ebben a reviewer gyakorlatilag eljutott oda, ahová te már korábban:
+
+schemaobjektum
+    ↓
+default + rejtett viselkedés injektálása
+    ↓
+compiled comparison/conformance plan
+Tehát:
+
+kézzel írt ConformanceSurface → valószínűleg rossz
+schema alapján generált ConformancePlan → jó
+A compiled plan digestje valóban bekerülhet a proofba:
+
+proof:
+  schema_digest: sha256:...
+  conformance_plan_digest: sha256:...
+  observation_digest: sha256:...
+  verdict_digest: sha256:...
+Ez jó javaslat.
+
+Field<T> ellentmondás
+Ezt is jól kapta el.
+
+A pontos állítás:
+
+Field<T>
+    → jó generált, típusos SDK-hoz és module view-hoz
+
+dinamikus rekurzív Node IR
+    → jó a schema compiler belső univerzális modelljéhez
+Nem az a helyes, hogy a Field<T> zsákutca, hanem az, hogy nem elegendő egyedüli futásidejű IR-ként.
+
+Tehát:
+
+Field<Vm>
+Field<Subnet>
+Field<String>
+nagyon jó lehet a generált modulinterfésznél.
+
+A schema engine belsejében pedig:
+
+Node {
+    value: Value,
+    cic: Meta,
+}
+kell.
+
+Ahol a reviewer alulértékeli a CIC-et
+A review gyakorlatilag nem foglalkozik ezekkel:
+
+$value és $cic namespace-szétválasztás;
+
+mezőszintű ACL-alapú részleges disclosure;
+
+partnerenként eltérő intent/state projekció;
+
+management-hierarchia;
+
+titkosított secret-placement és backup;
+
+x alapú használat olvasás nélkül;
+
+schemaobjektum-referenciák;
+
+IaC-objektumreferencia-gráf;
+
+provider binding;
+
+proof-chain;
+
+ellenjegyzett observation coverage.
+
+Ezért a „Terraform + SSA + Crossplane” összehasonlítás szükséges, de nem elegendő.
+
+A valódi bontás inkább:
+
+Terraform
+    → attribútum-viselkedés és provider plan/state
+
+SSA
+    → többíró-szereplős ownership és strukturált merge
+
+Crossplane
+    → observe/reconcile és late initialization
+
+POSIX/NFS ACL
+    → hierarchikus hozzáférési precedens
+
+CIC
+    → ezek fölött egységes, proofolt, többmanagementes
+      infrastruktúra-objektumtér
+Az ütemezési kritikája is helyes
+Ezt a teljes csomagot:
+
+Node IR
+canonical encoder
+ACL engine
+ownership
+observation completeness
+collection topology
+cross-language test vectors
+nem szabad belerángatni az aktuális PoC kritikus útjába.
+
+A helyes sorrend szerintem:
+
+1. A PoC menjen a jelenlegi drift-mechanizmussal.
+
+2. Írásos semantic core spec:
+   - canonical encoding;
+   - collection topology;
+   - observation coverage;
+   - ACL evaluation;
+   - ownership.
+
+3. Egyetlen OCI-erőforrás vertikális szelete.
+
+4. Go és Rust közös tesztvektorok.
+
+5. Csak ezután általános Node IR-migráció.
+Egy fontos ötödik hiány, amit ő sem nevezett meg
+A négy felsorolt specifikáció mellé én tennék egy ötödiket:
+
+Schema-evolúció és field identity.
+
+Ha egy mező:
+
+/network/interfaces
+átneveződik:
+
+/network/attachments
+akkor mi történik:
+
+az ownershiptel;
+
+az ACL-lel;
+
+a proof pathokkal;
+
+az observation fieldsettel;
+
+a korábbi state-tel;
+
+a partner patch-ekkel?
+
+Az SSA dokumentáció külön figyelmeztet arra, hogy a collection topology atomic és map/set/granular közötti megváltoztatása ownership-problémákat és elvesző konfliktusdetektálást okozhat. 
+
+Ezért a mezőidentitás hosszú távon ne csak a megjelenített path legyen. Kellhet stabil field ID:
+
+memory_gb:
+  $cic:
+    field_id: cic:oci:compute:instance:memory
+A path változhat, a field identity nem.
+
+Végső ítélet
+Ez nem lehúzás. Ez egy jó architecture review, és érdemes komolyan venni.
+
+A legerősebb, azonnal átveendő pontjai:
+
+kanonikus IR-encoding tesztvektorokkal;
+
+ACL-szemantika formalizálása;
+
+SSA-szerű collection topology és listaelem-identitás;
+
+observation coverage külön bizonyított fieldsetként;
+
+a conformance plan generálása a schemaobjektumból;
+
+mindezt kivinni a jelenlegi PoC kritikus útjából.
+
+De a review tárgya részben elcsúszott:
+
+Nem azt cáfolja, amit te kitaláltál, hanem pontosan megmutatja, hogy az én első ConformanceSurface- és külön intent/state-modellre épített értelmezésem hol volt túlbonyolított és belsőleg következetlen.
+
+A legjobb eredménye ezért nem az, hogy „rossz az irány”, hanem az, hogy most már tisztán elválasztható öt külön réteg:
+
+schema behavior
+ACL authorization
+SSA-szerű ownership
+observation coverage
+cryptographic proof
+Ezeket nem szabad egyetlen $cic masszává összefolyni hagyni — ugyanabban a namespace-ben lehetnek, de külön, formálisan specifikált alrendszerként.
+
+
+érdemes-e bármit is alakítani a koncepción?
+
+Alakítani igen, újratervezni nem. A koncepció magja jó. A review alapján néhány dolgot pontosítani kell, de a központi modellhez nem nyúlnék.
+
+Amit változatlanul megtartanék
+Ezek erősek:
+
+key: VALUE
+ugyanaz, mint:
+
+key:
+  $value: VALUE
+  $cic:
+    default: false
+    ...
+Továbbá:
+
+a séma közvetlenül a modulba töltés előtt validál és materializál;
+
+a schema injektálja a defaultokat és a rejtett viselkedési adatokat;
+
+az intent és a state ugyanazt a kanonikus objektummodellt használja;
+
+a state az intent megfigyelt és provideradatokkal kibővített változata;
+
+stabil adatok, például provider-ID, szabályozottan visszakerülhetnek az intentbe;
+
+proof, signature és observation metadata nem keveredik az üzleti adatba;
+
+$value és $cic névtere szigorúan külön marad;
+
+secret esetén nincs plaintext value, csak secretobjektum vagy referencia;
+
+sensitive: none jelenti azt, hogy közönséges adatról van szó.
+
+Ez a koncepció lényegi értéke.
+
+Amit módosítanék
+1. Ne legyen kézzel írt ConformanceSurface
+A megfelelőségi tervet a schemaobjektumból kell lefordítani.
+
+Nem:
+
+conformance:
+  intent_path: ...
+  state_path: ...
+hanem a mező sémája mondja meg:
+
+memory:
+  $cic:
+    schema:
+      field_id: cic:compute:vm:memory
+      mode:
+        read: true
+        write: true
+      compare:
+        type: exact
+A compiler ebből állítja elő a végrehajtási tervet:
+
+Schema object
+    ↓ compile
+Conformance plan
+    ↓
+intent–state verdict
+A plan digestje bekerülhet a proofba.
+
+Ez megszünteti a schema és a conformance-konfiguráció közötti szétcsúszást.
+
+2. A $cic maradjon közös namespace, de legyen belül szigorúan rétegezve
+Ne legyen egy lapos metadatahalmaz:
+
+$cic:
+  default: false
+  read: true
+  acl: ...
+  manager: ...
+  observed: ...
+Inkább:
+
+$cic:
+  schema:
+    field_id: cic:network:subnet:cidr
+    ref: cic://schemas/network/cidr
+    digest: sha256:...
+
+  behavior:
+    default: false
+
+    mode:
+      read: true
+      write: true
+      implemented: true
+      visible: true
+
+    compare:
+      type: exact
+
+  access:
+    acl: ...
+
+  collection:
+    topology: atomic
+Így külön marad:
+
+schema      → mi ez?
+behavior    → hogyan működik?
+access      → ki férhet hozzá?
+collection  → hogyan kezelendő a struktúrája?
+Az ownership és az observation adatait nem tenném minden mező mellé. Azok objektum- vagy envelope-szintű indexek legyenek.
+
+3. Vegyük át az SSA collection topology szemantikáját
+Ez fontos és eddig valóban hiányzott.
+
+Lista vagy map esetén meg kell mondani, hogyan azonosíthatók az elemek.
+
+Atomic
+Az egész lista egyetlen érték:
+
+$cic:
+  collection:
+    topology: atomic
+Set
+Az elemek érték szerint egyediek, a sorrend nem számít:
+
+$cic:
+  collection:
+    topology: set
+Map
+Az elemek meghatározott kulcsokkal azonosíthatók:
+
+interfaces:
+  $cic:
+    collection:
+      topology: map
+      keys:
+        - name
+Így:
+
+interfaces:
+  - name: nic-0
+    subnet: subnet-a
+
+  - name: nic-1
+    subnet: subnet-c
+nem index szerint, hanem name alapján párosítható.
+
+Ez egyszerre kell:
+
+drifthez;
+
+merge-höz;
+
+ownershiphöz;
+
+ACL-pathokhoz;
+
+proofhoz;
+
+elem törléséhez.
+
+Ezt nem érdemes saját ötlettel újra feltalálni. Az SSA modellje jó alap.
+
+4. A megfigyelési teljességet külön kell modellezni
+Ez a review legfontosabb módosítási javaslata.
+
+A state objektumban hiányzó kulcsról önmagában nem tudjuk, hogy:
+
+a provider megfigyelte, és ténylegesen nincs;
+
+a provider nem kérdezte le;
+
+az adott endpoint nem adta vissza;
+
+a modul nem implementálta az observationt.
+
+A field objectbe nem tennék újabb known/unobserved jelölést. Ez az observation esemény tulajdonsága.
+
+Például:
+
+object:
+  # state objektum
+
+observation:
+  observed:
+    - /id
+    - /display_name
+    - /interfaces/{name=nic-0}/private_ip
+
+  absent:
+    - /secondary_dns
+
+  unobserved:
+    - /boot_volume/encryption_key
+Vagy elég lehet csak:
+
+observation:
+  observed_fields: ...
+  authoritative_absent_fields: ...
+Ami egyik halmazban sincs, az UNOBSERVED.
+
+Így a verdict:
+
+CONFORMANT
+DRIFT
+OBSERVED_ABSENT
+UNOBSERVED
+NOT_COMPARABLE
+között bizonyíthatóan tud különbséget tenni.
+
+5. Az ACL-t formalizálni kell, nem újragondolni
+A mezőszintű ACL ötlete maradjon. Viszont el kell dönteni, hogy pontosan milyen rendszer.
+
+Nem szabad egyszerre lazán használni:
+
+POSIX maskot;
+
+explicit deny szabályokat;
+
+NFSv4-szerű rendezett ACE-ket;
+
+öröklést;
+
+RBAC-szerepeket.
+
+Én egy egyszerű, CIC-specifikus modellt választanék.
+
+Például:
+
+access:
+  owner: org:customer-a
+  group: role:platform-admin
+
+  mode:
+    owner: rwx
+    group: r-x
+    other: ---
+
+  entries:
+    - subject: partner:operations-x
+      allow: r-x
+
+  inherit: true
+Első verzióban nem tennék explicit deny szabályt bele.
+
+A szemantika:
+
+default deny
++ owner/group/other
++ named allow entries
++ mask
++ öröklés
+Ha később valóban kell explicit deny, akkor lehet új ACL-verzió:
+
+cic-acl/v2
+De ne keverjük össze az első implementációban.
+
+6. Az ownership legyen külön az ACL-től
+Az ACL azt mondja:
+
+Ki jogosult írni?
+
+Az ownership azt mondja:
+
+Ki kezeli jelenleg ezt a mezőt, és kivel konfliktál?
+
+Ezért:
+
+$cic:
+  access:
+    acl: ...
+marad a mező mellett vagy a sémából injektálva.
+
+Az SSA-szerű ownership viszont külön index:
+
+managedFields:
+  - manager: customer-platform
+    operation: apply
+    fields:
+      - /vms/web-01/cpu
+      - /vms/web-01/interfaces/{name=nic-0}
+
+  - manager: partner-network
+    operation: apply
+    fields:
+      - /vms/web-01/interfaces/{name=nic-1}
+Így a három kérdés külön marad:
+
+ACL         → írhatja-e?
+Ownership   → ütközik-e más managerrel?
+Schema      → technikailag írható-e?
+Az effektív írás:
+
+schema.write
+AND ACL.write
+AND ownership conflict-free
+7. Stabil field identity kell a path mellett
+A path önmagában nem tartós identitás.
+
+Ma:
+
+/interfaces
+holnap:
+
+/network_attachments
+Ha csak path alapú minden, elveszhet:
+
+ownership;
+
+ACL;
+
+observation coverage;
+
+migrációs kapcsolat;
+
+proof-verifikáció.
+
+Ezért a schemaobjektum mezője kapjon stabil ID-t:
+
+network_attachments:
+  $cic:
+    schema:
+      field_id: cic:compute:vm:network-interfaces
+A név és path változhat, a field_id nem.
+
+A listaelemek identitása pedig:
+
+field_id + collection key
+például:
+
+cic:compute:vm:network-interfaces/{name=nic-0}
+8. A kanonikus encoding legyen külön specifikáció
+Nem kell most eldönteni, hogy JCS vagy deterministic CBOR lesz, de ezt nem szabad a Go- vagy Rust-implementáció melléktermékére bízni.
+
+Kell egy nyelvfüggetlen szabály:
+
+CIC Canonical Object Encoding v1
+Ami definiálja:
+
+integer reprezentáció;
+
+decimal reprezentáció;
+
+-0 kezelése;
+
+Unicode normalizálás vagy annak tiltása;
+
+map kulcssorrend;
+
+set elemrendezés;
+
+null;
+
+hiányzó kulcs;
+
+URI/path normalizálás;
+
+schema digest;
+
+ACL-sorrend;
+
+list map-key encoding.
+
+Például közös tesztvektor:
+
+input:
+  cpu: 4
+  ratio: 1.0
+és hozzá:
+
+canonical bytes
+object digest
+Go result
+Rust result
+Ez szükséges, de nem kell az egész objektummodellt emiatt áttervezni.
+
+9. A secret policyt különítsük el az általános ACL-től
+Secret mező:
+
+password:
+  $value:
+    path: secret://relay/database/password
+
+  $cic:
+    behavior:
+      sensitive:
+        type: secret
+
+        placement:
+          local: primary
+          site: transit
+          central: backup
+Az általános ACL továbbra is azt szabályozza:
+
+ki láthatja a secret referenciát;
+
+ki cserélheti;
+
+ki használhatja.
+
+    access:
+      acl:
+        entries:
+          - subject: service:database-module
+            allow: --x
+
+          - subject: role:secret-admin
+            allow: rw-
+
+          - subject: partner:operator
+            allow: ---
+A placement nem ACL. Az adat elhelyezési/custody policyje.
+
+Ez a kettő külön maradjon:
+
+access ACL       → actor mit tehet?
+secret placement → secret objektum hol tárolható?
+Amit nem építenék meg most
+Nem húznám be az aktuális PoC-ba:
+
+teljes SSA ownership engine;
+
+többverziós ACL engine;
+
+teljes Go/Rust közös IR;
+
+általános schema-evolúció;
+
+minden providerre működő conformance compiler;
+
+Merkle partial disclosure.
+
+A PoC után egyetlen konkrét vertikális szelet:
+
+OCI VM
+├── két NIC
+├── két külön subnet
+├── provider ID
+├── read/write/computed mezők
+├── egy map-topology collection
+├── observation coverage
+└── egyszerű ACL-projekció
+Ezen lehet igazolni a modellt.
+
+A módosított magmodell
+key:
+  $value: VALUE
+
+  $cic:
+    schema:
+      field_id: cic:namespace:object:field
+      ref: cic://schemas/...
+      digest: sha256:...
+
+    behavior:
+      default: false
+
+      mode:
+        read: true
+        write: true
+        implemented: true
+        visible: true
+
+      compare:
+        type: exact
+
+      sensitive:
+        type: none
+
+    access:
+      acl:
+        inherit: true
+
+    collection:
+      topology: atomic
+A külön objektumszintű rendszerek:
+
+managedFields:
+  # SSA-szerű ownership
+
+observation:
+  # observed / absent fieldsets
+
+proof:
+  schema_digest: ...
+  conformance_plan_digest: ...
+  observation_digest: ...
+  object_digest: ...
+  signature: ...
+Végső válasz
+A koncepciót nem kell megváltoztatni. A határait és a belső rétegeit kell specifikálni.
+
+A valódi módosítások:
+
+kézi ConformanceSurface helyett schema-compiled plan;
+
+SSA-szerű collection topology;
+
+observation coverage külön envelope-ban;
+
+ACL és ownership szétválasztása;
+
+formálisan kiválasztott ACL-szemantika;
+
+stabil field identity;
+
+nyelvfüggetlen kanonikus encoding.
+
+A felületi egyszerűség változatlan marad:
+
+vm:
+  cpu: 4
+  networks:
+    - subnet-a
+    - subnet-c
+Csak a motorháztető alatt lesznek világosan elkülönített és bizonyítható alkatrészek.
+
+
+1Password menu is available. Press down arrow to select.
