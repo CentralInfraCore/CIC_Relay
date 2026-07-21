@@ -1,8 +1,10 @@
 package iac
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 
 	"centralrelay/pkg/canonicaljson"
 )
@@ -13,19 +15,39 @@ import (
 // The spec is first expanded to canonical [Field]s, so the compact `key: VALUE`
 // and the fully-written `key: {value, default, mode}` descriptor produce the SAME
 // bytes and therefore the SAME digest — the determinism contract the field model
-// promises. The expanded model is then serialized with the deterministic
-// canonical-JSON encoder (sorted keys) and SHA-256'd.
-//
-// NOTE: number normalization (1 vs 1.0 vs 1e0, -0) is NOT yet applied — a value's
-// Go type is preserved as written, so `cpu: 4` and `cpu: 4.0` currently digest
-// differently. Pinning that is CIC Canonical Object Encoding v1 (spec #1), which
-// must ship with language-neutral Go+Rust test vectors; until then, write numbers
-// consistently.
+// promises. Numbers are then normalized (spec #1): `4`, `4.0` and `4e0` digest
+// identically, `-0` is `0`, and — critically — integers keep full precision (the
+// bytes never round-trip through float64), so a value beyond float64's mantissa
+// digests as its exact digits rather than the nearest double. The normalized model
+// is serialized with the deterministic canonical-JSON encoder (sorted keys) and
+// SHA-256'd.
 func SpecDigest(spec map[string]interface{}) (string, error) {
-	canonical, err := canonicaljson.ToJSON(ExpandSpec(spec))
+	plain, err := toPlainValue(ExpandSpec(spec))
+	if err != nil {
+		return "", err
+	}
+	canonical, err := canonicaljson.ToJSON(normalizeNumbers(plain))
 	if err != nil {
 		return "", err
 	}
 	sum := sha256.Sum256(canonical)
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
+}
+
+// toPlainValue round-trips a value through JSON into plain maps/slices, decoding
+// numbers with UseNumber so integer precision survives (encoding/json's default
+// would collapse them to float64). This also flattens struct values (the expanded
+// [Field]s) into maps without triggering the canonical encoder's lossy struct path.
+func toPlainValue(v interface{}) (interface{}, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	var out interface{}
+	if err := dec.Decode(&out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

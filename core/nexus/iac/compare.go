@@ -54,6 +54,17 @@ func Compare(intent, observed interface{}, ct CompareType) (matched, comparable 
 		}
 		return in.Cmp(ob) == 0, true
 	default: // CompareExact
+		// Numbers compare by canonical value, so `exact` does not depend on the
+		// incidental Go type a number arrived as (int vs float64 vs json.Number).
+		iNum, oNum := isNumeric(intent), isNumeric(observed)
+		if iNum || oNum {
+			if iNum != oNum {
+				return false, false // number vs non-number → not comparable
+			}
+			in, _ := canonicalNumber(intent)
+			on, _ := canonicalNumber(observed)
+			return in == on, true
+		}
 		if jsonKind(intent) != jsonKind(observed) {
 			return false, false
 		}

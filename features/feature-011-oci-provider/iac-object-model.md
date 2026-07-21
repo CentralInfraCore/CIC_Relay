@@ -139,7 +139,7 @@ namespace split is the next small refinement when the layers land.
 | Structural validation (`validator.go`) — mode consistency, dependency + field-reference integrity | **landed** |
 | Field references (`reference.go`) — the hidden object behind a parameter | **landed** |
 | Collection topology (`collection.go`, spec #3) — atomic/set/map + element identity | **partial** (identity landed; merge/ownership use later) |
-| Canonical digest (`digest.go`, spec #1) — determinism proven (form-equivalence + golden vector) | **partial** (number normalization + Rust vectors deferred) |
+| Canonical digest (`digest.go`, spec #1) — determinism proven (form-equivalence + golden vector) | **partial** (number normalization landed in `number.go` — `4`/`4.0`/`4e0` collapse, `-0`→`0`, integer precision preserved; Rust cross-language vectors deferred) |
 | Observation completeness (`observation.go`, spec #4) — coverage envelope + coverage-aware verdicts | **landed** |
 | ACL algorithm (spec #2) | concept — no `ACL` / `Permission` / `Principal` symbol in repo |
 | Stable `field_id` / `$value`+`$cic` namespace (spec #5) | concept — no `ValueKind` / `ObjectRef` / `ResolvedSchemaRef` symbol in repo |
