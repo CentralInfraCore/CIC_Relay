@@ -151,3 +151,37 @@ func TestIaCValidator_DependencyIntegrity(t *testing.T) {
 	assert.Contains(t, err.Error(), "does-not-exist")
 	assert.Contains(t, err.Error(), "does not resolve")
 }
+
+// A field-level object reference resolves iff the target exists and its kind
+// (when named) matches.
+func TestIaCValidator_FieldReference(t *testing.T) {
+	v := NewIaCValidator(newStubCabinet("core.test@1.0"))
+
+	rt := makeTestResource("core.test", "1.0")
+	rt.Meta = types.ResourceMeta{Name: "production-private", Kind: "RouteTable"}
+
+	subnet := makeTestResource("core.test", "1.0")
+	subnet.Meta = types.ResourceMeta{Name: "subnet-a", Kind: "Subnet"}
+	subnet.Spec = map[string]interface{}{
+		"route_table": map[string]interface{}{"ref": "production-private", "kind": "RouteTable"},
+	}
+	graph := &types.Graph{Services: map[string]*types.Service{
+		"svc": {Spec: types.ServiceSpec{Resources: []types.ResourceSpec{rt, subnet}}},
+	}}
+	require.NoError(t, v.Validate(context.Background(), graph))
+
+	// dangling reference → error
+	subnet.Spec = map[string]interface{}{"route_table": map[string]interface{}{"ref": "ghost"}}
+	graph.Services["svc"].Spec.Resources = []types.ResourceSpec{rt, subnet}
+	err := v.Validate(context.Background(), graph)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "ghost")
+	assert.Contains(t, err.Error(), "does not exist")
+
+	// wrong kind → error
+	subnet.Spec = map[string]interface{}{"route_table": map[string]interface{}{"ref": "production-private", "kind": "Subnet"}}
+	graph.Services["svc"].Spec.Resources = []types.ResourceSpec{rt, subnet}
+	err = v.Validate(context.Background(), graph)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "as kind")
+}

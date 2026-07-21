@@ -25,7 +25,7 @@ func NewIaCValidator(c cabinet.Cabinet) *IaCValidator {
 // every error found: unresolved schemaRefs, spec-structure violations, and
 // dependencies that point at a resource not present in the graph.
 func (v *IaCValidator) Validate(_ context.Context, graph *types.Graph) error {
-	names := resourceNameSet(graph)
+	index := resourceIndex(graph)
 	var errs []error
 	for svcName, svc := range graph.Services {
 		for _, res := range svc.Spec.Resources {
@@ -36,9 +36,12 @@ func (v *IaCValidator) Validate(_ context.Context, graph *types.Graph) error {
 				errs = append(errs, err)
 			}
 			for _, dep := range res.Dependencies {
-				if !names[dep] {
+				if _, ok := index[dep]; !ok {
 					errs = append(errs, fmt.Errorf("%s: dependency %q does not resolve to any resource in the graph", resourceRef(svcName, res), dep))
 				}
+			}
+			if err := resolveFieldRefs(svcName, res, index); err != nil {
+				errs = append(errs, err)
 			}
 		}
 	}
@@ -85,14 +88,37 @@ func resourceRef(svcName string, res types.ResourceSpec) string {
 	return fmt.Sprintf("resource/%s", res.Meta.Name)
 }
 
-// resourceNameSet is the set of every resource name across all services — the
-// resolution target for dependency integrity.
-func resourceNameSet(graph *types.Graph) map[string]bool {
-	names := map[string]bool{}
-	for _, svc := range graph.Services {
-		for _, res := range svc.Spec.Resources {
-			names[res.Meta.Name] = true
+// resolveFieldRefs resolves every object-reference field in the resource's spec
+// against the graph index: the referenced resource must exist, and — if the ref
+// names a kind — the target's kind must match. Field-level references are the
+// "hidden object behind a parameter" (reference.go).
+func resolveFieldRefs(svcName string, res types.ResourceSpec, index map[string]string) error {
+	var errs []error
+	for name, field := range ExpandSpec(res.Spec) {
+		ref, ok := field.AsRef()
+		if !ok {
+			continue
+		}
+		kind, exists := index[ref.Target]
+		if !exists {
+			errs = append(errs, fmt.Errorf("%s: field %q references resource %q which does not exist in the graph", resourceRef(svcName, res), name, ref.Target))
+			continue
+		}
+		if ref.Kind != "" && kind != "" && kind != ref.Kind {
+			errs = append(errs, fmt.Errorf("%s: field %q references %q as kind %q but it is %q", resourceRef(svcName, res), name, ref.Target, ref.Kind, kind))
 		}
 	}
-	return names
+	return errors.Join(errs...)
+}
+
+// resourceIndex maps every resource name across all services to its kind — the
+// resolution target for dependency and field-reference integrity.
+func resourceIndex(graph *types.Graph) map[string]string {
+	index := map[string]string{}
+	for _, svc := range graph.Services {
+		for _, res := range svc.Spec.Resources {
+			index[res.Meta.Name] = res.Meta.Kind
+		}
+	}
+	return index
 }
