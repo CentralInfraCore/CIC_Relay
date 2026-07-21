@@ -145,7 +145,7 @@ namespace split is the next small refinement when the layers land.
 | Stable `field_id` / `$value`+`$cic` namespace (spec #5) | concept — no `ValueKind` / `ObjectRef` / `ResolvedSchemaRef` symbol in repo |
 | Intent↔state comparator (Task 1, `compare.go`) — exact / numeric; produces `ClassifyField`'s `matched`; `NOT_COMPARABLE` on kind mismatch | **landed**, tested (schema-compiled plan still deferred) |
 | OCI vertical slice (`conformance.go`) — object verdict over VM + 2 NICs + 2 subnets + map collection + observation | **landed**, tested (CONFORMANT / DRIFT / NOT_COMPARABLE / UNOBSERVED / OBSERVED_ABSENT proven end-to-end) |
-| Conformance plan compiled from schema behavior annotations (the `Evaluate` seam's input) | concept |
+| Conformance plan compiled from schema behavior annotations (`schema.go`) — `mode.write` = config/state split, `behavior.compare` = comparator, `collection` = topology | **landed**, tested (compiled plan reproduces the hand-built verdict; read-only fields excluded) |
 | Drift-engine rewire onto the new model (`core/nexus/drift` → `core/nexus/iac`) | **landed** — `drift.Analyze` classifies via `iac.Evaluate`; extra observed keys no longer drift, empty+empty is NONE; recorder verdicts unchanged |
 
 Per the scheduling above, this is the base off the PoC critical path; the OCI
