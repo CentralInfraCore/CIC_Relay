@@ -146,7 +146,7 @@ namespace split is the next small refinement when the layers land.
 | Intent↔state comparator (Task 1, `compare.go`) — exact / numeric; produces `ClassifyField`'s `matched`; `NOT_COMPARABLE` on kind mismatch | **landed**, tested (schema-compiled plan still deferred) |
 | OCI vertical slice (`conformance.go`) — object verdict over VM + 2 NICs + 2 subnets + map collection + observation | **landed**, tested (CONFORMANT / DRIFT / NOT_COMPARABLE / UNOBSERVED / OBSERVED_ABSENT proven end-to-end) |
 | Conformance plan compiled from schema behavior annotations (the `Evaluate` seam's input) | concept |
-| Drift-engine rewire onto the new model (`core/nexus/iac` ↔ `core/nexus/drift` bridge) | concept |
+| Drift-engine rewire onto the new model (`core/nexus/drift` → `core/nexus/iac`) | **landed** — `drift.Analyze` classifies via `iac.Evaluate`; extra observed keys no longer drift, empty+empty is NONE; recorder verdicts unchanged |
 
 Per the scheduling above, this is the base off the PoC critical path; the OCI
 vertical proves it, and the general Node IR / cross-language test vectors come last.
@@ -170,10 +170,10 @@ graph), not file reading. Findings:
   lives in the separate `schemas.tar` / `cic-module-oracle-cloud` artifact.
 - **The bridge is absent.** The existing drift engine is `core/nexus/drift`
   (`SoftDrift` / `HardDrift` / `ReconciliableDrift`, the `DeepEqual` classifier the
-  scheduling above keeps on the PoC path). There are **0 graph edges between
-  `core/nexus/iac` and `core/nexus/drift`** — the migration of the drift engine onto
-  the new semantic model has **not started**. The conformance plan (Task 1) is the
-  load-bearing missing link.
+  scheduling above keeps on the PoC path). At audit time there were **0 graph edges
+  between `core/nexus/iac` and `core/nexus/drift`** — the migration had not started.
+  **(Update: closed — `drift.Analyze` now classifies through `iac.Evaluate`; the
+  edge exists and the DeepEqual classifier is retired.)**
 
 Net: the foundation third (field-mode + observation-coverage + verdict +
 digest/collection/reference/validator) is landed and tested; the upper two-thirds
