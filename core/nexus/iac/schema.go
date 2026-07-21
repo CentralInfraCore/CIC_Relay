@@ -23,6 +23,7 @@ type SchemaField struct {
 	FieldID    FieldID // stable identity (schema.field_id); survives a path rename
 	Compare    CompareType
 	Mode       FieldMode
+	Sensitive  SensitivePolicy // secret placement/custody (behavior.sensitive)
 	Collection *Collection
 	Elements   []SchemaField
 }
@@ -102,6 +103,9 @@ func parseSchemaField(path string, raw interface{}) SchemaField {
 			if t, ok := compare["type"].(string); ok {
 				f.Compare = CompareType(t)
 			}
+		}
+		if sensitive, ok := behavior["sensitive"].(map[string]interface{}); ok {
+			f.Sensitive = parseSensitive(sensitive)
 		}
 	}
 

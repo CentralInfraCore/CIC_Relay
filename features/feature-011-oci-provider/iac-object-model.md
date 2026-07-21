@@ -143,6 +143,7 @@ namespace split is the next small refinement when the layers land.
 | Observation completeness (`observation.go`, spec #4) — coverage envelope + coverage-aware verdicts | **landed** |
 | ACL algorithm (spec #2, `acl.go`) — cic-acl/v1: default-deny + owner/group/other + named allow + mask + inherit, no explicit deny; keys on `field_id` | **landed**, tested (POSIX most-specific-class-wins semantics) |
 | Stable `field_id` (spec #5, `field_id.go`) — proof/ownership re-key on `field_id`, surviving a path rename; collection element id = field id + element key | **landed**, tested (rename-stability proof) |
+| Secret custody (`sensitive.go`) — placement/custody policy (class / exposure / backup), separate from ACL; type boundary: a secret field holds only a `SecretRef`, never plaintext | **landed**, tested (invariant + object-wide enforcement) |
 | `$value`+`$cic` namespace split + rich `ValueKind` / `ObjectRef` IR (spec #5 cont.) | concept |
 | Intent↔state comparator (Task 1, `compare.go`) — exact / numeric; produces `ClassifyField`'s `matched`; `NOT_COMPARABLE` on kind mismatch | **landed**, tested (schema-compiled plan still deferred) |
 | OCI vertical slice (`conformance.go`) — object verdict over VM + 2 NICs + 2 subnets + map collection + observation | **landed**, tested (CONFORMANT / DRIFT / NOT_COMPARABLE / UNOBSERVED / OBSERVED_ABSENT proven end-to-end) |
