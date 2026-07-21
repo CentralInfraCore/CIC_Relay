@@ -42,6 +42,26 @@ objects:
   calls:
   - assert.Equal
   - require.NoError
+- name: TestSpecDigest_NumberNormalization
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+- name: TestSpecDigest_IntegerPrecision
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEqual
+  calls:
+  - assert.NotEqual
+  - require.NoError
 - name: TestSpecDigest_EncodeError
   kind: func
   description: ''

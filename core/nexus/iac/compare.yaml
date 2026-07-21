@@ -1,0 +1,76 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: CompareType
+  kind: type
+  description: CompareType is the semantic-equality rule for a field, sourced from
+    the field's `behavior.compare.type`. Unknown/empty defaults to [CompareExact].
+  references: []
+- name: Compare
+  kind: func
+  description: 'Compare answers whether `observed` conforms to `intent` under the
+    comparator `ct`. It returns: - comparable — false when the two values are not
+    type-compatible under `ct` (the caller surfaces this as NOT_COMPARABLE, never
+    as DRIFT); - matched — meaningful only when comparable, true when the values are
+    equal. An empty/unknown `ct` is treated as [CompareExact].'
+  references: []
+  calls:
+  - Cmp
+- name: ClassifyFieldValue
+  kind: method
+  receiver: Observation
+  description: 'ClassifyFieldValue is the full per-field verdict: it joins observation
+    coverage (this method''s receiver) with the value comparison. For an observed
+    field it runs [Compare] and maps the result to CONFORMANT / DRIFT / NOT_COMPARABLE;
+    for absent or unobserved fields it defers to [Observation.ClassifyField], where
+    the value never matters. This is the seam the compiled conformance plan drives:
+    one call per field path, carrying the field''s comparator and both sides'' values.'
+  references: []
+  calls:
+  - ClassifyField
+  - Compare
+  - Coverage
+- name: canonicalEqual
+  kind: func
+  description: canonicalEqual reports whether two values have identical canonical-JSON
+    forms.
+  references:
+  - canonicaljson.ToJSON
+  calls:
+  - canonicaljson.ToJSON
+- name: jsonKind
+  kind: func
+  description: 'jsonKind names the JSON kind of a value for exact type-compatibility:
+    one of "null", "bool", "number", "string", "array", "object", or "" (unknown).
+    All integer and floating kinds collapse to "number".'
+  references: []
+  calls: []
+- name: asRat
+  kind: func
+  description: asRat coerces a numeric value (or a numeric string / json.Number) to
+    a big.Rat for representation-independent equality. bool is deliberately not numeric.
+  references: []
+  calls:
+  - SetFloat64
+  - SetInt64
+  - SetUint64
+  - String
+- name: ratFromString
+  kind: func
+  description: ratFromString parses a decimal or scientific-notation string into a
+    big.Rat.
+  references: []
+  calls:
+  - SetString
+- name: reflectUint
+  kind: func
+  description: reflectUint widens any unsigned integer kind to uint64.
+  references: []
+  calls: []

@@ -14,14 +14,22 @@ objects:
     of the proof-chain over IaC intent (feature-011, iac-object-model.md). The spec
     is first expanded to canonical [Field]s, so the compact `key: VALUE` and the fully-written
     `key: {value, default, mode}` descriptor produce the SAME bytes and therefore
-    the SAME digest — the determinism contract the field model promises. The expanded
-    model is then serialized with the deterministic canonical-JSON encoder (sorted
-    keys) and SHA-256''d. NOTE: number normalization (1 vs 1.0 vs 1e0, -0) is NOT
-    yet applied — a value''s Go type is preserved as written, so `cpu: 4` and `cpu:
-    4.0` currently digest differently. Pinning that is CIC Canonical Object Encoding
-    v1 (spec #1), which must ship with language-neutral Go+Rust test vectors; until
-    then, write numbers consistently.'
+    the SAME digest — the determinism contract the field model promises. Numbers are
+    then normalized (spec #1): `4`, `4.0` and `4e0` digest identically, `-0` is `0`,
+    and — critically — integers keep full precision (the bytes never round-trip through
+    float64), so a value beyond float64''s mantissa digests as its exact digits rather
+    than the nearest double. The normalized model is serialized with the deterministic
+    canonical-JSON encoder (sorted keys) and SHA-256''d.'
   references:
   - canonicaljson.ToJSON
   calls:
   - canonicaljson.ToJSON
+- name: toPlainValue
+  kind: func
+  description: toPlainValue round-trips a value through JSON into plain maps/slices,
+    decoding numbers with UseNumber so integer precision survives (encoding/json's
+    default would collapse them to float64). This also flattens struct values (the
+    expanded [Field]s) into maps without triggering the canonical encoder's lossy
+    struct path.
+  references: []
+  calls: []

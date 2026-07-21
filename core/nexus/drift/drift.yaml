@@ -4,7 +4,17 @@ description: 'Package drift classifies the difference between a declared (desire
   state and the observed (actual) state — the CIC "Declarative Accountability" primitive
   (demo §8.2–§8.3). The classification is deterministic (a `ProofTrace` prerequisite):
   the same desired/actual pair always yields the same type and the same, sorted, difference
-  report.'
+  report. Classification is delegated to the feature-011 conformance model (core/nexus/iac):
+  each desired key becomes an exact-compared field, `actual` is treated as a complete
+  observation, and the per-field verdicts are folded back into this package''s Report.
+  This is the "rewire the drift engine onto the new model" step — the bridge the object
+  model was missing. Two consequences follow directly from that model (both intentional
+  corrections of the old reflect-based engine): - Extra keys in the observed state
+  are observed state, not drift. A desired state that is fully satisfied is NONE even
+  when actual carries more (a provider_id, an assigned IP, a timestamp). SOFT_DRIFT
+  is reserved for when a schema/plan says an extra field must not exist — not emitted
+  by the default, schema-less classification here. - Empty desired + empty actual
+  is NONE, not HARD_DRIFT: nothing is declared and nothing is there.'
 tags:
 - core
 category: []
@@ -25,15 +35,23 @@ objects:
 - name: Analyze
   kind: func
   description: 'Analyze compares a desired state against an actual state and returns
-    the deterministic drift Report. Both are canonicalizable maps (e.g. decoded JSON).
-    An empty or nil actual state is HARD_DRIFT (the infrastructure is gone), regardless
-    of desired. Otherwise: any missing or changed desired key makes it RECONCILIABLE_DRIFT;
-    if the desired state is fully satisfied but the actual has extra keys, it is SOFT_DRIFT;
-    an exact match is NONE.'
-  references: []
+    the deterministic drift Report, classified through the iac conformance model.
+    Both are canonicalizable maps (e.g. decoded JSON). An empty actual against a non-empty
+    desired is HARD_DRIFT (the infrastructure is gone). Empty against empty is NONE.
+    Otherwise each desired key is compared (exact) against the observed value: a missing
+    or mismatched key makes it RECONCILIABLE_DRIFT; a fully-satisfied desired state
+    is NONE regardless of extra observed keys.'
+  references:
+  - iac.ConformancePlanScalars
+  - iac.FieldPlan
+  - iac.ObservationObserved
+  - iac.FieldPlanPath
+  - iac.CompareExact
+  - iac.Evaluate
+  - iac.VerdictDrift
+  - iac.VerdictNotComparable
   calls:
-  - DeepEqual
-  - Strings
+  - iac.Evaluate
 - name: Classify
   kind: func
   description: Classify is a convenience over Analyze returning only the drift Type.

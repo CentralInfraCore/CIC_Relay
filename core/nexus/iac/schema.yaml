@@ -1,0 +1,67 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- parser
+- schema
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SchemaField
+  kind: struct
+  description: 'SchemaField is one field''s behavior surface as authored in a schema:
+    its canonical path, comparator, mode (read/write/…), and — for a list field —
+    the collection topology plus the per-element field behaviors (relative paths).'
+  implements: []
+  references: []
+- name: Schema
+  kind: struct
+  description: Schema is the authored field-behavior surface a [ConformancePlan] compiles
+    from.
+  implements: []
+  references: []
+- name: CompilePlan
+  kind: func
+  description: 'CompilePlan compiles a schema into the [ConformancePlan] that [Evaluate]
+    runs. Only writable fields become comparisons: a writable scalar → a [FieldPlan];
+    a writable collection → a [CollectionPlan] carrying its writable element fields.
+    Read-only fields are omitted — they are observed state, never compared against
+    intent. Output order is deterministic (fields are pre-sorted by [ParseSchema]).'
+  references: []
+  calls: []
+- name: ParseSchema
+  kind: func
+  description: 'ParseSchema reads a schema document into a [Schema]. Each top-level
+    key is a field; its value carries the behavior annotations: shape:      { behavior:
+    { compare: { type: exact } } } memory_gb:  { behavior: { compare: { type: numeric
+    } } } provider_id:{ behavior: { mode: { write: false } } }        # computed →
+    state-only interfaces: { collection: { topology: map, keys: [name] }, element:
+    { subnet: { behavior: { compare: { type: exact } } } } } A missing `behavior.mode`
+    defaults every flag to true (writable), matching the field model''s scalar-sugar.
+    Fields (and collection elements) are sorted by path so the compiled plan — and
+    any digest over it — is deterministic.'
+  references: []
+  calls:
+  - Slice
+- name: parseSchemaField
+  kind: func
+  description: parseSchemaField parses one field descriptor at the given (already-prefixed)
+    path. Element fields are parsed with their relative name as path.
+  references: []
+  calls:
+  - CollectionTopology
+  - CompareType
+  - Strings
+- name: asString
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: asStringSlice
+  kind: func
+  description: ''
+  references: []
+  calls: []
