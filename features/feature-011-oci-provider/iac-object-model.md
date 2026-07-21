@@ -131,6 +131,24 @@ build**, sequenced per the scheduling above. `ExpandField`'s scalar-sugar +
 three-forms determinism is the base those layers wrap; the `$value`/`$cic`
 namespace split is the next small refinement when the layers land.
 
+## Implementation status (core/nexus/iac)
+
+| Piece | Status |
+|---|---|
+| Field expansion base (`field.go`) — scalar↔descriptor sugar, `mode` | **landed**, tested |
+| Structural validation (`validator.go`) — mode consistency, dependency + field-reference integrity | **landed** |
+| Field references (`reference.go`) — the hidden object behind a parameter | **landed** |
+| Collection topology (`collection.go`, spec #3) — atomic/set/map + element identity | **partial** (identity landed; merge/ownership use later) |
+| Canonical digest (`digest.go`, spec #1) — determinism proven (form-equivalence + golden vector) | **partial** (number normalization + Rust vectors deferred) |
+| Observation completeness (`observation.go`, spec #4) — coverage envelope + coverage-aware verdicts | **landed** |
+| ACL algorithm (spec #2) | concept |
+| Stable `field_id` / `$value`+`$cic` namespace (spec #5) | concept |
+| Intent↔state conformance plan (Task 1) — compiled from schema; feeds `ClassifyField`'s `matched` | concept |
+| OCI vertical slice (VM + 2 NICs + 2 subnets + collection + observation) | concept |
+
+Per the scheduling above, this is the base off the PoC critical path; the OCI
+vertical proves it, and the general Node IR / cross-language test vectors come last.
+
 ## Reference
 
 `thread-object-model.txt` (raw) — the field-wrapping model, the secret
