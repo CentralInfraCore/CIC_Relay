@@ -10,6 +10,7 @@ members = [
     "ffi",
     "executor",
     "http-executor",
+    "cic-canonical",
 ]
 
 # Shared metadata + lints applied to every workspace crate.

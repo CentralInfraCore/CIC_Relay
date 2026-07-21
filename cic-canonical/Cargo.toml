@@ -1,0 +1,13 @@
+[package]
+name = "cic-canonical"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# The Rust peer of the Go canonical encoding (core/nexus/iac/number.go). No
+# dependencies: number canonicalization is std-only string + f64 formatting, so the
+# supply-chain surface stays empty and the two languages agree byte-for-byte.
+
+[lints]
+workspace = true
