@@ -1,0 +1,82 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: moduleFSWith
+  kind: func
+  description: moduleFSWith builds a single-module fstest.MapFS whose project.yaml
+    carries the given abi/capability_manifest body, signed with the valid module ee
+    cert so it passes PKI verification in loadModule.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: newCabinetForTest
+  kind: func
+  description: ''
+  references:
+  - cabinet.Cabinet
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfigLRUCacheSize
+  - require.NoError
+  calls:
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+- name: loadedPKIWithSource
+  kind: func
+  description: loadedPKIWithSource returns a loaded trust store whose CICSourceCA
+    provenance anchor is the same pool (the test module ee chains to it), so verifyCICFlowProvenance
+    passes.
+  references: []
+  calls: []
+- name: TestLoadModule_BindsCICFlowCapability
+  kind: func
+  description: A verified module that declares cic-flow imports + a matching manifest
+    has its capability bound into the registry at load (the load → hook → register
+    path).
+  references:
+  - require.NoError
+  - require.True
+  - require.Len
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Len
+  - require.NoError
+  - require.True
+- name: TestLoadModule_CICFlow_FailClosedWithoutSourceCA
+  kind: func
+  description: Without the CICSourceCA provenance anchor, a cic-flow module still
+    loads but gets no capability — fail-closed (R3b).
+  references:
+  - require.NoError
+  - assert.False
+  calls:
+  - assert.False
+  - require.NoError
+- name: TestLoadModule_RejectsOverDeclaredCICFlow
+  kind: func
+  description: A verified module that over-declares its cic-flow imports (imports
+    sign but declares no sign secret) is rejected at load — fail-closed.
+  references:
+  - require.Error
+  - assert.Contains
+  - assert.False
+  calls:
+  - assert.Contains
+  - assert.False
+  - require.Error

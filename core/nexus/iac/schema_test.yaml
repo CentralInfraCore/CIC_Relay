@@ -1,0 +1,55 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ociSchemaDoc
+  kind: func
+  description: ociSchemaDoc is the OCI VM's field-behavior surface, authored as a
+    schema. The compiled plan must reproduce ociPlan() (the hand-built one), and provider_id
+    — marked read-only — must be excluded as observed state.
+  references: []
+  calls: []
+- name: TestCompilePlan_OCISchema
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - CompilePlan
+  - DeepEqual
+  - Errorf
+  - Fatalf
+  - ParseSchema
+- name: TestCompilePlan_MatchesHandBuiltVerdict
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - CompilePlan
+  - DeepEqual
+  - Errorf
+  - ParseSchema
+- name: TestParseSchema_DefaultsWritableExact
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - CompilePlan
+  - Errorf
+  - Fatalf
+  - ParseSchema
+- name: TestCompilePlan_ReadOnlyCollectionExcluded
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - CompilePlan
+  - Errorf
+  - ParseSchema

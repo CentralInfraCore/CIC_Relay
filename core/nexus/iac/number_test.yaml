@@ -1,0 +1,32 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestCanonicalNumber
+  kind: func
+  description: 'Canonical number vectors — the source of truth to mirror in the Rust
+    test vectors (spec #1).'
+  references: []
+  calls:
+  - Errorf
+  - Number
+- name: TestCanonicalNumber_NonNumeric
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+- name: TestNormalizeNumbers_LeavesStringsAndStructure
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+  - Number

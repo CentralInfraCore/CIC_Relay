@@ -1,0 +1,46 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Observation
+  kind: struct
+  description: 'Observation is the coverage envelope accompanying an observed state
+    object: the field paths the observe actually covered. Paths are canonical (e.g.
+    "/interfaces/{name=nic-0}/private_ip"). A path in neither set is unobserved. The
+    envelope is itself hashable and signable, so coverage becomes proof.'
+  implements: []
+  references: []
+- name: CoverageState
+  kind: type
+  description: CoverageState is how a field path was (or was not) covered by an observation.
+  references: []
+- name: FieldVerdict
+  kind: type
+  description: FieldVerdict is the per-field conformance verdict.
+  references: []
+- name: Coverage
+  kind: method
+  receiver: Observation
+  description: Coverage classifies a field path against the observation envelope.
+  references: []
+  calls:
+  - Contains
+- name: ClassifyField
+  kind: method
+  receiver: Observation
+  description: ClassifyField produces a per-field verdict from the observation coverage
+    of the path and the comparison outcome. `intentPresent` is whether the intent
+    declares the field; `matched` is whether the observed value equals the intent
+    (only meaningful when the field was observed). - unobserved            → UNOBSERVED
+    (conformance cannot be claimed) - observed + matched     → CONFORMANT - observed
+    + not matched → DRIFT - absent + intent wants it   → DRIFT (missing) - absent
+    + intent omits it   → OBSERVED_ABSENT (desired-absent, is absent)
+  references: []
+  calls:
+  - Coverage

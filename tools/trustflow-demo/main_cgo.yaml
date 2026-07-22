@@ -1,0 +1,40 @@
+---
+package: main
+description: 'Command trustflow-demo is a live, self-contained demonstration of the
+  feature-008/009 FFI trust-flow: the Go relay hands one request to the Rust airlock
+  (cic-ffi), and the entire trust-flow runs *inside Rust* against a real (throwaway)
+  Vault — mint a per-request module identity, have Vault countersign it, log in over
+  mTLS cert-auth, read the pubkey-sealed secret, open it inside the module, and actuate
+  over HTTP with the opened credential. Only the outcome crosses back; the secret
+  is sealed in transit and opened only inside the module. It expects VAULT_LIVE_ADDR
+  / VAULT_LIVE_CACERT (and the cic-ffi live staticlib linked) in the environment —
+  set by scripts/trustflow-demo.sh. Run via `make demo-trustflow`.'
+tags:
+- builder
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Exit
+  - Fprintf
+- name: run
+  kind: func
+  description: ''
+  references:
+  - cicffi.RunFlow
+  - cicffi.ParseRunFlowResult
+  calls:
+  - cicffi.ParseRunFlowResult
+  - cicffi.RunFlow
+- name: short
+  kind: func
+  description: ''
+  references: []
+  calls: []

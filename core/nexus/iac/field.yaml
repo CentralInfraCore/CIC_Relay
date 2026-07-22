@@ -1,0 +1,55 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: FieldMode
+  kind: struct
+  description: FieldMode is the per-field capability/status flags. A bare scalar expands
+    with every flag true; a partially-specified mode fills missing flags as true.
+  implements: []
+  references: []
+- name: Field
+  kind: struct
+  description: Field is the canonical (expanded) form of a parameter.
+  implements: []
+  references: []
+- name: defaultMode
+  kind: func
+  description: 'defaultMode is the mode a bare scalar expands to: everything true.'
+  references: []
+  calls: []
+- name: ExpandField
+  kind: func
+  description: 'ExpandField normalizes a raw parameter value into a canonical [Field].
+    A map carrying a "value" key is treated as a (partial) descriptor: its missing
+    "default" and "mode" pieces are filled with the canonical defaults. Any other
+    value — a scalar, a list, or a map without a "value" key — is the value itself,
+    expanding to {value: raw, default: false, mode: all-true}. (Descending into a
+    map-without-value is a later round: here it stays an opaque value.)'
+  references: []
+  calls: []
+- name: ExpandSpec
+  kind: func
+  description: ExpandSpec expands every top-level parameter of a resource spec into
+    its canonical [Field] form.
+  references: []
+  calls:
+  - ExpandField
+- name: modeFrom
+  kind: func
+  description: modeFrom reads a mode descriptor, defaulting every missing flag to
+    true (so a bare or partially-specified field is "all capabilities on" unless narrowed).
+  references: []
+  calls: []
+- name: asBool
+  kind: func
+  description: asBool coerces a raw value to bool, returning def when absent or not
+    a bool.
+  references: []
+  calls: []

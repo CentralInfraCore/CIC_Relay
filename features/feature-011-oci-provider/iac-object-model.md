@@ -139,15 +139,50 @@ namespace split is the next small refinement when the layers land.
 | Structural validation (`validator.go`) — mode consistency, dependency + field-reference integrity | **landed** |
 | Field references (`reference.go`) — the hidden object behind a parameter | **landed** |
 | Collection topology (`collection.go`, spec #3) — atomic/set/map + element identity | **partial** (identity landed; merge/ownership use later) |
-| Canonical digest (`digest.go`, spec #1) — determinism proven (form-equivalence + golden vector) | **partial** (number normalization + Rust vectors deferred) |
+| Canonical digest (`digest.go`, spec #1) — determinism proven (form-equivalence + golden vector) | **landed** — number normalization (`number.go`): `4`/`4.0`/`4e0` collapse, `-0`→`0`, integer precision preserved; Rust peer `cic-canonical` mirrors the Go vectors byte-for-byte |
 | Observation completeness (`observation.go`, spec #4) — coverage envelope + coverage-aware verdicts | **landed** |
-| ACL algorithm (spec #2) | concept |
-| Stable `field_id` / `$value`+`$cic` namespace (spec #5) | concept |
-| Intent↔state conformance plan (Task 1) — compiled from schema; feeds `ClassifyField`'s `matched` | concept |
-| OCI vertical slice (VM + 2 NICs + 2 subnets + collection + observation) | concept |
+| ACL algorithm (spec #2, `acl.go`) — cic-acl/v1: default-deny + owner/group/other + named allow + mask + inherit, no explicit deny; keys on `field_id` | **landed**, tested (POSIX most-specific-class-wins semantics) |
+| Stable `field_id` (spec #5, `field_id.go`) — proof/ownership re-key on `field_id`, surviving a path rename; collection element id = field id + element key | **landed**, tested (rename-stability proof) |
+| Secret custody (`sensitive.go`) — placement/custody policy (class / exposure / backup), separate from ACL; type boundary: a secret field holds only a `SecretRef`, never plaintext | **landed**, tested (invariant + object-wide enforcement) |
+| `$value`+`$cic` namespace split + rich `ValueKind` / `ObjectRef` IR (spec #5 cont., `node.go`) — discriminated `Value` (8 kinds), `Node{Value, Meta}` split, type-level secret boundary, canonical digest + `FromRaw`/`Raw` interop | **landed** (the IR type + interop); migrating the `interface{}`-based layers onto it is the deferred final round |
+| Intent↔state comparator (Task 1, `compare.go`) — exact / numeric; produces `ClassifyField`'s `matched`; `NOT_COMPARABLE` on kind mismatch | **landed**, tested (schema-compiled plan still deferred) |
+| OCI vertical slice (`conformance.go`) — object verdict over VM + 2 NICs + 2 subnets + map collection + observation | **landed**, tested (CONFORMANT / DRIFT / NOT_COMPARABLE / UNOBSERVED / OBSERVED_ABSENT proven end-to-end) |
+| Conformance plan compiled from schema behavior annotations (`schema.go`) — `mode.write` = config/state split, `behavior.compare` = comparator, `collection` = topology | **landed**, tested (compiled plan reproduces the hand-built verdict; read-only fields excluded) |
+| Drift-engine rewire onto the new model (`core/nexus/drift` → `core/nexus/iac`) | **landed** — `drift.Analyze` classifies via `iac.Evaluate`; extra observed keys no longer drift, empty+empty is NONE; recorder verdicts unchanged |
 
 Per the scheduling above, this is the base off the PoC critical path; the OCI
 vertical proves it, and the general Node IR / cross-language test vectors come last.
+
+### RepoWise symbol-graph audit (2026-07-21)
+
+Cross-checked the table against a whole-repo RepoWise index (690 files, full symbol
+graph), not file reading. Findings:
+
+- **Landed rows confirmed** as symbols in `core/nexus/iac`: `ExpandField` /
+  `FieldMode` (`field.go`), `Observation` / `CoverageState` / `ClassifyField` /
+  `FieldVerdict` (`observation.go`), `Collection` / `CollectionTopology` /
+  `ElementKey` (`collection.go`), `IaCValidator` (`validator.go`), `Reference`,
+  `Digest`.
+- **Concept rows confirmed empty repo-wide** — the annotated symbols above return
+  *no* match anywhere in the codebase (not just outside `iac`). `Node` / `Value` /
+  `SecretRef` exist only in the Rust `connections/` and `pkg/merkle`, i.e. **not**
+  the IaC object model.
+- **The surface layer** (`ConfigSurface` / `StateSurface` / `BindingSurface` /
+  `ManagedEntity`) the thread calls "already built" is **not in this repo** — it
+  lives in the separate `schemas.tar` / `cic-module-oracle-cloud` artifact.
+- **The bridge is absent.** The existing drift engine is `core/nexus/drift`
+  (`SoftDrift` / `HardDrift` / `ReconciliableDrift`, the `DeepEqual` classifier the
+  scheduling above keeps on the PoC path). At audit time there were **0 graph edges
+  between `core/nexus/iac` and `core/nexus/drift`** — the migration had not started.
+  **(Update: closed — `drift.Analyze` now classifies through `iac.Evaluate`; the
+  edge exists and the DeepEqual classifier is retired.)**
+
+Net: the foundation third (field-mode + observation-coverage + verdict +
+digest/collection/reference/validator) is landed and tested; the upper two-thirds
+(conformance contract, comparator plan, rich Node/Value IR with secret+ACL
+invariants, and the drift-engine rewire) is concept with no code counterpart. The
+`iac` package is imported by `cmd/relay/main.go`, but the feature-011 symbols do not
+yet drive a live conformance verdict.
 
 ## Reference
 

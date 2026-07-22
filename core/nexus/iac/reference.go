@@ -25,7 +25,13 @@ type FieldRef struct {
 // A reference is a map value carrying a non-empty "ref" string; an optional "kind"
 // narrows the expected target kind.
 func (f Field) AsRef() (FieldRef, bool) {
-	m, ok := f.Value.(map[string]interface{})
+	return asObjectRef(f.Value)
+}
+
+// asObjectRef recognizes an object-reference value: a map carrying a non-empty
+// "ref" string, with an optional "kind".
+func asObjectRef(v interface{}) (FieldRef, bool) {
+	m, ok := v.(map[string]interface{})
 	if !ok {
 		return FieldRef{}, false
 	}

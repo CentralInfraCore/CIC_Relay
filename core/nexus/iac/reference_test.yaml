@@ -1,0 +1,24 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestField_AsRef
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.Equal
+  - assert.Empty
+  - assert.False
+  calls:
+  - assert.Empty
+  - assert.Equal
+  - assert.False
+  - assert.True

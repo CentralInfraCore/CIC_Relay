@@ -12,8 +12,10 @@ related_nodes: []
 objects:
 - name: IaCValidator
   kind: struct
-  description: IaCValidator resolves schemaRefs in a Graph against the Cabinet schema
-    registry and performs structural validation on each resource.
+  description: 'IaCValidator validates an IaC graph against the Cabinet schema registry:
+    it resolves each resource''s schemaRef, structurally validates its (expanded)
+    spec, and checks that every declared dependency resolves to a resource in the
+    graph.'
   implements: []
   references:
   - cabinet.Cabinet
@@ -26,20 +28,24 @@ objects:
 - name: Validate
   kind: method
   receiver: IaCValidator
-  description: Validate iterates over all services and their resources in the graph.
-    It returns a joined error listing every schemaRef that could not be resolved.
+  description: 'Validate iterates over all services and their resources in the graph
+    and joins every error found: unresolved schemaRefs, spec-structure violations,
+    and dependencies that point at a resource not present in the graph.'
   references:
   - types.Graph
   calls:
+  - Errorf
   - Join
 - name: ValidateResource
   kind: method
   receiver: IaCValidator
-  description: ValidateResource validates a single ResourceSpec against the Cabinet
-    schema registry. Suitable for per-event validation in the Operator.
+  description: ValidateResource validates a single ResourceSpec (schemaRef resolution
+    + spec structure). Suitable for per-event validation in the Operator; dependency
+    integrity needs the whole graph and is only checked by [IaCValidator.Validate].
   references:
   - types.ResourceSpec
-  calls: []
+  calls:
+  - Join
 - name: resolveSchema
   kind: method
   receiver: IaCValidator
@@ -50,3 +56,44 @@ objects:
   - cabinet.GetSchema
   calls:
   - cabinet.GetSchema
+- name: validateSpecStructure
+  kind: func
+  description: 'validateSpecStructure expands the resource spec into canonical fields
+    (so a compact and a fully-written spec validate identically) and checks intent-side
+    consistency: a field explicitly declared non-writable (mode.write=false) cannot
+    appear in an intent spec — it is provider-computed / read-only and belongs to
+    observed state, not the declaration.'
+  references:
+  - types.ResourceSpec
+  calls:
+  - Errorf
+  - ExpandSpec
+  - Join
+- name: resourceRef
+  kind: func
+  description: resourceRef renders a stable "service/x resource/y" (or "resource/y")
+    label.
+  references:
+  - types.ResourceSpec
+  calls:
+  - Sprintf
+- name: resolveFieldRefs
+  kind: func
+  description: 'resolveFieldRefs resolves every object-reference field in the resource''s
+    spec against the graph index: the referenced resource must exist, and — if the
+    ref names a kind — the target''s kind must match. Field-level references are the
+    "hidden object behind a parameter" (reference.go).'
+  references:
+  - types.ResourceSpec
+  calls:
+  - AsRef
+  - Errorf
+  - ExpandSpec
+  - Join
+- name: resourceIndex
+  kind: func
+  description: resourceIndex maps every resource name across all services to its kind
+    — the resolution target for dependency and field-reference integrity.
+  references:
+  - types.Graph
+  calls: []

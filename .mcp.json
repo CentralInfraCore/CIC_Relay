@@ -13,6 +13,11 @@
     "cic-graph": {
       "type": "sse",
       "url": "http://127.0.0.1:8000/sse"
+    },
+    "repowise": {
+      "type": "http",
+      "url": "http://127.0.0.1:7338/mcp",
+      "description": "repowise: codebase intelligence \u2014 docs, graph, git signals, dead code, decisions (dedicated HTTP port 7338)"
     }
   }
 }

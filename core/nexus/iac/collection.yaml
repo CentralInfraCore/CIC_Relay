@@ -1,0 +1,32 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Collection
+  kind: struct
+  description: Collection describes a list field's topology. Keys apply only to TopologyMap.
+  implements: []
+  references: []
+- name: CollectionTopology
+  kind: type
+  description: CollectionTopology names how a list field's elements are identified.
+  references: []
+- name: ElementKey
+  kind: method
+  receiver: Collection
+  description: 'ElementKey returns a stable identity for a list element under this
+    topology: - map: the sorted "k=v" tuple of the element''s key fields ("name=nic-0");
+    a missing key field is rendered empty; - set: a string form of the element value
+    (a placeholder identity until the CIC Canonical Object Encoding lands — spec #1);
+    - atomic (or unset): "" — the list has no per-element identity, it is one value.'
+  references: []
+  calls:
+  - Join
+  - Sprintf
+  - Strings

@@ -1,0 +1,35 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestACL_Allows
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Allows
+  - Fatalf
+  - Run
+- name: TestACL_ResolveInherit
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Allows
+  - Errorf
+  - Resolve
+- name: TestACLSet_Effective_KeysOnFieldID
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Allows
+  - Effective
+  - Errorf

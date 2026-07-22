@@ -1,6 +1,7 @@
 package iac
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,6 +47,30 @@ func TestSpecDigest_GoldenVector(t *testing.T) {
 	d, err := SpecDigest(map[string]interface{}{"cpu": 4, "name": "web-01"})
 	require.NoError(t, err)
 	assert.Equal(t, "sha256:e18b725544c13fbcbfbbc657c2b49f5d7c642db2824cad40b1d631690be4ecb1", d)
+}
+
+func TestSpecDigest_NumberNormalization(t *testing.T) {
+	base, err := SpecDigest(map[string]interface{}{"cpu": 4})
+	require.NoError(t, err)
+	for _, equiv := range []interface{}{4.0, json.Number("4"), json.Number("4.0"), json.Number("4e0"), int64(4)} {
+		d, err := SpecDigest(map[string]interface{}{"cpu": equiv})
+		require.NoError(t, err)
+		assert.Equal(t, base, d, "cpu:4 and cpu:%v must digest identically", equiv)
+	}
+	// A string "4" is NOT the number 4.
+	ds, err := SpecDigest(map[string]interface{}{"cpu": "4"})
+	require.NoError(t, err)
+	assert.NotEqual(t, base, ds, "number 4 and string \"4\" must differ")
+}
+
+func TestSpecDigest_IntegerPrecision(t *testing.T) {
+	// Two integers that collapse to the same float64 must NOT digest the same —
+	// the old float64 round-trip lost this distinction.
+	a, err := SpecDigest(map[string]interface{}{"n": json.Number("9007199254740993")})
+	require.NoError(t, err)
+	b, err := SpecDigest(map[string]interface{}{"n": json.Number("9007199254740992")})
+	require.NoError(t, err)
+	assert.NotEqual(t, a, b, "adjacent large integers must digest differently")
 }
 
 func TestSpecDigest_EncodeError(t *testing.T) {

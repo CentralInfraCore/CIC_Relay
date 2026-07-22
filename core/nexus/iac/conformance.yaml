@@ -1,0 +1,79 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: FieldPlan
+  kind: struct
+  description: FieldPlan binds one comparable field path to its comparator. Path is
+    canonical ("/shape", or relative within a collection element like "subnet").
+  implements: []
+  references: []
+- name: CollectionPlan
+  kind: struct
+  description: 'CollectionPlan is a map-topology list within the object: its container
+    path, the topology that identifies elements, and the per-element field plans (paths
+    relative to the element).'
+  implements: []
+  references: []
+- name: ConformancePlan
+  kind: struct
+  description: 'ConformancePlan is the compiled comparison plan for an object: flat
+    scalar fields plus map-topology collections. (Compiled from schema behavior annotations
+    in a later round; hand-built for the vertical slice.)'
+  implements: []
+  references: []
+- name: ConformanceResult
+  kind: struct
+  description: ConformanceResult is the object verdict plus its proof inputs.
+  implements: []
+  references: []
+- name: ObjectConformance
+  kind: type
+  description: ObjectConformance is the aggregate object verdict.
+  references: []
+- name: Evaluate
+  kind: func
+  description: Evaluate produces the object-level conformance verdict for an intent
+    (config) object against an observed (state) object, under the observation coverage
+    and the compiled plan. Only planned fields are compared; unplanned state fields
+    are intentionally ignored (they are observed state, not drift).
+  references: []
+  calls:
+  - ClassifyFieldValue
+  - SpecDigest
+- name: aggregate
+  kind: func
+  description: 'aggregate reduces per-field verdicts to the object verdict. Precedence:
+    DRIFT/NOT_COMPARABLE > UNOBSERVED > CONFORMANT.'
+  references: []
+  calls: []
+- name: elementKeys
+  kind: func
+  description: elementKeys returns the sorted union of element identities of a collection
+    across the intent and observed lists, keyed by the collection's topology.
+  references: []
+  calls:
+  - ElementKey
+  - Strings
+- name: resolvePath
+  kind: func
+  description: resolvePath walks a canonical path ("/a/b", or "/list/{key=val}/field")
+    into a nested object, returning the value and whether it was present. A "{key=val}"
+    segment selects the element of a list whose key field equals val.
+  references: []
+  calls: []
+- name: observationDigest
+  kind: func
+  description: observationDigest is the canonical digest of the observation coverage
+    envelope, so coverage itself is part of the proof (the envelope is hashable by
+    design).
+  references:
+  - canonicaljson.ToJSON
+  calls:
+  - canonicaljson.ToJSON

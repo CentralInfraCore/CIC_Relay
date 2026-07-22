@@ -107,13 +107,8 @@ objects:
   - assert.Contains
   - wazero.NewRuntime
   - require.NoError
-  - wazero.Runtime
-  - assert.Equal
-  - require.Error
   calls:
   - assert.Contains
-  - assert.Equal
-  - require.Error
   - require.NoError
   - wazero.NewRuntime
 - name: TestMakeActuateFn_BadBodyBase64
@@ -132,7 +127,7 @@ objects:
   calls:
   - require.NoError
   - wazero.NewRuntime
-- name: TestMakeCICFlowHostSetupFn_DefaultsDoer
+- name: TestMakeCICFlowHostSetupFn
   kind: func
   description: ''
   references:
@@ -141,27 +136,12 @@ objects:
   calls:
   - require.NoError
   - wazero.NewRuntime
-- name: TestCombineHostSetups
+- name: TestPerModule_Resolution
   kind: func
-  description: ''
+  description: perModule resolves the calling guest's deps by mod.Name() from the
+    registry; an unregistered module is denied (fail-closed), a registered one gets
+    its deps.
   references:
-  - wazero.NewRuntime
-  - wazero.Runtime
-  - require.NoError
-  - assert.Equal
+  - assert.Contains
   calls:
-  - assert.Equal
-  - require.NoError
-  - wazero.NewRuntime
-- name: TestCombineHostSetups_StopsOnError
-  kind: func
-  description: ''
-  references:
-  - wazero.NewRuntime
-  - wazero.Runtime
-  - require.Error
-  - assert.Equal
-  calls:
-  - assert.Equal
-  - require.Error
-  - wazero.NewRuntime
+  - assert.Contains

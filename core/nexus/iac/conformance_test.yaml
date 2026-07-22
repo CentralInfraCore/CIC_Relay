@@ -1,0 +1,86 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ociIntent
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: ociObserved
+  kind: func
+  description: 'ociObserved is the provider-extended state: same declared fields plus
+    provider_id, lifecycle_state and per-NIC private_ip that exist only after creation.'
+  references: []
+  calls: []
+- name: ociPlan
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: ociObservation
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: mustEvaluate
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Evaluate
+  - Fatalf
+  - Helper
+- name: TestEvaluate_OCI_Conformant
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+  - Fatalf
+- name: TestEvaluate_OCI_ExtraStateFieldsAreNotDrift
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+- name: TestEvaluate_OCI_Drift
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+- name: TestEvaluate_OCI_NotComparable
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+- name: TestEvaluate_OCI_Unobserved
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+- name: TestEvaluate_OCI_DesiredAbsentIsConformant
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+- name: TestEvaluate_OCI_SubnetIsRecognizedReference
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - AsRef
+  - Errorf
+  - ExpandField
+  - Fatalf

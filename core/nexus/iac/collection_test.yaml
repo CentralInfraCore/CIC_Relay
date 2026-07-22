@@ -1,0 +1,20 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestCollection_ElementKey
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Empty
+  calls:
+  - assert.Empty
+  - assert.Equal

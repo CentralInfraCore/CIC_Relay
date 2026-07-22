@@ -61,3 +61,6 @@ embedded/pki/*.key
 /*/*/__pycache__/
 /*/__pycache__/
 /.coverage
+
+# RepoWise local index (repo-intelligence backend)
+.repowise/

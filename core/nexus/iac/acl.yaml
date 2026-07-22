@@ -1,0 +1,87 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Principal
+  kind: struct
+  description: Principal is a named user or group referenced by an ACL entry.
+  implements: []
+  references: []
+- name: Actor
+  kind: struct
+  description: 'Actor is who is requesting access: a user identity and the groups
+    it belongs to.'
+  implements: []
+  references: []
+- name: ACLEntry
+  kind: struct
+  description: ACLEntry is a named allow entry — extra permissions for a specific
+    user or group.
+  implements: []
+  references: []
+- name: ACL
+  kind: struct
+  description: ACL is a field's access-control list (cic-acl/v1, allow-only).
+  implements: []
+  references: []
+- name: Permission
+  kind: type
+  description: Permission is a bitset of the access bits.
+  references: []
+- name: PrincipalKind
+  kind: type
+  description: PrincipalKind distinguishes a user identity from a group.
+  references: []
+- name: ACLSet
+  kind: type
+  description: 'ACLSet maps field identities to their ACL — ownership keyed on [FieldID],
+    not the path, so it survives a rename (spec #5).'
+  references: []
+- name: Allows
+  kind: method
+  receiver: ACL
+  description: Allows reports whether the actor is granted every bit in want.
+  references: []
+  calls: []
+- name: effective
+  kind: method
+  receiver: ACL
+  description: effective computes the actor's permission bits under most-specific-class-wins.
+  references: []
+  calls: []
+- name: mask
+  kind: method
+  receiver: ACL
+  description: 'mask resolves the effective mask: an unset (zero) mask does not cap.'
+  references: []
+  calls: []
+- name: Resolve
+  kind: method
+  receiver: ACL
+  description: 'Resolve applies inheritance: an ACL marked Inherit takes the parent''s
+    ACL wholesale; otherwise it is used as-is.'
+  references: []
+  calls: []
+- name: Effective
+  kind: method
+  receiver: ACLSet
+  description: Effective returns the ACL governing a field id, resolving inheritance
+    against the object-level default. A field with no entry uses the object default.
+  references: []
+  calls:
+  - Resolve
+- name: contains
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: allPerms
+  kind: const
+  description: allPerms is every bit — the value an unset mask resolves to (no capping).
+  references: []

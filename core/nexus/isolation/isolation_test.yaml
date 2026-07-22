@@ -134,9 +134,9 @@ objects:
   description: ''
   references:
   - require.Error
-  - assert.Contains
+  - assert.True
   calls:
-  - assert.Contains
+  - assert.True
   - require.Error
 - name: TestSubprocessWorker_Decrypt_BadJSON
   kind: func

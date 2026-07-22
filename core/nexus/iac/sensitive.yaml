@@ -1,0 +1,79 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SecretRef
+  kind: struct
+  description: SecretRef is a reference (capability handle) to a secret in custody
+    — never the plaintext itself.
+  implements: []
+  references: []
+- name: SensitivePolicy
+  kind: struct
+  description: SensitivePolicy is a field's secret placement/custody policy.
+  implements: []
+  references: []
+- name: SensitiveClass
+  kind: type
+  description: SensitiveClass is whether a field carries a secret.
+  references: []
+- name: Exposure
+  kind: type
+  description: Exposure is where the plaintext of a secret may exist.
+  references: []
+- name: BackupOp
+  kind: type
+  description: BackupOp is a management-scope backup level.
+  references: []
+- name: asSecretRef
+  kind: func
+  description: 'asSecretRef recognizes a secret-reference value: a map carrying a
+    non-empty "secret_ref" string.'
+  references: []
+  calls: []
+- name: AsSecretRef
+  kind: method
+  receiver: Field
+  description: AsSecretRef reports whether the field's value is a secret reference.
+  references: []
+  calls: []
+- name: ValidateValue
+  kind: method
+  receiver: SensitivePolicy
+  description: 'ValidateValue enforces the secret type boundary: a secret field must
+    hold a SecretRef (never plaintext), and a non-secret field must not hold a SecretRef.'
+  references: []
+  calls:
+  - Errorf
+- name: AllowsBackup
+  kind: method
+  receiver: SensitivePolicy
+  description: AllowsBackup reports whether a backup operation is permitted by this
+    policy.
+  references: []
+  calls: []
+- name: parseSensitive
+  kind: func
+  description: parseSensitive reads a `behavior.sensitive` descriptor into a [SensitivePolicy].
+  references: []
+  calls:
+  - BackupOp
+  - Exposure
+  - SensitiveClass
+- name: ValidateSensitive
+  kind: method
+  receiver: Schema
+  description: ValidateSensitive checks every scalar field's value in obj against
+    its sensitive policy, so the secret type boundary is enforced object-wide. (Collection
+    element secrets are a later round.)
+  references: []
+  calls:
+  - Errorf
+  - ValidateValue

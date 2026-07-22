@@ -18,10 +18,12 @@ func TestClassify(t *testing.T) {
 			want:    None,
 		},
 		{
-			name:    "extra actual key is SOFT_DRIFT",
+			// The old engine called any extra actual key SOFT_DRIFT; under the
+			// conformance model an unplanned observed key is observed state, not drift.
+			name:    "extra actual key is not drift",
 			desired: map[string]interface{}{"network": "10.0.0.0/24"},
 			actual:  map[string]interface{}{"network": "10.0.0.0/24", "vms": "3"},
-			want:    SoftDrift,
+			want:    None,
 		},
 		{
 			name:    "changed desired value is RECONCILIABLE_DRIFT",
@@ -48,16 +50,19 @@ func TestClassify(t *testing.T) {
 			want:    HardDrift,
 		},
 		{
+			// Nothing declared and nothing observed: not hard drift (there is no
+			// declared state to be "gone").
 			name:    "both empty is NONE",
 			desired: map[string]interface{}{},
 			actual:  map[string]interface{}{},
-			want:    HardDrift, // no observable actual state
+			want:    None,
 		},
 		{
-			name:    "no desire but actual present is SOFT_DRIFT",
+			// Nothing declared, so unplanned observed keys are not drift.
+			name:    "no desire but actual present is not drift",
 			desired: map[string]interface{}{},
 			actual:  map[string]interface{}{"unexpected": "x"},
-			want:    SoftDrift,
+			want:    None,
 		},
 		{
 			name:    "changed takes precedence over extra",

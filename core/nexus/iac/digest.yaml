@@ -1,0 +1,35 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SpecDigest
+  kind: func
+  description: 'SpecDigest returns the canonical digest of a resource spec — the base
+    of the proof-chain over IaC intent (feature-011, iac-object-model.md). The spec
+    is first expanded to canonical [Field]s, so the compact `key: VALUE` and the fully-written
+    `key: {value, default, mode}` descriptor produce the SAME bytes and therefore
+    the SAME digest — the determinism contract the field model promises. Numbers are
+    then normalized (spec #1): `4`, `4.0` and `4e0` digest identically, `-0` is `0`,
+    and — critically — integers keep full precision (the bytes never round-trip through
+    float64), so a value beyond float64''s mantissa digests as its exact digits rather
+    than the nearest double. The normalized model is serialized with the deterministic
+    canonical-JSON encoder (sorted keys) and SHA-256''d.'
+  references:
+  - canonicaljson.ToJSON
+  calls:
+  - canonicaljson.ToJSON
+- name: toPlainValue
+  kind: func
+  description: toPlainValue round-trips a value through JSON into plain maps/slices,
+    decoding numbers with UseNumber so integer precision survives (encoding/json's
+    default would collapse them to float64). This also flattens struct values (the
+    expanded [Field]s) into maps without triggering the canonical encoder's lossy
+    struct path.
+  references: []
+  calls: []

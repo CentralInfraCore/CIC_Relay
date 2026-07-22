@@ -1,0 +1,29 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: FieldRef
+  kind: struct
+  description: FieldRef is a reference from a field to another resource.
+  implements: []
+  references: []
+- name: AsRef
+  kind: method
+  receiver: Field
+  description: AsRef reports whether the field's value is an object reference and
+    returns it. A reference is a map value carrying a non-empty "ref" string; an optional
+    "kind" narrows the expected target kind.
+  references: []
+  calls: []
+- name: asObjectRef
+  kind: func
+  description: 'asObjectRef recognizes an object-reference value: a map carrying a
+    non-empty "ref" string, with an optional "kind".'
+  references: []
+  calls: []

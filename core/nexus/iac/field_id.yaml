@@ -1,0 +1,43 @@
+---
+package: iac
+description: ''
+tags:
+- core
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: FieldID
+  kind: type
+  description: FieldID is a field's stable, path-independent identity.
+  references: []
+- name: RekeyByFieldID
+  kind: method
+  receiver: Schema
+  description: 'RekeyByFieldID converts a path-keyed conformance verdict into a field_id-keyed
+    one using this schema''s field_id assignments. The result is stable across a path
+    rename: two schema versions that differ only in a field''s path but share its
+    field_id produce the same field_id-keyed verdict for the same object. A path with
+    no field_id in the schema is kept under a "path:<path>" key so it never collides
+    with a real id.'
+  references: []
+  calls: []
+- name: fieldIDForPath
+  kind: method
+  receiver: Schema
+  description: 'fieldIDForPath resolves a verdict path to its stable identity: a direct
+    match for scalars, or the element field''s id plus the element key for a collection
+    element path. Falls back to "path:<path>" when no field_id is assigned.'
+  references: []
+  calls:
+  - FieldID
+- name: elementFieldID
+  kind: func
+  description: elementFieldID resolves a collection element path ("/network_interfaces/{name=nic-0}/subnet")
+    to the element field's id plus the element key ("cic:...:subnet/{name=nic-0}").
+  references: []
+  calls:
+  - FieldID
+  - HasPrefix
+  - Index

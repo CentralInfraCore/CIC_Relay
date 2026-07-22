@@ -1,0 +1,49 @@
+---
+package: main
+description: ''
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: loadCompanionCAPool
+  kind: func
+  description: loadCompanionCAPool reads a detached PEM CA bundle into a cert pool.
+  references: []
+  calls:
+  - AppendCertsFromPEM
+  - Errorf
+  - NewCertPool
+  - ReadFile
+- name: loadProvenanceAnchors
+  kind: func
+  description: 'loadProvenanceAnchors loads the detached cic-flow anchors into pkiAssets:
+    CICSourceCA from CIC_SOURCE_CA_BUNDLE (provenance) and CICLicenseCA from CIC_LICENSE_CA_BUNDLE
+    (entitlement). Each is optional; a missing var leaves its anchor unloaded (fail-closed).
+    A configured-but-unreadable bundle is an error.'
+  references:
+  - logrus.Logger
+  - logrus.Fields
+  calls:
+  - Errorf
+  - Getenv
+  - Info
+  - TrimSpace
+  - Warn
+  - WithField
+  - WithFields
+- name: verifyCICFlowProvenance
+  kind: func
+  description: 'verifyCICFlowProvenance checks a module''s signing cert against the
+    CICSourceCA provenance anchor (EKU=CodeSigning, CRL). It is the fail-closed gate
+    for binding a cic-flow capability: no SourceCA loaded, or a cert that does not
+    chain to it, means no capability. (Entitlement against CICLicenseCA is a separate
+    axis; its per-module attestation format is pending — see r3-plan.md.)'
+  references:
+  - cabinet.VerifyCertificateChain
+  - cabinet.VerifyOptions
+  calls:
+  - cabinet.VerifyCertificateChain

@@ -46,6 +46,12 @@ objects:
   references:
   - api.Memory
   calls: []
+- name: Name
+  kind: method
+  receiver: minMod
+  description: ''
+  references: []
+  calls: []
 - name: newMod
   kind: func
   description: ''

@@ -1,0 +1,71 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestSpecDigest_FormEquivalence
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - require.NoError
+- name: TestSpecDigest_StableAndSensitive
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+- name: TestSpecDigest_GoldenVector
+  kind: func
+  description: 'Golden vector — locks the canonical encoding. A change to the field
+    model or the canonical encoder that alters the bytes breaks this; regenerate deliberately
+    and mirror it in the Rust test vectors (spec #1).'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.NoError
+- name: TestSpecDigest_NumberNormalization
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+- name: TestSpecDigest_IntegerPrecision
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEqual
+  calls:
+  - assert.NotEqual
+  - require.NoError
+- name: TestSpecDigest_EncodeError
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - assert.Error

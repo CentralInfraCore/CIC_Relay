@@ -1,0 +1,174 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Value
+  kind: struct
+  description: 'Value is a node in the canonical value tree. Its fields are private:
+    a Value is built only through the constructors, so its kind and payload stay consistent.'
+  implements: []
+  references: []
+- name: Meta
+  kind: struct
+  description: 'Meta is the $cic side of a [Node]: a field''s metadata, physically
+    separate from its $value. It aggregates the per-field surfaces built elsewhere
+    in the model.'
+  implements: []
+  references: []
+- name: Node
+  kind: struct
+  description: 'Node is the $value/$cic split made concrete: a value and its metadata,
+    held separately so a module can read the value without the metadata leaking into
+    it, and the metadata cannot be forged from the value side.'
+  implements: []
+  references: []
+- name: ValueKind
+  kind: type
+  description: ValueKind is the discriminant of a [Value].
+  references: []
+- name: NullValue
+  kind: func
+  description: NullValue returns an explicit null.
+  references: []
+  calls: []
+- name: BoolValue
+  kind: func
+  description: BoolValue returns a boolean value.
+  references: []
+  calls: []
+- name: StringValue
+  kind: func
+  description: StringValue returns a string value.
+  references: []
+  calls: []
+- name: NumberValue
+  kind: func
+  description: NumberValue returns a number value from any numeric literal, or false
+    if it is not a number. The value is stored in canonical form.
+  references: []
+  calls: []
+- name: ListValue
+  kind: func
+  description: ListValue returns a list value.
+  references: []
+  calls: []
+- name: ObjectValue
+  kind: func
+  description: ObjectValue returns an object value.
+  references: []
+  calls: []
+- name: ObjectRefValue
+  kind: func
+  description: ObjectRefValue returns an object-reference value.
+  references: []
+  calls: []
+- name: SecretRefValue
+  kind: func
+  description: SecretRefValue returns a secret-reference value.
+  references: []
+  calls: []
+- name: Kind
+  kind: method
+  receiver: Value
+  description: Kind returns the value's discriminant.
+  references: []
+  calls: []
+- name: Bool
+  kind: method
+  receiver: Value
+  description: Bool returns the boolean and true when the kind is [KindBool].
+  references: []
+  calls: []
+- name: Number
+  kind: method
+  receiver: Value
+  description: Number returns the canonical number token and true when the kind is
+    [KindNumber].
+  references: []
+  calls: []
+- name: Str
+  kind: method
+  receiver: Value
+  description: Str returns the string and true when the kind is [KindString].
+  references: []
+  calls: []
+- name: List
+  kind: method
+  receiver: Value
+  description: List returns the list and true when the kind is [KindList].
+  references: []
+  calls: []
+- name: Object
+  kind: method
+  receiver: Value
+  description: Object returns the object and true when the kind is [KindObject].
+  references: []
+  calls: []
+- name: Ref
+  kind: method
+  receiver: Value
+  description: Ref returns the object reference and true when the kind is [KindObjectRef].
+  references: []
+  calls: []
+- name: Secret
+  kind: method
+  receiver: Value
+  description: Secret returns the secret reference and true when the kind is [KindSecretRef].
+  references: []
+  calls: []
+- name: FromRaw
+  kind: func
+  description: FromRaw builds a [Value] from a decoded (interface{}) value, discriminating
+    a secret reference ({secret_ref}) and an object reference ({ref, kind}) from an
+    ordinary object, and canonicalizing numbers.
+  references: []
+  calls:
+  - BoolValue
+  - FromRaw
+  - ListValue
+  - NullValue
+  - NumberValue
+  - ObjectRefValue
+  - ObjectValue
+  - SecretRefValue
+  - Sprintf
+  - StringValue
+- name: Raw
+  kind: method
+  receiver: Value
+  description: Raw converts a [Value] back into a plain interface{} tree, for interop
+    with the existing layers. Numbers become json.Number in canonical form.
+  references: []
+  calls: []
+- name: Digest
+  kind: method
+  receiver: Value
+  description: Digest returns the canonical SHA-256 digest of the value — deterministic
+    across map key order and number representation.
+  references:
+  - canonicaljson.ToJSON
+  calls:
+  - canonicaljson.ToJSON
+- name: Validate
+  kind: method
+  receiver: Node
+  description: 'Validate enforces the secret type boundary at the IR level: a secret
+    field''s value must be a [KindSecretRef] (never inline data), and a non-secret
+    field''s value must not be a secret reference. This is the structural form of
+    [SensitivePolicy.ValidateValue] — the kind cannot lie.'
+  references: []
+  calls:
+  - Errorf
+- name: String
+  kind: method
+  receiver: ValueKind
+  description: String renders a ValueKind for diagnostics.
+  references: []
+  calls: []
