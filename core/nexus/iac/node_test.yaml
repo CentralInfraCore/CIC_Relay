@@ -1,0 +1,62 @@
+---
+package: iac
+description: ''
+tags:
+- core
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestFromRaw_KindsAndRoundTrip
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Fatalf
+  - FromRaw
+  - Kind
+  - Run
+- name: TestValue_AccessorsAreKindGuarded
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+  - FromRaw
+  - Number
+  - Ref
+  - Secret
+  - Str
+  - StringValue
+- name: TestValue_AbsentDistinctFromNull
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Digest
+  - Errorf
+  - Fatal
+  - Kind
+  - NullValue
+  - Object
+  - ObjectValue
+- name: TestValue_Digest_Deterministic
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Digest
+  - Errorf
+  - FromRaw
+  - Number
+- name: TestNode_Validate_SecretTypeBoundary
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Errorf
+  - SecretRefValue
+  - StringValue
+  - Validate

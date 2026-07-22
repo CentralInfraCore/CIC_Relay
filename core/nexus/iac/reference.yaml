@@ -21,3 +21,9 @@ objects:
     "kind" narrows the expected target kind.
   references: []
   calls: []
+- name: asObjectRef
+  kind: func
+  description: 'asObjectRef recognizes an object-reference value: a map carrying a
+    non-empty "ref" string, with an optional "kind".'
+  references: []
+  calls: []
