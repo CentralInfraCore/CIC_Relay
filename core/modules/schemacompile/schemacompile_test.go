@@ -174,6 +174,57 @@ func TestAssertSource_WithVerifier_ValidChain(t *testing.T) {
 	assert.Equal(t, "test.schema", m["schema"])
 }
 
+// Regression: the assert step must carry source provenance through.
+//
+// cic.pipeline.start resolves the cloned repository's commit and tree digest and
+// the intermediate steps propagate them, but assert used to rebuild its result
+// from scratch and drop them here. The signing step then fell back to the
+// relay's own build-time constants, so build_hash attested WHAT was compiled but
+// not WHERE it came from: two different commits of the same repository yielded a
+// bit-identical build_hash whenever the compiled artifact was unchanged.
+func TestAssertSource_CarriesSourceProvenance(t *testing.T) {
+	rootCA, rootKey := makeCACert(t, "CICRootCA", nil, nil)
+	intermediateCA, intermediateKey := makeCACert(t, "CICDeveloperCA2026", rootCA, rootKey)
+	_, leafPEM := makeLeafCert(t, intermediateCA, intermediateKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCA)
+	intermediatePool := x509.NewCertPool()
+	intermediatePool.AddCert(intermediateCA)
+
+	fn := schemacompile.NewAssertSourceFunc(makeVerifier(rootPool, intermediatePool))
+	out, err := fn(context.Background(), map[string]interface{}{
+		"source_assertion":     assertionYAML(leafPEM),
+		"schema":               "test.schema",
+		"version":              "1.0",
+		"source_ref":           "0123456789abcdef0123456789abcdef01234567",
+		"source_tree_digest":   "sha256:treedigest",
+		"builder_image_digest": "sha256:builderimage",
+		"branch":               "main",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	assert.Equal(t, "0123456789abcdef0123456789abcdef01234567", m["source_ref"])
+	assert.Equal(t, "sha256:treedigest", m["source_tree_digest"])
+	assert.Equal(t, "sha256:builderimage", m["builder_image_digest"])
+	assert.Equal(t, "main", m["branch"])
+}
+
+// A run that carries no repository (e.g. a direct /v1/schema/compile call) must
+// not grow empty provenance keys — the signing step distinguishes "absent" from
+// "empty" to decide whether to fall back to the relay's own build constants.
+func TestAssertSource_NoProvenanceKeysWhenAbsent(t *testing.T) {
+	fn := schemacompile.NewAssertSourceFunc(nil)
+	out, err := fn(context.Background(), map[string]interface{}{
+		"schema":  "test.schema",
+		"version": "1.0",
+	})
+	require.NoError(t, err)
+	m := out.(map[string]interface{})
+	_, hasRef := m["source_ref"]
+	assert.False(t, hasRef, "source_ref must not be invented when the run has no repository")
+}
+
 func TestAssertSource_WithVerifier_UntrustedCA(t *testing.T) {
 	rootCA, rootKey := makeCACert(t, "CICRootCA", nil, nil)
 	intermediateCA, intermediateKey := makeCACert(t, "CICDeveloperCA2026", rootCA, rootKey)

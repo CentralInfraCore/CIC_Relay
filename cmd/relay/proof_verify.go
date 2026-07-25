@@ -63,8 +63,12 @@ func VerifyProofArtifact(a *ProofArtifact) VerifyResult {
 	if a.Timestamp == "" {
 		errs = append(errs, "timestamp is required")
 	}
-	if a.SourceDigest == "" {
-		warns = append(warns, "source_digest is empty — chain is not anchored to a source revision")
+	// An unset source_digest and the "unknown" sentinel mean the same thing: the
+	// chain identifies no source revision. Checking only for emptiness let the
+	// sentinel through silently, so a trace that was in fact unanchored verified
+	// with no warning at all.
+	if a.SourceDigest == "" || a.SourceDigest == "unknown" {
+		warns = append(warns, "source_digest is empty or unknown — chain is not anchored to a source revision")
 	}
 
 	// 2. chain_hash recomputation

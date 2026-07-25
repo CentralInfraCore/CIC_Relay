@@ -65,6 +65,20 @@ func TestVerifyProofArtifact_EmptySourceDigest_Warns(t *testing.T) {
 	assert.Contains(t, r.Warnings[0], "source_digest")
 }
 
+// "unknown" is the sentinel the relay writes when it has no source revision to
+// name. It means exactly what an empty value means, but the emptiness check let
+// it through silently: a trace that was in fact unanchored verified with no
+// warning at all.
+func TestVerifyProofArtifact_UnknownSourceDigest_Warns(t *testing.T) {
+	a := validProofArtifact()
+	a.SourceDigest = "unknown"
+	a.ChainHash = cabinet.ComputeChainHashV1("wf@1.0", "unknown", testSteps)
+	r := VerifyProofArtifact(a)
+	assert.True(t, r.Valid, "an unanchored chain is still internally consistent")
+	require.NotEmpty(t, r.Warnings, `"unknown" must warn just like an empty source_digest`)
+	assert.Contains(t, r.Warnings[0], "source_digest")
+}
+
 func TestVerifyProofArtifact_ChainHashMismatch(t *testing.T) {
 	a := validProofArtifact()
 	a.ChainHash = strings.Repeat("d", 64)
