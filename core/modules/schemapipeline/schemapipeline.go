@@ -94,14 +94,15 @@ func (c *PipelineConfig) NewStartFunc() func(context.Context, interface{}) (inte
 		}
 		repoURL, _ := m["repo_url"].(string)
 		branch, _ := m["branch"].(string)
+		commit, _ := m["commit"].(string)
 		schema, _ := m["schema"].(string)
 		version, _ := m["version"].(string)
 
 		if repoURL == "" {
 			return nil, fmt.Errorf("cic.pipeline.start: repo_url is required")
 		}
-		if branch == "" {
-			return nil, fmt.Errorf("cic.pipeline.start: branch is required")
+		if branch == "" && commit == "" {
+			return nil, fmt.Errorf("cic.pipeline.start: branch or commit is required")
 		}
 		if schema == "" {
 			return nil, fmt.Errorf("cic.pipeline.start: schema is required")
@@ -125,13 +126,36 @@ func (c *PipelineConfig) NewStartFunc() func(context.Context, interface{}) (inte
 			return nil, fmt.Errorf("cic.pipeline.start: clean build dir: %w", err)
 		}
 
-		// git clone --branch <branch> --depth 1 <url> <dir>
-		out, code, err := r.Run(ctx, "", "git", "clone", "--branch", branch, "--depth", "1", repoURL, buildDir)
-		if err != nil {
-			return nil, fmt.Errorf("cic.pipeline.start: git clone: %w", err)
-		}
-		if code != 0 {
-			return nil, fmt.Errorf("cic.pipeline.start: git clone exit %d: %s", code, strings.TrimSpace(out))
+		// Clone, then pin to the requested revision.
+		//
+		// A shallow, branch-pinned clone can only ever reach that branch's tip, so
+		// it cannot serve a request that names a specific commit. When `commit` is
+		// given we take a full clone and check it out; without it the original
+		// shallow branch clone is kept, since it is markedly cheaper.
+		if commit != "" {
+			out, code, err := r.Run(ctx, "", "git", "clone", repoURL, buildDir)
+			if err != nil {
+				return nil, fmt.Errorf("cic.pipeline.start: git clone: %w", err)
+			}
+			if code != 0 {
+				return nil, fmt.Errorf("cic.pipeline.start: git clone exit %d: %s", code, strings.TrimSpace(out))
+			}
+			out, code, err = r.Run(ctx, buildDir, "git", "checkout", "--detach", commit)
+			if err != nil {
+				return nil, fmt.Errorf("cic.pipeline.start: git checkout %s: %w", commit, err)
+			}
+			if code != 0 {
+				return nil, fmt.Errorf("cic.pipeline.start: git checkout %s exit %d: %s", commit, code, strings.TrimSpace(out))
+			}
+		} else {
+			// git clone --branch <branch> --depth 1 <url> <dir>
+			out, code, err := r.Run(ctx, "", "git", "clone", "--branch", branch, "--depth", "1", repoURL, buildDir)
+			if err != nil {
+				return nil, fmt.Errorf("cic.pipeline.start: git clone: %w", err)
+			}
+			if code != 0 {
+				return nil, fmt.Errorf("cic.pipeline.start: git clone exit %d: %s", code, strings.TrimSpace(out))
+			}
 		}
 
 		// Resolve HEAD commit.

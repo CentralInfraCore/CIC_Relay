@@ -1,0 +1,24 @@
+tags:
+  - doc
+  - pipeline
+  - provenance
+  - build
+related_nodes:
+  - docs/hu/pipeline/build-process
+  - docs/hu/pipeline/artifact-validation
+  - docs/hu/spec/Cabinet_Specification
+category:
+  - process
+  - build
+  - verification
+entrypoint: false
+used_in:
+  - build
+  - validation
+description: |
+  Leírja, hogyan rögzíti a séma-pipeline, hogy egy build melyik forrás-revízióból
+  készült: commit rögzítése a kérésben, a provenance mezők útja a
+  cic.pipeline.start-tól az assert és build lépéseken át a cic.artifact.sign-ig,
+  a build_hash (tiszta tartalom-digest) és a verification_root (a manifest
+  Merkle-gyökere, benne a forrás-provenance) különbsége, valamint az, hogyan
+  jelzi a VerifyProofArtifact a horgonyozatlan láncot.

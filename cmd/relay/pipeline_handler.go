@@ -13,9 +13,14 @@ import (
 
 // PipelineRequest is the request body for POST /v1/schemas/pipeline.
 type PipelineRequest struct {
-	Schema           string `json:"schema"`            // e.g. "postgresql"
-	Version          string `json:"version"`           // e.g. "v0.18.0"
-	Branch           string `json:"branch"`            // e.g. "postgres/dev"
+	Schema  string `json:"schema"`  // e.g. "postgresql"
+	Version string `json:"version"` // e.g. "v0.18.0"
+	Branch  string `json:"branch"`  // e.g. "postgres/dev"
+	// Commit pins the build to an exact revision. When set, the pipeline takes a
+	// full clone and checks this commit out, so the resulting build_hash attests
+	// that revision rather than whatever the branch tip happened to be. Either
+	// Commit or Branch must be present.
+	Commit           string `json:"commit"`
 	RepoURL          string `json:"repo_url"`          // e.g. "file:///src/cic-schemas"
 	BuildDir         string `json:"build_dir"`         // override config default
 	BuilderContainer string `json:"builder_container"` // override config default
@@ -61,8 +66,12 @@ func (s *relayServer) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON: "+err.Error())
 		return
 	}
-	if req.Schema == "" || req.Version == "" || req.Branch == "" || req.RepoURL == "" {
-		writeError(w, http.StatusBadRequest, "missing_fields", "schema, version, branch and repo_url are required")
+	if req.Schema == "" || req.Version == "" || req.RepoURL == "" {
+		writeError(w, http.StatusBadRequest, "missing_fields", "schema, version and repo_url are required")
+		return
+	}
+	if req.Branch == "" && req.Commit == "" {
+		writeError(w, http.StatusBadRequest, "missing_fields", "either branch or commit is required")
 		return
 	}
 
@@ -72,6 +81,9 @@ func (s *relayServer) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 		"version":  req.Version,
 		"branch":   req.Branch,
 		"repo_url": req.RepoURL,
+	}
+	if req.Commit != "" {
+		payload["commit"] = req.Commit
 	}
 	if req.BuildDir != "" {
 		payload["build_dir"] = req.BuildDir
@@ -84,9 +96,20 @@ func (s *relayServer) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 		payload["builder_container"] = s.config.SchemaBuilderContainer
 	}
 
-	sourceDigest := SourceTreeHash
-	if sourceDigest == "unknown" {
-		sourceDigest = CommitHash
+	// Anchor the trace to the revision under build, not to the relay binary.
+	//
+	// SourceTreeHash/CommitHash describe the relay's own source, which is the
+	// right answer for a request that carries no repository but the wrong one
+	// here: it made every pipeline run report the same source_digest regardless
+	// of what was actually built. When the caller pinned a commit we can anchor
+	// to it up front; otherwise the pipeline resolves the cloned HEAD and the
+	// signed artifact carries source_ref/source_tree_digest.
+	sourceDigest := req.Commit
+	if sourceDigest == "" {
+		sourceDigest = SourceTreeHash
+		if sourceDigest == "unknown" {
+			sourceDigest = CommitHash
+		}
 	}
 
 	sp := &cabinet.SetPayload{

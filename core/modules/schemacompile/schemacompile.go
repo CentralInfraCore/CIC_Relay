@@ -143,7 +143,7 @@ func assertSourceImpl(input interface{}, verify CertVerifyFunc) (interface{}, er
 		return nil, fmt.Errorf("cic.source.assert: version mismatch: request=%q assertion=%q", requestedVersion, assertedVersion)
 	}
 
-	return map[string]interface{}{
+	out := map[string]interface{}{
 		"asserted":       true,
 		"policy_version": "1.0",
 		"schema":         assertedName,
@@ -151,7 +151,33 @@ func assertSourceImpl(input interface{}, verify CertVerifyFunc) (interface{}, er
 		"metadata":       artifact.Metadata,
 		"spec":           artifact.Spec,
 		"raw_yaml":       assertionYAML,
-	}, nil
+	}
+
+	carryProvenance(out, m)
+	return out, nil
+}
+
+// provenanceKeys are the fields that identify the source revision under build.
+//
+// cic.pipeline.start resolves the cloned repository's HEAD commit and computes a
+// tree digest over it; the pipeline steps propagate them via copyMap. The steps
+// in this package, however, build their results from scratch, so without an
+// explicit hand-off the provenance is dropped and cic.artifact.sign falls back
+// to the relay's own build-time constants. The observable effect was that
+// build_hash attested WHAT was compiled but not WHERE it came from: two
+// different commits of the same repository produced a bit-identical build_hash
+// whenever the compiled artifact was unchanged.
+var provenanceKeys = []string{"source_ref", "source_tree_digest", "builder_image_digest", "branch"}
+
+// carryProvenance copies the provenance fields from src to dst when present.
+// Absent keys are left absent rather than written as empty strings, so the
+// signing step can tell "no repository in this run" from "empty value".
+func carryProvenance(dst, src map[string]interface{}) {
+	for _, k := range provenanceKeys {
+		if v, ok := src[k]; ok {
+			dst[k] = v
+		}
+	}
 }
 
 // BuildSchema is the native function for cic.schema.build@1.0.
@@ -167,13 +193,15 @@ func BuildSchema(_ context.Context, input interface{}) (interface{}, error) {
 	// If AssertSource already parsed a real artifact, use it.
 	if metadata, ok := m["metadata"].(map[string]interface{}); ok && metadata != nil {
 		rawYAML, _ := m["raw_yaml"].(string)
-		return map[string]interface{}{
+		out := map[string]interface{}{
 			"schema":       m["schema"],
 			"version":      m["version"],
 			"raw_artifact": rawYAML,
 			"metadata":     metadata,
 			"spec":         m["spec"],
-		}, nil
+		}
+		carryProvenance(out, m)
+		return out, nil
 	}
 
 	// Stub mode: generate synthetic artifact.
@@ -188,11 +216,13 @@ func BuildSchema(_ context.Context, input interface{}) (interface{}, error) {
 
 	rawArtifact := fmt.Sprintf("apiVersion: cic.com/v1\nkind: SchemaArtifact\nmetadata:\n  name: %s\n  version: %s\nspec: {}\n", schema, version)
 
-	return map[string]interface{}{
+	out := map[string]interface{}{
 		"schema":       schema,
 		"version":      version,
 		"raw_artifact": rawArtifact,
-	}, nil
+	}
+	carryProvenance(out, m)
+	return out, nil
 }
 
 // SignArtifact is the legacy no-signer entry point (stub mode, no Vault signing).
@@ -241,12 +271,30 @@ func newSignArtifactResult(ctx context.Context, input interface{}, bctx merkle.B
 	schema, _ := m["schema"].(string)
 	version, _ := m["version"].(string)
 
+	// Source provenance describes the repository under build, NOT the relay.
+	//
+	// When the pipeline cloned a repository, cic.pipeline.start put the resolved
+	// commit and tree digest into the flow; prefer those. Only fall back to bctx
+	// (the relay's own build-time constants, fixed at server start) when the run
+	// carries no repository — e.g. a direct /v1/schema/compile call.
+	//
+	// The BuildEnv/Validation fields below deliberately keep using bctx: those
+	// correctly describe the environment that performed the build.
+	sourceRef, _ := m["source_ref"].(string)
+	sourceTreeDigest, _ := m["source_tree_digest"].(string)
+	if sourceRef == "" {
+		sourceRef = bctx.SourceRef
+	}
+	if sourceTreeDigest == "" {
+		sourceTreeDigest = bctx.SourceTreeDigest
+	}
+
 	// M33: compute Merkle-root verification hash from all available provenance inputs.
 	manifest := &merkle.VerificationManifest{
 		Version: 1,
 		Source: merkle.SourceFields{
-			SourceRef:        bctx.SourceRef,
-			SourceTreeDigest: bctx.SourceTreeDigest,
+			SourceRef:        sourceRef,
+			SourceTreeDigest: sourceTreeDigest,
 		},
 		BuildEnv: merkle.BuildEnvFields{
 			DockerImageChecksum:  bctx.DockerImageChecksum,
@@ -287,11 +335,15 @@ func newSignArtifactResult(ctx context.Context, input interface{}, bctx merkle.B
 		cicSignedCA = bctx.CAFingerprint
 	}
 
+	// source_ref / source_tree_digest are echoed so a caller can see which
+	// revision the build_hash actually attests, without re-deriving it.
 	return map[string]interface{}{
-		"artifact":          rawArtifact,
-		"build_hash":        buildHash,
-		"cic_sign":          cicSign,
-		"cic_signed_ca":     cicSignedCA,
-		"verification_root": merkle.BuildVerificationRoot(manifest),
+		"artifact":           rawArtifact,
+		"build_hash":         buildHash,
+		"cic_sign":           cicSign,
+		"cic_signed_ca":      cicSignedCA,
+		"verification_root":  merkle.BuildVerificationRoot(manifest),
+		"source_ref":         sourceRef,
+		"source_tree_digest": sourceTreeDigest,
 	}, nil
 }

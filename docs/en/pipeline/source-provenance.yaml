@@ -1,0 +1,24 @@
+tags:
+  - doc
+  - pipeline
+  - provenance
+  - build
+related_nodes:
+  - docs/en/pipeline/build-process
+  - docs/en/pipeline/artifact-validation
+  - docs/en/spec/Cabinet_Specification
+category:
+  - process
+  - build
+  - verification
+entrypoint: false
+used_in:
+  - build
+  - validation
+description: |
+  Describes how the schema pipeline records which source revision a build came
+  from: commit pinning on the request, the provenance field flow from
+  cic.pipeline.start through assert and build into cic.artifact.sign, the
+  distinction between build_hash (pure content digest) and verification_root
+  (Merkle root over the manifest, including source provenance), and how
+  VerifyProofArtifact reports an unanchored chain.

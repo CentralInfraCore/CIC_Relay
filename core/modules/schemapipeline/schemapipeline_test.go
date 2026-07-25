@@ -20,6 +20,9 @@ import (
 type mockRunner struct {
 	calls  []mockCall
 	cursor int
+	// seen records every invocation as "<name> <args...>" so a test can assert on
+	// the command line that was actually built, not only on the returned value.
+	seen []string
 }
 
 type mockCall struct {
@@ -30,6 +33,7 @@ type mockCall struct {
 }
 
 func (m *mockRunner) Run(_ context.Context, _ string, name string, args ...string) (string, int, error) {
+	m.seen = append(m.seen, strings.TrimSpace(name+" "+strings.Join(args, " ")))
 	if m.cursor >= len(m.calls) {
 		return "", -1, fmt.Errorf("unexpected Run call: %s %v", name, args)
 	}
@@ -93,14 +97,68 @@ func TestStart_MissingRepoURL(t *testing.T) {
 	require.ErrorContains(t, err, "repo_url is required")
 }
 
-func TestStart_MissingBranch(t *testing.T) {
+func TestStart_MissingBranchAndCommit(t *testing.T) {
 	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: &mockRunner{}}
 	fn := cfg.NewStartFunc()
 	_, err := fn(context.Background(), map[string]interface{}{
 		"repo_url": "https://git.example.com/schemas.git",
 		"schema":   "pg", "version": "v1.0.0",
 	})
-	require.ErrorContains(t, err, "branch is required")
+	require.ErrorContains(t, err, "branch or commit is required")
+}
+
+// A commit alone is a complete revision spec — no branch needed.
+func TestStart_CommitWithoutBranchPassesValidation(t *testing.T) {
+	mr := &mockRunner{}
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: mr}
+	fn := cfg.NewStartFunc()
+	_, err := fn(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git",
+		"commit":   "0123456789abcdef0123456789abcdef01234567",
+		"schema":   "pg", "version": "v1.0.0",
+	})
+	if err != nil {
+		require.NotContains(t, err.Error(), "branch or commit is required")
+	}
+	require.NotEmpty(t, mr.seen, "validation should have passed and git should have been invoked")
+}
+
+// With a commit the clone must not be shallow/branch-pinned — a --depth 1
+// --branch clone can only ever reach that branch's tip — and the commit has to
+// be checked out explicitly. This is what makes build_hash attest the requested
+// revision rather than whatever the branch happened to point at.
+func TestStart_CommitTakesFullCloneAndChecksOut(t *testing.T) {
+	mr := &mockRunner{}
+	mr.expectNext("git clone", "", 0)
+	mr.expectNext("git checkout", "", 0)
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: mr}
+	fn := cfg.NewStartFunc()
+	_, _ = fn(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git",
+		"branch":   "main",
+		"commit":   "0123456789abcdef0123456789abcdef01234567",
+		"schema":   "pg", "version": "v1.0.0",
+	})
+	joined := strings.Join(mr.seen, "\n")
+	require.Contains(t, joined, "git clone https://git.example.com/schemas.git")
+	require.NotContains(t, joined, "--depth 1")
+	require.Contains(t, joined, "git checkout --detach 0123456789abcdef0123456789abcdef01234567")
+}
+
+// Without a commit the cheaper shallow branch clone is kept.
+func TestStart_WithoutCommitStaysShallow(t *testing.T) {
+	mr := &mockRunner{}
+	mr.expectNext("git clone", "", 0)
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: mr}
+	fn := cfg.NewStartFunc()
+	_, _ = fn(context.Background(), map[string]interface{}{
+		"repo_url": "https://git.example.com/schemas.git",
+		"branch":   "main",
+		"schema":   "pg", "version": "v1.0.0",
+	})
+	joined := strings.Join(mr.seen, "\n")
+	require.Contains(t, joined, "--depth 1")
+	require.NotContains(t, joined, "git checkout")
 }
 
 func TestStart_CloneFailure(t *testing.T) {
