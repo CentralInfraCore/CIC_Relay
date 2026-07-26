@@ -510,22 +510,24 @@ func TestPipelineConfig_DefaultRunner(t *testing.T) {
 	_ = err
 }
 
-func TestStart_MissingSchema(t *testing.T) {
-	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: &mockRunner{}}
+// schema/version belong to the CIC-Schemas pipeline, which reads the released
+// artifact from source/<schema>.yaml. A generic repository CI run has no such
+// concept, so the clone step must not demand them; the steps that need them
+// validate on their own.
+func TestStart_SchemaAndVersionAreOptional(t *testing.T) {
+	mr := &mockRunner{}
+	mr.expectNext("git clone", "", 0)
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: mr}
 	fn := cfg.NewStartFunc()
 	_, err := fn(context.Background(), map[string]interface{}{
-		"repo_url": "https://git.example.com/schemas.git", "branch": "main", "version": "v1",
+		"repo_url": "https://git.example.com/schemas.git", "branch": "main",
 	})
-	require.ErrorContains(t, err, "schema is required")
-}
-
-func TestStart_MissingVersion(t *testing.T) {
-	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: &mockRunner{}}
-	fn := cfg.NewStartFunc()
-	_, err := fn(context.Background(), map[string]interface{}{
-		"repo_url": "https://git.example.com/schemas.git", "branch": "main", "schema": "pg",
-	})
-	require.ErrorContains(t, err, "version is required")
+	if err != nil {
+		require.NotContains(t, err.Error(), "schema is required")
+		require.NotContains(t, err.Error(), "version is required")
+	}
+	require.Contains(t, strings.Join(mr.seen, "\n"), "git clone",
+		"validation should have passed and the clone should have been attempted")
 }
 
 func TestStart_MissingBuildDir(t *testing.T) {
@@ -652,4 +654,90 @@ func TestOSCommandRunner_Run_NonExistentBinary(t *testing.T) {
 	_, code, err := r.Run(context.Background(), "", "nonexistent-binary-xyz-abc-def")
 	assert.Equal(t, -1, code)
 	assert.Error(t, err)
+}
+
+// --- cic.repo.build (generic repo CI) ---
+
+func TestRepoBuild_RequiresArtifactOutput(t *testing.T) {
+	cfg := &schemapipeline.PipelineConfig{BuildDir: t.TempDir(), Runner: &mockRunner{}}
+	_, err := cfg.NewRepoBuildFunc()(context.Background(), map[string]interface{}{
+		"builder_container": "b",
+	})
+	require.ErrorContains(t, err, "artifact_output is required")
+}
+
+// artifact_output arrives from the request, so it must not be able to name a
+// file outside the build directory.
+func TestRepoBuild_RejectsPathEscape(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &schemapipeline.PipelineConfig{BuildDir: dir, Runner: &mockRunner{}}
+	for _, bad := range []string{"../outside.txt", "sub/../../outside.txt", "/etc/passwd"} {
+		_, err := cfg.NewRepoBuildFunc()(context.Background(), map[string]interface{}{
+			"builder_container": "b",
+			"artifact_output":   bad,
+		})
+		require.Error(t, err, "must reject %q", bad)
+		require.Regexp(t, "escapes build_dir|must be relative", err.Error())
+	}
+}
+
+func TestRepoBuild_RunsMakeTargetAndReadsArtifact(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "dist"), 0o755))
+	want := "built bytes\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "dist", "out.bin"), []byte(want), 0o644))
+
+	mr := &mockRunner{}
+	mr.expectNext("docker exec", "make output", 0)
+	cfg := &schemapipeline.PipelineConfig{BuildDir: dir, Runner: mr}
+
+	res, err := cfg.NewRepoBuildFunc()(context.Background(), map[string]interface{}{
+		"builder_container": "cic-py-builder",
+		"make_target":       "package",
+		"artifact_output":   "dist/out.bin",
+	})
+	require.NoError(t, err)
+	m := res.(map[string]interface{})
+
+	assert.Equal(t, want, m["raw_artifact"], "the artifact's bytes are what gets signed")
+	assert.Equal(t, "dist/out.bin", m["artifact_path"])
+	assert.Equal(t, int64(len(want)), m["artifact_size"])
+	assert.NotEmpty(t, m["step_hash"])
+	assert.Contains(t, strings.Join(mr.seen, "\n"), "docker exec cic-py-builder make package",
+		"the build must run in the builder container, not in the relay process")
+}
+
+// Without make_target the step defaults to `make build`.
+func TestRepoBuild_DefaultsToBuildTarget(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.out"), []byte("x"), 0o644))
+	mr := &mockRunner{}
+	mr.expectNext("docker exec", "", 0)
+	cfg := &schemapipeline.PipelineConfig{BuildDir: dir, Runner: mr}
+	_, err := cfg.NewRepoBuildFunc()(context.Background(), map[string]interface{}{
+		"builder_container": "b",
+		"artifact_output":   "a.out",
+	})
+	require.NoError(t, err)
+	assert.Contains(t, strings.Join(mr.seen, "\n"), "make build")
+}
+
+// Provenance resolved by the clone step must survive into the signing step —
+// that is what makes verification_root identify the revision that was built.
+func TestRepoBuild_CarriesProvenance(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.out"), []byte("x"), 0o644))
+	mr := &mockRunner{}
+	mr.expectNext("docker exec", "", 0)
+	cfg := &schemapipeline.PipelineConfig{BuildDir: dir, Runner: mr}
+	res, err := cfg.NewRepoBuildFunc()(context.Background(), map[string]interface{}{
+		"builder_container":  "b",
+		"artifact_output":    "a.out",
+		"source_ref":         "0123456789abcdef0123456789abcdef01234567",
+		"source_tree_digest": "sha256:tree",
+	})
+	require.NoError(t, err)
+	m := res.(map[string]interface{})
+	assert.Equal(t, "0123456789abcdef0123456789abcdef01234567", m["source_ref"])
+	assert.Equal(t, "sha256:tree", m["source_tree_digest"])
 }

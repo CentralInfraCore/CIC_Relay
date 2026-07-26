@@ -16,6 +16,8 @@ COMMIT            ?=
 BRANCH            ?=
 SCHEMA            ?=
 VERSION           ?=
+MAKE_TARGET       ?=
+ARTIFACT_OUTPUT   ?=
 BUILD_DIR         ?=
 BUILDER_CONTAINER ?=
 
@@ -53,10 +55,14 @@ relay.status: ## Show relay health and whether ProofTrace recording is on
 	  && echo "prooftrace: enabled" \
 	  || echo "prooftrace: DISABLED (VAULT_TOKEN unset, or not authorised for CIC_VAULT_KEY)"
 
-# Drive one CI build through the running relay.
+# Drive one CI build through the running relay. Two routes:
 #
-#   make relay.ci REPO_URL=https://github.com/org/repo COMMIT=<sha> \
-#                 SCHEMA=postgresql VERSION=v0.18.0
+#   generic repository — the caller names what make produces
+#     make relay.ci REPO_URL=https://github.com/org/repo COMMIT=<sha> \
+#                   ARTIFACT_OUTPUT=dist/app.bin [MAKE_TARGET=build]
+#
+#   CIC-Schemas pipeline — schema/version, artifact read from source/<schema>.yaml
+#     make relay.ci REPO_URL=… COMMIT=<sha> SCHEMA=postgresql VERSION=v0.18.0
 #
 # Prints the signed artifact's build_hash and verification_root. COMMIT is
 # optional; without it BRANCH is used and the build is pinned only to that
@@ -64,6 +70,7 @@ relay.status: ## Show relay health and whether ProofTrace recording is on
 relay.ci: ## Run a CI build (REPO_URL, SCHEMA, VERSION, COMMIT|BRANCH)
 	@RELAY_URL="$(RELAY_URL)" REPO_URL="$(REPO_URL)" COMMIT="$(COMMIT)" \
 	 BRANCH="$(BRANCH)" SCHEMA="$(SCHEMA)" VERSION="$(VERSION)" \
+	 MAKE_TARGET="$(MAKE_TARGET)" ARTIFACT_OUTPUT="$(ARTIFACT_OUTPUT)" \
 	 BUILD_DIR="$(BUILD_DIR)" BUILDER_CONTAINER="$(BUILDER_CONTAINER)" \
 	 ./tools/relay-ci.sh
 
@@ -77,10 +84,11 @@ relay.help:
 	@echo "  relay.logs          Tail relay logs."
 	@echo "  relay.status        Show health and whether ProofTrace recording is on."
 	@echo ""
-	@echo "CI build:"
-	@echo "  relay.ci            Run one pipeline build through the relay."
-	@echo "                      REPO_URL=<url> SCHEMA=<name> VERSION=<vX.Y.Z>"
-	@echo "                      COMMIT=<sha>   pin an exact revision (recommended)"
+	@echo "CI build (relay.ci) — two routes:"
+	@echo "  generic repo        REPO_URL=<url> ARTIFACT_OUTPUT=<path in repo>"
+	@echo "                      MAKE_TARGET=<target>  (default: build)"
+	@echo "  CIC-Schemas         REPO_URL=<url> SCHEMA=<name> VERSION=<vX.Y.Z>"
+	@echo "  both                COMMIT=<sha>   pin an exact revision (recommended)"
 	@echo "                      BRANCH=<name>  build that branch's tip instead"
 	@echo ""
 	@echo "Notes:"

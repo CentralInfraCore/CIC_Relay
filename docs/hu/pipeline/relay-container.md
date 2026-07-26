@@ -27,6 +27,51 @@ Ha azt akarod tudni, **melyik revízió** épült, a `verification_root`-ot néz
 `build_hash`-t — az utóbbi `sha256(raw_artifact)`, tiszta tartalom-digest. Lásd:
 [source-provenance.md](source-provenance.md).
 
+## Két útvonal
+
+| Útvonal | Workflow | Mire |
+|---|---|---|
+| `POST /v1/repo/ci` | `cic.repo.ci` | Bármely repó, amiben van `Makefile` |
+| `POST /v1/schemas/pipeline` | `cic.schemas.pipeline` | CIC-Schemas repók |
+
+### Általános repó
+
+A `cic.repo.ci` lánca: `start(clone) → cic.repo.build → cic.artifact.sign`. A hívó
+megnevezi a make célt és az általa előállított fájlt; ennek a fájlnak a bájtjai
+kerülnek aláírásra.
+
+```bash
+make relay.ci \
+  REPO_URL=https://github.com/org/repo \
+  COMMIT=<sha> \
+  ARTIFACT_OUTPUT=dist/app.bin \
+  MAKE_TARGET=build            # opcionális, alapértelmezés: "build"
+```
+
+Az `artifact_output` a build könyvtárhoz képest oldódik fel, és **nem léphet ki
+belőle**. A build `docker exec <builder_container> make <target>` formában fut — a
+builder konténerben, nem a relay folyamatában, így a toolchain abban a konténerben
+marad, amit az üzemeltető felügyel.
+
+A `cic.source.assert` és a `cic.schema.build` szándékosan hiányzik ebből a
+workflow-ból: azok egy fejlesztő által aláírt séma-artifact ellenőrzésére és
+újrakibocsátására valók, ami egy általános repónak nincs. A klónból hozott
+provenance viszont továbbra is eljut a verification manifestbe, tehát a
+`verification_root` azonosítja a buildelt revíziót — lásd
+[source-provenance.md](source-provenance.md).
+
+### CIC-Schemas repó
+
+A `cic.schemas.pipeline` ezen felül lefuttatja a `test`, `validate` és `release`
+célokat, majd ellenőrzi a `source/<schema>.yaml`-ból olvasott, fejlesztő által
+aláírt artifactot. `schema` és `version` kötelező.
+
+```bash
+make relay.ci \
+  REPO_URL=https://github.com/org/cic-schemas \
+  COMMIT=<sha> SCHEMA=postgresql VERSION=v0.18.0
+```
+
 ## Konfiguráció
 
 A `relay` szolgáltatás ezeket olvassa a környezetből (a `docker-compose.yml` melletti
