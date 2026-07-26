@@ -64,3 +64,13 @@ embedded/pki/*.key
 
 # RepoWise local index (repo-intelligence backend)
 .repowise/
+
+# Runtime secrets mounted into the relay container (see relay-secrets/.gitkeep)
+relay-secrets/*
+!relay-secrets/.gitkeep
+
+# Local compose configuration. docs/en/pipeline/relay-container.md tells operators
+# to put VAULT_TOKEN here, so it must never be committed.
+.env
+.env.*
+!.env.example

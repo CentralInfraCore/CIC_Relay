@@ -44,6 +44,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Named explicitly (like cic-go-builder / cic-rust-builder): the relay drives
+    # this container with `docker exec <name> make <target>`, so a
+    # compose-generated name would make CIC_SCHEMA_BUILDER_CONTAINER unpredictable.
+    container_name: cic-py-builder
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       # Mount the populated venv directory as a read-only cache
@@ -165,3 +169,52 @@ services:
     entrypoint: ["sh"]
     environment:
       - NATS_URL=nats://nats:4222
+
+  # --- Relay server ------------------------------------------------------------
+
+  # The relay itself, as a CI executor. Profiled (no auto-start) so the existing
+  # build/tooling stack is unaffected: `docker compose --profile relay up -d relay`.
+  #
+  # Everything here was previously a hand-assembled `docker run`. The non-obvious
+  # parts are documented in docs/en/pipeline/relay-container.md; the short version:
+  #   - the docker socket + CLI are needed because the pipeline's test/validate/
+  #     release steps run `docker exec <builder_container> make <target>`
+  #   - /build must be the SAME host path the builder container sees, or the
+  #     builder cannot see the clone the relay just made
+  #   - ProofTrace recording is silently disabled without VAULT_TOKEN, and the
+  #     token must be authorised for CIC_VAULT_KEY (not merely valid)
+  relay:
+    build:
+      context: .
+      dockerfile: Dockerfile.relay
+    image: cic-relay:dev
+    container_name: cic-relay
+    profiles: ["relay"]
+    ports:
+      - "${CIC_RELAY_PORT:-8080}:8080"
+    # Vault usually runs on the host, which is not reachable as 127.0.0.1 from a
+    # bridge network. Same pattern the py-builder service already uses.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Shared with the builder container: the relay clones here, the builder builds here.
+      - ${CIC_BUILD_DIR:-./build}:/build
+      # ProofTrace audit git repository.
+      - ${CIC_AUDIT_DIR:-./relay-audit}:/var/lib/cic-relay
+      # The pipeline drives the builder container through the host daemon.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Anything the relay needs to read at runtime — most commonly the Vault CA
+      # certificate that VAULT_CACERT points at.
+      - ${CIC_SECRETS_DIR:-./relay-secrets}:/run/secrets/relay:ro
+    environment:
+      - CIC_SCHEMA_BUILD_DIR=/build
+      - CIC_SCHEMA_BUILDER_CONTAINER=${CIC_BUILDER_CONTAINER:-cic-py-builder}
+      # ProofTrace signing. Without VAULT_TOKEN the relay starts but logs
+      # "ProofTrace recording disabled" and produces no signed trace.
+      - VAULT_ADDR=${VAULT_ADDR:-}
+      - VAULT_TOKEN=${VAULT_TOKEN:-}
+      - VAULT_CACERT=${VAULT_CACERT:-}
+      - CIC_VAULT_MOUNT=${CIC_VAULT_MOUNT:-transit}
+      - CIC_VAULT_KEY=${CIC_VAULT_KEY:-}
+      - CIC_TRUST_MODE=${CIC_TRUST_MODE:-dev}
+    restart: unless-stopped

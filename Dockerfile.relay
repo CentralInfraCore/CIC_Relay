@@ -1,0 +1,74 @@
+# syntax=docker/dockerfile:1
+#
+# CIC Relay server image.
+#
+# The repository root Dockerfile builds the Python schema-compiler tooling; this
+# one builds and runs the relay itself. Before it existed, starting a relay took
+# a hand-assembled `docker run` with six separate pitfalls (see
+# docs/en/pipeline/relay-container.md) — this image bakes those in.
+#
+# Image digests pinned to linux/amd64 manifests, matching docker-compose.yml.
+# To re-pin: docker manifest inspect <image>:<tag> \
+#   | jq '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest'
+
+# --- build ------------------------------------------------------------------
+FROM golang:1.25.12@sha256:09c6d487ccb96cac78767ef217cef33d15e9ee8c7569edbc9a3b00e3aef505d5 AS build
+
+WORKDIR /src
+
+# Module cache first, so a source-only change does not re-download dependencies.
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+COPY . .
+
+# CommitHash / SourceTreeHash are normally injected by the release build. They
+# describe the RELAY's own source and end up in a ProofTrace only when a run
+# carries no repository of its own (see docs/en/pipeline/source-provenance.md).
+ARG COMMIT_HASH=unknown
+ARG SOURCE_TREE_HASH=unknown
+
+# -buildvcs=false is required, not cosmetic: the build context frequently has no
+# usable .git (CI checkouts, read-only mounts), and VCS stamping then fails the
+# whole build with "error obtaining VCS status: exit status 128".
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -buildvcs=false \
+      -ldflags "-X main.CommitHash=${COMMIT_HASH} -X main.SourceTreeHash=${SOURCE_TREE_HASH}" \
+      -o /out/relay ./cmd/relay
+
+# --- docker CLI -------------------------------------------------------------
+# The pipeline's test/validate/release steps shell out to
+# `docker exec <builder_container> make <target>`, so the relay needs a docker
+# client. Only the client: the daemon is the host's, reached via the mounted socket.
+FROM docker:28-cli@sha256:cd58b396e427d1ee8cddcc3f3b7e8d8c2ba45755c5dd5b821b6e615e1ccf4586 AS dockercli
+
+# --- runtime ----------------------------------------------------------------
+FROM debian:bookworm-slim@sha256:63a496b5d3b99214b39f5ed70eb71a61e590a77979c79cbee4faf991f8c0783e AS runtime
+
+# git: cic.pipeline.start clones the repository under build.
+# ca-certificates: HTTPS to Vault and to remote git.
+RUN apt-get update \
+ && apt-get install --no-install-recommends -y git ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=build /out/relay /usr/local/bin/relay
+
+# The clone target and the repository under build are owned by whichever uid the
+# host mounted them as, which git refuses to touch by default ("detected dubious
+# ownership"). Note the env-var form (GIT_CONFIG_COUNT/KEY_0/VALUE_0) does NOT
+# work for this — a config file does.
+RUN printf '[safe]\n\tdirectory = *\n' > /etc/gitconfig
+ENV GIT_CONFIG_GLOBAL=/etc/gitconfig
+
+# Written by the ProofTrace audit recorder; must be writable by the run user.
+RUN mkdir -p /var/lib/cic-relay /build
+VOLUME ["/var/lib/cic-relay"]
+
+ENV CIC_SCHEMA_BUILD_DIR=/build
+EXPOSE 8080
+
+# No HEALTHCHECK: the image ships no curl/wget, and the relay already exposes
+# /healthz and /readyz for the orchestrator to poll.
+ENTRYPOINT ["/usr/local/bin/relay"]

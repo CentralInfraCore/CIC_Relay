@@ -1,0 +1,21 @@
+tags:
+  - doc
+  - pipeline
+  - container
+  - ci
+related_nodes:
+  - docs/en/pipeline/source-provenance
+  - docs/en/pipeline/build-process
+category:
+  - process
+  - deployment
+entrypoint: false
+used_in:
+  - build
+  - deployment
+description: |
+  How to build, start and drive the relay as a CI executor: the relay image,
+  the profiled compose service, and the relay.* make targets. Documents the
+  shared build directory requirement between relay and builder container, the
+  two distinct Vault failure modes, and the six startup pitfalls the image now
+  handles instead of the operator.
