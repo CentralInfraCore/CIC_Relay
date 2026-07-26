@@ -27,6 +27,50 @@ Read `verification_root`, not `build_hash`, when you want to know *which
 revision* was built — `build_hash` is `sha256(raw_artifact)`, a pure content
 digest. See [source-provenance.md](source-provenance.md).
 
+## Two routes
+
+| Route | Workflow | For |
+|---|---|---|
+| `POST /v1/repo/ci` | `cic.repo.ci` | Any repository with a `Makefile` |
+| `POST /v1/schemas/pipeline` | `cic.schemas.pipeline` | CIC-Schemas repositories |
+
+### Generic repository
+
+`cic.repo.ci` is `start(clone) → cic.repo.build → cic.artifact.sign`. The caller
+names the make target and the file it produces; that file's bytes are what gets
+signed.
+
+```bash
+make relay.ci \
+  REPO_URL=https://github.com/org/repo \
+  COMMIT=<sha> \
+  ARTIFACT_OUTPUT=dist/app.bin \
+  MAKE_TARGET=build            # optional, defaults to "build"
+```
+
+`artifact_output` is resolved relative to the build directory and may not escape
+it. The build runs as `docker exec <builder_container> make <target>` — in the
+builder container, not in the relay process, so the toolchain stays in a
+container the operator controls.
+
+`cic.source.assert` and `cic.schema.build` are deliberately absent from this
+workflow: they exist to validate and re-emit a developer-signed schema artifact,
+which a generic repository does not have. Provenance carried from the clone still
+reaches the verification manifest, so `verification_root` identifies the revision
+that was built — see [source-provenance.md](source-provenance.md).
+
+### CIC-Schemas repository
+
+`cic.schemas.pipeline` additionally runs `test`, `validate` and `release`, then
+verifies the developer-signed artifact read from `source/<schema>.yaml`. It
+requires `schema` and `version`.
+
+```bash
+make relay.ci \
+  REPO_URL=https://github.com/org/cic-schemas \
+  COMMIT=<sha> SCHEMA=postgresql VERSION=v0.18.0
+```
+
 ## Configuration
 
 The `relay` service reads these from the environment (a `.env` file next to

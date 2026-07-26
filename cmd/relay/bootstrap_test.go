@@ -768,7 +768,7 @@ func TestRegisterNativeComponents(t *testing.T) {
 	// core.test + ci.build + cic.source.assert + cic.schema.build +
 	// cic.artifact.sign + cert.selfsigned + 4 pipeline steps = 10; a relay built
 	// with the ffi_cgo bridge registers one more (the http.request capability).
-	expectedModules := 10
+	expectedModules := 11
 	if newActuator() != nil {
 		expectedModules++
 	}
@@ -782,17 +782,18 @@ func TestRegisterNativeComponents(t *testing.T) {
 	var registeredWorkflows []*cabinet.Workflow
 	mockCabinet.On("PutWorkflow", mock.Anything).Run(func(args mock.Arguments) {
 		registeredWorkflows = append(registeredWorkflows, args.Get(0).(*cabinet.Workflow))
-	}).Return(nil).Times(3) // cic.schema.compile + cert.selfsigned + cic.schemas.pipeline
+	}).Return(nil).Times(4) // cic.schema.compile + cert.selfsigned + cic.schemas.pipeline + cic.repo.ci
 
 	err := registerNativeComponents(context.Background(), mockCabinet, &PKIAssets{}, merkle.BuildContext{}, nil, &config{})
 	require.NoError(t, err, "registerNativeComponents should not return an error")
 	mockCabinet.AssertExpectations(t)
 
 	require.Len(t, registeredModules, expectedModules, "unexpected native module count")
-	require.Len(t, registeredWorkflows, 3, "expected three workflows to be registered")
+	require.Len(t, registeredWorkflows, 4, "expected four workflows to be registered")
 	assert.Equal(t, "cic.schema.compile@1.0", registeredWorkflows[0].ID())
 	assert.Equal(t, "cert.selfsigned@1.0", registeredWorkflows[1].ID())
 	assert.Equal(t, "cic.schemas.pipeline@1.0", registeredWorkflows[2].ID())
+	assert.Equal(t, "cic.repo.ci@1.0", registeredWorkflows[3].ID())
 
 	// First: core.test
 	coreTest := registeredModules[0]
@@ -1099,7 +1100,9 @@ func TestRegisterNativeComponents_SequentialPutModuleFailures(t *testing.T) {
 		{"pipeline.test PutModule", 7, 2, "cic.pipeline.test"},
 		{"pipeline.validate PutModule", 8, 2, "cic.pipeline.validate"},
 		{"pipeline.release PutModule", 9, 2, "cic.pipeline.release"},
-		{"cic.schemas.pipeline PutWorkflow", 10, 2, "cic.schemas.pipeline"},
+		{"repo.build PutModule", 10, 2, "cic.repo.build"},
+		{"cic.schemas.pipeline PutWorkflow", 11, 2, "cic.schemas.pipeline"},
+		{"cic.repo.ci PutWorkflow", 11, 3, "cic.repo.ci"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1116,8 +1119,11 @@ func TestRegisterNativeComponents_SequentialPutModuleFailures(t *testing.T) {
 			} else if tt.moduleOKs == 6 && tt.workflowOKs == 1 {
 				// cert.selfsigned PutWorkflow fails
 				mc.On("PutWorkflow", mock.Anything).Return(expectedErr).Once()
-			} else if tt.moduleOKs == 10 && tt.workflowOKs == 2 {
+			} else if tt.moduleOKs == 11 && tt.workflowOKs == 2 {
 				// cic.schemas.pipeline PutWorkflow fails
+				mc.On("PutWorkflow", mock.Anything).Return(expectedErr).Once()
+			} else if tt.moduleOKs == 11 && tt.workflowOKs == 3 {
+				// cic.repo.ci PutWorkflow fails
 				mc.On("PutWorkflow", mock.Anything).Return(expectedErr).Once()
 			} else {
 				mc.On("PutModule", mock.Anything).Return(expectedErr).Once()

@@ -95,8 +95,8 @@ func (c *PipelineConfig) NewStartFunc() func(context.Context, interface{}) (inte
 		repoURL, _ := m["repo_url"].(string)
 		branch, _ := m["branch"].(string)
 		commit, _ := m["commit"].(string)
-		schema, _ := m["schema"].(string)
-		version, _ := m["version"].(string)
+		// schema/version are not read here: they belong to the CIC-Schemas pipeline
+		// and simply travel through the flow via copyMap.
 
 		if repoURL == "" {
 			return nil, fmt.Errorf("cic.pipeline.start: repo_url is required")
@@ -104,12 +104,10 @@ func (c *PipelineConfig) NewStartFunc() func(context.Context, interface{}) (inte
 		if branch == "" && commit == "" {
 			return nil, fmt.Errorf("cic.pipeline.start: branch or commit is required")
 		}
-		if schema == "" {
-			return nil, fmt.Errorf("cic.pipeline.start: schema is required")
-		}
-		if version == "" {
-			return nil, fmt.Errorf("cic.pipeline.start: version is required")
-		}
+		// schema/version are required by the CIC-Schemas pipeline, which reads the
+		// released artifact from source/<schema>.yaml. A generic repo CI run has no
+		// such concept, so they are carried when present and not demanded here; the
+		// steps that actually need them validate on their own.
 
 		buildDir := c.BuildDir
 		if override, _ := m["build_dir"].(string); override != "" {
@@ -225,6 +223,86 @@ func (c *PipelineConfig) NewValidateFunc() func(context.Context, interface{}) (i
 	return func(ctx context.Context, input interface{}) (interface{}, error) {
 		return c.runMakeStep(ctx, input, "validate", "cic.pipeline.validate")
 	}
+}
+
+// --- Generic repo CI ---
+
+// NewRepoBuildFunc returns the cic.repo.build@1.0 native function.
+//
+// The schema pipeline is CIC-Schemas-shaped: it demands schema/version and reads
+// the released artifact from a fixed source/<schema>.yaml. This step is the
+// generic counterpart — the caller names the make target and the file that make
+// produces, and the result is handed to cic.artifact.sign as raw_artifact.
+//
+// Like test/validate it runs inside the builder container, not in the relay
+// process, so the build toolchain stays in a container the operator controls.
+//
+// Input:  make_target (default "build"), artifact_output (required, relative to
+//         build_dir), builder_container, build_dir
+// Output: the make step's record plus raw_artifact / artifact_path / artifact_digest
+func (c *PipelineConfig) NewRepoBuildFunc() func(context.Context, interface{}) (interface{}, error) {
+	return func(ctx context.Context, input interface{}) (interface{}, error) {
+		m, ok := input.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("cic.repo.build: expected map, got %T", input)
+		}
+
+		makeTarget, _ := m["make_target"].(string)
+		if makeTarget == "" {
+			makeTarget = "build"
+		}
+		artifactOutput, _ := m["artifact_output"].(string)
+		if artifactOutput == "" {
+			return nil, fmt.Errorf("cic.repo.build: artifact_output is required")
+		}
+		buildDir, _ := m["build_dir"].(string)
+		if buildDir == "" {
+			buildDir = c.BuildDir
+		}
+		if buildDir == "" {
+			return nil, fmt.Errorf("cic.repo.build: build_dir is required")
+		}
+
+		// artifact_output comes from the request, so it must not be able to name a
+		// file outside the build directory.
+		artifactPath, err := resolveInBuildDir(buildDir, artifactOutput)
+		if err != nil {
+			return nil, fmt.Errorf("cic.repo.build: %w", err)
+		}
+
+		res, err := c.runMakeStep(ctx, input, makeTarget, "cic.repo.build")
+		if err != nil {
+			return nil, err
+		}
+		out2, _ := res.(map[string]interface{})
+
+		artifactBytes, err := os.ReadFile(artifactPath)
+		if err != nil {
+			return nil, fmt.Errorf("cic.repo.build: read artifact %q: %w", artifactOutput, err)
+		}
+
+		out2["raw_artifact"] = string(artifactBytes)
+		out2["artifact_path"] = artifactOutput
+		out2["artifact_digest"] = "sha256:" + digestString(string(artifactBytes))
+		out2["artifact_size"] = int64(len(artifactBytes))
+		return out2, nil
+	}
+}
+
+// resolveInBuildDir joins rel onto buildDir and refuses anything that escapes it.
+func resolveInBuildDir(buildDir, rel string) (string, error) {
+	if filepath.IsAbs(rel) {
+		return "", fmt.Errorf("artifact_output must be relative to build_dir, got %q", rel)
+	}
+	base, err := filepath.Abs(buildDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve build_dir: %w", err)
+	}
+	full := filepath.Join(base, rel)
+	if full != base && !strings.HasPrefix(full, base+string(os.PathSeparator)) {
+		return "", fmt.Errorf("artifact_output %q escapes build_dir", rel)
+	}
+	return full, nil
 }
 
 // runMakeStep is the shared implementation for test and validate steps.

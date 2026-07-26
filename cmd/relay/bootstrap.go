@@ -194,6 +194,14 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 			pipelineCfg.NewReleaseFunc(),
 			[]string{"artifact_digest", "artifact_size", "release_stdout_digest", "step_hash", "source_assertion"},
 		},
+		{
+			// Generic counterpart of the schema-specific release step: the caller
+			// names the make target and the produced file instead of the pipeline
+			// assuming source/<schema>.yaml.
+			"cic.repo.build",
+			pipelineCfg.NewRepoBuildFunc(),
+			[]string{"raw_artifact", "artifact_path", "artifact_digest", "artifact_size", "step_hash"},
+		},
 	}
 
 	for _, step := range pipelineSteps {
@@ -231,6 +239,33 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 	}
 	if err := svc.PutWorkflow(pipelineWorkflow); err != nil {
 		return fmt.Errorf("failed to register cic.schemas.pipeline workflow: %w", err)
+	}
+
+	// Generic repository CI: clone at a revision, run a make target in the builder
+	// container, sign what it produced. No schema/version, no source/<schema>.yaml.
+	//
+	// cic.source.assert and cic.schema.build are deliberately absent: those exist
+	// to validate and re-emit a developer-signed schema artifact, which a generic
+	// repository does not have. cic.repo.build hands raw_artifact straight to the
+	// signing step, and the provenance carried from the clone still reaches the
+	// verification manifest.
+	repoCIWorkflow, err := cabinet.NewWorkflow(ctx,
+		cabinet.WorkflowIdentity{Version: "1.0"},
+		cabinet.WorkflowConfig{
+			Name:        "cic.repo.ci",
+			Description: "Generic repository CI: clone, build in the builder container, sign the produced artifact.",
+			Steps: []string{
+				"cic.pipeline.start@1.0.start(input) -> start_result",
+				"cic.repo.build@1.0.build(start_result) -> artifact",
+				"cic.artifact.sign@1.0.sign(artifact) -> signed_artifact",
+			},
+		},
+		cabinet.WorkflowSigning{})
+	if err != nil {
+		return fmt.Errorf("failed to create cic.repo.ci workflow: %w", err)
+	}
+	if err := svc.PutWorkflow(repoCIWorkflow); err != nil {
+		return fmt.Errorf("failed to register cic.repo.ci workflow: %w", err)
 	}
 
 	logrus.Info("Successfully registered all native components.")

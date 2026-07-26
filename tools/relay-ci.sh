@@ -4,8 +4,13 @@
 # Turns "here is a repo and a commit" into a signed artifact, and prints the
 # values that identify it. Usually invoked as `make relay.ci`.
 #
-#   REPO_URL=https://github.com/org/repo COMMIT=<sha> \
-#   SCHEMA=postgresql VERSION=v0.18.0 ./tools/relay-ci.sh
+# Two modes, selected by which variables are set:
+#
+#   generic repository (POST /v1/repo/ci)
+#     REPO_URL=… COMMIT=<sha> ARTIFACT_OUTPUT=dist/app.bin [MAKE_TARGET=build]
+#
+#   CIC-Schemas pipeline (POST /v1/schemas/pipeline)
+#     REPO_URL=… COMMIT=<sha> SCHEMA=postgresql VERSION=v0.18.0
 #
 # Exit 0 only when the pipeline returned a signed artifact.
 set -uo pipefail
@@ -16,18 +21,33 @@ COMMIT="${COMMIT:-}"
 BRANCH="${BRANCH:-}"
 SCHEMA="${SCHEMA:-}"
 VERSION="${VERSION:-}"
+MAKE_TARGET="${MAKE_TARGET:-}"
+ARTIFACT_OUTPUT="${ARTIFACT_OUTPUT:-}"
 BUILD_DIR="${BUILD_DIR:-}"
 BUILDER_CONTAINER="${BUILDER_CONTAINER:-}"
 
 command -v jq >/dev/null || { echo "FATAL: jq is required" >&2; exit 1; }
 
+# ARTIFACT_OUTPUT selects the generic route: the caller names the file make
+# produces instead of the pipeline assuming source/<schema>.yaml.
+if [[ -n "$ARTIFACT_OUTPUT" ]]; then
+    MODE=repo
+    ENDPOINT="/v1/repo/ci"
+else
+    MODE=schema
+    ENDPOINT="/v1/schemas/pipeline"
+fi
+
 missing=()
 [[ -n "$REPO_URL" ]] || missing+=(REPO_URL)
-[[ -n "$SCHEMA"   ]] || missing+=(SCHEMA)
-[[ -n "$VERSION"  ]] || missing+=(VERSION)
+if [[ "$MODE" == "schema" ]]; then
+    [[ -n "$SCHEMA"  ]] || missing+=(SCHEMA)
+    [[ -n "$VERSION" ]] || missing+=(VERSION)
+fi
 if [[ ${#missing[@]} -gt 0 ]]; then
     echo "FATAL: missing required variables: ${missing[*]}" >&2
-    echo "  usage: REPO_URL=… SCHEMA=… VERSION=… [COMMIT=… | BRANCH=…] $0" >&2
+    echo "  generic repo : REPO_URL=… ARTIFACT_OUTPUT=… [MAKE_TARGET=…] [COMMIT=… | BRANCH=…] $0" >&2
+    echo "  schema repo  : REPO_URL=… SCHEMA=… VERSION=… [COMMIT=… | BRANCH=…] $0" >&2
     exit 1
 fi
 if [[ -z "$COMMIT" && -z "$BRANCH" ]]; then
@@ -41,20 +61,25 @@ if ! curl -fsS -o /dev/null --max-time 10 "$RELAY_URL/readyz"; then
 fi
 
 req=$(jq -n \
+  --arg mode "$MODE" \
   --arg schema "$SCHEMA" --arg version "$VERSION" \
   --arg repo "$REPO_URL" --arg branch "$BRANCH" --arg commit "$COMMIT" \
+  --arg mt "$MAKE_TARGET" --arg ao "$ARTIFACT_OUTPUT" \
   --arg bd "$BUILD_DIR" --arg bc "$BUILDER_CONTAINER" '
-  {schema: $schema, version: $version, repo_url: $repo}
+  {repo_url: $repo}
+  + (if $mode == "schema" then {schema: $schema, version: $version}
+                          else {artifact_output: $ao} end)
+  + (if $mt     != "" then {make_target: $mt} else {} end)
   + (if $branch != "" then {branch: $branch} else {} end)
   + (if $commit != "" then {commit: $commit} else {} end)
   + (if $bd     != "" then {build_dir: $bd} else {} end)
   + (if $bc     != "" then {builder_container: $bc} else {} end)')
 
-echo "--- Running pipeline (${COMMIT:-$BRANCH}) ---"
+echo "--- Running $MODE pipeline (${COMMIT:-$BRANCH}) ---"
 resp=$(mktemp); trap 'rm -f "$resp"' EXIT
 code=$(curl -s -o "$resp" -w '%{http_code}' --max-time 3600 \
   -X POST -H 'Content-Type: application/json' -d "$req" \
-  "$RELAY_URL/v1/schemas/pipeline")
+  "$RELAY_URL$ENDPOINT")
 
 if [[ "$code" != "200" ]]; then
     echo "FAILED (HTTP $code):" >&2
