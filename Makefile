@@ -3,6 +3,7 @@ SHELL := /bin/bash
 MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 
 -include mk/infra.mk
+-include mk/relay.mk
 
 # ---- Phony ----
 .PHONY: all help infra-init prepare fmt fmt-go fmt-check lint lint-go vet quality deadcode \
@@ -185,6 +186,7 @@ help: ## Show available make targets
 	@echo "  TEST_FILE=path/to/file.py  Specify a single test file."
 	@echo "  TEST_NAME=test_function    Specify a single test function."
 	@$(MAKE) infra.help
+	@$(MAKE) relay.help
 
 # =============================================================================
 # Infra / Prepare (Go build dirs)

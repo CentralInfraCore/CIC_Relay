@@ -1,0 +1,21 @@
+tags:
+  - doc
+  - pipeline
+  - container
+  - ci
+related_nodes:
+  - docs/hu/pipeline/source-provenance
+  - docs/hu/pipeline/build-process
+category:
+  - process
+  - deployment
+entrypoint: false
+used_in:
+  - build
+  - deployment
+description: |
+  Hogyan kell a relayt CI-végrehajtóként megépíteni, elindítani és vezérelni: a
+  relay image, a profil mögé tett compose szolgáltatás és a relay.* make célok.
+  Leírja a relay és a builder konténer közös build könyvtárának követelményét, a
+  két különböző Vault-hibamódot, és azt a hat indítási buktatót, amit mostantól
+  az image kezel az üzemeltető helyett.

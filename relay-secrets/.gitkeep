@@ -1,0 +1,6 @@
+Mount point for files the relay reads at runtime (default for CIC_SECRETS_DIR).
+
+Typical use: copy the Vault CA certificate here and set
+  VAULT_CACERT=/run/secrets/relay/vault-ca.crt
+
+Contents other than this file are gitignored.
