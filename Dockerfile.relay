@@ -12,7 +12,7 @@
 #   | jq '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest'
 
 # --- build ------------------------------------------------------------------
-FROM golang:1.25.12@sha256:09c6d487ccb96cac78767ef217cef33d15e9ee8c7569edbc9a3b00e3aef505d5 AS build
+FROM golang:1.25.12@sha256:dd651521feb94cf992bdab3df2fbf3f58e7415f34f02b0ead741f605a8c0f08e AS build
 
 WORKDIR /src
 
