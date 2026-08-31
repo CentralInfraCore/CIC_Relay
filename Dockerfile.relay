@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM docker:28-cli@sha256:cd58b396e427d1ee8cddcc3f3b7e8d8c2ba45755c5dd5b821b6e615e1ccf4586 AS dockercli
 
 # --- runtime ----------------------------------------------------------------
-FROM debian:bookworm-slim@sha256:63a496b5d3b99214b39f5ed70eb71a61e590a77979c79cbee4faf991f8c0783e AS runtime
+FROM debian:bookworm-slim@sha256:5ae3c39ebd15e229dcedd5cee596b2497182493d41ff162e824ba13fc1b2b867 AS runtime
 
 # git: cic.pipeline.start clones the repository under build.
 # ca-certificates: HTTPS to Vault and to remote git.
