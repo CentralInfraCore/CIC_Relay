@@ -2,6 +2,7 @@ package iac
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 )
 
@@ -22,7 +23,8 @@ func TestCanonicalNumber(t *testing.T) {
 		{json.Number("4.50"), "4.5"},
 		{json.Number("1e3"), "1000"},
 		{"16", "16"},
-		{-0.0, "0"},
+		// A real negative zero: the Go literal -0.0 is +0 (staticcheck SA4026).
+		{math.Copysign(0, -1), "0"},
 		{json.Number("-0"), "0"},
 		{json.Number("-0.0"), "0"},
 		{-7, "-7"},
