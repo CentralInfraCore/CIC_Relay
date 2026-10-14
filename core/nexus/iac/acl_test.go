@@ -99,8 +99,8 @@ func TestACL_ResolveInherit(t *testing.T) {
 func TestACLSet_Effective_KeysOnFieldID(t *testing.T) {
 	objectDefault := ACL{Owner: "alice", OwnerPerms: PermRead | PermWrite}
 	set := ACLSet{
-		"cic:compute:vm:memory": ACL{Inherit: true},                             // inherits object default
-		"cic:compute:vm:shape":  ACL{Owner: "bob", OwnerPerms: PermRead},         // own ACL
+		"cic:compute:vm:memory": ACL{Inherit: true},                      // inherits object default
+		"cic:compute:vm:shape":  ACL{Owner: "bob", OwnerPerms: PermRead}, // own ACL
 	}
 
 	// inheriting field → object default applies

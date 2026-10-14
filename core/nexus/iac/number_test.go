@@ -53,7 +53,7 @@ func TestCanonicalNumber_NonNumeric(t *testing.T) {
 func TestNormalizeNumbers_LeavesStringsAndStructure(t *testing.T) {
 	in := map[string]interface{}{
 		"n":    json.Number("4.0"),
-		"s":    "4",       // a string stays a string
+		"s":    "4", // a string stays a string
 		"b":    true,
 		"list": []interface{}{json.Number("1e1"), "x"},
 	}
