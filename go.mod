@@ -2,7 +2,7 @@ module centralrelay
 
 go 1.25.0
 
-toolchain go1.25.12
+toolchain go1.25.14
 
 require (
 	github.com/google/uuid v1.6.0
@@ -12,9 +12,9 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tetratelabs/wabin v0.0.0-20230304001439-f6f874872834
 	github.com/tetratelabs/wazero v1.9.0
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.21.0
 	golang.org/x/time v0.12.0
-	golang.org/x/tools v0.44.0
+	golang.org/x/tools v0.47.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -36,8 +36,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	golang.org/x/mod v0.35.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 )
