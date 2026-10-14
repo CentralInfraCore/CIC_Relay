@@ -7,6 +7,10 @@ set -euo pipefail
 
 ROOT="cmd/relay/testdata"
 
+# Test-fixture certificates are valid for 100 years (36500 days). A 365-day lifetime made
+# every test that verifies a chain against the real clock fail once a year.
+# The deliberately expired negative (make_expired_ee, faketime 2023-01-01) keeps its short lifetime.
+
 # --- helpers -----------------------------------------------------------------
 msg(){ printf "\033[1;32m==>\033[0m %s\n" "$*"; }
 err(){ printf "\033[1;31m[err]\033[0m %s\n" "$*" >&2; }
@@ -41,12 +45,12 @@ basicConstraints = critical, CA:true, pathlen:2
 keyUsage = critical, keyCertSign, cRLSign
 EOF
   openssl genrsa -out "$dir/root-ca.key" 4096 >/dev/null 2>&1
-  openssl req -x509 -new -days 365 -key "$dir/root-ca.key" -out "$dir/root-ca.pem" -config "$dir/openssl.cnf" >/dev/null 2>&1
+  openssl req -x509 -new -days 36500 -key "$dir/root-ca.key" -out "$dir/root-ca.pem" -config "$dir/openssl.cnf" >/dev/null 2>&1
 
   # next-year root (dual trust window demo)
   sed 's/(current)/(next)/' "$dir/openssl.cnf" >"$dir/openssl.next.cnf"
   openssl genrsa -out "$dir/root-ca.next.key" 4096 >/dev/null 2>&1
-  openssl req -x509 -new -days 730 -key "$dir/root-ca.next.key" -out "$dir/root-ca.next.pem" -config "$dir/openssl.next.cnf" >/dev/null 2>&1
+  openssl req -x509 -new -days 36500 -key "$dir/root-ca.next.key" -out "$dir/root-ca.next.pem" -config "$dir/openssl.next.cnf" >/dev/null 2>&1
 }
 
 make_company_ca(){
@@ -69,7 +73,7 @@ EOF
   openssl genrsa -out "$dir/company-ca.key" 4096 >/dev/null 2>&1
   openssl req -new -key "$dir/company-ca.key" -out "$dir/company-ca.csr" -config "$dir/ca.cnf" >/dev/null 2>&1
   openssl x509 -req -in "$dir/company-ca.csr" -CA "$rootdir/root-ca.pem" -CAkey "$rootdir/root-ca.key" -CAcreateserial \
-    -days 365 -extfile "$dir/ca.cnf" -extensions v3_intermediate -out "$dir/company-ca.pem" >/dev/null 2>&1
+    -days 36500 -extfile "$dir/ca.cnf" -extensions v3_intermediate -out "$dir/company-ca.pem" >/dev/null 2>&1
 }
 
 # Generic EE cert maker
@@ -101,7 +105,7 @@ subjectAltName = email:${cn//@/}
 EOF
   openssl genrsa -out "$dir/ee.key" 3072 >/dev/null 2>&1
   openssl req -new -key "$dir/ee.key" -out "$dir/ee.csr" -config "$dir/ee.cnf" >/dev/null 2>&1
-  openssl x509 -req -in "$dir/ee.csr" -CA "$ca_pem" -CAkey "$ca_key" -CAcreateserial -days 365 \
+  openssl x509 -req -in "$dir/ee.csr" -CA "$ca_pem" -CAkey "$ca_key" -CAcreateserial -days 36500 \
     -extfile "$dir/ee.cnf" -extensions v3_ee_ext -out "$dir/ee.pem" >/dev/null 2>&1
 }
 
