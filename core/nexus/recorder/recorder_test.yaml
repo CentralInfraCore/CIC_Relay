@@ -317,4 +317,3 @@ objects:
   - ois.Rollback
   - require.Error
   - require.NoError
-equire.NoError
