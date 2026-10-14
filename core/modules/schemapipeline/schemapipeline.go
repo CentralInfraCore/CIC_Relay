@@ -238,7 +238,9 @@ func (c *PipelineConfig) NewValidateFunc() func(context.Context, interface{}) (i
 // process, so the build toolchain stays in a container the operator controls.
 //
 // Input:  make_target (default "build"), artifact_output (required, relative to
-//         build_dir), builder_container, build_dir
+//
+//	build_dir), builder_container, build_dir
+//
 // Output: the make step's record plus raw_artifact / artifact_path / artifact_digest
 func (c *PipelineConfig) NewRepoBuildFunc() func(context.Context, interface{}) (interface{}, error) {
 	return func(ctx context.Context, input interface{}) (interface{}, error) {

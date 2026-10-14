@@ -91,26 +91,26 @@ func TestClassifyFieldValue(t *testing.T) {
 		want             FieldVerdict
 	}{
 		{
-			name: "observed + matched → CONFORMANT",
-			obs:  Observation{Observed: []string{p}},
+			name:   "observed + matched → CONFORMANT",
+			obs:    Observation{Observed: []string{p}},
 			intent: "E4.Flex", observed: "E4.Flex", ct: CompareExact,
 			intentPresent: true, want: VerdictConformant,
 		},
 		{
-			name: "observed + mismatch → DRIFT",
-			obs:  Observation{Observed: []string{p}},
+			name:   "observed + mismatch → DRIFT",
+			obs:    Observation{Observed: []string{p}},
 			intent: "E4.Flex", observed: "E3.Flex", ct: CompareExact,
 			intentPresent: true, want: VerdictDrift,
 		},
 		{
-			name: "observed + not comparable → NOT_COMPARABLE",
-			obs:  Observation{Observed: []string{p}},
+			name:   "observed + not comparable → NOT_COMPARABLE",
+			obs:    Observation{Observed: []string{p}},
 			intent: "16", observed: 16, ct: CompareExact,
 			intentPresent: true, want: VerdictNotComparable,
 		},
 		{
-			name: "numeric normalization → CONFORMANT",
-			obs:  Observation{Observed: []string{p}},
+			name:   "numeric normalization → CONFORMANT",
+			obs:    Observation{Observed: []string{p}},
 			intent: 16, observed: 16.0, ct: CompareNumeric,
 			intentPresent: true, want: VerdictConformant,
 		},
