@@ -27,25 +27,14 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - Exit
-  - Fprintf
+  calls: []
 - name: run
   kind: func
   description: ''
   references: []
   calls:
   - Close
-  - Errorf
   - Format
-  - GenerateKey
-  - HandlerFunc
-  - Itoa
-  - NewServer
-  - Now
-  - Printf
-  - Println
-  - Split
   - UTC
 - name: ociStringToSign
   kind: func
@@ -53,18 +42,12 @@ objects:
     (request-target) = "<lowercase-method> <path>"; host from the wire host; the rest
     from the request headers.
   references: []
-  calls:
-  - Fprintf
-  - String
-  - ToLower
-  - WriteByte
+  calls: []
 - name: ociAuthorization
   kind: func
   description: ociAuthorization assembles the OCI `Signature` Authorization header.
   references: []
-  calls:
-  - Join
-  - Sprintf
+  calls: []
 - name: signRSASHA256
   kind: func
   description: signRSASHA256 signs the string RSA-SHA256 with PKCS#1 v1.5 — OCI's
@@ -73,8 +56,6 @@ objects:
   references: []
   calls:
   - EncodeToString
-  - SignPKCS1v15
-  - Sum256
 - name: actuate
   kind: func
   description: 'actuate is the cic-flow.actuate step: send the request carrying the
@@ -83,8 +64,6 @@ objects:
   calls:
   - Close
   - Do
-  - NewReader
-  - NewRequest
   - Set
 - name: ociVerifyHandler
   kind: func
@@ -96,24 +75,26 @@ objects:
   - DecodeString
   - FindStringSubmatch
   - Get
-  - ReadAll
   - RequestURI
-  - Sum256
-  - VerifyPKCS1v15
-  - Write
-  - WriteHeader
 - name: b64sha
   kind: func
   description: ''
   references: []
   calls:
   - EncodeToString
-  - Sum256
 - name: signedHeaders
   kind: var
   description: signedHeaders is the OCI header set + order for body methods (POST/PUT/PATCH).
   references: []
 - name: sigParamRE
   kind: var
+  description: ''
+  references: []
+- name: keyID
+  kind: const
+  description: ''
+  references: []
+- name: host
+  kind: const
   description: ''
   references: []

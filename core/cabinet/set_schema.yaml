@@ -26,6 +26,4 @@ objects:
     deduplicating and sorting modules, and setting default options (priority defaults
     to "normal"). This ensures deterministic comparison and hashing of requests.
   references: []
-  calls:
-  - Slice
-  - TrimSpace
+  calls: []

@@ -68,7 +68,8 @@ objects:
     is surfaced as an error so the workflow step fails; the credential and any body
     contents never cross into the result.'
   references: []
-  calls: []
+  calls:
+  - Actuator.RunFlow
 - name: ErrNoActuator
   kind: var
   description: ErrNoActuator is returned by the capability when no [Actuator] is configured

@@ -16,20 +16,11 @@ objects:
   calls:
   - Action
   - Allow
-  - As
   - Authorize
-  - Fatal
-  - Fatalf
   - NewAllowlistPolicy
-  - Run
 - name: TestDenied_IsError
   kind: func
   description: ''
   references: []
   calls:
   - Error
-  - Fatalf
-- name: _
-  kind: var
-  description: AllowlistPolicy must satisfy the Policy seam.
-  references: []

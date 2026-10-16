@@ -28,7 +28,7 @@ objects:
   - cabinet.NewMemSchemaStore
   - cabinet.NewMemModuleStore
   - cabinet.NewMemWorkflowStore
-  - cabinet.WasmManagerConfigLRUCacheSize
+  - cabinet.WasmManagerConfig
   - require.NoError
   calls:
   - cabinet.NewCabinetService
@@ -77,6 +77,7 @@ objects:
   - assert.Contains
   - assert.False
   calls:
+  - Error
   - assert.Contains
   - assert.False
   - require.Error

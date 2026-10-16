@@ -23,6 +23,7 @@ objects:
   references:
   - require.NoError
   calls:
+  - Add
   - require.NoError
 - name: TestVerifyCertificateChain
   kind: func
@@ -34,6 +35,11 @@ objects:
   - assert.Contains
   - assert.NoError
   calls:
+  - Add
+  - AddCert
+  - EncodeToString
+  - Error
+  - VerifyCertificateChain
   - assert.Contains
   - assert.Error
   - assert.NoError

@@ -15,21 +15,17 @@ objects:
   references: []
   calls:
   - Allows
-  - Fatalf
-  - Run
 - name: TestACL_ResolveInherit
   kind: func
   description: ''
   references: []
   calls:
+  - ACL.Resolve
   - Allows
-  - Errorf
-  - Resolve
 - name: TestACLSet_Effective_KeysOnFieldID
   kind: func
   description: ''
   references: []
   calls:
+  - ACLSet.Effective
   - Allows
-  - Effective
-  - Errorf

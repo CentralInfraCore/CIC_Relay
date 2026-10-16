@@ -36,10 +36,7 @@ objects:
   references:
   - logrus.Logger
   calls:
-  - Errorf
-  - Getenv
   - NewUpstreamSource
-  - ParseDuration
 - name: FetchConfig
   kind: method
   receiver: UpstreamSource
@@ -48,11 +45,11 @@ objects:
     "<content>"}.'
   references:
   - logrus.Fields
-  - context.Context.Done
-  - context.Context.Err
   calls:
-  - context.Context.Done
-  - context.Context.Err
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
 - name: fetchOnce
   kind: method
   receiver: UpstreamSource
@@ -61,22 +58,25 @@ objects:
   calls:
   - Close
   - Do
-  - Errorf
   - Get
-  - NewRequestWithContext
-  - ReadAll
   - Set
 - name: parseUpstreamResponse
   kind: func
   description: parseUpstreamResponse detects JSON vs YAML from Content-Type and unmarshals
     the body as map[string]string, returning map[string][]byte.
-  references: []
+  references:
+  - yaml.Unmarshal
   calls:
-  - Contains
-  - Errorf
-  - ToLower
-  - Unmarshal
+  - yaml.Unmarshal
 - name: retryBackoff
   kind: var
+  description: ''
+  references: []
+- name: defaultUpstreamTimeout
+  kind: const
+  description: ''
+  references: []
+- name: maxRetries
+  kind: const
   description: ''
   references: []

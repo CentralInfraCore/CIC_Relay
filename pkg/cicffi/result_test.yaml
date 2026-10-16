@@ -13,23 +13,22 @@ objects:
   description: ''
   references: []
   calls:
-  - Errorf
-  - Fatal
-  - Fatalf
   - ParseRunFlowResult
 - name: TestParseRunFlowResultFailureHasNoAudit
   kind: func
   description: ''
   references: []
   calls:
-  - Errorf
-  - Fatal
-  - Fatalf
+  - ParseRunFlowResult
+- name: TestParseRunFlowResultDeniedCarriesAudit
+  kind: func
+  description: ''
+  references: []
+  calls:
   - ParseRunFlowResult
 - name: TestParseRunFlowResultRejectsGarbage
   kind: func
   description: ''
   references: []
   calls:
-  - Fatal
   - ParseRunFlowResult

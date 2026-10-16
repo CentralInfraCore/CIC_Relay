@@ -18,6 +18,8 @@ objects:
   - assert.Empty
   - assert.False
   calls:
+  - AsRef
+  - ExpandField
   - assert.Empty
   - assert.Equal
   - assert.False

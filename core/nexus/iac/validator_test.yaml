@@ -22,8 +22,7 @@ objects:
   description: ''
   references:
   - cabinet.Schema
-  calls:
-  - New
+  calls: []
 - name: PutSchema
   kind: method
   receiver: stubCabinet
@@ -83,9 +82,9 @@ objects:
   description: ''
   references:
   - types.ResourceSpec
-  - types.ResourceMetaName
-  - types.SchemaRefName
-  - types.ResourceStateDesired
+  - types.ResourceMeta
+  - types.SchemaRef
+  - types.ResourceState
   calls: []
 - name: TestIaCValidator_ValidateResource_SchemaFound
   kind: func
@@ -93,6 +92,8 @@ objects:
   references:
   - require.NoError
   calls:
+  - NewIaCValidator
+  - ValidateResource
   - require.NoError
 - name: TestIaCValidator_ValidateResource_SchemaNotFound
   kind: func
@@ -101,6 +102,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - NewIaCValidator
+  - ValidateResource
   - assert.Contains
   - require.Error
 - name: TestIaCValidator_Validate_Graph_AllValid
@@ -109,10 +113,12 @@ objects:
   references:
   - types.Graph
   - types.Service
-  - types.ServiceSpecResources
+  - types.ServiceSpec
   - types.ResourceSpec
   - require.NoError
   calls:
+  - NewIaCValidator
+  - Validate
   - require.NoError
 - name: TestIaCValidator_Validate_Graph_PartialFailure
   kind: func
@@ -120,12 +126,15 @@ objects:
   references:
   - types.Graph
   - types.Service
-  - types.ServiceSpecResources
+  - types.ServiceSpec
   - types.ResourceSpec
   - require.Error
   - assert.Contains
   - assert.NotContains
   calls:
+  - Error
+  - NewIaCValidator
+  - Validate
   - assert.Contains
   - assert.NotContains
   - require.Error
@@ -133,10 +142,12 @@ objects:
   kind: func
   description: ''
   references:
-  - types.GraphServices
+  - types.Graph
   - types.Service
   - require.NoError
   calls:
+  - NewIaCValidator
+  - Validate
   - require.NoError
 - name: TestIaCValidator_SpecStructure
   kind: func
@@ -147,6 +158,9 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - NewIaCValidator
+  - ValidateResource
   - assert.Contains
   - require.Error
   - require.NoError
@@ -154,15 +168,18 @@ objects:
   kind: func
   description: A dependency resolves iff a resource with that name exists in the graph.
   references:
-  - types.ResourceMetaName
-  - types.GraphServices
+  - types.ResourceMeta
+  - types.Graph
   - types.Service
-  - types.ServiceSpecResources
-  - types.ResourceSpecsubnet
+  - types.ServiceSpec
+  - types.ResourceSpec
   - require.NoError
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - NewIaCValidator
+  - Validate
   - assert.Contains
   - require.Error
   - require.NoError
@@ -171,15 +188,18 @@ objects:
   description: A field-level object reference resolves iff the target exists and its
     kind (when named) matches.
   references:
-  - types.ResourceMetaName
-  - types.GraphServices
+  - types.ResourceMeta
+  - types.Graph
   - types.Service
-  - types.ServiceSpecResources
-  - types.ResourceSpecrt
+  - types.ServiceSpec
+  - types.ResourceSpec
   - require.NoError
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - NewIaCValidator
+  - Validate
   - assert.Contains
   - require.Error
   - require.NoError

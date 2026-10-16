@@ -34,7 +34,10 @@ objects:
   - packages.Config
   calls:
   - Err
-  - NewScanner
-  - Println
   - Scan
   - Text
+- name: fatalf
+  kind: var
+  description: fatalf is a variable that holds the log.Fatalf function. It can be
+    replaced in tests to prevent actual program exit.
+  references: []

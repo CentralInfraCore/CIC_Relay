@@ -27,19 +27,13 @@ objects:
     repository path.
   references:
   - crypto.CryptoService
-  calls:
-  - Errorf
+  calls: []
 - name: init
   kind: method
   receiver: GitStateRecorder
   description: init ensures the repository directory and the git repository exist.
   references: []
-  calls:
-  - Errorf
-  - Join
-  - MkdirAll
-  - Stat
-  - WriteFile
+  calls: []
 - name: RecordState
   kind: method
   receiver: GitStateRecorder
@@ -74,7 +68,11 @@ objects:
     (e.g. *ois.Denied), so the caller can tell "not authorized" from a recording failure.'
   references:
   - ois.Policy
-  calls: []
+  - ois.Intent
+  - ois.Rollback
+  - ois.Policy.Authorize
+  calls:
+  - ois.Policy.Authorize
 - name: signAndCommit
   kind: method
   receiver: GitStateRecorder
@@ -84,25 +82,15 @@ objects:
     Vault, and commits. Shared by RecordState and RecordDrift.
   references: []
   calls:
-  - Errorf
   - Format
-  - Join
-  - MarshalIndent
-  - Now
   - Sign
-  - Sprintf
-  - Sum256
   - UTC
-  - WriteFile
 - name: createManifest
   kind: method
   receiver: GitStateRecorder
   description: createManifest generates a sorted list of files and their SHA256 hashes.
   references: []
-  calls:
-  - EncodeToString
-  - Strings
-  - Sum256
+  calls: []
 - name: runGit
   kind: method
   receiver: GitStateRecorder
@@ -110,19 +98,13 @@ objects:
   references: []
   calls:
   - CombinedOutput
-  - Command
-  - Errorf
-  - Join
 - name: getHeadHash
   kind: method
   receiver: GitStateRecorder
   description: getHeadHash returns the full hash of the current HEAD commit.
   references: []
   calls:
-  - Command
-  - Errorf
   - Output
-  - TrimSpace
 - name: VerifyChain
   kind: method
   receiver: GitStateRecorder
@@ -135,10 +117,6 @@ objects:
     verifies; the signing key never leaves Vault.
   references: []
   calls:
-  - Errorf
-  - MarshalIndent
-  - Sum256
-  - Unmarshal
   - Verify
 - name: listCommits
   kind: method
@@ -146,19 +124,13 @@ objects:
   description: listCommits returns all commit hashes oldest-to-newest.
   references: []
   calls:
-  - Command
-  - Errorf
   - Output
-  - Split
-  - TrimSpace
 - name: showFileAtCommit
   kind: method
   receiver: GitStateRecorder
   description: showFileAtCommit returns the content of file as it existed at commit.
   references: []
   calls:
-  - Command
-  - Errorf
   - Output
 - name: parentOf
   kind: method
@@ -167,6 +139,4 @@ objects:
     root.
   references: []
   calls:
-  - Command
   - Output
-  - TrimSpace

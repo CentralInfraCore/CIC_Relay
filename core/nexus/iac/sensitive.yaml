@@ -50,8 +50,7 @@ objects:
   description: 'ValidateValue enforces the secret type boundary: a secret field must
     hold a SecretRef (never plaintext), and a non-secret field must not hold a SecretRef.'
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: AllowsBackup
   kind: method
   receiver: SensitivePolicy
@@ -75,5 +74,33 @@ objects:
     element secrets are a later round.)
   references: []
   calls:
-  - Errorf
   - ValidateValue
+- name: SensitiveNone
+  kind: const
+  description: SensitiveNone — an ordinary value; a SecretRef is forbidden.
+  references: []
+- name: SensitiveSecret
+  kind: const
+  description: SensitiveSecret — the value is a secret; only a SecretRef is permitted.
+  references: []
+- name: ExposureLocal
+  kind: const
+  description: ExposureLocal — plaintext may exist only within the local custody boundary.
+  references: []
+- name: ExposureRemote
+  kind: const
+  description: ExposureRemote — plaintext never leaves custody; only a capability
+    handle is exposed.
+  references: []
+- name: BackupTransit
+  kind: const
+  description: BackupTransit — the secret may be re-wrapped for transit.
+  references: []
+- name: BackupStore
+  kind: const
+  description: BackupStore — the secret may be persisted (as ciphertext) at rest.
+  references: []
+- name: BackupRestore
+  kind: const
+  description: BackupRestore — the secret may be restored from a backup.
+  references: []

@@ -45,7 +45,7 @@ objects:
     are intentionally ignored (they are observed state, not drift).
   references: []
   calls:
-  - ClassifyFieldValue
+  - Observation.ClassifyFieldValue
   - SpecDigest
 - name: aggregate
   kind: func
@@ -60,7 +60,6 @@ objects:
   references: []
   calls:
   - ElementKey
-  - Strings
 - name: resolvePath
   kind: func
   description: resolvePath walks a canonical path ("/a/b", or "/list/{key=val}/field")
@@ -77,3 +76,16 @@ objects:
   - canonicaljson.ToJSON
   calls:
   - canonicaljson.ToJSON
+- name: ObjConformant
+  kind: const
+  description: ObjConformant — every planned field is CONFORMANT or OBSERVED_ABSENT.
+  references: []
+- name: ObjDrift
+  kind: const
+  description: ObjDrift — at least one field is DRIFT or NOT_COMPARABLE.
+  references: []
+- name: ObjIncomplete
+  kind: const
+  description: ObjIncomplete — no drift, but at least one planned field was UNOBSERVED,
+    so full conformance cannot be claimed.
+  references: []

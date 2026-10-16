@@ -17,6 +17,8 @@ objects:
   references:
   - assert.Equal
   calls:
+  - Middleware
+  - ServeHTTP
   - assert.Equal
 - name: TestIPRateLimiter_BlocksWhenExhausted
   kind: func
@@ -24,6 +26,8 @@ objects:
   references:
   - assert.True
   calls:
+  - Middleware
+  - ServeHTTP
   - assert.True
 - name: TestIPRateLimiter_IsolatesPerIP
   kind: func
@@ -31,6 +35,8 @@ objects:
   references:
   - assert.Equal
   calls:
+  - Middleware
+  - ServeHTTP
   - assert.Equal
 - name: TestConcurrentLimiter_AllowsUnderCap
   kind: func
@@ -38,6 +44,8 @@ objects:
   references:
   - assert.Equal
   calls:
+  - Middleware
+  - ServeHTTP
   - assert.Equal
 - name: TestConcurrentLimiter_BlocksWhenFull
   kind: func
@@ -45,6 +53,8 @@ objects:
   references:
   - assert.Equal
   calls:
+  - Middleware
+  - ServeHTTP
   - assert.Equal
 - name: TestIPRateLimiter_InvalidRemoteAddr
   kind: func
@@ -52,6 +62,8 @@ objects:
   references:
   - assert.Equal
   calls:
+  - Middleware
+  - ServeHTTP
   - assert.Equal
 - name: TestConcurrentLimiter_ReleasesSlotAfterRequest
   kind: func
@@ -59,6 +71,8 @@ objects:
   references:
   - assert.Equal
   calls:
+  - Middleware
+  - ServeHTTP
   - assert.Equal
 - name: okHandler
   kind: var

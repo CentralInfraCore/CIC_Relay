@@ -24,6 +24,9 @@ objects:
   - assert.Equal
   - require.Len
   calls:
+  - NewGitStateRecorder
+  - NewWorkflowRecorder
+  - Record
   - assert.Equal
   - cabinet.ProofFromActuation
   - cabinet.ProofTraceStepFromActuation

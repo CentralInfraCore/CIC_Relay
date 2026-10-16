@@ -16,5 +16,7 @@ objects:
   - assert.Equal
   - assert.Empty
   calls:
+  - Collection.ElementKey
+  - ElementKey
   - assert.Empty
   - assert.Equal

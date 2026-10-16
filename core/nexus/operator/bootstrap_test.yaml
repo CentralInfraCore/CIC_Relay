@@ -28,6 +28,7 @@ objects:
   - logrus.Logger
   - logrus.New
   calls:
+  - SetOutput
   - logrus.New
 - name: TestBootstrapHost_Valid
   kind: func
@@ -39,6 +40,9 @@ objects:
   - assert.NotEmpty
   - assert.True
   calls:
+  - After
+  - BootstrapHost
+  - NewBootstrapper
   - assert.Equal
   - assert.NotEmpty
   - assert.True
@@ -52,6 +56,9 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - BootstrapHost
+  - Error
+  - NewBootstrapper
   - assert.Contains
   - assert.Error
   - assert.Nil
@@ -62,6 +69,8 @@ objects:
   - require.NoError
   - assert.NotNil
   calls:
+  - BootstrapHost
+  - NewBootstrapper
   - assert.NotNil
   - require.NoError
 - name: TestBootstrapHost_RecorderError_NonFatal
@@ -72,6 +81,8 @@ objects:
   - require.NoError
   - assert.NotNil
   calls:
+  - BootstrapHost
+  - NewBootstrapper
   - assert.NotNil
   - require.NoError
 - name: TestBootstrapToken_TTL
@@ -81,6 +92,9 @@ objects:
   - require.NotNil
   - assert.WithinDuration
   calls:
+  - Add
+  - BootstrapHost
+  - NewBootstrapper
   - assert.WithinDuration
   - require.NotNil
 - name: TestValidateToken_Valid
@@ -90,6 +104,9 @@ objects:
   - require.NotNil
   - assert.NoError
   calls:
+  - BootstrapHost
+  - NewBootstrapper
+  - ValidateToken
   - assert.NoError
   - require.NotNil
 - name: TestValidateToken_Expired
@@ -99,6 +116,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Add
+  - Error
+  - NewBootstrapper
+  - UTC
+  - ValidateToken
   - assert.Contains
   - assert.Error
 - name: TestValidateToken_InvalidHMAC
@@ -108,6 +130,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Add
+  - Error
+  - NewBootstrapper
+  - UTC
+  - ValidateToken
   - assert.Contains
   - assert.Error
 - name: TestValidateToken_Nil
@@ -116,6 +143,8 @@ objects:
   references:
   - assert.Error
   calls:
+  - NewBootstrapper
+  - ValidateToken
   - assert.Error
 - name: TestComputeHMAC_Deterministic
   kind: func

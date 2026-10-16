@@ -17,6 +17,7 @@ objects:
   references:
   - require.NoError
   calls:
+  - CombinedOutput
   - require.NoError
 - name: TestExecGitOps_CloneAndStatus
   kind: func
@@ -26,6 +27,11 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
+  - Clone
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - Status
   - assert.Empty
   - require.NoError
 - name: TestExecGitOps_UnknownRepo
@@ -36,6 +42,10 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Status
   - assert.Contains
   - require.Error
 - name: TestHardenedEnv
@@ -46,6 +56,10 @@ objects:
   - require.NoError
   - assert.True
   calls:
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - Status
   - assert.True
   - require.NoError
 - name: TestParsePortcelainStatus
@@ -68,6 +82,11 @@ objects:
   - assert.Equal
   - assert.True
   calls:
+  - Clone
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - SetObsSinks
   - assert.Equal
   - assert.True
   - require.NoError
@@ -81,6 +100,11 @@ objects:
   - require.NotEmpty
   - assert.Equal
   calls:
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - SetObsSinks
+  - Status
   - assert.Equal
   - require.NotEmpty
 - name: TestExecGitOps_SetObsSinks_NilSafe
@@ -90,6 +114,11 @@ objects:
   references:
   - assert.NotPanics
   calls:
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - SetObsSinks
+  - Status
   - assert.NotPanics
 - name: TestExecGitOps_Fetch_UnknownRepo
   kind: func
@@ -97,6 +126,9 @@ objects:
   references:
   - require.Error
   calls:
+  - Fetch
+  - NewExecGitOps
+  - NewRepoRegistry
   - require.Error
 - name: TestExecGitOps_Checkout_UnknownRepo
   kind: func
@@ -104,6 +136,9 @@ objects:
   references:
   - require.Error
   calls:
+  - Checkout
+  - NewExecGitOps
+  - NewRepoRegistry
   - require.Error
 - name: TestExecGitOps_Commit_UnknownRepo
   kind: func
@@ -111,6 +146,9 @@ objects:
   references:
   - require.Error
   calls:
+  - Commit
+  - NewExecGitOps
+  - NewRepoRegistry
   - require.Error
 - name: TestExecGitOps_Push_UnknownRepo
   kind: func
@@ -118,6 +156,9 @@ objects:
   references:
   - require.Error
   calls:
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Push
   - require.Error
 - name: TestExecGitOps_Fetch_Success
   kind: func
@@ -125,6 +166,11 @@ objects:
   references:
   - require.NoError
   calls:
+  - Clone
+  - Fetch
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
   - require.NoError
 - name: TestExecGitOps_Checkout_Success
   kind: func
@@ -132,6 +178,11 @@ objects:
   references:
   - require.NoError
   calls:
+  - Checkout
+  - Clone
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
   - require.NoError
 - name: TestExecGitOps_Commit_Success
   kind: func
@@ -140,6 +191,11 @@ objects:
   - require.NoError
   - assert.Len
   calls:
+  - Clone
+  - Commit
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
   - assert.Len
   - require.NoError
 - name: TestExecGitOps_Push_Success
@@ -148,4 +204,11 @@ objects:
   references:
   - require.NoError
   calls:
+  - Clone
+  - CombinedOutput
+  - Commit
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Push
+  - Register
   - require.NoError

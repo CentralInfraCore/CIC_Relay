@@ -34,9 +34,9 @@ objects:
     one call per field path, carrying the field''s comparator and both sides'' values.'
   references: []
   calls:
-  - ClassifyField
   - Compare
-  - Coverage
+  - Observation.ClassifyField
+  - Observation.Coverage
 - name: canonicalEqual
   kind: func
   description: canonicalEqual reports whether two values have identical canonical-JSON
@@ -58,7 +58,6 @@ objects:
     a big.Rat for representation-independent equality. bool is deliberately not numeric.
   references: []
   calls:
-  - SetFloat64
   - SetInt64
   - SetUint64
   - String
@@ -74,3 +73,15 @@ objects:
   description: reflectUint widens any unsigned integer kind to uint64.
   references: []
   calls: []
+- name: CompareExact
+  kind: const
+  description: 'CompareExact — structural canonical equality: the two values match
+    iff their canonical-JSON encodings are identical. Values of different JSON kinds
+    (string vs object, number vs list, …) are NOT comparable.'
+  references: []
+- name: CompareNumeric
+  kind: const
+  description: 'CompareNumeric — numeric equality with representation normalization:
+    1, 1.0, 1e0 and "1" are equal. Values that are not numeric on both sides are NOT
+    comparable.'
+  references: []

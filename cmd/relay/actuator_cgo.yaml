@@ -18,6 +18,14 @@ objects:
     is linked.'
   implements: []
   references: []
+- name: RunFlow
+  kind: method
+  receiver: ffiActuator
+  description: RunFlow delegates to the cgo bridge.
+  references:
+  - cicffi.RunFlow
+  calls:
+  - cicffi.RunFlow
 - name: newActuator
   kind: func
   description: newActuator returns the FFI-backed actuator, so registerNativeComponents

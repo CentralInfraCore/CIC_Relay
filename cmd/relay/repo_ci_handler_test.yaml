@@ -1,0 +1,182 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: postRepoCI
+  kind: func
+  description: postRepoCI sends body (marshalled to JSON) to the handler and returns
+    the recorder.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: captureSetx
+  kind: func
+  description: captureSetx makes the mock accept any Setx call, store the payload
+    and return an empty success.
+  references:
+  - cabinet.SetPayload
+  - mock.Anything
+  - mock.Arguments
+  - cabinet.SetResponse
+  - mock.Arguments.Get
+  calls:
+  - Return
+  - Run
+  - mock.Arguments.Get
+  - mockCabinetService.On
+- name: validRepoCIBody
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestRepoCIHandler_MethodNotAllowed
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestRepoCIHandler_ReadBodyError
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestRepoCIHandler_BodyTooLarge
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestRepoCIHandler_InvalidJSON
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestRepoCIHandler_MissingFields
+  kind: func
+  description: 'Every rejected request must stop before the workflow runs: the mock
+    has no Setx expectation, so an unexpected call panics.'
+  references:
+  - assert.Equal
+  - mock.Anything
+  calls:
+  - assert.Equal
+  - mockCabinetService.AssertNotCalled
+- name: TestRepoCIHandler_Success
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponse
+  - cabinet.ProofTrace
+  - require.Equal
+  - assert.Equal
+  - require.NoError
+  - require.True
+  - require.NotNil
+  calls:
+  - Bytes
+  - Get
+  - Header
+  - Return
+  - assert.Equal
+  - mock.MatchedBy
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On
+  - require.Equal
+  - require.NoError
+  - require.NotNil
+  - require.True
+- name: TestRepoCIHandler_OptionalFieldsOmittedWhenUnset
+  kind: func
+  description: Optional fields are forwarded only when the caller set them.
+  references:
+  - require.Equal
+  - require.NotNil
+  - assert.False
+  calls:
+  - assert.False
+  - require.Equal
+  - require.NotNil
+- name: TestRepoCIHandler_OptionalFieldsForwarded
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Equal
+- name: TestRepoCIHandler_CommitOnlyIsAccepted
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Equal
+- name: TestRepoCIHandler_RequestOverridesConfig
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Equal
+- name: TestRepoCIHandler_NoConfigDefaultsNoBuildFields
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - assert.False
+  calls:
+  - assert.False
+  - require.Equal
+- name: TestRepoCIHandler_SourceDigest
+  kind: func
+  description: 'SourceDigest anchors the proof trace: a pinned commit wins, then the
+    relay''s own SourceTreeHash, then its CommitHash.'
+  references:
+  - require.Equal
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Equal
+- name: TestRepoCIHandler_Timeout
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - cabinet.ErrTimeout
+  - assert.Equal
+  calls:
+  - Return
+  - assert.Equal
+  - mockCabinetService.On
+- name: TestRepoCIHandler_InternalError
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.Equal
+  calls:
+  - Return
+  - assert.Equal
+  - mockCabinetService.On

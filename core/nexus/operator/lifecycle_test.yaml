@@ -27,6 +27,8 @@ objects:
   - assert.True
   - assert.Equal
   calls:
+  - BootstrapHost
+  - OnboardHost
   - assert.Equal
   - assert.NoError
   - assert.True
@@ -39,6 +41,10 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Add
+  - Error
+  - OnboardHost
+  - UTC
   - assert.Contains
   - assert.Error
 - name: TestOnboardHost_InvalidHMAC
@@ -47,6 +53,9 @@ objects:
   references:
   - assert.Error
   calls:
+  - Add
+  - OnboardHost
+  - UTC
   - assert.Error
 - name: TestOffboardHost_Active
   kind: func
@@ -58,6 +67,9 @@ objects:
   - assert.False
   - assert.NotNil
   calls:
+  - BootstrapHost
+  - OffboardHost
+  - OnboardHost
   - assert.False
   - assert.NoError
   - assert.NotNil
@@ -70,6 +82,8 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
+  - OffboardHost
   - assert.Contains
   - assert.Error
 - name: TestOffboardHost_RecorderError_NonFatal
@@ -80,6 +94,9 @@ objects:
   - require.NoError
   - assert.NoError
   calls:
+  - BootstrapHost
+  - OffboardHost
+  - OnboardHost
   - assert.NoError
   - require.NoError
 - name: TestHostRegistry_IsolatesHosts
@@ -90,6 +107,12 @@ objects:
   - assert.True
   - assert.False
   calls:
+  - BootstrapHost
+  - NewBootstrapper
+  - NewHostRegistry
+  - NewLifecycleManager
+  - OffboardHost
+  - OnboardHost
   - assert.False
   - assert.True
   - require.NoError

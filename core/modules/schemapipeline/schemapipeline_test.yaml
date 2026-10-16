@@ -19,6 +19,23 @@ objects:
   description: ''
   implements: []
   references: []
+- name: captureRunner
+  kind: struct
+  description: captureRunner captures the last call's args for inspection.
+  implements: []
+  references: []
+- name: fileCreatingRunner
+  kind: struct
+  description: fileCreatingRunner simulates a git clone by writing a file to buildDir.
+  implements: []
+  references: []
+- name: brokenSymlinkRunner
+  kind: struct
+  description: brokenSymlinkRunner creates a broken symlink in buildDir during clone.
+    filepath.WalkDir calls the function for the symlink (isDir=false), then os.ReadFile
+    fails on it — covering the line 394 error path.
+  implements: []
+  references: []
 - name: gitAndRealFileRunner
   kind: struct
   description: gitAndRealFileRunner creates schema.yaml AND a .git dir during clone.
@@ -29,8 +46,7 @@ objects:
   receiver: mockRunner
   description: ''
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: expectNext
   kind: method
   receiver: mockRunner
@@ -48,56 +64,412 @@ objects:
   description: ''
   references:
   - schemapipeline.PipelineConfig
-  - require.ErrorContains
-  calls:
-  - require.ErrorContains
-- name: TestStart_CloneFailure
-  kind: func
-  description: ''
-  references:
-  - schemapipeline.PipelineConfigBuildDir
   - require.NoError
-  - assert.True
-  - assert.NotEqual
+  - require.True
+  - assert.Equal
+  - assert.NotEmpty
+  - schemapipeline.PipelineConfig.NewStartFunc
   calls:
-  - assert.NotEqual
-  - assert.True
+  - assert.Equal
+  - assert.NotEmpty
   - require.NoError
-- name: TestStart_ComputesTreeDigest_GitDirSkipped
+  - require.True
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_MissingRepoURL
   kind: func
   description: ''
   references:
   - schemapipeline.PipelineConfig
   - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
   calls:
   - require.ErrorContains
-- name: TestStart_MissingVersion
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_MissingBranchAndCommit
   kind: func
   description: ''
   references:
-  - schemapipeline.PipelineConfigBuildDir
+  - schemapipeline.PipelineConfig
   - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
   calls:
   - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_CommitWithoutBranchPassesValidation
+  kind: func
+  description: A commit alone is a complete revision spec — no branch needed.
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NotContains
+  - require.NotEmpty
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - Error
+  - require.NotContains
+  - require.NotEmpty
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_CommitTakesFullCloneAndChecksOut
+  kind: func
+  description: With a commit the clone must not be shallow/branch-pinned — a --depth
+    1 --branch clone can only ever reach that branch's tip — and the commit has to
+    be checked out explicitly. This is what makes build_hash attest the requested
+    revision rather than whatever the branch happened to point at.
+  references:
+  - schemapipeline.PipelineConfig
+  - require.Contains
+  - require.NotContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - require.Contains
+  - require.NotContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_WithoutCommitStaysShallow
+  kind: func
+  description: Without a commit the cheaper shallow branch clone is kept.
+  references:
+  - schemapipeline.PipelineConfig
+  - require.Contains
+  - require.NotContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - require.Contains
+  - require.NotContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_CloneFailure
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestTest_Success
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NoError
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.NotEqual
+  - schemapipeline.PipelineConfig.NewTestFunc
+  calls:
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.NotEqual
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewTestFunc
+- name: TestTest_Failure
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewTestFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewTestFunc
+- name: TestTest_MissingContainer
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewTestFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewTestFunc
+- name: TestValidate_Success
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NoError
+  - assert.Equal
+  - schemapipeline.PipelineConfig.NewValidateFunc
+  calls:
+  - assert.Equal
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewValidateFunc
+- name: TestValidate_Failure
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewValidateFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewValidateFunc
+- name: TestRelease_Success
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - schemapipeline.PipelineConfig
+  - assert.Equal
+  - assert.NotEmpty
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  calls:
+  - assert.Equal
+  - assert.NotEmpty
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+- name: TestRelease_MakeFailure
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+- name: TestRelease_ArtifactMissing
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+- name: TestRelease_VersionStripsV
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - schemapipeline.PipelineConfig
+  - assert.Contains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  calls:
+  - assert.Contains
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+- name: Run
+  kind: method
+  receiver: captureRunner
+  description: ''
+  references: []
+  calls: []
+- name: TestValidateStepHash_Deterministic
+  kind: func
+  description: 'TestValidateStepHash_Deterministic verifies that sortedKeys produces
+    a stable sorted order on every call: the same input must yield an identical step_hash
+    across repeated invocations. Go randomises map iteration per range, so any mutation
+    that breaks the sort (disabled inner loop, reversed comparison, wrong swap indices)
+    will produce a different hash on at least one iteration.'
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NoError
+  - require.NotEmpty
+  - assert.Equal
+  - schemapipeline.PipelineConfig.NewValidateFunc
+  calls:
+  - assert.Equal
+  - require.NoError
+  - require.NotEmpty
+  - schemapipeline.PipelineConfig.NewValidateFunc
+- name: TestValidateStepHash_GoldenValue
+  kind: func
+  description: 'TestValidateStepHash_GoldenValue asserts the exact step_hash for a
+    known input. This kills mutations that sort keys in the wrong order (e.g. reversed
+    comparison): any wrong sort produces a different Merkle root.'
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NoError
+  - assert.Equal
+  - schemapipeline.PipelineConfig.NewValidateFunc
+  calls:
+  - assert.Equal
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewValidateFunc
+- name: TestOSCommandRunner_Run_Success
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.OSCommandRunner
+  - require.NoError
+  - assert.Equal
+  - assert.Contains
+  - schemapipeline.OSCommandRunner.Run
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - require.NoError
+  - schemapipeline.OSCommandRunner.Run
+- name: TestOSCommandRunner_Run_NonZeroExit
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.OSCommandRunner
+  - require.NoError
+  - assert.Equal
+  - schemapipeline.OSCommandRunner.Run
+  calls:
+  - assert.Equal
+  - require.NoError
+  - schemapipeline.OSCommandRunner.Run
+- name: TestOSCommandRunner_Run_WithDir
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.OSCommandRunner
+  - require.NoError
+  - assert.Equal
+  - assert.NotEmpty
+  - schemapipeline.OSCommandRunner.Run
+  calls:
+  - assert.Equal
+  - assert.NotEmpty
+  - require.NoError
+  - schemapipeline.OSCommandRunner.Run
+- name: Run
+  kind: method
+  receiver: fileCreatingRunner
+  description: ''
+  references: []
+  calls: []
+- name: TestStart_ComputesTreeDigest_NonEmpty
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NoError
+  - assert.True
+  - assert.NotEqual
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - assert.NotEqual
+  - assert.True
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_ComputesTreeDigest_GitDirSkipped
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NoError
+  - assert.NotEmpty
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - assert.NotEmpty
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStepHashChangesAcrossSteps
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - assert.NotEqual
+  - schemapipeline.PipelineConfig.NewTestFunc
+  - schemapipeline.PipelineConfig.NewValidateFunc
+  calls:
+  - assert.NotEqual
+  - schemapipeline.PipelineConfig.NewTestFunc
+  - schemapipeline.PipelineConfig.NewValidateFunc
+- name: TestPipelineConfig_DefaultRunner
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - schemapipeline.PipelineConfig.NewTestFunc
+  calls:
+  - schemapipeline.PipelineConfig.NewTestFunc
+- name: TestStart_SchemaAndVersionAreOptional
+  kind: func
+  description: schema/version belong to the CIC-Schemas pipeline, which reads the
+    released artifact from source/<schema>.yaml. A generic repository CI run has no
+    such concept, so the clone step must not demand them; the steps that need them
+    validate on their own.
+  references:
+  - schemapipeline.PipelineConfig
+  - require.NotContains
+  - require.Contains
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - Error
+  - require.Contains
+  - require.NotContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestStart_MissingBuildDir
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
 - name: TestStart_RevParseError
   kind: func
   description: ''
   references:
-  - schemapipeline.PipelineConfigBuildDir
-  - require.Error
-  - assert.Contains
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
   calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestRelease_MissingSchema
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+- name: TestRelease_MissingVersion
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+- name: TestRelease_MissingBuildDir
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+- name: Run
+  kind: method
+  receiver: brokenSymlinkRunner
+  description: ''
+  references: []
+  calls: []
+- name: TestStart_ComputesTreeDigest_UnreadableFile
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.Error
+  - assert.Contains
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - Error
   - assert.Contains
   - require.Error
+  - schemapipeline.PipelineConfig.NewStartFunc
 - name: Run
   kind: method
   receiver: gitAndRealFileRunner
   description: ''
   references: []
-  calls:
-  - Join
-  - MkdirAll
-  - WriteFile
+  calls: []
 - name: TestStart_ComputesTreeDigest_GitDirExcluded
   kind: func
   description: TestStart_ComputesTreeDigest_GitDirExcluded verifies that .git content
@@ -106,8 +478,87 @@ objects:
     stop skipping .git → different hash → test fails.
   references:
   - schemapipeline.PipelineConfig
+  - require.NoError
+  - assert.Equal
+  - schemapipeline.PipelineConfig.NewStartFunc
+  calls:
+  - assert.Equal
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewStartFunc
+- name: TestOSCommandRunner_Run_NonExistentBinary
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.OSCommandRunner
   - assert.Equal
   - assert.Error
+  - schemapipeline.OSCommandRunner.Run
   calls:
   - assert.Equal
   - assert.Error
+  - schemapipeline.OSCommandRunner.Run
+- name: TestRepoBuild_RequiresArtifactOutput
+  kind: func
+  description: ''
+  references:
+  - schemapipeline.PipelineConfig
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+  calls:
+  - require.ErrorContains
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+- name: TestRepoBuild_RejectsPathEscape
+  kind: func
+  description: artifact_output arrives from the request, so it must not be able to
+    name a file outside the build directory.
+  references:
+  - schemapipeline.PipelineConfig
+  - require.Error
+  - require.Regexp
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+  calls:
+  - Error
+  - require.Error
+  - require.Regexp
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+- name: TestRepoBuild_RunsMakeTargetAndReadsArtifact
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - schemapipeline.PipelineConfig
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.Contains
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - assert.NotEmpty
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+- name: TestRepoBuild_DefaultsToBuildTarget
+  kind: func
+  description: Without make_target the step defaults to `make build`.
+  references:
+  - require.NoError
+  - schemapipeline.PipelineConfig
+  - assert.Contains
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+  calls:
+  - assert.Contains
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+- name: TestRepoBuild_CarriesProvenance
+  kind: func
+  description: Provenance resolved by the clone step must survive into the signing
+    step — that is what makes verification_root identify the revision that was built.
+  references:
+  - require.NoError
+  - schemapipeline.PipelineConfig
+  - assert.Equal
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+  calls:
+  - assert.Equal
+  - require.NoError
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc

@@ -16,17 +16,11 @@ objects:
     Accepts schema constraint on each workflow step's input data.
   references: []
   calls:
-  - Background
-  - Fatal
-  - Fatalf
   - ID
-  - Is
-  - New
   - NewMemModuleStore
   - NewMemSchemaStore
   - NewMemWorkflowStore
   - NewModuleDescriptor
   - NewWorkflow
   - Put
-  - Run
   - Setx

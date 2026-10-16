@@ -14,16 +14,13 @@ objects:
   description: ''
   references: []
   calls:
-  - Fatalf
   - FromRaw
   - Kind
-  - Run
 - name: TestValue_AccessorsAreKindGuarded
   kind: func
   description: ''
   references: []
   calls:
-  - Errorf
   - FromRaw
   - Number
   - Ref
@@ -36,8 +33,6 @@ objects:
   references: []
   calls:
   - Digest
-  - Errorf
-  - Fatal
   - Kind
   - NullValue
   - Object
@@ -48,15 +43,89 @@ objects:
   references: []
   calls:
   - Digest
-  - Errorf
   - FromRaw
-  - Number
 - name: TestNode_Validate_SecretTypeBoundary
   kind: func
   description: ''
   references: []
   calls:
-  - Errorf
   - SecretRefValue
   - StringValue
   - Validate
+- name: TestValueKind_String
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - String
+  - ValueKind
+- name: TestValue_BoolAndListAccessorsAreKindGuarded
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Bool
+  - BoolValue
+  - Kind
+  - List
+  - ListValue
+  - NullValue
+  - Object
+  - ObjectValue
+  - StringValue
+- name: TestNumberValue
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Number
+  - NumberValue
+- name: TestFromRaw_NumericKindsAndFallback
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - FromRaw
+  - Kind
+  - Number
+  - Str
+- name: TestValue_Raw
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - BoolValue
+  - FromRaw
+  - NullValue
+  - ObjectRefValue
+  - Raw
+  - SecretRefValue
+  - StringValue
+  - ValueKind
+- name: TestValue_RawFromRawKeepsReferenceKinds
+  kind: func
+  description: 'Raw() and FromRaw() are inverses for the reference kinds: a ref must
+    not decay into an ordinary object (and a secret ref must not become one) on the
+    way back.'
+  references: []
+  calls:
+  - FromRaw
+  - Kind
+  - ObjectRefValue
+  - Raw
+  - SecretRefValue
+- name: TestValue_Digest_KindsAreDistinct
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Digest
+  - FromRaw
+  - NullValue
+  - StringValue
+- name: TestValue_Digest_InvalidNumberIsAnError
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Digest

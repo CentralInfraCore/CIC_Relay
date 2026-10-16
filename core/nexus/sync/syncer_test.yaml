@@ -15,6 +15,7 @@ objects:
   references:
   - require.NoError
   calls:
+  - Run
   - require.NoError
 - name: createCommitsOnBranch
   kind: func
@@ -22,6 +23,7 @@ objects:
   references:
   - require.NoError
   calls:
+  - Run
   - require.NoError
 - name: TestGitSyncer_SyncDaily_Success
   kind: func
@@ -32,6 +34,11 @@ objects:
   - assert.Contains
   - assert.Error
   calls:
+  - Format
+  - NewGitSyncer
+  - Output
+  - Run
+  - SyncDaily
   - assert.Contains
   - assert.Equal
   - assert.Error
@@ -42,6 +49,10 @@ objects:
   references:
   - require.NoError
   calls:
+  - Format
+  - NewGitSyncer
+  - Run
+  - SyncDaily
   - require.NoError
 - name: TestGitSyncer_SyncDaily_WithRemote
   kind: func
@@ -50,6 +61,11 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
+  - Format
+  - NewGitSyncer
+  - Output
+  - Run
+  - SyncDaily
   - assert.Contains
   - require.NoError
 - name: TestGitSyncer_SyncDaily_Errors
@@ -59,6 +75,10 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
+  - Format
+  - NewGitSyncer
+  - SyncDaily
   - assert.Contains
   - assert.Error
 - name: TestGitSyncer_SyncDaily_FallbackBranch
@@ -66,11 +86,8 @@ objects:
   description: ''
   references: []
   calls:
-  - Background
-  - Date
   - Format
   - NewGitSyncer
-  - Sprintf
   - SyncDaily
 - name: TestGitSyncer_SyncDaily_CommitFails
   kind: func
@@ -78,6 +95,8 @@ objects:
   references:
   - assert.Error
   calls:
+  - NewGitSyncer
+  - SyncDaily
   - assert.Error
 - name: TestGitSyncer_SyncDaily_PruneFails
   kind: func
@@ -86,5 +105,8 @@ objects:
   - require.NoError
   - assert.Error
   calls:
+  - Format
+  - NewGitSyncer
+  - SyncDaily
   - assert.Error
   - require.NoError

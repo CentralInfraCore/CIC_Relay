@@ -60,16 +60,12 @@ objects:
   description: 'labelsFor builds the sorted label set for a point: Resource.Component
     (if set) plus every Attrs entry.'
   references: []
-  calls:
-  - Slice
+  calls: []
 - name: seriesKey
   kind: func
   description: ''
   references: []
-  calls:
-  - String
-  - WriteByte
-  - WriteString
+  calls: []
 - name: newSeries
   kind: func
   description: ''
@@ -106,31 +102,25 @@ objects:
     onto the Prometheus metric-name charset ([a-zA-Z_:][a-zA-Z0-9_:]*).
   references: []
   calls:
-  - NewReplacer
   - Replace
 - name: formatFloat
   kind: func
   description: 'formatFloat renders v the way Prometheus expects: the shortest round-trippable
     decimal representation.'
   references: []
-  calls:
-  - FormatFloat
+  calls: []
 - name: formatLabels
   kind: func
   description: formatLabels renders labels as a Prometheus label-set suffix, e.g.
     `{component="cicwasm",module_id="x"}`, or "" when there are none.
   references: []
-  calls:
-  - Fprintf
-  - String
-  - WriteByte
+  calls: []
 - name: printf
   kind: method
   receiver: errWriter
   description: ''
   references: []
-  calls:
-  - Fprintf
+  calls: []
 - name: WritePrometheus
   kind: method
   receiver: PrometheusSink
@@ -140,5 +130,4 @@ objects:
   references: []
   calls:
   - Lock
-  - Slice
   - Unlock

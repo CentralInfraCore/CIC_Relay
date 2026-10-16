@@ -21,9 +21,7 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - Exit
-  - Fprintf
+  calls: []
 - name: run
   kind: func
   description: ''
@@ -31,6 +29,10 @@ objects:
   - cicffi.RunFlow
   - cicffi.ParseRunFlowResult
   calls:
+  - Close
+  - DecodeString
+  - EncodeToString
+  - Get
   - cicffi.ParseRunFlowResult
   - cicffi.RunFlow
 - name: short

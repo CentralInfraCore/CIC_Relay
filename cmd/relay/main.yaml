@@ -39,12 +39,7 @@ objects:
     with sensible defaults.
   references:
   - cabinet.MaxWASMModuleSize
-  calls:
-  - Atoi
-  - Errorf
-  - Getenv
-  - ParseDuration
-  - ParseInt
+  calls: []
 - name: emitTrace
   kind: method
   receiver: relayServer
@@ -73,19 +68,16 @@ objects:
   kind: func
   description: 'writeError writes a uniform JSON error response with the specified
     HTTP status code. Response format: {"error":"<msg>","code":"<code>"}.'
-  references:
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  references: []
   calls:
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  - Encode
+  - Set
 - name: newMux
   kind: func
   description: newMux creates a new HTTP multiplexer and registers all relay API routes.
   references: []
   calls:
   - HandleFunc
-  - NewServeMux
 - name: rootHandler
   kind: method
   receiver: relayServer
@@ -93,40 +85,40 @@ objects:
   references:
   - uuid.New
   - logrus.Fields
-  - http.ResponseWriter.Header
   calls:
-  - http.ResponseWriter.Header
+  - Info
+  - Set
+  - String
+  - WithFields
   - uuid.New
 - name: healthzHandler
   kind: method
   receiver: relayServer
   description: healthzHandler serves the health check endpoint.
-  references:
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  references: []
   calls:
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  - Encode
+  - Set
 - name: readyzHandler
   kind: method
   receiver: relayServer
   description: readyzHandler serves the readiness check endpoint.
-  references:
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  references: []
   calls:
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  - Encode
+  - Set
 - name: metricsHandler
   kind: method
   receiver: relayServer
   description: metricsHandler serves the in-process aggregated metrics (relay.requests.total,
     relay.wasm.*_duration_ms, relay.git.op_duration_ms, …) in Prometheus text exposition
     format. Responds 503 if no PrometheusSink is configured.
-  references:
-  - http.ResponseWriter.Header
+  references: []
   calls:
-  - http.ResponseWriter.Header
+  - Error
+  - Set
+  - WithError
+  - WritePrometheus
 - name: setHandler
   kind: method
   receiver: relayServer
@@ -141,15 +133,23 @@ objects:
   - cabinet.IsTimeout
   - cabinet.IsInvalid
   - obs.LogRecord
-  - obs.ExecutionContextWorkflowID
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  - obs.ExecutionContext
   calls:
+  - Close
+  - Encode
+  - Error
+  - Format
+  - Info
+  - Set
+  - String
+  - UTC
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
   - cabinet.IsInvalid
   - cabinet.IsTimeout
   - cabinet.NewAPI
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
   - uuid.New
 - name: validateConfig
   kind: func
@@ -161,6 +161,7 @@ objects:
   references:
   - cabinet.ValidateSchema
   calls:
+  - String
   - cabinet.ValidateSchema
 - name: loadSecretsFromVault
   kind: func
@@ -171,9 +172,9 @@ objects:
     (default "cic-dev-sign-key"), CIC_AUDIT_REPO_PATH (default "/var/lib/cic-relay/audit").'
   references:
   - logrus.Logger
+  - logrus.Logger.Warn
   calls:
-  - Getenv
-  - Warn
+  - logrus.Logger.Warn
 - name: buildRecorderOption
   kind: func
   description: buildRecorderOption constructs a cabinet.WithRecorder option from the
@@ -185,8 +186,14 @@ objects:
   - cabinet.WithRecorder
   - recorder.NewWorkflowRecorder
   - logrus.Fields
+  - logrus.Logger.WithError
+  - logrus.Logger.WithFields
   calls:
+  - Info
+  - Warn
   - cabinet.WithRecorder
+  - logrus.Logger.WithError
+  - logrus.Logger.WithFields
   - recorder.NewWorkflowRecorder
 - name: buildOperatorIfConfigured
   kind: func
@@ -213,12 +220,28 @@ objects:
   - operator.NewOperatorWithLifecycle
   - iac.NewIaCValidator
   - logrus.Fields
+  - logrus.Logger.Warn
+  - logrus.Logger.Fatal
+  - logrus.Logger.WithError
+  - logrus.Logger.WithFields
   calls:
+  - Fatal
+  - Info
+  - Load
+  - NewCabinetActivator
+  - Warn
+  - WithActivator
+  - WithGraph
+  - WithValidator
   - iac.NewFileSource
   - iac.NewGitSource
   - iac.NewIaCValidator
   - iac.NewLoader
   - iac.NewUpstreamSourceFromEnv
+  - logrus.Logger.Fatal
+  - logrus.Logger.Warn
+  - logrus.Logger.WithError
+  - logrus.Logger.WithFields
   - operator.NewBootstrapper
   - operator.NewHostRegistry
   - operator.NewLifecycleManager
@@ -229,8 +252,9 @@ objects:
   description: run is a separate function to avoid calling main() in unit tests
   references:
   - logrus.Logger
+  - logrus.Logger.Printf
   calls:
-  - Printf
+  - logrus.Logger.Printf
 - name: main
   kind: func
   description: ''
@@ -258,6 +282,19 @@ objects:
   - merkle.GoRuntimeDigest
   - obs.Resource
   calls:
+  - Close
+  - Debug
+  - Fatal
+  - Info
+  - Register
+  - Run
+  - SetFormatter
+  - SetObsSinks
+  - String
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
   - cabinet.NewCabinetService
   - cabinet.NewMemModuleStore
   - cabinet.NewMemSchemaStore
@@ -274,6 +311,26 @@ objects:
   - obs.NewMultiMetricSink
   - obs.NewPrometheusSink
   - uuid.New
+- name: BuildID
+  kind: var
+  description: ''
+  references: []
+- name: CommitHash
+  kind: var
+  description: ''
+  references: []
+- name: Timestamp
+  kind: var
+  description: ''
+  references: []
+- name: SourceTreeHash
+  kind: var
+  description: ''
+  references: []
+- name: BuilderImageDigest
+  kind: var
+  description: ''
+  references: []
 - name: listenAndServe
   kind: var
   description: 'test seam: can be overridden in unit tests'

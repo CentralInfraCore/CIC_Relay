@@ -31,6 +31,12 @@ objects:
   - nexusgit.GitOps
   - wazero.Runtime.NewHostModuleBuilder
   calls:
+  - Export
+  - Instantiate
+  - NewFunctionBuilder
+  - WithFunc
+  - WithParameterNames
+  - WithResultNames
   - wazero.Runtime.NewHostModuleBuilder
 - name: makeCloneFn
   kind: func
@@ -40,6 +46,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Clone
   calls:
+  - Error
   - nexusgit.GitOps.Clone
 - name: makeFetchFn
   kind: func
@@ -50,6 +57,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Fetch
   calls:
+  - Error
   - nexusgit.GitOps.Fetch
 - name: makeCheckoutFn
   kind: func
@@ -59,6 +67,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Checkout
   calls:
+  - Error
   - nexusgit.GitOps.Checkout
 - name: makeCommitFn
   kind: func
@@ -69,6 +78,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Commit
   calls:
+  - Error
   - nexusgit.GitOps.Commit
 - name: makePushFn
   kind: func
@@ -79,6 +89,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Push
   calls:
+  - Error
   - nexusgit.GitOps.Push
 - name: makeStatusFn
   kind: func
@@ -89,6 +100,7 @@ objects:
   - api.Module
   - nexusgit.GitOps.Status
   calls:
+  - Error
   - nexusgit.GitOps.Status
 - name: gitReadJSON
   kind: func
@@ -98,6 +110,7 @@ objects:
   - api.Module
   - api.Module.Memory
   calls:
+  - Read
   - api.Module.Memory
 - name: gitWriteJSON
   kind: func
@@ -107,6 +120,7 @@ objects:
   - api.Module
   - api.Module.Memory
   calls:
+  - Write
   - api.Module.Memory
 - name: gitWriteError
   kind: func

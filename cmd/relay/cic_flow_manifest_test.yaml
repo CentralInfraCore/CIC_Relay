@@ -65,6 +65,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - assert.Equal
   - assert.Len
@@ -80,6 +81,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - require.NoError
@@ -92,6 +94,7 @@ objects:
   - assert.Contains
   - assert.Error
   calls:
+  - Error
   - assert.Contains
   - assert.Error
   - require.Error
@@ -107,10 +110,6 @@ objects:
   - assert.Equal
   - assert.False
   - assert.True
-- name: _
-  kind: var
-  description: ensure keyResolver stays type-compatible with the signer interface.
-  references: []
 - name: ociProjectYAML
   kind: const
   description: A project.yaml shaped like cic-module-oracle-cloud's.

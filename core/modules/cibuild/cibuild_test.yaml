@@ -18,6 +18,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - assert.Equal
   - require.Error
@@ -46,6 +47,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - Execute
   - assert.Contains
   - require.Error
 - name: TestExecute_WrongInputType
@@ -55,6 +58,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - Execute
   - assert.Contains
   - require.Error
 - name: TestExecute_MakeFails
@@ -65,6 +70,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - Execute
   - assert.Contains
   - require.Error
   - require.NoError
@@ -77,6 +84,7 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   calls:
+  - Execute
   - assert.Equal
   - assert.NotEmpty
   - require.NoError

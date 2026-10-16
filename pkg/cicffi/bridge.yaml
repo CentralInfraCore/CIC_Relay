@@ -14,7 +14,8 @@ objects:
 - name: ABIVersion
   kind: func
   description: ABIVersion returns the C-ABI version of the linked cic-ffi staticlib.
-  references: []
+  references:
+  - C.cic_ffi_abi_version
   calls: []
 - name: CheckABI
   kind: func
@@ -23,7 +24,6 @@ objects:
   references: []
   calls:
   - ABIVersion
-  - New
 - name: invoke
   kind: func
   description: 'invoke runs one airlock call: it hands `in` to a C export `fn`, copies
@@ -31,14 +31,21 @@ objects:
     when the export returned null/empty (its rejection or empty signal), so no Rust
     memory is retained by the caller.'
   references:
+  - C.uchar
+  - C.size_t
+  - C.cic_ffi_free
   - C.GoBytes
+  - C.int
   calls:
   - C.GoBytes
 - name: Ping
   kind: func
   description: Ping sends bytes across the FFI boundary into the Rust airlock and
     returns the echoed bytes (the linkability smoke test). Empty input yields nil.
-  references: []
+  references:
+  - C.uchar
+  - C.size_t
+  - C.cic_ffi_ping
   calls: []
 - name: ConnectionRequest
   kind: func
@@ -46,9 +53,11 @@ objects:
     a JSON {"subject": ..., "scope": [...]} document via the Rust core, returning
     the canonical JSON (deduplicated, sorted scope). It returns an error when the
     Rust core rejected the input (malformed JSON or an empty subject).'
-  references: []
-  calls:
-  - New
+  references:
+  - C.uchar
+  - C.size_t
+  - C.cic_ffi_connection_request
+  calls: []
 - name: RunFlow
   kind: func
   description: RunFlow runs the end-to-end trust-flow PoC entirely inside Rust and
@@ -61,9 +70,11 @@ objects:
     or {"ok":false,"error":".."} if the flow ran but failed (policy/HTTP). It returns
     an error only when the Rust core rejected the input (malformed JSON or a missing/empty
     required field).
-  references: []
-  calls:
-  - New
+  references:
+  - C.uchar
+  - C.size_t
+  - C.cic_ffi_run_flow
+  calls: []
 - name: ExpectedABIVersion
   kind: const
   description: ExpectedABIVersion is the C-ABI version this Go package is written

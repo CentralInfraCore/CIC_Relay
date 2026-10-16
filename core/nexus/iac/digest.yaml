@@ -23,6 +23,7 @@ objects:
   references:
   - canonicaljson.ToJSON
   calls:
+  - ExpandSpec
   - canonicaljson.ToJSON
 - name: toPlainValue
   kind: func
@@ -32,4 +33,6 @@ objects:
     expanded [Field]s) into maps without triggering the canonical encoder's lossy
     struct path.
   references: []
-  calls: []
+  calls:
+  - Decode
+  - UseNumber

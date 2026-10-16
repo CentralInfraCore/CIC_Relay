@@ -35,11 +35,7 @@ objects:
   - types.Host
   - types.Service
   - types.BaseComponent
+  - yaml.Unmarshal
   calls:
-  - Dir
-  - Errorf
-  - Ext
   - FetchConfig
-  - Join
-  - ToLower
-  - Unmarshal
+  - yaml.Unmarshal

@@ -13,8 +13,7 @@ objects:
   description: NewWorkflow constructs a ManagedEntity-conformant Workflow with validated
     checksum.
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: ID
   kind: method
   receiver: Workflow

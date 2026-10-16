@@ -43,4 +43,3 @@ objects:
   references: []
   calls:
   - Decrypt
-  - Errorf

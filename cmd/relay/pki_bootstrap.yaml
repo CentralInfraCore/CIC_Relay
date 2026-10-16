@@ -17,26 +17,29 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  - logrus.Logger.WithFields
   calls:
-  - Getenv
-  - TrimSpace
   - Warn
-  - WithFields
+  - logrus.Logger.WithFields
 - name: bootstrapPKI
   kind: func
-  description: 'bootstrapPKI loads the CA trust store based on trustMode. dev  → loads
+  description: 'bootstrapPKI loads the CA trust store based on trustMode. dev → loads
     CICDeveloperCA + rootCA from embeddedPKI; TrustStoreLoaded=true prod → scaffold:
     CICPlatformCA not embedded; returns empty pool with WARN Any other value returns
     an error.'
   references:
   - logrus.Logger
   - logrus.Fields
+  - logrus.Logger.WithFields
   calls:
   - AppendCertsFromPEM
-  - Errorf
-  - Getenv
   - Info
-  - NewCertPool
-  - ReadFile
-  - TrimSpace
-  - WithFields
+  - logrus.Logger.WithFields
+- name: TrustModeDev
+  kind: const
+  description: ''
+  references: []
+- name: TrustModeProd
+  kind: const
+  description: ''
+  references: []

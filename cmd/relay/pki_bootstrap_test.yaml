@@ -49,6 +49,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
 - name: TestBootstrapPKI_ProdMode_WithBundle
@@ -59,6 +60,7 @@ objects:
   - assert.True
   - assert.NotNil
   calls:
+  - ReadFile
   - assert.NotNil
   - assert.True
   - require.NoError
@@ -69,6 +71,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
 - name: TestBootstrapPKI_UnknownMode_Error
@@ -78,6 +81,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
 - name: TestBootstrapPKI_DevMode_LoadError
@@ -87,5 +91,6 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error

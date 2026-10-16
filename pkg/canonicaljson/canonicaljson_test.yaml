@@ -18,8 +18,7 @@ objects:
   receiver: failingWriter
   description: ''
   references: []
-  calls:
-  - New
+  calls: []
 - name: TestToJSON_DataTypes
   kind: func
   description: ''
@@ -28,6 +27,7 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - ToJSON
   - assert.Equal
   - assert.Error
   - require.NoError
@@ -47,5 +47,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - SetToJSONMock
+  - ToJSON
+  - ToJSONOriginal
   - assert.Equal
   - require.NoError

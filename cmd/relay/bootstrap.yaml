@@ -57,7 +57,7 @@ objects:
   - schemacompile.ArtifactSigner
   - cabinet.NativeFunctions
   - cabinet.CoreEcho
-  - cabinet.BaseBlockName
+  - cabinet.BaseBlock
   - cabinet.NewModuleDescriptor
   - cibuild.Execute
   - schemacompile.CertVerifyFunc
@@ -67,15 +67,19 @@ objects:
   - schemacompile.BuildSchema
   - schemacompile.NewSignArtifactFunc
   - cabinet.NewWorkflow
-  - cabinet.WorkflowIdentityVersion
+  - cabinet.WorkflowIdentity
   - cabinet.WorkflowConfig
   - cabinet.WorkflowSigning
   - certselfsigned.Generate
   - schemapipeline.PipelineConfig
-  - cabinet.NativeFunctionsfuncName
   - logrus.Info
   - cabinet.Cabinet.PutModule
   - cabinet.Cabinet.PutWorkflow
+  - schemapipeline.PipelineConfig.NewStartFunc
+  - schemapipeline.PipelineConfig.NewTestFunc
+  - schemapipeline.PipelineConfig.NewValidateFunc
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
   calls:
   - cabinet.Cabinet.PutModule
   - cabinet.Cabinet.PutWorkflow
@@ -85,6 +89,11 @@ objects:
   - logrus.Info
   - schemacompile.NewAssertSourceFunc
   - schemacompile.NewSignArtifactFunc
+  - schemapipeline.PipelineConfig.NewReleaseFunc
+  - schemapipeline.PipelineConfig.NewRepoBuildFunc
+  - schemapipeline.PipelineConfig.NewStartFunc
+  - schemapipeline.PipelineConfig.NewTestFunc
+  - schemapipeline.PipelineConfig.NewValidateFunc
 - name: registerHTTPCapability
   kind: func
   description: registerHTTPCapability registers the `http@1.0` native capability backed
@@ -113,9 +122,9 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
+  - logrus.Logger.Info
   calls:
-  - Errorf
-  - Info
+  - logrus.Logger.Info
 - name: loadInstalledComponents
   kind: func
   description: loadInstalledComponents loads components from a given filesystem path.
@@ -124,16 +133,13 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
+  - logrus.Logger.WithField
   calls:
-  - DirFS
   - Error
-  - Errorf
   - Info
   - IsDir
-  - IsNotExist
-  - Stat
   - Warn
-  - WithField
+  - logrus.Logger.WithField
 - name: loadComponentsFromFS
   kind: func
   description: loadComponentsFromFS walks a filesystem and loads all valid components.
@@ -141,46 +147,52 @@ objects:
   - cabinet.Cabinet
   - logrus.Logger
   - logrus.Fields
+  - yaml.Unmarshal
+  - logrus.Logger.WithFields
+  - logrus.Logger.WithField
   calls:
-  - Errorf
-  - Ext
-  - IsDir
-  - ReadFile
-  - Unmarshal
-  - WalkDir
   - Warn
-  - WithField
-  - WithFields
+  - logrus.Logger.WithField
+  - logrus.Logger.WithFields
+  - yaml.Unmarshal
 - name: loadSchema
   kind: func
   description: loadSchema unmarshals a Schema from YAML content and registers it with
     the cabinet service.
   references:
   - cabinet.Cabinet
+  - yaml.Unmarshal
   - cabinet.NewSchema
   - logrus.WithField
   - cabinet.Cabinet.GetSchema
   - cabinet.Cabinet.PutSchema
   calls:
+  - ID
+  - Info
   - cabinet.Cabinet.GetSchema
   - cabinet.Cabinet.PutSchema
   - cabinet.NewSchema
   - logrus.WithField
+  - yaml.Unmarshal
 - name: loadWorkflow
   kind: func
   description: loadWorkflow unmarshals a Workflow from YAML content and registers
     it with the cabinet service.
   references:
   - cabinet.Cabinet
+  - yaml.Unmarshal
   - cabinet.NewWorkflow
   - logrus.WithField
   - cabinet.Cabinet.GetWorkflow
   - cabinet.Cabinet.PutWorkflow
   calls:
+  - ID
+  - Info
   - cabinet.Cabinet.GetWorkflow
   - cabinet.Cabinet.PutWorkflow
   - cabinet.NewWorkflow
   - logrus.WithField
+  - yaml.Unmarshal
 - name: loadModule
   kind: func
   description: loadModule unmarshals a Module from YAML content, verifies its WASM
@@ -188,19 +200,34 @@ objects:
   references:
   - cabinet.Cabinet
   - logrus.Logger
+  - yaml.Unmarshal
   - logrus.Fields
   - cabinet.VerifyOptions
   - cabinet.VerifyCertificateChain
   - cabinet.NewModuleDescriptor
   - logrus.WithField
+  - logrus.Logger.WithFields
   - cabinet.Cabinet.GetModule
   - cabinet.Cabinet.PutModule
   calls:
+  - Error
+  - ID
+  - Info
+  - Size
+  - String
+  - Sum
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
+  - Write
   - cabinet.Cabinet.GetModule
   - cabinet.Cabinet.PutModule
   - cabinet.NewModuleDescriptor
   - cabinet.VerifyCertificateChain
+  - logrus.Logger.WithFields
   - logrus.WithField
+  - yaml.Unmarshal
 - name: loadPKIAssets
   kind: func
   description: loadPKIAssets loads X.509 certificates and CRLs from a filesystem path
@@ -209,27 +236,19 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  - logrus.Logger.Debug
+  - logrus.Logger.WithField
+  - logrus.Logger.WithFields
+  - logrus.Logger.Info
   calls:
   - AddCert
-  - Debug
-  - Decode
-  - EncodeToString
-  - Errorf
-  - Info
-  - Is
   - IsDir
-  - Join
   - Name
-  - New
-  - NewCertPool
-  - ParseCertificate
-  - ParseRevocationList
-  - ReadDir
-  - ReadFile
   - String
   - Sum
-  - Sum256
   - Warn
-  - WithField
-  - WithFields
   - Write
+  - logrus.Logger.Debug
+  - logrus.Logger.Info
+  - logrus.Logger.WithField
+  - logrus.Logger.WithFields

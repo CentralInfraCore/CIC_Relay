@@ -19,6 +19,7 @@ objects:
   - require.Error
   - assert.EqualError
   calls:
+  - NewWorkflow
   - assert.EqualError
   - assert.Error
   - assert.ErrorIs

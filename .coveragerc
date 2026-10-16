@@ -9,10 +9,6 @@ omit =
     tests/*
     */conftest.py
 
-# NOTE: tools/go_ast_extract.py is intentionally NOT omitted. It is genuinely
-# uncovered by the tests/ suite (its tests live in the currently-unwired
-# tools/test_go_ast_extract.py). Leaving it measured keeps that gap visible and
-# is the main lever to ratchet cov-fail-under upward once those tests are wired in.
 
 [report]
 show_missing = True

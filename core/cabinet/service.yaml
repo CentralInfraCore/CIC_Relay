@@ -80,8 +80,7 @@ objects:
 - name: GetModule
   kind: method
   receiver: executionContext
-  description: GetModule retrieves a ModuleDescriptor by ID, returning ErrNotFound
-    if not present.
+  description: GetModule retrieves a materialized module from the context.
   references: []
   calls: []
 - name: StoreModule
@@ -90,7 +89,7 @@ objects:
   description: StoreModule stores a newly materialized module in the context.
   references: []
   calls:
-  - ID
+  - ModuleDescriptor.ID
 - name: WithRecorder
   kind: func
   description: WithRecorder sets an optional ExecutionRecorder on the service. If
@@ -112,10 +111,8 @@ objects:
     and WasmManager configuration.
   references: []
   calls:
-  - Errorf
   - Format
   - NewWasmManager
-  - Now
   - UTC
 - name: Setx
   kind: method
@@ -127,6 +124,33 @@ objects:
   - logrus.WithFields
   - logrus.Fields
   calls:
+  - Call
+  - Close
+  - ComputeChainHashV1
+  - Elem
+  - Format
+  - Get
+  - ID
+  - In
+  - Init
+  - Interface
+  - IsNil
+  - Kind
+  - NewExecutionContext
+  - NewHostInstance
+  - Notify
+  - NumIn
+  - NumOut
+  - Out
+  - ParseExecutionGraph
+  - Process
+  - Record
+  - Set
+  - Type
+  - UTC
+  - Warn
+  - cabinetService.GetModule
+  - cabinetService.GetWorkflow
   - logrus.WithFields
 - name: Close
   kind: method
@@ -140,8 +164,7 @@ objects:
   description: isWasmTimeout checks whether a WASM errorResult string signals a timeout.
     The cicwasm layer encodes timeouts as {"code":"TIMEOUT",...}.
   references: []
-  calls:
-  - Unmarshal
+  calls: []
 - name: PutSchema
   kind: method
   receiver: cabinetService

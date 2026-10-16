@@ -138,7 +138,6 @@ objects:
   - ObjectRefValue
   - ObjectValue
   - SecretRefValue
-  - Sprintf
   - StringValue
 - name: Raw
   kind: method
@@ -146,7 +145,8 @@ objects:
   description: Raw converts a [Value] back into a plain interface{} tree, for interop
     with the existing layers. Numbers become json.Number in canonical form.
   references: []
-  calls: []
+  calls:
+  - Raw
 - name: Digest
   kind: method
   receiver: Value
@@ -155,6 +155,7 @@ objects:
   references:
   - canonicaljson.ToJSON
   calls:
+  - Value.Raw
   - canonicaljson.ToJSON
 - name: Validate
   kind: method
@@ -164,11 +165,43 @@ objects:
     field''s value must not be a secret reference. This is the structural form of
     [SensitivePolicy.ValidateValue] — the kind cannot lie.'
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: String
   kind: method
   receiver: ValueKind
   description: String renders a ValueKind for diagnostics.
   references: []
   calls: []
+- name: KindNull
+  kind: const
+  description: KindNull is an explicit null (distinct from an absent object key).
+  references: []
+- name: KindBool
+  kind: const
+  description: KindBool is a boolean.
+  references: []
+- name: KindNumber
+  kind: const
+  description: KindNumber is a number, stored as its canonical decimal token.
+  references: []
+- name: KindString
+  kind: const
+  description: KindString is a string.
+  references: []
+- name: KindList
+  kind: const
+  description: KindList is an ordered list of values.
+  references: []
+- name: KindObject
+  kind: const
+  description: KindObject is a string-keyed map of values.
+  references: []
+- name: KindObjectRef
+  kind: const
+  description: KindObjectRef is a reference to another resource ([FieldRef]).
+  references: []
+- name: KindSecretRef
+  kind: const
+  description: KindSecretRef is a capability handle to a secret ([SecretRef]) — never
+    plaintext.
+  references: []

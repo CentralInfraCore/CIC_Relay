@@ -33,9 +33,7 @@ objects:
     and dependencies that point at a resource not present in the graph.'
   references:
   - types.Graph
-  calls:
-  - Errorf
-  - Join
+  calls: []
 - name: ValidateResource
   kind: method
   receiver: IaCValidator
@@ -44,8 +42,7 @@ objects:
     integrity needs the whole graph and is only checked by [IaCValidator.Validate].
   references:
   - types.ResourceSpec
-  calls:
-  - Join
+  calls: []
 - name: resolveSchema
   kind: method
   receiver: IaCValidator
@@ -53,9 +50,8 @@ objects:
     error on failure.
   references:
   - types.ResourceSpec
-  - cabinet.GetSchema
   calls:
-  - cabinet.GetSchema
+  - GetSchema
 - name: validateSpecStructure
   kind: func
   description: 'validateSpecStructure expands the resource spec into canonical fields
@@ -66,17 +62,14 @@ objects:
   references:
   - types.ResourceSpec
   calls:
-  - Errorf
   - ExpandSpec
-  - Join
 - name: resourceRef
   kind: func
   description: resourceRef renders a stable "service/x resource/y" (or "resource/y")
     label.
   references:
   - types.ResourceSpec
-  calls:
-  - Sprintf
+  calls: []
 - name: resolveFieldRefs
   kind: func
   description: 'resolveFieldRefs resolves every object-reference field in the resource''s
@@ -87,9 +80,7 @@ objects:
   - types.ResourceSpec
   calls:
   - AsRef
-  - Errorf
   - ExpandSpec
-  - Join
 - name: resourceIndex
   kind: func
   description: resourceIndex maps every resource name across all services to its kind

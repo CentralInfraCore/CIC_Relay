@@ -26,12 +26,28 @@ objects:
     the cabinet NativeFunc signature: func(context.Context, interface{}) (interface{},
     error)'
   references: []
-  calls: []
+  calls:
+  - Add
+  - Format
+  - UTC
 - name: parseInput
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
-  - Marshal
-  - Unmarshal
+  calls: []
+- name: generateKey
+  kind: var
+  description: ''
+  references: []
+- name: generateSerial
+  kind: var
+  description: ''
+  references: []
+- name: createCertificate
+  kind: var
+  description: ''
+  references: []
+- name: marshalECPrivateKey
+  kind: var
+  description: ''
+  references: []

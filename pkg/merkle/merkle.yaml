@@ -2,7 +2,7 @@
 package: merkle
 description: 'Package merkle implements a deterministic binary Merkle tree used for
   computing the final verification hash of a CIC build provenance manifest. Domain
-  separation: Leaf node:  SHA256(0x00 || name || 0x1f || value) Inner node: SHA256(0x01
+  separation: Leaf node: SHA256(0x00 || name || 0x1f || value) Inner node: SHA256(0x01
   || left || right) Odd-count levels duplicate the last element before pairing. Empty
   tree returns SHA256("empty").'
 tags: []
@@ -17,7 +17,6 @@ objects:
     value is silently replaced with NullMarker.
   references: []
   calls:
-  - New
   - Sum
   - Write
 - name: NodeHash
@@ -25,7 +24,6 @@ objects:
   description: NodeHash combines two child hashes into a parent inner-node hash.
   references: []
   calls:
-  - New
   - Sum
   - Write
 - name: MerkleRoot
@@ -36,18 +34,32 @@ objects:
   references: []
   calls:
   - NodeHash
-  - Sum256
 - name: HexMerkleRoot
   kind: func
   description: HexMerkleRoot returns the lowercase hex-encoded Merkle root.
   references: []
   calls:
-  - EncodeToString
   - MerkleRoot
 - name: SizeLeaf
   kind: func
   description: SizeLeaf encodes an int64 as a decimal string leaf (no leading zeros).
   references: []
   calls:
-  - FormatInt
   - LeafHash
+- name: NullMarker
+  kind: const
+  description: NullMarker replaces empty or missing field values to keep the tree
+    structure stable regardless of which fields are populated.
+  references: []
+- name: leafPrefix
+  kind: const
+  description: ''
+  references: []
+- name: nodePrefix
+  kind: const
+  description: ''
+  references: []
+- name: fieldSep
+  kind: const
+  description: ''
+  references: []

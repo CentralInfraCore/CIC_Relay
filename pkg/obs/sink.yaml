@@ -34,3 +34,33 @@ objects:
   - RecordCounter
   - RecordGauge
   - RecordHistogram
+- name: RecordTrace
+  kind: method
+  receiver: NoopSink
+  description: ''
+  references: []
+  calls: []
+- name: RecordLog
+  kind: method
+  receiver: NoopSink
+  description: ''
+  references: []
+  calls: []
+- name: RecordCounter
+  kind: method
+  receiver: NoopSink
+  description: ''
+  references: []
+  calls: []
+- name: RecordGauge
+  kind: method
+  receiver: NoopSink
+  description: ''
+  references: []
+  calls: []
+- name: RecordHistogram
+  kind: method
+  receiver: NoopSink
+  description: ''
+  references: []
+  calls: []

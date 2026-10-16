@@ -1,13 +1,12 @@
 ---
 package: schemapipeline
 description: 'Package schemapipeline implements the four-step CIC-Schemas build pipeline
-  as native relay modules. Workflow steps (in order): cic.pipeline.start@1.0    —
-  git clone + branch, record source_ref + tree_digest cic.pipeline.test@1.0     —
-  make test in the builder container cic.pipeline.validate@1.0 — make validate in
-  the builder container cic.pipeline.release@1.0  — make release, read signed artifact
-  from source/ The output of release feeds directly into cic.source.assert@1.0 as
-  source_assertion. Every step adds its own merkle leaf (step_hash) to the carry-over
-  map.'
+  as native relay modules. Workflow steps (in order): cic.pipeline.start@1.0 — git
+  clone + branch, record source_ref + tree_digest cic.pipeline.test@1.0 — make test
+  in the builder container cic.pipeline.validate@1.0 — make validate in the builder
+  container cic.pipeline.release@1.0 — make release, read signed artifact from source/
+  The output of release feeds directly into cic.source.assert@1.0 as source_assertion.
+  Every step adds its own merkle leaf (step_hash) to the carry-over map.'
 tags:
 - core
 category: []
@@ -40,10 +39,7 @@ objects:
   description: Run executes name with args in dir (empty = caller's cwd).
   references: []
   calls:
-  - As
   - CombinedOutput
-  - CommandContext
-  - ExitCode
 - name: runner
   kind: method
   receiver: PipelineConfig
@@ -59,7 +55,8 @@ objects:
     branch, schema, version. Optional: build_dir (overrides PipelineConfig.BuildDir
     per-request).'
   references: []
-  calls: []
+  calls:
+  - Run
 - name: NewTestFunc
   kind: method
   receiver: PipelineConfig
@@ -75,13 +72,34 @@ objects:
     + exit_code.
   references: []
   calls: []
+- name: NewRepoBuildFunc
+  kind: method
+  receiver: PipelineConfig
+  description: 'NewRepoBuildFunc returns the cic.repo.build@1.0 native function. The
+    schema pipeline is CIC-Schemas-shaped: it demands schema/version and reads the
+    released artifact from a fixed source/<schema>.yaml. This step is the generic
+    counterpart — the caller names the make target and the file that make produces,
+    and the result is handed to cic.artifact.sign as raw_artifact. Like test/validate
+    it runs inside the builder container, not in the relay process, so the build toolchain
+    stays in a container the operator controls. Input: make_target (default "build"),
+    artifact_output (required, relative to build_dir), builder_container, build_dir
+    Output: the make step''s record plus raw_artifact / artifact_path / artifact_digest'
+  references: []
+  calls: []
+- name: resolveInBuildDir
+  kind: func
+  description: resolveInBuildDir joins rel onto buildDir and refuses anything that
+    escapes it.
+  references: []
+  calls: []
 - name: runMakeStep
   kind: method
   receiver: PipelineConfig
   description: runMakeStep is the shared implementation for test and validate steps.
     It runs `make <target>` inside the builder container and records the result.
   references: []
-  calls: []
+  calls:
+  - Run
 - name: NewReleaseFunc
   kind: method
   receiver: PipelineConfig
@@ -90,7 +108,8 @@ objects:
     the signed artifact from <build_dir>/source/<schema>.yaml and returns it as source_assertion
     for cic.source.assert.
   references: []
-  calls: []
+  calls:
+  - Run
 - name: computeStepHash
   kind: func
   description: computeStepHash returns a Merkle root over the step's named leaves.
@@ -120,25 +139,13 @@ objects:
     where the build directory always lives on the same host filesystem.'
   references: []
   calls:
-  - EncodeToString
-  - IsDir
-  - IsNotExist
-  - Name
-  - New
-  - ReadFile
-  - Rel
-  - Stat
   - Sum
-  - Sum256
-  - WalkDir
   - Write
 - name: digestString
   kind: func
   description: digestString returns the lowercase hex SHA-256 of s.
   references: []
-  calls:
-  - EncodeToString
-  - Sum256
+  calls: []
 - name: copyMap
   kind: func
   description: copyMap shallow-copies a map[string]interface{}.

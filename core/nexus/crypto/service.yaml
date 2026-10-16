@@ -34,6 +34,8 @@ objects:
   - api.DefaultConfig
   - api.NewClient
   calls:
+  - ReadEnvironment
+  - Token
   - api.DefaultConfig
   - api.NewClient
 - name: Sign
@@ -45,9 +47,7 @@ objects:
   references: []
   calls:
   - EncodeToString
-  - Errorf
   - Logical
-  - Sprintf
   - WriteWithContext
 - name: SignOCI
   kind: method
@@ -61,10 +61,7 @@ objects:
   references: []
   calls:
   - EncodeToString
-  - Errorf
-  - LastIndexByte
   - Logical
-  - Sprintf
   - WriteWithContext
 - name: Verify
   kind: method
@@ -75,9 +72,7 @@ objects:
   references: []
   calls:
   - EncodeToString
-  - Errorf
   - Logical
-  - Sprintf
   - WriteWithContext
 - name: Decrypt
   kind: method
@@ -87,9 +82,7 @@ objects:
   references: []
   calls:
   - DecodeString
-  - Errorf
   - Logical
-  - Sprintf
   - WriteWithContext
 - name: HealthCheck
   kind: method
@@ -97,6 +90,5 @@ objects:
   description: HealthCheck pings the Vault server's health endpoint.
   references: []
   calls:
-  - Errorf
   - Health
   - Sys

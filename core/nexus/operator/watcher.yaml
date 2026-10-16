@@ -100,28 +100,29 @@ objects:
   description: Run starts the operator loop.
   references:
   - logrus.Fields
-  - context.Context.Done
   calls:
-  - context.Context.Done
+  - Warn
+  - Watch
+  - WithError
+  - WithFields
 - name: handleEvent
   kind: method
   receiver: Operator
   description: handleEvent processes a single infrastructure change event.
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: onApply
   kind: method
   receiver: Operator
   description: onApply handles creation or update of a Host or Service entity.
   references:
   - types.BaseComponent
+  - yaml.Unmarshal
   - logrus.Fields
   calls:
   - Debug
-  - Errorf
-  - Unmarshal
   - WithFields
+  - yaml.Unmarshal
 - name: onApplyHost
   kind: method
   receiver: Operator
@@ -130,7 +131,6 @@ objects:
   - types.BaseComponent
   calls:
   - BootstrapHost
-  - Errorf
   - OnboardHost
   - Warn
   - WithField
@@ -141,18 +141,18 @@ objects:
     registry and logs resources that are ready for activation.
   references:
   - types.Service
+  - yaml.Unmarshal
   - logrus.Fields
   calls:
   - Activate
   - Debug
-  - Errorf
   - Info
-  - Unmarshal
   - ValidateResource
   - Warn
   - WithError
   - WithField
   - WithFields
+  - yaml.Unmarshal
 - name: depsReady
   kind: method
   receiver: Operator
@@ -170,10 +170,7 @@ objects:
   references:
   - logrus.Fields
   calls:
-  - Base
-  - Ext
   - OffboardHost
-  - TrimSuffix
   - Warn
   - WithField
   - WithFields
@@ -188,13 +185,7 @@ objects:
   description: scanDir walks rootPath and returns a map of relative path → SHA-256
     content hash.
   references: []
-  calls:
-  - EncodeToString
-  - IsDir
-  - ReadFile
-  - Rel
-  - Sum256
-  - WalkDir
+  calls: []
 - name: emitDiff
   kind: func
   description: emitDiff computes CREATE/UPDATE/DELETE events between prev and curr
@@ -202,9 +193,9 @@ objects:
     for all files.
   references:
   - logrus.WithField
-  - context.Context.Done
   calls:
-  - context.Context.Done
+  - Warn
+  - WithError
   - logrus.WithField
 - name: Watch
   kind: method
@@ -212,7 +203,20 @@ objects:
   description: ''
   references:
   - logrus.WithField
-  - context.Context.Done
   calls:
-  - context.Context.Done
+  - Stop
+  - Warn
+  - WithError
   - logrus.WithField
+- name: EventCreate
+  kind: const
+  description: ''
+  references: []
+- name: EventUpdate
+  kind: const
+  description: ''
+  references: []
+- name: EventDelete
+  kind: const
+  description: ''
+  references: []

@@ -14,7 +14,6 @@ objects:
   description: ''
   references: []
   calls:
-  - Background
   - NewAPI
   - NewCabinetService
   - NewMemModuleStore
@@ -23,7 +22,5 @@ objects:
   - NewModuleDescriptor
   - NewSchema
   - NewWorkflow
-  - Printf
-  - Println
   - Put
   - Set

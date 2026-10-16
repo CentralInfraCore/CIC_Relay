@@ -21,7 +21,27 @@ objects:
   - httpcap.ActuatorFunc
   - httpcap.NewRequestFunc
   - require.NoError
+  - require.True
+  - require.NotNil
+  - require.Len
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.NotContains
   calls:
+  - ComputeChainHashV1
+  - ID
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - Put
+  - assert.Equal
+  - assert.NotContains
+  - assert.NotEmpty
+  - cabinetService.Setx
   - httpcap.ActuatorFunc
   - httpcap.NewRequestFunc
+  - require.Len
   - require.NoError
+  - require.NotNil
+  - require.True

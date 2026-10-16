@@ -69,5 +69,12 @@ objects:
   description: Authorize permits the intent iff its Actor is allowlisted for its Action.
     A missing actor or target ref is always refused.
   references: []
-  calls:
-  - Sprintf
+  calls: []
+- name: Rollback
+  kind: const
+  description: Rollback restores an earlier, verified state (demo §8.4).
+  references: []
+- name: Apply
+  kind: const
+  description: Apply provisions a declared desired state.
+  references: []

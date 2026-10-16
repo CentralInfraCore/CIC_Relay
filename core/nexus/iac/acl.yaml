@@ -81,7 +81,27 @@ objects:
   description: ''
   references: []
   calls: []
+- name: PermRead
+  kind: const
+  description: PermRead — read the field's value.
+  references: []
+- name: PermWrite
+  kind: const
+  description: PermWrite — set the field's value (a config/intent write).
+  references: []
+- name: PermExecute
+  kind: const
+  description: PermExecute — act on the field (e.g. trigger a referenced operation).
+  references: []
 - name: allPerms
   kind: const
   description: allPerms is every bit — the value an unset mask resolves to (no capping).
+  references: []
+- name: PrincipalUser
+  kind: const
+  description: PrincipalUser is a single actor identity.
+  references: []
+- name: PrincipalGroup
+  kind: const
+  description: PrincipalGroup is a group of actors.
   references: []

@@ -25,6 +25,8 @@ objects:
   - testify_assert.NoError
   - require.Error
   calls:
+  - Error
+  - SetStripWasmModuleFunc
   - canonicaljson.SetToJSONMock
   - require.Error
   - require.NoError
@@ -45,6 +47,7 @@ objects:
   - testify_assert.Contains
   - testify_assert.NoError
   calls:
+  - Error
   - canonicaljson.SetToJSONMock
   - canonicaljson.ToJSONOriginal
   - testify_assert.Contains
@@ -57,6 +60,7 @@ objects:
   - require.Error
   - testify_assert.Contains
   calls:
+  - Error
   - require.Error
   - testify_assert.Contains
 - name: TestComputeChecksum_ContextCancelled
@@ -75,6 +79,7 @@ objects:
   - require.Error
   - testify_assert.ErrorIs
   calls:
+  - NewModuleDescriptor
   - require.Error
   - testify_assert.ErrorIs
 - name: TestNewWorkflow_ContextCancelled
@@ -84,6 +89,7 @@ objects:
   - require.Error
   - testify_assert.ErrorIs
   calls:
+  - NewWorkflow
   - require.Error
   - testify_assert.ErrorIs
 - name: TestNewSchema_ContextCancelled
@@ -93,6 +99,7 @@ objects:
   - require.Error
   - testify_assert.ErrorIs
   calls:
+  - NewSchema
   - require.Error
   - testify_assert.ErrorIs
 - name: TestValidateAndChecksumSchema_Validation
@@ -103,6 +110,8 @@ objects:
   - testify_assert.ErrorIs
   - testify_assert.Contains
   calls:
+  - Error
+  - NewSchema
   - testify_assert.Contains
   - testify_assert.Error
   - testify_assert.ErrorIs
@@ -114,6 +123,8 @@ objects:
   - testify_assert.ErrorIs
   - testify_assert.Contains
   calls:
+  - Error
+  - NewWorkflow
   - testify_assert.Contains
   - testify_assert.Error
   - testify_assert.ErrorIs

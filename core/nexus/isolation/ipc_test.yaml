@@ -17,10 +17,6 @@ objects:
     test without needing a separately compiled binary.
   references: []
   calls:
-  - Background
-  - Exit
-  - Getenv
-  - Run
   - RunWorkerLoop
 - name: TestRunWorkerLoop_Echo
   kind: func
@@ -30,6 +26,10 @@ objects:
   - assert.Empty
   - assert.Equal
   calls:
+  - Decode
+  - DecodeString
+  - EncodeToString
+  - RunWorkerLoop
   - assert.Empty
   - assert.Equal
   - require.NoError
@@ -41,6 +41,10 @@ objects:
   - assert.Empty
   - assert.Equal
   calls:
+  - Decode
+  - DecodeString
+  - EncodeToString
+  - RunWorkerLoop
   - assert.Empty
   - assert.Equal
   - require.NoError
@@ -52,6 +56,8 @@ objects:
   - assert.NotEmpty
   - assert.Contains
   calls:
+  - Decode
+  - RunWorkerLoop
   - assert.Contains
   - assert.NotEmpty
   - require.NoError
@@ -63,6 +69,8 @@ objects:
   - assert.NotEmpty
   - assert.Contains
   calls:
+  - Decode
+  - RunWorkerLoop
   - assert.Contains
   - assert.NotEmpty
   - require.NoError
@@ -72,6 +80,8 @@ objects:
   references:
   - assert.Equal
   calls:
+  - EncodeToString
+  - RunWorkerLoop
   - assert.Equal
 - name: TestRunWorkerLoop_WithWorker_Success
   kind: func
@@ -83,6 +93,12 @@ objects:
   - assert.Empty
   - assert.Equal
   calls:
+  - Decode
+  - DecodeString
+  - EncodeToString
+  - MockWorker.On
+  - Return
+  - RunWorkerLoop
   - assert.Empty
   - assert.Equal
   - mock.MatchedBy
@@ -95,6 +111,11 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
+  - Decode
+  - EncodeToString
+  - MockWorker.On
+  - Return
+  - RunWorkerLoop
   - assert.Contains
   - require.NoError
 - name: TestRunWorkerLoop_WithWorker_ResponseError
@@ -105,6 +126,11 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
+  - Decode
+  - EncodeToString
+  - MockWorker.On
+  - Return
+  - RunWorkerLoop
   - assert.Contains
   - require.NoError
 - name: TestSubprocessWorker_RoundTrip
@@ -114,5 +140,6 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - Decrypt
   - assert.Equal
   - require.NoError

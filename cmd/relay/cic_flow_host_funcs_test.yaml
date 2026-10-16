@@ -25,7 +25,8 @@ objects:
   kind: type
   description: hostFn is the uniform (req_ptr,req_len,out_ptr,out_len)->i32 host-function
     type.
-  references: []
+  references:
+  - api.Module
 - name: Sign
   kind: method
   receiver: stubSigner
@@ -42,10 +43,7 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - NewReader
-  - NopCloser
-  - Set
+  calls: []
 - name: invoke
   kind: func
   description: invoke runs a host fn with req at offset 0 and the output buffer at
@@ -59,6 +57,7 @@ objects:
   - require.Positive
   - assert.Equal
   calls:
+  - EncodeToString
   - assert.Equal
   - require.Positive
 - name: TestMakeSignFn_NoSigner
@@ -67,6 +66,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - EncodeToString
   - assert.Contains
 - name: TestMakeSignFn_BadJSON
   kind: func
@@ -75,6 +75,7 @@ objects:
   - require.Positive
   - assert.Contains
   calls:
+  - Write
   - assert.Contains
   - require.Positive
 - name: TestMakeSignFn_BadBase64
@@ -90,8 +91,25 @@ objects:
   references:
   - assert.Contains
   calls:
+  - EncodeToString
   - assert.Contains
 - name: TestMakeActuateFn_Success_CarriesAuthorization
+  kind: func
+  description: ''
+  references:
+  - require.Positive
+  - require.NoError
+  - assert.Equal
+  - require.NotNil
+  calls:
+  - DecodeString
+  - EncodeToString
+  - Get
+  - assert.Equal
+  - require.NoError
+  - require.NotNil
+  - require.Positive
+- name: TestMakeActuateFn_EgressDenied
   kind: func
   description: ''
   references:
@@ -105,13 +123,31 @@ objects:
   description: ''
   references:
   - assert.Contains
-  - wazero.NewRuntime
-  - require.NoError
   calls:
   - assert.Contains
-  - require.NoError
-  - wazero.NewRuntime
+- name: TestMakeActuateFn_BadJSON
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - Write
+  - assert.Contains
+- name: TestMakeActuateFn_InvalidURL
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
 - name: TestMakeActuateFn_BadBodyBase64
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
+- name: TestMakeActuateFn_DoerError
   kind: func
   description: ''
   references:
@@ -125,6 +161,7 @@ objects:
   - wazero.NewRuntime
   - require.NoError
   calls:
+  - Close
   - require.NoError
   - wazero.NewRuntime
 - name: TestMakeCICFlowHostSetupFn
@@ -134,6 +171,7 @@ objects:
   - wazero.NewRuntime
   - require.NoError
   calls:
+  - Close
   - require.NoError
   - wazero.NewRuntime
 - name: TestPerModule_Resolution
@@ -142,6 +180,34 @@ objects:
     registry; an unregistered module is denied (fail-closed), a registered one gets
     its deps.
   references:
+  - assert.Equal
   - assert.Contains
   calls:
   - assert.Contains
+  - assert.Equal
+- name: TestCombineHostSetups
+  kind: func
+  description: ''
+  references:
+  - wazero.NewRuntime
+  - wazero.Runtime
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Close
+  - assert.Equal
+  - require.NoError
+  - wazero.NewRuntime
+- name: TestCombineHostSetups_StopsOnError
+  kind: func
+  description: ''
+  references:
+  - wazero.NewRuntime
+  - wazero.Runtime
+  - require.Error
+  - assert.Equal
+  calls:
+  - Close
+  - assert.Equal
+  - require.Error
+  - wazero.NewRuntime

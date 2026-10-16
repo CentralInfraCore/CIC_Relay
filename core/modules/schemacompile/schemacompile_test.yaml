@@ -22,6 +22,7 @@ objects:
   references:
   - canonicaljson.ToJSON
   calls:
+  - Error
   - canonicaljson.ToJSON
 - name: makeCACert
   kind: func
@@ -29,6 +30,7 @@ objects:
   references:
   - require.NoError
   calls:
+  - Add
   - require.NoError
 - name: makeLeafCert
   kind: func
@@ -36,20 +38,19 @@ objects:
   references:
   - require.NoError
   calls:
+  - Add
   - require.NoError
 - name: makeVerifier
   kind: func
   description: ''
   references:
   - schemacompile.CertVerifyFunc
-  calls:
-  - Verify
+  calls: []
 - name: assertionYAML
   kind: func
   description: ''
   references: []
-  calls:
-  - Sprintf
+  calls: []
 - name: indentCert
   kind: func
   description: ''
@@ -79,7 +80,39 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - AddCert
   - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
+- name: TestAssertSource_CarriesSourceProvenance
+  kind: func
+  description: 'Regression: the assert step must carry source provenance through.
+    cic.pipeline.start resolves the cloned repository''s commit and tree digest and
+    the intermediate steps propagate them, but assert used to rebuild its result from
+    scratch and drop them here. The signing step then fell back to the relay''s own
+    build-time constants, so build_hash attested WHAT was compiled but not WHERE it
+    came from: two different commits of the same repository yielded a bit-identical
+    build_hash whenever the compiled artifact was unchanged.'
+  references:
+  - schemacompile.NewAssertSourceFunc
+  - require.NoError
+  - assert.Equal
+  calls:
+  - AddCert
+  - assert.Equal
+  - require.NoError
+  - schemacompile.NewAssertSourceFunc
+- name: TestAssertSource_NoProvenanceKeysWhenAbsent
+  kind: func
+  description: A run that carries no repository (e.g. a direct /v1/schema/compile
+    call) must not grow empty provenance keys — the signing step distinguishes "absent"
+    from "empty" to decide whether to fall back to the relay's own build constants.
+  references:
+  - schemacompile.NewAssertSourceFunc
+  - require.NoError
+  - assert.False
+  calls:
+  - assert.False
   - require.NoError
   - schemacompile.NewAssertSourceFunc
 - name: TestAssertSource_WithVerifier_UntrustedCA
@@ -90,6 +123,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - AddCert
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.NewAssertSourceFunc
@@ -101,6 +136,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.NewAssertSourceFunc
@@ -112,6 +148,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.NewAssertSourceFunc
@@ -123,6 +160,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.NewAssertSourceFunc
@@ -134,6 +172,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.NewAssertSourceFunc
@@ -152,8 +191,7 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - Sprintf
+  calls: []
 - name: TestAssertSource_L04_ChecksumMismatch
   kind: func
   description: ''
@@ -162,6 +200,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.NewAssertSourceFunc
@@ -218,7 +257,7 @@ objects:
   kind: func
   description: ''
   references:
-  - merkle.BuildContextSourceRef
+  - merkle.BuildContext
   - schemacompile.NewSignArtifactFunc
   - assert.Equal
   calls:
@@ -239,7 +278,7 @@ objects:
   description: ''
   references:
   - schemacompile.NewSignArtifactFunc
-  - merkle.BuildContextSourceRef
+  - merkle.BuildContext
   - assert.NotEqual
   calls:
   - assert.NotEqual
@@ -305,7 +344,7 @@ objects:
   kind: func
   description: ''
   references:
-  - merkle.BuildContextCAFingerprint
+  - merkle.BuildContext
   - schemacompile.NewSignArtifactFunc
   - require.NoError
   - assert.Equal
@@ -317,7 +356,7 @@ objects:
   kind: func
   description: ''
   references:
-  - merkle.BuildContextCAFingerprint
+  - merkle.BuildContext
   - schemacompile.NewSignArtifactFunc
   - assert.NotEqual
   calls:
@@ -332,6 +371,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.NewSignArtifactFunc
@@ -376,6 +416,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.BuildSchema
@@ -387,6 +428,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
   - schemacompile.BuildSchema
@@ -412,3 +454,11 @@ objects:
   - assert.NotNil
   - require.NoError
   - schemacompile.BuildSchema
+- name: emptySpecChecksum
+  kind: var
+  description: emptySpecChecksum = sha256(canonical_json({}))
+  references: []
+- name: fieldsSpecChecksum
+  kind: var
+  description: fieldsSpecChecksum = sha256(canonical_json({"fields":[]}))
+  references: []

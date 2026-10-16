@@ -59,9 +59,7 @@ objects:
   description: Commit stages paths and creates a commit; returns the new commit hash.
   references: []
   calls:
-  - Errorf
   - Resolve
-  - TrimSpace
 - name: Push
   kind: method
   receiver: ExecGitOps
@@ -80,11 +78,7 @@ objects:
   kind: func
   description: parsePortcelainStatus parses the output of `git status --porcelain`.
   references: []
-  calls:
-  - Contains
-  - Split
-  - SplitN
-  - TrimSpace
+  calls: []
 - name: runGit
   kind: method
   receiver: ExecGitOps
@@ -104,8 +98,20 @@ objects:
   description: ''
   references:
   - obs.HistogramPoint
-  - obs.ResourceComponent
+  - obs.Resource
   - obs.LogRecord
-  - context.Context.Deadline
   calls:
-  - context.Context.Deadline
+  - Format
+  - Milliseconds
+  - RecordHistogram
+  - RecordLog
+  - Run
+  - UTC
+- name: maxOutputSize
+  kind: const
+  description: maxOutputSize limits the amount of git output captured in memory.
+  references: []
+- name: defaultTimeout
+  kind: const
+  description: defaultTimeout is applied per git command when the context has no deadline.
+  references: []

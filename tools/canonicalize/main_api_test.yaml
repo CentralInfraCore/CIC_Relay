@@ -15,12 +15,3 @@ objects:
   references: []
   calls:
   - Close
-  - Fatalf
-  - Join
-  - Open
-  - Pipe
-  - ReadFrom
-  - String
-  - TempDir
-  - TrimSpace
-  - WriteFile

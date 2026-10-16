@@ -28,9 +28,16 @@ objects:
   references:
   - uuid.New
   - logrus.Fields
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
   calls:
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
+  - Close
+  - Encode
+  - Error
+  - Info
+  - ProofVerifyResponse
+  - Set
+  - String
+  - VerifyProofArtifact
+  - WithError
+  - WithField
+  - WithFields
   - uuid.New

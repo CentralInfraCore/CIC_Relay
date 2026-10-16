@@ -14,27 +14,26 @@ objects:
   description: ''
   references:
   - cabinet.Workflow
-  - cabinet.WorkflowConfigName
-  - cabinet.WorkflowIdentityVersion
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowIdentity
+  - cabinet.Workflow.ID
   calls:
-  - Fatalf
-  - ID
+  - cabinet.Workflow.ID
 - name: TestWorkflow_ID_API_Empty
   kind: func
   description: ''
   references:
   - cabinet.Workflow
+  - cabinet.Workflow.ID
   calls:
-  - Fatalf
-  - ID
+  - cabinet.Workflow.ID
 - name: TestWorkflow_GetData_API_ReturnsConfig
   kind: func
   description: ''
   references:
   - cabinet.WorkflowConfig
   - cabinet.Workflow
-  - cabinet.WorkflowIdentityVersion
+  - cabinet.WorkflowIdentity
+  - cabinet.Workflow.GetData
   calls:
-  - DeepEqual
-  - Fatalf
-  - GetData
+  - cabinet.Workflow.GetData

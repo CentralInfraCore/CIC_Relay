@@ -17,15 +17,16 @@ objects:
   - logrus.Logger
   - logrus.New
   calls:
+  - SetOutput
   - logrus.New
 - name: makeResource
   kind: func
   description: ''
   references:
   - types.ResourceSpec
-  - types.ResourceMetaName
-  - types.SchemaRefName
-  - types.ResourceStateDesired
+  - types.ResourceMeta
+  - types.SchemaRef
+  - types.ResourceState
   calls: []
 - name: TestCabinetActivator_Activate_Success
   kind: func
@@ -35,10 +36,15 @@ objects:
   - mock.MatchedBy
   - cabinet.SetPayload
   - cabinet.SetResponse
-  - cabinet.ProofTraceChainHash
+  - cabinet.ProofTrace
   - require.NoError
   calls:
+  - Activate
+  - NewCabinetActivator
+  - Return
   - mock.MatchedBy
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On
   - require.NoError
 - name: TestCabinetActivator_Activate_SetxError
   kind: func
@@ -48,7 +54,12 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Activate
+  - Error
+  - NewCabinetActivator
+  - Return
   - assert.Contains
+  - mockCabinetService.On
   - require.Error
 - name: TestCabinetActivator_Activate_NilTrace
   kind: func
@@ -58,6 +69,10 @@ objects:
   - cabinet.SetResponse
   - require.NoError
   calls:
+  - Activate
+  - NewCabinetActivator
+  - Return
+  - mockCabinetService.On
   - require.NoError
 - name: TestCabinetActivator_Activate_PayloadMapping
   kind: func
@@ -70,7 +85,14 @@ objects:
   - require.NoError
   - require.NotNil
   - assert.Equal
+  - mock.Arguments.Get
   calls:
+  - Activate
+  - NewCabinetActivator
+  - Return
+  - Run
   - assert.Equal
+  - mock.Arguments.Get
+  - mockCabinetService.On
   - require.NoError
   - require.NotNil

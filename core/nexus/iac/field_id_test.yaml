@@ -23,9 +23,6 @@ objects:
   references: []
   calls:
   - CompilePlan
-  - DeepEqual
-  - Errorf
-  - Fatalf
   - ParseSchema
   - RekeyByFieldID
 - name: TestRekeyByFieldID_ElementKey
@@ -34,7 +31,6 @@ objects:
   references: []
   calls:
   - CompilePlan
-  - Fatalf
   - ParseSchema
   - RekeyByFieldID
 - name: TestRekeyByFieldID_FallbackToPath
@@ -43,6 +39,5 @@ objects:
   references: []
   calls:
   - CompilePlan
-  - Fatalf
   - ParseSchema
   - RekeyByFieldID

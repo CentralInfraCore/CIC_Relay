@@ -29,6 +29,4 @@ objects:
   kind: func
   description: ParseRunFlowResult decodes the JSON returned by RunFlow into a RunFlowResult.
   references: []
-  calls:
-  - Errorf
-  - Unmarshal
+  calls: []

@@ -26,7 +26,16 @@ objects:
     (a placeholder identity until the CIC Canonical Object Encoding lands — spec #1);
     - atomic (or unset): "" — the list has no per-element identity, it is one value.'
   references: []
-  calls:
-  - Join
-  - Sprintf
-  - Strings
+  calls: []
+- name: TopologyAtomic
+  kind: const
+  description: 'TopologyAtomic: the whole list is a single opaque value (one owner).'
+  references: []
+- name: TopologySet
+  kind: const
+  description: 'TopologySet: elements are unique by value; order is irrelevant.'
+  references: []
+- name: TopologyMap
+  kind: const
+  description: 'TopologyMap: elements are identified by one or more key fields.'
+  references: []

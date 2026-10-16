@@ -17,6 +17,7 @@ objects:
   references:
   - logrus.New
   calls:
+  - SetOutput
   - logrus.New
 - name: TestPipelineHandler_MethodNotAllowed
   kind: func
@@ -32,6 +33,7 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - SetOutput
   - assert.Equal
   - logrus.New
 - name: TestPipelineHandler_InvalidJSON
@@ -45,16 +47,49 @@ objects:
   kind: func
   description: ''
   references:
-  - cabinet.SetResponse
-  - cabinet.ProofTraceChainHash
   - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestPipelineHandler_Success
+  kind: func
+  description: ''
+  references:
   - mock.Anything
   - mock.MatchedBy
   - cabinet.SetPayload
-  - cabinet.SetResponseResults
+  - cabinet.SetResponse
+  - cabinet.ProofTrace
+  - require.Equal
+  - assert.Equal
+  - require.NoError
+  - require.NotNil
   calls:
+  - Bytes
+  - Get
+  - Header
+  - Return
   - assert.Equal
   - mock.MatchedBy
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On
+  - require.Equal
+  - require.NoError
+  - require.NotNil
+- name: TestPipelineHandler_RequestOverridesConfig
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - cabinet.SetPayload
+  - cabinet.SetResponse
+  - assert.Equal
+  calls:
+  - Return
+  - assert.Equal
+  - mock.MatchedBy
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On
 - name: TestPipelineHandler_ConfigDefaultsUsed
   kind: func
   description: ''
@@ -62,18 +97,39 @@ objects:
   - mock.Anything
   - mock.MatchedBy
   - cabinet.SetPayload
-  - cabinet.SetResponseResults
+  - cabinet.SetResponse
   - assert.Equal
   calls:
+  - Return
   - assert.Equal
   - mock.MatchedBy
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On
+- name: TestPipelineHandler_Timeout
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - cabinet.ErrTimeout
+  - assert.Equal
+  calls:
+  - Return
+  - assert.Equal
+  - mockCabinetService.On
 - name: TestPipelineHandler_InternalError
   kind: func
   description: ''
   references:
   - mock.Anything
+  - assert.Equal
   calls:
-  - Errorf
-  - Marshal
-  - 'On'
   - Return
+  - assert.Equal
+  - mockCabinetService.On
+- name: TestPipelineHandler_ReadBodyError
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal

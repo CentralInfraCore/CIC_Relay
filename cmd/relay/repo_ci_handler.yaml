@@ -1,0 +1,49 @@
+---
+package: main
+description: ''
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: RepoCIRequest
+  kind: struct
+  description: 'RepoCIRequest is the request body for POST /v1/repo/ci. The schema
+    pipeline (POST /v1/schemas/pipeline) is CIC-Schemas-shaped: it requires schema/version
+    and reads the released artifact from a fixed source/<schema>.yaml. This route
+    is the generic counterpart — the caller names the make target and the file it
+    produces.'
+  implements: []
+  references: []
+- name: RepoCIResponse
+  kind: struct
+  description: RepoCIResponse is the response body for POST /v1/repo/ci.
+  implements: []
+  references:
+  - cabinet.ProofTrace
+- name: repoCIHandler
+  kind: method
+  receiver: relayServer
+  description: repoCIHandler handles POST /v1/repo/ci by executing the cic.repo.ci
+    workflow.
+  references:
+  - uuid.New
+  - logrus.Fields
+  - cabinet.SetPayload
+  - cabinet.IsTimeout
+  calls:
+  - Close
+  - Encode
+  - Error
+  - Info
+  - Set
+  - Setx
+  - String
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
+  - cabinet.IsTimeout
+  - uuid.New

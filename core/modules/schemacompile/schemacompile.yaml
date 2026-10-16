@@ -2,9 +2,9 @@
 package: schemacompile
 description: 'Package schemacompile implements the native modules for the schema compilation
   workflow. Three modules, three stubs — each will be filled in as the trust layers
-  land: cic.source.assert@1.0  — validates the source assertion (Layer 1) cic.schema.build@1.0   —
-  invokes the CIC-Schemas compiler (Layer 0.2) cic.artifact.sign@1.0  — computes buildHash,
-  attaches cicSign/cicSignedCA (Layer 2)'
+  land: cic.source.assert@1.0 — validates the source assertion (Layer 1) cic.schema.build@1.0
+  — invokes the CIC-Schemas compiler (Layer 0.2) cic.artifact.sign@1.0 — computes
+  buildHash, attaches cicSign/cicSignedCA (Layer 2)'
 tags:
 - core
 - schema
@@ -52,6 +52,17 @@ objects:
 - name: assertSourceImpl
   kind: func
   description: ''
+  references:
+  - yaml.Unmarshal
+  - canonicaljson.ToJSON
+  calls:
+  - canonicaljson.ToJSON
+  - yaml.Unmarshal
+- name: carryProvenance
+  kind: func
+  description: carryProvenance copies the provenance fields from src to dst when present.
+    Absent keys are left absent rather than written as empty strings, so the signing
+    step can tell "no repository in this run" from "empty value".
   references: []
   calls: []
 - name: BuildSchema
@@ -65,7 +76,8 @@ objects:
   kind: func
   description: SignArtifact is the legacy no-signer entry point (stub mode, no Vault
     signing). Use NewSignArtifactFunc to inject a real signer.
-  references: []
+  references:
+  - merkle.BuildContext
   calls: []
 - name: NewSignArtifactFunc
   kind: func
@@ -90,4 +102,25 @@ objects:
     computes verification_root.
   references:
   - merkle.BuildContext
-  calls: []
+  - merkle.VerificationManifest
+  - merkle.SourceFields
+  - merkle.BuildEnvFields
+  - merkle.InputsFields
+  - merkle.ArtifactFields
+  - merkle.ValidationFields
+  - merkle.AuditFields
+  - merkle.BuildVerificationRoot
+  calls:
+  - ArtifactSigner.Sign
+  - merkle.BuildVerificationRoot
+- name: provenanceKeys
+  kind: var
+  description: 'provenanceKeys are the fields that identify the source revision under
+    build. cic.pipeline.start resolves the cloned repository''s HEAD commit and computes
+    a tree digest over it; the pipeline steps propagate them via copyMap. The steps
+    in this package, however, build their results from scratch, so without an explicit
+    hand-off the provenance is dropped and cic.artifact.sign falls back to the relay''s
+    own build-time constants. The observable effect was that build_hash attested WHAT
+    was compiled but not WHERE it came from: two different commits of the same repository
+    produced a bit-identical build_hash whenever the compiled artifact was unchanged.'
+  references: []

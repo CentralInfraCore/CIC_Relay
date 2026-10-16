@@ -14,16 +14,14 @@ objects:
   description: ''
   references: []
   calls:
-  - Background
   - Exists
-  - Fatal
-  - Fatalf
   - Get
   - ID
   - NewMemSchemaStore
   - NewMemWorkflowStore
   - NewSchema
   - Put
+  - Workflow.ID
 - name: TestMemModuleStore_OverwriteAndCAS
   kind: func
   description: ''
@@ -35,6 +33,11 @@ objects:
   - assert.Equal
   - require.NotNil
   calls:
+  - Exists
+  - Get
+  - ModuleDescriptor.ID
+  - NewMemModuleStore
+  - Put
   - assert.Equal
   - assert.True
   - require.False

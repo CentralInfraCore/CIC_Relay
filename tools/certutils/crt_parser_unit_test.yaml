@@ -13,35 +13,19 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - EncodeToMemory
-  - Fatalf
-  - Helper
-  - Join
-  - TempDir
-  - WriteFile
+  calls: []
 - name: Test_printHelp_DoesNotPanic
   kind: func
   description: ''
   references: []
   calls:
   - Close
-  - Fatal
-  - Pipe
-  - ReadFrom
-  - String
 - name: Test_main_VerboseYAML
   kind: func
   description: ''
   references: []
   calls:
   - Close
-  - Fatalf
-  - NewFlagSet
-  - Pipe
-  - ReadFrom
-  - String
-  - TrimSpace
 - name: Test_main_CertPath_YAML
   kind: func
   description: ''
@@ -49,27 +33,13 @@ objects:
   calls:
   - Add
   - Close
-  - Contains
-  - CreateCertificate
-  - EncodeToMemory
-  - Fatalf
-  - GenerateKey
-  - Join
-  - NewFlagSet
-  - NewInt
-  - Now
-  - Pipe
-  - ReadFrom
-  - String
-  - TempDir
-  - TrimSpace
-  - WriteFile
 - name: Test_main_Help_LongFlag
   kind: func
   description: ''
   references:
   - assert.Contains
   calls:
+  - Close
   - assert.Contains
 - name: Test_main_CertPath_ECDSACert
   kind: func
@@ -77,6 +47,8 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Add
+  - Close
   - assert.Contains
 - name: Test_main_CertPath_Ed25519Cert
   kind: func
@@ -84,4 +56,6 @@ objects:
   references:
   - assert.NotEmpty
   calls:
+  - Add
+  - Close
   - assert.NotEmpty

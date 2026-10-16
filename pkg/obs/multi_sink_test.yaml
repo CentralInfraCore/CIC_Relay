@@ -15,13 +15,15 @@ objects:
   references:
   - obs.CaptureSink
   - obs.NewMultiMetricSink
-  - obs.CounterPointName
-  - obs.GaugePointName
-  - obs.HistogramPointName
-  - obs.CaptureSinka
+  - obs.CounterPoint
+  - obs.GaugePoint
+  - obs.HistogramPoint
   - require.Len
   - assert.Equal
   calls:
+  - RecordCounter
+  - RecordGauge
+  - RecordHistogram
   - assert.Equal
   - obs.NewMultiMetricSink
   - require.Len
@@ -31,9 +33,12 @@ objects:
   references:
   - obs.NewMultiMetricSink
   - assert.NotPanics
-  - obs.CounterPointName
-  - obs.GaugePointName
-  - obs.HistogramPointName
+  - obs.CounterPoint
+  - obs.GaugePoint
+  - obs.HistogramPoint
   calls:
+  - RecordCounter
+  - RecordGauge
+  - RecordHistogram
   - assert.NotPanics
   - obs.NewMultiMetricSink

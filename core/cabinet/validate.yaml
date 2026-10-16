@@ -27,42 +27,52 @@ objects:
     It now accepts a context to handle timeouts during long-running operations.
   references:
   - canonicaljson.ToJSON
-  - context.Context.Err
   calls:
+  - Sum
+  - Write
   - canonicaljson.ToJSON
-  - context.Context.Err
 - name: validateAndChecksumSchema
   kind: func
   description: validateAndChecksumSchema validates Schema-specific invariants and
     computes the canonical checksum.
   references:
   - canonicaljson.ToJSON
-  - context.Context.Err
   calls:
+  - Sum
+  - Write
   - canonicaljson.ToJSON
-  - context.Context.Err
 - name: validateAndChecksumWorkflow
   kind: func
   description: validateAndChecksumWorkflow validates Workflow-specific invariants
     and computes the canonical checksum.
   references:
   - canonicaljson.ToJSON
-  - context.Context.Err
   calls:
+  - Sum
+  - Write
   - canonicaljson.ToJSON
-  - context.Context.Err
 - name: validateAndChecksum
   kind: func
   description: validateAndChecksum is the single central entry point for validation
     and checksum calculation. It now accepts a context to handle timeouts.
-  references:
-  - context.Context.Err
-  calls:
-  - context.Context.Err
+  references: []
+  calls: []
 - name: stripWasmModuleFunc
   kind: var
   description: stripWasmModuleFunc uses wabin to strip all custom sections from a
     WASM module, producing a canonical byte representation.
+  references: []
+- name: KindSpec
+  kind: const
+  description: ''
+  references: []
+- name: KindWf
+  kind: const
+  description: ''
+  references: []
+- name: KindModule
+  kind: const
+  description: ''
   references: []
 - name: MaxWASMModuleSize
   kind: const

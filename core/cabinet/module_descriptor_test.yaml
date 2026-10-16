@@ -17,6 +17,7 @@ objects:
   - assert.Nil
   - assert.ErrorIs
   calls:
+  - NewModuleDescriptor
   - assert.Error
   - assert.ErrorIs
   - assert.Nil
@@ -26,6 +27,7 @@ objects:
   references:
   - assert.Equal
   calls:
+  - ModuleDescriptor.ID
   - assert.Equal
 - name: TestModuleDescriptor_ID_EmptyParts
   kind: func
@@ -33,6 +35,7 @@ objects:
   references:
   - assert.Equal
   calls:
+  - ID
   - assert.Equal
 - name: TestModuleDescriptor_GetData_ReturnsCompositeStruct
   kind: func
@@ -44,6 +47,7 @@ objects:
   - require.True
   - assert.Equal
   calls:
+  - ModuleDescriptor.GetData
   - assert.Equal
   - assert.JSONEq
   - canonicaljson.ToJSON

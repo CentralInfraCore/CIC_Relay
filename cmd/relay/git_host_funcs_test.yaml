@@ -62,7 +62,6 @@ objects:
   description: ''
   references: []
   calls:
-  - Marshal
   - Write
 - name: Clone
   kind: method
@@ -108,6 +107,7 @@ objects:
   - assert.True
   - assert.Equal
   calls:
+  - Write
   - assert.Equal
   - assert.True
 - name: TestGitReadJSON_BadOffset
@@ -123,6 +123,7 @@ objects:
   references:
   - assert.False
   calls:
+  - Write
   - assert.False
 - name: TestGitWriteJSON_OK
   kind: func
@@ -132,6 +133,7 @@ objects:
   - require.True
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
   - assert.Greater
   - require.True
@@ -156,6 +158,7 @@ objects:
   - require.Greater
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
   - require.Greater
 - name: TestRegisterGitHostFunctions
@@ -165,6 +168,7 @@ objects:
   - wazero.NewRuntime
   - require.NoError
   calls:
+  - Close
   - require.NoError
   - wazero.NewRuntime
 - name: TestMakeGitHostSetupFn
@@ -174,6 +178,7 @@ objects:
   - wazero.NewRuntime
   - require.NoError
   calls:
+  - Close
   - require.NoError
   - wazero.NewRuntime
 - name: TestMakeCloneFn_Success
@@ -183,6 +188,7 @@ objects:
   - assert.Greater
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
   - assert.Greater
 - name: TestMakeCloneFn_Error
@@ -191,6 +197,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCloneFn_BadJSON
   kind: func
@@ -198,6 +205,8 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
+  - Write
   - assert.Contains
 - name: TestMakeFetchFn_Success
   kind: func
@@ -205,6 +214,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeFetchFn_Error
   kind: func
@@ -212,6 +222,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCheckoutFn_Success
   kind: func
@@ -219,6 +230,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCheckoutFn_Error
   kind: func
@@ -226,6 +238,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCommitFn_Success
   kind: func
@@ -233,6 +246,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCommitFn_Error
   kind: func
@@ -240,6 +254,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakePushFn_Success
   kind: func
@@ -247,6 +262,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakePushFn_Error
   kind: func
@@ -254,6 +270,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeStatusFn_Success
   kind: func
@@ -268,6 +285,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCloneFn_BadRequest
   kind: func
@@ -275,6 +293,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeFetchFn_BadRequest
   kind: func
@@ -282,6 +301,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCheckoutFn_BadRequest
   kind: func
@@ -289,6 +309,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeCommitFn_BadRequest
   kind: func
@@ -296,6 +317,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakePushFn_BadRequest
   kind: func
@@ -303,6 +325,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestMakeStatusFn_BadRequest
   kind: func
@@ -310,6 +333,7 @@ objects:
   references:
   - assert.Contains
   calls:
+  - Read
   - assert.Contains
 - name: TestGitWriteJSON_MarshalError
   kind: func

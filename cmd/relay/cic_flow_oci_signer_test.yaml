@@ -28,6 +28,11 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - Close
+  - Decode
+  - Encode
+  - Error
+  - Sign
   - assert.Contains
   - assert.Equal
   - require.Error

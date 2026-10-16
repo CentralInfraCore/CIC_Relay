@@ -19,8 +19,7 @@ objects:
     and executed bytes always match the checksummed form.'
   references: []
   calls:
-  - Errorf
-  - GetData
+  - ModuleDescriptor.GetData
 - name: ID
   kind: method
   receiver: ModuleDescriptor
