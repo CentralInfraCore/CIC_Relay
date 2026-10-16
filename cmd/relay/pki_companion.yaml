@@ -15,9 +15,6 @@ objects:
   references: []
   calls:
   - AppendCertsFromPEM
-  - Errorf
-  - NewCertPool
-  - ReadFile
 - name: loadProvenanceAnchors
   kind: func
   description: 'loadProvenanceAnchors loads the detached cic-flow anchors into pkiAssets:
@@ -27,14 +24,13 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  - logrus.Logger.WithFields
+  - logrus.Logger.WithField
   calls:
-  - Errorf
-  - Getenv
   - Info
-  - TrimSpace
   - Warn
-  - WithField
-  - WithFields
+  - logrus.Logger.WithField
+  - logrus.Logger.WithFields
 - name: verifyCICFlowProvenance
   kind: func
   description: 'verifyCICFlowProvenance checks a module''s signing cert against the

@@ -29,18 +29,52 @@ objects:
   receiver: Observation
   description: Coverage classifies a field path against the observation envelope.
   references: []
-  calls:
-  - Contains
+  calls: []
 - name: ClassifyField
   kind: method
   receiver: Observation
   description: ClassifyField produces a per-field verdict from the observation coverage
     of the path and the comparison outcome. `intentPresent` is whether the intent
     declares the field; `matched` is whether the observed value equals the intent
-    (only meaningful when the field was observed). - unobserved            → UNOBSERVED
-    (conformance cannot be claimed) - observed + matched     → CONFORMANT - observed
-    + not matched → DRIFT - absent + intent wants it   → DRIFT (missing) - absent
-    + intent omits it   → OBSERVED_ABSENT (desired-absent, is absent)
+    (only meaningful when the field was observed). - unobserved → UNOBSERVED (conformance
+    cannot be claimed) - observed + matched → CONFORMANT - observed + not matched
+    → DRIFT - absent + intent wants it → DRIFT (missing) - absent + intent omits it
+    → OBSERVED_ABSENT (desired-absent, is absent)
   references: []
   calls:
-  - Coverage
+  - Observation.Coverage
+- name: CoverageObserved
+  kind: const
+  description: CoverageObserved — the field was observed; its value is authoritative.
+  references: []
+- name: CoverageAbsent
+  kind: const
+  description: CoverageAbsent — the field was observed and is authoritatively not
+    present.
+  references: []
+- name: CoverageUnobserved
+  kind: const
+  description: CoverageUnobserved — the field was not covered by this observation.
+  references: []
+- name: VerdictConformant
+  kind: const
+  description: ''
+  references: []
+- name: VerdictDrift
+  kind: const
+  description: ''
+  references: []
+- name: VerdictObservedAbsent
+  kind: const
+  description: ''
+  references: []
+- name: VerdictUnobserved
+  kind: const
+  description: ''
+  references: []
+- name: VerdictNotComparable
+  kind: const
+  description: VerdictNotComparable is produced by the comparison layer (Task 1) when
+    the intent and observed values are not type-compatible; ClassifyField does not
+    emit it.
+  references: []

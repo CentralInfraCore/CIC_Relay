@@ -18,5 +18,4 @@ objects:
     module-count assertion in TestRegisterNativeComponents confirms the capability
     is absent from the registered set in this build.)'
   references: []
-  calls:
-  - Fatal
+  calls: []

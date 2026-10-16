@@ -31,10 +31,17 @@ objects:
   - logrus.Fields
   - cabinet.SetPayload
   - cabinet.IsTimeout
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
   calls:
+  - Close
+  - Encode
+  - Error
+  - Info
+  - Set
+  - Setx
+  - String
+  - Warn
+  - WithError
+  - WithField
+  - WithFields
   - cabinet.IsTimeout
-  - http.ResponseWriter.Header
-  - http.ResponseWriter.WriteHeader
   - uuid.New

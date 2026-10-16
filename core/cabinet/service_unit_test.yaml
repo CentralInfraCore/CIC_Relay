@@ -17,6 +17,11 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
   - assert.Contains
   - require.Error
 - name: TestWithRecorder
@@ -27,6 +32,11 @@ objects:
   - require.NoError
   - require.NotNil
   calls:
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - WithRecorder
   - require.NoError
   - require.NotNil
 - name: TestExecutionContext
@@ -40,6 +50,12 @@ objects:
   - assert.False
   - require.NoError
   calls:
+  - Get
+  - GetModule
+  - NewExecutionContext
+  - NewModuleDescriptor
+  - Set
+  - StoreModule
   - assert.Equal
   - assert.False
   - require.NoError
@@ -56,9 +72,24 @@ objects:
   - assert.Contains
   - assert.ErrorIs
   calls:
+  - Error
+  - ID
+  - MockCicWasmHost.AssertExpectations
+  - MockCicWasmHost.Close
+  - MockCicWasmHost.On
+  - MockWasmManager.AssertExpectations
+  - MockWasmManager.On
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - Once
+  - Put
+  - Return
   - assert.Contains
   - assert.Equal
   - assert.ErrorIs
+  - cabinetService.Setx
   - require.Error
   - require.NoError
 - name: TestCabinetService_PutAndGet_Success
@@ -70,6 +101,21 @@ objects:
   - assert.NoError
   - assert.Equal
   calls:
+  - Checksum
+  - GetModule
+  - GetSchema
+  - GetWorkflow
+  - ID
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewSchema
+  - NewWorkflow
+  - PutModule
+  - PutSchema
+  - PutWorkflow
   - assert.Equal
   - assert.NoError
   - require.NoError
@@ -80,6 +126,13 @@ objects:
   - require.NoError
   - assert.ErrorIs
   calls:
+  - GetModule
+  - GetSchema
+  - GetWorkflow
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
   - assert.ErrorIs
   - require.NoError
 - name: TestSetx_ProofTrace
@@ -92,8 +145,16 @@ objects:
   - require.Len
   - assert.NotEmpty
   calls:
+  - ComputeChainHashV1
+  - ID
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - Put
   - assert.Equal
   - assert.NotEmpty
+  - cabinetService.Setx
   - require.Len
   - require.NoError
   - require.NotNil
@@ -104,5 +165,15 @@ objects:
   - require.NoError
   - assert.NoError
   calls:
+  - Close
+  - MockWasmManager.AssertExpectations
+  - MockWasmManager.On
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - Once
+  - Return
   - assert.NoError
+  - cabinetService.Close
   - require.NoError

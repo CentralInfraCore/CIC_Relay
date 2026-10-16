@@ -20,8 +20,6 @@ objects:
   description: ''
   references: []
   calls:
-  - Fatalf
-  - Run
   - ValidateValue
 - name: TestField_AsSecretRef
   kind: func
@@ -29,24 +27,19 @@ objects:
   references: []
   calls:
   - AsSecretRef
-  - Errorf
   - ExpandField
-  - Fatalf
 - name: TestSensitivePolicy_AllowsBackup
   kind: func
   description: ''
   references: []
   calls:
-  - AllowsBackup
-  - Errorf
+  - SensitivePolicy.AllowsBackup
 - name: TestParseSchema_Sensitive
   kind: func
   description: ''
   references: []
   calls:
   - AllowsBackup
-  - Errorf
-  - Fatalf
   - ParseSchema
 - name: TestSchema_ValidateSensitive
   kind: func
@@ -54,7 +47,5 @@ objects:
   references: []
   calls:
   - Error
-  - Errorf
-  - Fatal
   - ParseSchema
   - ValidateSensitive

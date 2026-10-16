@@ -23,20 +23,14 @@ objects:
   kind: func
   description: 'ParseExecutionGraph parses a slice of step strings into an ExecutionGraph.
     Supported formats: New: "component@version.function(inputKey) -> outputKey" Old:
-    "component.function(data)"   (outputKey defaults to "result") Both formats may
-    appear in the same workflow (backward-compatible).'
+    "component.function(data)" (outputKey defaults to "result") Both formats may appear
+    in the same workflow (backward-compatible).'
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: parseStep
   kind: func
   description: parseStep parses a single step string and extracts its component parts.
     It supports both new format (component@version.function(inputKey) -> outputKey)
     and old format (component.function(data)).
   references: []
-  calls:
-  - Errorf
-  - HasSuffix
-  - Index
-  - LastIndex
-  - TrimSpace
+  calls: []

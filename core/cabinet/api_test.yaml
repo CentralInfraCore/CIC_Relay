@@ -15,4 +15,6 @@ objects:
   references:
   - assert.Panics
   calls:
+  - Close
+  - NewAPI
   - assert.Panics

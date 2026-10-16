@@ -24,6 +24,7 @@ objects:
   - assert.True
   - assert.Empty
   calls:
+  - VerifyProofArtifact
   - assert.Empty
   - assert.True
 - name: TestVerifyProofArtifact_MissingWorkflowID
@@ -33,6 +34,7 @@ objects:
   - assert.False
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.False
 - name: TestVerifyProofArtifact_MissingChainHash
@@ -42,6 +44,7 @@ objects:
   - assert.False
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.False
 - name: TestVerifyProofArtifact_MissingTimestamp
@@ -51,6 +54,7 @@ objects:
   - assert.False
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.False
 - name: TestVerifyProofArtifact_EmptySourceDigest_Warns
@@ -62,6 +66,24 @@ objects:
   - require.NotEmpty
   - assert.Contains
   calls:
+  - VerifyProofArtifact
+  - assert.Contains
+  - assert.True
+  - cabinet.ComputeChainHashV1
+  - require.NotEmpty
+- name: TestVerifyProofArtifact_UnknownSourceDigest_Warns
+  kind: func
+  description: '"unknown" is the sentinel the relay writes when it has no source revision
+    to name. It means exactly what an empty value means, but the emptiness check let
+    it through silently: a trace that was in fact unanchored verified with no warning
+    at all.'
+  references:
+  - cabinet.ComputeChainHashV1
+  - assert.True
+  - require.NotEmpty
+  - assert.Contains
+  calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.True
   - cabinet.ComputeChainHashV1
@@ -73,6 +95,7 @@ objects:
   - assert.False
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.False
 - name: TestVerifyProofArtifact_StepMissingFields
@@ -81,10 +104,10 @@ objects:
   references:
   - cabinet.ProofTraceStep
   - cabinet.ComputeChainHashV1
-  - cabinet.ProofTraceStepempty
   - assert.False
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.False
   - cabinet.ComputeChainHashV1
@@ -95,6 +118,7 @@ objects:
   - assert.True
   - assert.Empty
   calls:
+  - VerifyProofArtifact
   - assert.Empty
   - assert.True
 - name: TestVerifyProofArtifact_InvalidPoSEResult
@@ -104,6 +128,7 @@ objects:
   - assert.False
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.False
 - name: TestVerifyProofArtifact_CommitRecord_Consistent
@@ -113,6 +138,7 @@ objects:
   - assert.True
   - assert.Empty
   calls:
+  - VerifyProofArtifact
   - assert.Empty
   - assert.True
 - name: TestVerifyProofArtifact_CommitRecord_IDMismatch
@@ -122,6 +148,7 @@ objects:
   - assert.False
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.False
 - name: TestVerifyProofArtifact_CommitRecord_PoseNotVerified_Warns
@@ -132,6 +159,7 @@ objects:
   - require.NotEmpty
   - assert.Contains
   calls:
+  - VerifyProofArtifact
   - assert.Contains
   - assert.True
   - require.NotEmpty
@@ -144,6 +172,7 @@ objects:
   - assert.Equal
   - require.Len
   calls:
+  - ProofArtifactFromTrace
   - assert.Equal
   - require.Len
 - name: TestProofArtifactFromTrace_EmptySteps
@@ -153,6 +182,7 @@ objects:
   - cabinet.ProofTrace
   - assert.Empty
   calls:
+  - ProofArtifactFromTrace
   - assert.Empty
 - name: TestMarshalProofArtifact
   kind: func
@@ -161,6 +191,7 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
+  - MarshalProofArtifact
   - assert.Contains
   - require.NoError
 - name: testSteps

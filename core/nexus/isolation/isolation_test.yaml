@@ -29,17 +29,17 @@ objects:
   description: ''
   references: []
   calls:
-  - Called
   - Error
   - Get
+  - MockWorker.Called
 - name: Sign
   kind: method
   receiver: MockCryptoService
   description: ''
   references: []
   calls:
-  - Called
   - Error
+  - MockCryptoService.Called
   - String
 - name: Verify
   kind: method
@@ -48,25 +48,25 @@ objects:
   references: []
   calls:
   - Bool
-  - Called
   - Error
+  - MockCryptoService.Called
 - name: Decrypt
   kind: method
   receiver: MockCryptoService
   description: ''
   references: []
   calls:
-  - Called
   - Error
   - Get
+  - MockCryptoService.Called
 - name: HealthCheck
   kind: method
   receiver: MockCryptoService
   description: ''
   references: []
   calls:
-  - Called
   - Error
+  - MockCryptoService.Called
 - name: TestCoordinator_Unwrap_Success
   kind: func
   description: ''
@@ -75,6 +75,11 @@ objects:
   - assert.NoError
   - assert.Equal
   calls:
+  - MockWorker.AssertExpectations
+  - MockWorker.On
+  - NewCoordinator
+  - Return
+  - Unwrap
   - assert.Equal
   - assert.NoError
 - name: TestCoordinator_Unwrap_Errors
@@ -85,6 +90,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
+  - MockWorker.On
+  - NewCoordinator
+  - Return
+  - Unwrap
   - assert.Contains
   - assert.Error
 - name: TestCoordinator_Unwrap_WorkerResponseErrors
@@ -95,6 +105,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
+  - MockWorker.On
+  - NewCoordinator
+  - Return
+  - Unwrap
   - assert.Contains
   - assert.Error
 - name: TestLocalWorker_Decrypt
@@ -108,6 +123,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Decrypt
+  - Error
+  - MockCryptoService.On
+  - NewLocalWorker
+  - Return
   - assert.Contains
   - assert.Equal
   - assert.Error
@@ -120,6 +140,7 @@ objects:
   - require.NoError
   - require.NotNil
   calls:
+  - NewSubprocessWorker
   - require.NoError
   - require.NotNil
 - name: TestSubprocessWorker_Decrypt_BadExecutable
@@ -128,6 +149,7 @@ objects:
   references:
   - require.Error
   calls:
+  - Decrypt
   - require.Error
 - name: TestSubprocessWorker_Decrypt_NoResponse
   kind: func
@@ -136,6 +158,8 @@ objects:
   - require.Error
   - assert.True
   calls:
+  - Decrypt
+  - Error
   - assert.True
   - require.Error
 - name: TestSubprocessWorker_Decrypt_BadJSON
@@ -145,6 +169,8 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Decrypt
+  - Error
   - assert.Contains
   - require.Error
 - name: TestSubprocessWorker_Decrypt_WorkerError
@@ -155,6 +181,8 @@ objects:
   - require.NotNil
   - assert.Contains
   calls:
+  - Decrypt
+  - Error
   - assert.Contains
   - require.NoError
   - require.NotNil
@@ -165,5 +193,6 @@ objects:
   - require.NoError
   - assert.Nil
   calls:
+  - Decrypt
   - assert.Nil
   - require.NoError

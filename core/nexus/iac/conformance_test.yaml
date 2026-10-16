@@ -36,51 +36,40 @@ objects:
   references: []
   calls:
   - Evaluate
-  - Fatalf
-  - Helper
 - name: TestEvaluate_OCI_Conformant
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
-  - Fatalf
+  calls: []
 - name: TestEvaluate_OCI_ExtraStateFieldsAreNotDrift
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: TestEvaluate_OCI_Drift
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: TestEvaluate_OCI_NotComparable
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: TestEvaluate_OCI_Unobserved
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: TestEvaluate_OCI_DesiredAbsentIsConformant
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: TestEvaluate_OCI_SubnetIsRecognizedReference
   kind: func
   description: ''
   references: []
   calls:
   - AsRef
-  - Errorf
   - ExpandField
-  - Fatalf

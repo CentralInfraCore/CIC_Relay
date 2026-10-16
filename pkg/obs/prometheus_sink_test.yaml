@@ -21,6 +21,7 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
+  - WritePrometheus
   - assert.Empty
   - obs.NewPrometheusSink
   - require.NoError
@@ -29,11 +30,13 @@ objects:
   description: ''
   references:
   - obs.NewPrometheusSink
-  - obs.CounterPointName
-  - obs.ResourceComponent
+  - obs.CounterPoint
+  - obs.Resource
   - require.NoError
   - assert.Contains
   calls:
+  - RecordCounter
+  - WritePrometheus
   - assert.Contains
   - obs.NewPrometheusSink
   - require.NoError
@@ -42,11 +45,13 @@ objects:
   description: ''
   references:
   - obs.NewPrometheusSink
-  - obs.CounterPointName
+  - obs.CounterPoint
   - require.NoError
   - assert.Contains
   - assert.Equal
   calls:
+  - RecordCounter
+  - WritePrometheus
   - assert.Contains
   - assert.Equal
   - obs.NewPrometheusSink
@@ -56,11 +61,13 @@ objects:
   description: ''
   references:
   - obs.NewPrometheusSink
-  - obs.GaugePointName
+  - obs.GaugePoint
   - require.NoError
   - assert.Contains
   - assert.NotContains
   calls:
+  - RecordGauge
+  - WritePrometheus
   - assert.Contains
   - assert.NotContains
   - obs.NewPrometheusSink
@@ -70,10 +77,12 @@ objects:
   description: ''
   references:
   - obs.NewPrometheusSink
-  - obs.HistogramPointName
+  - obs.HistogramPoint
   - require.NoError
   - assert.Contains
   calls:
+  - RecordHistogram
+  - WritePrometheus
   - assert.Contains
   - obs.NewPrometheusSink
   - require.NoError
@@ -82,10 +91,12 @@ objects:
   description: ''
   references:
   - obs.NewPrometheusSink
-  - obs.CounterPointName
+  - obs.CounterPoint
   - require.NoError
   - assert.Contains
   calls:
+  - RecordCounter
+  - WritePrometheus
   - assert.Contains
   - obs.NewPrometheusSink
   - require.NoError
@@ -94,23 +105,33 @@ objects:
   description: ''
   references:
   - obs.NewPrometheusSink
-  - obs.CounterPointName
+  - obs.CounterPoint
   - require.NoError
   - assert.Equal
   - assert.Less
   calls:
+  - RecordCounter
+  - WritePrometheus
   - assert.Equal
   - assert.Less
   - obs.NewPrometheusSink
   - require.NoError
+- name: Write
+  kind: method
+  receiver: failingWriter
+  description: ''
+  references: []
+  calls: []
 - name: TestPrometheusSink_WritePrometheus_PropagatesWriteError
   kind: func
   description: ''
   references:
   - obs.NewPrometheusSink
-  - obs.CounterPointName
+  - obs.CounterPoint
   - assert.Error
   calls:
+  - RecordCounter
+  - WritePrometheus
   - assert.Error
   - obs.NewPrometheusSink
 - name: TestPrometheusSink_ConcurrentRecordAndWriteIsRaceFree
@@ -123,10 +144,14 @@ objects:
     production scenario for GET /metrics).
   references:
   - obs.NewPrometheusSink
-  - obs.CounterPointName
-  - obs.GaugePointName
-  - obs.HistogramPointName
+  - obs.CounterPoint
+  - obs.GaugePoint
+  - obs.HistogramPoint
   - require.NoError
   calls:
+  - RecordCounter
+  - RecordGauge
+  - RecordHistogram
+  - WritePrometheus
   - obs.NewPrometheusSink
   - require.NoError

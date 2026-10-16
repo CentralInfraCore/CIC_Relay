@@ -15,18 +15,12 @@ objects:
   references: []
   calls:
   - Compare
-  - Fatalf
-  - Number
-  - Run
 - name: TestCompare_Numeric
   kind: func
   description: ''
   references: []
   calls:
   - Compare
-  - Fatalf
-  - Number
-  - Run
 - name: TestCompare_EmptyTypeDefaultsToExact
   kind: func
   description: ''
@@ -34,12 +28,51 @@ objects:
   calls:
   - Compare
   - CompareType
-  - Fatalf
 - name: TestClassifyFieldValue
   kind: func
   description: ''
   references: []
   calls:
   - ClassifyFieldValue
-  - Fatalf
-  - Run
+- name: TestCompare_Numeric_EveryNumericKindAgrees
+  kind: func
+  description: The same quantity must compare equal whatever Go type it arrived as.
+  references: []
+  calls:
+  - Compare
+- name: TestCompare_Numeric_DistinguishesNearbyValues
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Compare
+- name: TestCompare_Numeric_NonFiniteIsNotComparable
+  kind: func
+  description: 'NaN and the infinities have no rational value: under the numeric comparator
+    they are not comparable (surfaced as NOT_COMPARABLE), never a spurious match or
+    drift.'
+  references: []
+  calls:
+  - Compare
+- name: TestCompare_Exact_NumbersByCanonicalValue
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Compare
+- name: TestCompare_Exact_StructuredValues
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Compare
+- name: TestJSONKind
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestCanonicalEqual_UnserializableNeverMatches
+  kind: func
+  description: ''
+  references: []
+  calls: []

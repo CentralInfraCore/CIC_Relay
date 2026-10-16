@@ -16,16 +16,13 @@ objects:
     round-trip form. Plain strings are accepted here (for numeric comparison), but
     [normalizeNumbers] does not treat them as numbers.
   references: []
-  calls:
-  - FormatInt
-  - FormatUint
+  calls: []
 - name: canonicalFloat
   kind: func
   description: canonicalFloat renders a float in plain (non-exponent) decimal, shortest
     form, mapping negative zero to "0".
   references: []
-  calls:
-  - FormatFloat
+  calls: []
 - name: canonicalNumericString
   kind: func
   description: canonicalNumericString canonicalizes a numeric literal. Integer literals
@@ -33,10 +30,8 @@ objects:
     Returns false if s is not a number.
   references: []
   calls:
-  - ParseFloat
   - SetString
   - String
-  - TrimSpace
 - name: isNumeric
   kind: func
   description: isNumeric reports whether v is a numeric Go type (not a numeric string).

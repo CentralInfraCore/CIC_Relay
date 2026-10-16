@@ -39,11 +39,6 @@ objects:
   - api.Module
   - api.Function
   - obs.LogSink
-- name: GuestResult
-  kind: struct
-  description: ''
-  implements: []
-  references: []
 - name: SetObsSinks
   kind: method
   receiver: WasmManager
@@ -62,12 +57,20 @@ objects:
   - wasi_snapshot_preview1.Instantiate
   - wazero.CompiledModule
   - obs.LogRecord
-  - obs.ResourceComponent
+  - obs.Resource
   - lru.NewWithEvict
-  - context.Context.Err
+  - wazero.CompiledModule.Close
   calls:
-  - context.Context.Err
+  - Close
+  - Error
+  - Format
+  - RecordLog
+  - UTC
+  - WasmManagerConfig.HostSetupFn
+  - WithCloseOnContextDone
+  - lru.NewWithEvict
   - wasi_snapshot_preview1.Instantiate
+  - wazero.CompiledModule.Close
   - wazero.NewRuntimeConfig
   - wazero.NewRuntimeWithConfig
 - name: PreCompileModule
@@ -79,21 +82,17 @@ objects:
   references:
   - wazero.CompiledModule
   - obs.HistogramPoint
-  - obs.ResourceComponent
+  - obs.Resource
   calls:
   - Add
   - Checksum
   - CompileModule
   - Do
-  - Errorf
   - Format
   - Get
   - Load
   - Milliseconds
-  - New
-  - Now
   - RecordHistogram
-  - Since
   - UTC
 - name: NewHostInstance
   kind: method
@@ -103,8 +102,18 @@ objects:
   references:
   - wazero.NewModuleConfig
   - obs.HistogramPoint
-  - obs.ResourceComponent
+  - obs.Resource
   calls:
+  - Close
+  - Format
+  - InstantiateModule
+  - Load
+  - Milliseconds
+  - RecordHistogram
+  - UTC
+  - WasmManager.PreCompileModule
+  - WithName
+  - WithStartFunctions
   - wazero.NewModuleConfig
 - name: EvictModule
   kind: method
@@ -113,14 +122,14 @@ objects:
     cache by moduleID prefix matching.
   references: []
   calls:
-  - HasPrefix
   - Keys
   - Load
   - Remove
 - name: Close
   kind: method
   receiver: WasmManager
-  description: Close releases the underlying WASM module instance and its memory resources.
+  description: Close shuts down the entire WASM runtime and purges the compiled module
+    cache, invoking eviction callbacks.
   references: []
   calls:
   - Close
@@ -182,12 +191,8 @@ objects:
   references: []
   calls:
   - Call
-  - Is
   - Memory
   - Read
-  - Sprintf
-  - Unmarshal
-  - WithTimeout
 - name: writeStringToWasm
   kind: method
   receiver: CicWasmHost
@@ -196,7 +201,6 @@ objects:
   references: []
   calls:
   - Call
-  - Errorf
   - Memory
   - Write
 - name: emitDeallocWarn
@@ -206,11 +210,10 @@ objects:
     fails. It is a no-op if logSink is nil.
   references:
   - obs.LogRecord
-  - obs.ResourceComponent
+  - obs.Resource
   calls:
   - Error
   - Format
-  - Now
   - RecordLog
   - UTC
 - name: formatErrorJson
@@ -218,5 +221,4 @@ objects:
   description: formatErrorJson constructs a JSON error object with code, message,
     and optional details fields.
   references: []
-  calls:
-  - Marshal
+  calls: []

@@ -17,6 +17,7 @@ objects:
   - assert.Equal
   - assert.Contains
   calls:
+  - SpecDigest
   - assert.Contains
   - assert.Equal
   - require.NoError
@@ -28,6 +29,7 @@ objects:
   - assert.Equal
   - assert.NotEqual
   calls:
+  - SpecDigest
   - assert.Equal
   - assert.NotEqual
   - require.NoError
@@ -40,6 +42,7 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - SpecDigest
   - assert.Equal
   - require.NoError
 - name: TestSpecDigest_NumberNormalization
@@ -50,6 +53,7 @@ objects:
   - assert.Equal
   - assert.NotEqual
   calls:
+  - SpecDigest
   - assert.Equal
   - assert.NotEqual
   - require.NoError
@@ -60,6 +64,7 @@ objects:
   - require.NoError
   - assert.NotEqual
   calls:
+  - SpecDigest
   - assert.NotEqual
   - require.NoError
 - name: TestSpecDigest_EncodeError
@@ -68,4 +73,5 @@ objects:
   references:
   - assert.Error
   calls:
+  - SpecDigest
   - assert.Error

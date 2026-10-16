@@ -35,17 +35,16 @@ objects:
 - name: ParseSchema
   kind: func
   description: 'ParseSchema reads a schema document into a [Schema]. Each top-level
-    key is a field; its value carries the behavior annotations: shape:      { behavior:
-    { compare: { type: exact } } } memory_gb:  { behavior: { compare: { type: numeric
-    } } } provider_id:{ behavior: { mode: { write: false } } }        # computed →
-    state-only interfaces: { collection: { topology: map, keys: [name] }, element:
-    { subnet: { behavior: { compare: { type: exact } } } } } A missing `behavior.mode`
-    defaults every flag to true (writable), matching the field model''s scalar-sugar.
-    Fields (and collection elements) are sorted by path so the compiled plan — and
-    any digest over it — is deterministic.'
+    key is a field; its value carries the behavior annotations: shape: { behavior:
+    { compare: { type: exact } } } memory_gb: { behavior: { compare: { type: numeric
+    } } } provider_id:{ behavior: { mode: { write: false } } } # computed → state-only
+    interfaces: { collection: { topology: map, keys: [name] }, element: { subnet:
+    { behavior: { compare: { type: exact } } } } } A missing `behavior.mode` defaults
+    every flag to true (writable), matching the field model''s scalar-sugar. Fields
+    (and collection elements) are sorted by path so the compiled plan — and any digest
+    over it — is deterministic.'
   references: []
-  calls:
-  - Slice
+  calls: []
 - name: parseSchemaField
   kind: func
   description: parseSchemaField parses one field descriptor at the given (already-prefixed)
@@ -55,7 +54,6 @@ objects:
   - CollectionTopology
   - CompareType
   - FieldID
-  - Strings
 - name: asString
   kind: func
   description: ''

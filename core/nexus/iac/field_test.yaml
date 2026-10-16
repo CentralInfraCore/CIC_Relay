@@ -16,6 +16,7 @@ objects:
   references:
   - assert.Equal
   calls:
+  - ExpandField
   - assert.Equal
 - name: TestExpandField_ScalarKinds
   kind: func
@@ -23,6 +24,7 @@ objects:
   references:
   - assert.Equal
   calls:
+  - ExpandField
   - assert.Equal
 - name: TestExpandField_Default
   kind: func
@@ -32,6 +34,7 @@ objects:
   - assert.Equal
   - assert.False
   calls:
+  - ExpandField
   - assert.Equal
   - assert.False
   - assert.True
@@ -43,6 +46,7 @@ objects:
   - assert.False
   - assert.True
   calls:
+  - ExpandField
   - assert.Equal
   - assert.False
   - assert.True
@@ -52,6 +56,7 @@ objects:
   references:
   - assert.Equal
   calls:
+  - ExpandField
   - assert.Equal
 - name: TestExpandSpec
   kind: func
@@ -62,6 +67,7 @@ objects:
   - assert.True
   - assert.Len
   calls:
+  - ExpandSpec
   - assert.Equal
   - assert.False
   - assert.Len

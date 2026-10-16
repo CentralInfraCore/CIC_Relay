@@ -14,6 +14,19 @@ objects:
   references:
   - require.NoError
   - sourcedigest.ComputeTreeHash
+  - assert.Equal
+  - assert.Len
+  calls:
+  - assert.Equal
+  - assert.Len
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
+- name: TestComputeTreeHash_ContentSensitivity
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - sourcedigest.ComputeTreeHash
   - assert.NotEqual
   calls:
   - assert.NotEqual

@@ -24,10 +24,15 @@ Options:
 """
 
 import argparse
+import atexit
 import json
+import os
 import re
-import subprocess
+import shlex
+import shutil
+import subprocess  # nosec B404 - drives the Go toolchain / goastdump, argv lists only
 import sys
+import tempfile
 from pathlib import Path
 
 try:
@@ -207,20 +212,20 @@ def _parse_imports(source: str) -> dict[str, str]:
             if not line:
                 continue
             # alias "path"
-            line_m = re.match(r'(\w+|_|\.)\s+"([^"]+)"', line)
-            if line_m:
+            alias_m = re.match(r'(\w+|_|\.)\s+"([^"]+)"', line)
+            if alias_m:
                 alias = (
-                    line_m.group(1)
-                    if line_m.group(1) not in ("_", ".")
-                    else line_m.group(2).split("/")[-1]
+                    alias_m.group(1)
+                    if alias_m.group(1) not in ("_", ".")
+                    else alias_m.group(2).split("/")[-1]
                 )
-                imports[alias] = line_m.group(2)
+                imports[alias] = alias_m.group(2)
                 continue
             # "path"
-            line_m = re.match(r'"([^"]+)"', line)
-            if line_m:
-                alias = line_m.group(1).split("/")[-1]
-                imports[alias] = line_m.group(1)
+            path_m = re.match(r'"([^"]+)"', line)
+            if path_m:
+                alias = path_m.group(1).split("/")[-1]
+                imports[alias] = path_m.group(1)
 
     return imports
 
@@ -254,6 +259,104 @@ def _is_external(pkg: str, imports: dict[str, str], module_name: str = "") -> bo
     return not _is_stdlib_path(imports[pkg])
 
 
+def _extract_interface_methods(body: str) -> list[str]:
+    """Extract exported method names from an interface body."""
+    methods = []
+    for m in re.finditer(r"^\s+([A-Z]\w*)\s*\(", body, re.MULTILINE):
+        methods.append(m.group(1))
+    return sorted(set(methods))
+
+
+def _extract_calls(body: str, refs: list[str] | None = None) -> list[str]:
+    """Extract function/method calls from function body with type resolution.
+
+    First extracts method names from body (Set, Query, etc).
+    Then resolves types using references (cabinet.Cabinet.Set, sql.DB.Query, etc).
+
+    Examples:
+        body: "s.Set(db.Query())"  refs: ["cabinet.Cabinet.Set", "sql.DB.Query"]
+        → ["cabinet.Cabinet.Set", "sql.DB.Query"]
+
+    Falls back to untyped calls if refs unavailable:
+        body: "s.Set(db.Query())"  refs: None
+        → ["Set", "Query"]
+    """
+    call_names = set()
+
+    # Extract bare method/function names
+    # First pattern: pkg.Name()
+    for m in re.finditer(r"\b\w+\.([A-Z]\w*)\s*\(", body):
+        call_names.add(m.group(1))
+
+    # Second pattern: standalone Name()
+    for m in re.finditer(r"\b([A-Z]\w*)\s*\(", body):
+        call_names.add(m.group(1))
+
+    # Type resolution: match call names against references
+    if refs:
+        typed_calls = []
+        for ref in refs:
+            # ref format: "cabinet.Cabinet.Set", extract the method name
+            method_name = ref.split(".")[-1]  # "Set" from "cabinet.Cabinet.Set"
+            if method_name in call_names:
+                typed_calls.append(ref)
+
+        # Return typed calls if found, otherwise fall back to bare names
+        if typed_calls:
+            return sorted(set(typed_calls))
+
+    # Fallback: return untyped call names
+    return sorted(call_names) if call_names else []
+
+
+def _extract_param_types(
+    params_str: str, imports: dict[str, str], module_name: str = ""
+) -> dict[str, str]:
+    """Extract {param_name: pkg_alias} from function parameter list.
+
+    Examples:
+        "s *Service, db *sql.DB" -> {"s": "Service", "db": "sql"}
+        "ops nexusgit.GitOps" -> {"ops": "nexusgit.GitOps"}
+    """
+    result: dict[str, str] = {}
+    if not params_str:
+        return result
+
+    # Split by comma, but handle nested parens (e.g., func types)
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    for c in params_str:
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif c == "," and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+            continue
+        current.append(c)
+    if current:
+        parts.append("".join(current).strip())
+
+    # Parse each parameter: [*]pkg.Type or [*]Type
+    for part in parts:
+        if not part or part.startswith("..."):
+            continue
+
+        # Extract type: skip pointer, handle []
+        type_part = re.sub(r"^[\[\]*]+", "", part).strip()
+
+        # Extract param name: "s *Service" → name="s", type="Service"
+        m = re.match(r"^(\w+)\s+([\w.]+)$", type_part)
+        if m:
+            param_name = m.group(1)
+            param_type = m.group(2)
+            result[param_name] = param_type
+
+    return result
+
+
 def _extract_local_typed_vars(
     text: str, imports: dict[str, str], module_name: str = ""
 ) -> dict[str, str]:
@@ -278,13 +381,19 @@ def _extract_local_typed_vars(
 
 
 def _extract_refs(
-    text: str, imports: dict[str, str], module_name: str = ""
+    text: str,
+    imports: dict[str, str],
+    module_name: str = "",
+    param_types: dict[str, str] | None = None,
+    receiver_type: str | None = None,
+    receiver_name: str = "s",
 ) -> list[str]:
     """Find non-stdlib pkg.Name references in text.
 
-    Two passes:
+    Three passes:
     1. Direct package references: pkg.ExportedName  (types, funcs, consts)
     2. Typed variable method calls: var db *sql.DB → db.QueryRow → sql.QueryRow
+    3. Parameter/receiver method calls: func f(s *Service) { s.Method() } → Service.Method
     """
     seen: dict[str, None] = {}  # ordered set preserving insertion order
 
@@ -301,6 +410,27 @@ def _extract_refs(
         pkg = local_vars.get(var_name)
         if pkg:
             seen[f"{pkg}.{method}"] = None
+
+    # Pass 3 — parameter/receiver method calls
+    # param_types: {"s": "Service", "ops": "nexusgit.GitOps"}
+    # receiver_type: "Service" (for methods), receiver_name: "s"
+    if param_types:
+        local_vars.update(param_types)
+    if receiver_type:
+        local_vars[receiver_name] = (
+            receiver_type  # implicit receiver, e.g., s *relayServer → s: relayServer
+        )
+
+    for m in re.finditer(r"\b(\w+)\.([A-Z]\w*)\s*\(", text):
+        var_name, method = m.group(1), m.group(2)
+        type_name = local_vars.get(var_name)
+        if type_name and "." in type_name:
+            # Already has package: "nexusgit.GitOps"
+            seen[f"{type_name}.{method}"] = None
+        elif type_name and _is_external(type_name, imports, module_name):
+            # Type is a local package: "Service" → resolve via imports
+            # This would need symbol table, skip for now
+            pass
 
     return list(seen)
 
@@ -441,6 +571,8 @@ def _parse_objects(
     for m in re.finditer(r"\btype\s+(\w+)\s+struct\s*\{", clean):
         name = m.group(1)
         body = _extract_block_content(clean, m.end() - 1)
+        # Struct fields could have types, but they're just declarations
+        # Extract refs from field types
         refs = _extract_refs(body, imports, module_name)
         obj: dict = {
             "name": name,
@@ -458,12 +590,14 @@ def _parse_objects(
         name = m.group(1)
         body = _extract_block_content(clean, m.end() - 1)
         refs = _extract_refs(body, imports, module_name)
+        methods = _extract_interface_methods(body)
         objects.append(
             {
                 "name": name,
                 "kind": "interface",
                 "description": doc.get(name, ""),
                 "references": refs,
+                "methods": methods,
             }
         )
 
@@ -490,20 +624,35 @@ def _parse_objects(
     # --- funcs and methods ---
     func_re = re.compile(
         r"\bfunc\s+"
-        r"(?:\(\s*\w+\s+\*?(\w+)\s*\)\s*)?"  # group 1: receiver type (optional)
-        r"(\w+)\s*"  # group 2: func name
-        r"\(([^)]*(?:\([^)]*\)[^)]*)*)\)"  # group 3: params
-        r"([^{]*)",  # group 4: return types
+        r"(?:\(\s*(\w+)\s+\*?(\w+)\s*\)\s*)?"  # group 1: receiver name, group 2: receiver type (optional)
+        r"(\w+)\s*"  # group 3: func name
+        r"\(([^)]*(?:\([^)]*\)[^)]*)*)\)"  # group 4: params
+        r"([^{]*)",  # group 5: return types
         re.MULTILINE,
     )
     for m in func_re.finditer(clean):
-        recv_type = m.group(1)
-        func_name = m.group(2)
-        params = m.group(3) or ""
-        returns = m.group(4) or ""
+        recv_name = m.group(1)
+        recv_type = m.group(2)
+        func_name = m.group(3)
+        params = m.group(4) or ""
+        returns = m.group(5) or ""
         brace_pos = clean.find("{", m.end())
         body = _extract_block_content(clean, brace_pos) if brace_pos != -1 else ""
-        refs = _extract_refs(f"{params} {returns} {body}", imports, module_name)
+
+        # Extract parameter types and pass to _extract_refs
+        param_types = _extract_param_types(params, imports, module_name)
+        refs = _extract_refs(
+            f"{params} {returns} {body}",
+            imports,
+            module_name,
+            param_types=param_types,
+            receiver_type=recv_type,
+            receiver_name=recv_name or "s",
+        )
+
+        # Extract function/method calls from body with type resolution
+        # Pass refs for type resolution: match call names against full refs
+        calls = _extract_calls(body, refs)
 
         if recv_type:
             objects.append(
@@ -513,6 +662,7 @@ def _parse_objects(
                     "receiver": recv_type,
                     "description": doc.get(func_name, ""),
                     "references": refs,
+                    "calls": calls,
                 }
             )
         else:
@@ -522,6 +672,7 @@ def _parse_objects(
                     "kind": "func",
                     "description": doc.get(func_name, ""),
                     "references": refs,
+                    "calls": calls,
                 }
             )
 
@@ -557,24 +708,29 @@ def _parse_objects(
 # ---------------------------------------------------------------------------
 
 
-def generate(go_file: Path) -> dict:
-    source = go_file.read_text(encoding="utf-8")
+def generate(go_file: Path, dump: dict | None = None) -> dict:
+    """Build the companion data for one Go file.
 
-    pkg_m = re.search(r"^\s*package\s+(\w+)", source, re.MULTILINE)
-    package = pkg_m.group(1) if pkg_m else ""
-
-    module_name = _find_module_name(go_file)
-    imports = _parse_imports(source)
-    objects = _parse_objects(source, imports, module_name)
-
-    # Merge AST metadata into objects
-    ast_meta = _extract_ast_metadata(go_file)
-    if ast_meta:
-        objects = _merge_ast_into_objects(objects, ast_meta)
+    With `dump` (one entry of the goastdump output) the declarations come from
+    go/ast; without it the regex reader is used.
+    """
+    if dump is not None:
+        imports = dump["imports"]
+        objects = _objects_from_dump(dump, imports)
+        package = dump["package"]
+        description = dump["package_doc"]
+    else:
+        source = go_file.read_text(encoding="utf-8")
+        pkg_m = re.search(r"^\s*package\s+(\w+)", source, re.MULTILINE)
+        package = pkg_m.group(1) if pkg_m else ""
+        module_name = _find_module_name(go_file)
+        imports = _parse_imports(source)
+        objects = _parse_objects(source, imports, module_name)
+        description = _extract_package_doc(source)
 
     return {
         "package": package,
-        "description": _extract_package_doc(source),
+        "description": description,
         "tags": _suggest_tags(go_file, imports, objects),
         "category": [],
         "used_in": [],
@@ -584,95 +740,203 @@ def generate(go_file: Path) -> dict:
     }
 
 
-def _extract_ast_metadata(go_file: Path) -> dict:
-    """Extract AST metadata using go_ast_extract module.
+# ---------------------------------------------------------------------------
+# go/ast front end (tools/goastdump)
+# ---------------------------------------------------------------------------
 
-    Returns {object_key: ObjectMeta, ...} or {} if extraction fails.
-    Tries direct import first (faster), falls back to subprocess if needed.
+_AST_DIR = Path(__file__).resolve().parent / "goastdump"
+_AST_CHUNK = 400  # files per goastdump invocation (argv length)
+_ast_bin: list[str] | None = None  # resolved command, cached after the first build
+_KIND_RANK = {
+    "struct": 0,
+    "interface": 1,
+    "type": 2,
+    "func": 3,
+    "method": 3,
+    "var": 4,
+    "const": 5,
+}
+
+
+def _ast_command() -> list[str] | None:
+    """Return the command that runs goastdump, or None if it cannot be had.
+
+    GO_META_GOASTDUMP overrides it with a prebuilt binary (or any command).
+    Otherwise the helper is built once with the `go` on PATH.
     """
-    try:
-        # Try direct import first (faster, no subprocess overhead). Bare import
-        # resolved at runtime via sys.path; falls back to subprocess on failure.
-        from go_ast_extract import extract_ast  # type: ignore[import-not-found]
+    global _ast_bin
+    if _ast_bin is not None:
+        return _ast_bin
+    override = os.environ.get("GO_META_GOASTDUMP")
+    if override:
+        _ast_bin = shlex.split(override)
+        return _ast_bin
+    go = shutil.which("go")
+    if not go or not (_AST_DIR / "main.go").exists():
+        return None
+    build_dir = tempfile.mkdtemp(prefix="goastdump-")
+    atexit.register(shutil.rmtree, build_dir, True)
+    out = Path(build_dir) / "goastdump"
+    res = subprocess.run(
+        [go, "build", "-o", str(out), "."],
+        cwd=_AST_DIR,  # nosec B603 - argv list, no shell, builds this repo's own helper
+        capture_output=True,
+        text=True,
+    )
+    if res.returncode != 0:
+        print(f"goastdump build failed:\n{res.stderr}", file=sys.stderr)
+        return None
+    _ast_bin = [str(out)]
+    return _ast_bin
 
-        return extract_ast(go_file)
-    except ImportError:
-        pass
 
-    # Fallback: use subprocess if module import fails
-    ast_script = Path(__file__).parent / "go_ast_extract.py"
-    if not ast_script.exists():
-        return {}
-
-    try:
-        result = subprocess.run(
-            [sys.executable, str(ast_script), str(go_file)],
+def _ast_dump(files: list[Path]) -> dict[Path, dict]:
+    """Run goastdump over files; returns {resolved path: per-file dump}."""
+    cmd = _ast_command()
+    if cmd is None:
+        raise RuntimeError("goastdump unavailable (no Go toolchain on PATH)")
+    result: dict[Path, dict] = {}
+    resolved = [f.resolve() for f in files]
+    for i in range(0, len(resolved), _AST_CHUNK):
+        chunk = resolved[i : i + _AST_CHUNK]
+        res = subprocess.run(
+            cmd
+            + [
+                str(f) for f in chunk
+            ],  # nosec B603 - argv list, no shell; cmd is the helper or GO_META_GOASTDUMP
             capture_output=True,
             text=True,
-            timeout=5,
         )
-        if result.returncode == 0:
-            return json.loads(result.stdout)
-    except Exception:
-        pass
+        if res.returncode != 0:
+            raise RuntimeError(f"goastdump failed: {res.stderr.strip()}")
+        for entry in json.loads(res.stdout)["files"]:
+            result[Path(entry["file"])] = entry
+    return result
 
-    return {}
+
+def _format_call(c: dict, imports: dict[str, str]) -> str | None:
+    pkg = c.get("pkg", "")
+    if pkg and not _is_external(pkg, imports):
+        return None  # stdlib (or unknown alias): not part of the graph
+    return ".".join(p for p in (pkg, c.get("type", ""), c["name"]) if p)
 
 
-def _merge_ast_into_objects(objects: list, ast_meta: dict) -> list:
-    """Merge AST metadata into objects list.
+def _objects_from_dump(dump: dict, imports: dict[str, str]) -> list[dict]:
+    """Turn a goastdump file entry into the objects list the regex reader made.
 
-    AST metadata keys match go_ast_extract._make_key format:
-      methods  → "ReceiverType.MethodName"
-      others   → "Name"
+    Key order and the kind grouping (structs, interfaces, types, funcs/methods,
+    vars, consts) follow the regex reader so a regenerated YAML differs only by
+    what the syntax tree adds, not by reordering.
     """
-    if not ast_meta:
-        return objects
+    objects: list[dict] = []
+    for o in dump["objects"]:
+        kind = o["kind"]
+        refs = [
+            f"{r['pkg']}.{r['name']}"
+            for r in o["refs"]
+            if _is_external(r["pkg"], imports)
+        ]
+        if kind in ("func", "method"):
+            # a call on an imported type is a reference to that type's method
+            for c in o["calls"]:
+                if c.get("pkg") and c.get("type") and _is_external(c["pkg"], imports):
+                    ref = f"{c['pkg']}.{c['type']}.{c['name']}"
+                    if ref not in refs:
+                        refs.append(ref)
+            calls = sorted(
+                {t for t in (_format_call(c, imports) for c in o["calls"]) if t}
+            )
 
-    for obj in objects:
-        name = obj.get("name", "")
-        kind = obj.get("kind", "")
-
-        # Build key matching go_ast_extract's _make_key output
-        if kind == "method":
-            receiver = obj.get("receiver", "")
-            ast_key = f"{receiver}.{name}" if receiver else name
-        else:
-            ast_key = name
-
-        ast_info = ast_meta.get(ast_key)
-
-        if ast_info:
-            if "position" in ast_info:
-                obj["position"] = ast_info["position"]
-            if "signature" in ast_info and ast_info["signature"]:
-                obj["signature"] = ast_info["signature"]
-            if "calls" in ast_info and ast_info["calls"]:
-                obj["calls"] = ast_info["calls"]
-            if "fields" in ast_info and ast_info["fields"]:
-                obj["fields"] = ast_info["fields"]
-            if "methods" in ast_info and ast_info["methods"]:
-                obj["methods"] = ast_info["methods"]
-
+        desc = o["doc"]
+        if kind == "struct":
+            obj = {
+                "name": o["name"],
+                "kind": kind,
+                "description": desc,
+                "implements": [],
+                "references": refs,
+            }
+        elif kind == "interface":
+            obj = {
+                "name": o["name"],
+                "kind": kind,
+                "description": desc,
+                "references": refs,
+                "methods": o.get("methods", []),
+            }
+        elif kind == "method":
+            obj = {
+                "name": o["name"],
+                "kind": kind,
+                "receiver": o["receiver"],
+                "description": desc,
+                "references": refs,
+                "calls": calls,
+            }
+        elif kind == "func":
+            obj = {
+                "name": o["name"],
+                "kind": kind,
+                "description": desc,
+                "references": refs,
+                "calls": calls,
+            }
+        else:  # type, var, const
+            obj = {
+                "name": o["name"],
+                "kind": kind,
+                "description": desc,
+                "references": refs if kind == "type" else [],
+            }
+        objects.append(obj)
+    objects.sort(
+        key=lambda x: _KIND_RANK[x["kind"]]
+    )  # stable: source order within a rank
     return objects
 
 
-def _object_key(obj: dict) -> str:
-    """Create stable, unique key for object merge.
+def _detect_implements(yaml_dir: Path) -> dict[str, list[str]]:
+    """Scan all YAML files in yaml_dir and return {struct_name: [interface_names]}
+    based on method-set inclusion.
 
-    Disambiguates same-named objects across different kinds/receivers:
-      method:Store.Save
-      method:Client.Save
-      func:Save
+    A struct S implements interface I if all exported methods of I appear as
+    kind=method objects with receiver=S across any YAML in the directory.
+
+    Returns a dict mapping struct names to the list of interfaces they implement.
+    Does NOT modify any files — callers are responsible for applying results.
     """
-    kind = obj.get("kind", "unknown")
-    if kind == "method":
-        receiver = obj.get("receiver", "")
-        name = obj.get("name", "")
-        return f"method:{receiver}.{name}"
-    else:
-        name = obj.get("name", "")
-        return f"{kind}:{name}"
+    ifaces: dict[str, set[str]] = {}  # {iface_name: {method_name, ...}}
+    struct_methods: dict[str, set[str]] = {}  # {struct_name: {method_name, ...}}
+
+    for yaml_file in sorted(yaml_dir.glob("*.yaml")):
+        try:
+            with open(yaml_file) as f:
+                data = yaml.safe_load(f) or {}
+        except (
+            Exception
+        ):  # nosec B112 - one malformed companion YAML must not abort the scan
+            continue
+        for obj in data.get("objects", []):
+            kind = obj.get("kind")
+            name = obj.get("name", "")
+            if kind == "interface":
+                methods = obj.get("methods", [])
+                if methods:
+                    ifaces[name] = set(methods)
+            elif kind == "method":
+                receiver = obj.get("receiver", "")
+                if receiver:
+                    struct_methods.setdefault(receiver, set()).add(name)
+
+    result: dict[str, list[str]] = {}
+    for struct, methods in struct_methods.items():
+        impls = []
+        for iface, iface_methods in ifaces.items():
+            if iface_methods and iface_methods.issubset(methods):
+                impls.append(iface)
+        if impls:
+            result[struct] = sorted(impls)
+    return result
 
 
 def _merge_data(new_data: dict, old_data: dict) -> dict:
@@ -692,9 +956,6 @@ def _merge_data(new_data: dict, old_data: dict) -> dict:
       - New objects (added to Go source) → appended
       - Removed objects (deleted from Go source) → dropped
       - Existing objects → merged per field rules above
-
-    Object matching uses stable key (kind:name or method:receiver.name)
-    to correctly handle same-named methods on different types.
     """
     merged = dict(new_data)
 
@@ -708,15 +969,13 @@ def _merge_data(new_data: dict, old_data: dict) -> dict:
     if not merged.get("description"):
         merged["description"] = old_data.get("description", "")
 
-    # merge objects by stable key (kind:name or method:receiver.name)
-    old_by_key: dict[str, dict] = {
-        _object_key(o): o for o in old_data.get("objects", [])
-    }
+    # merge objects by name
+    old_by_name: dict[str, dict] = {o["name"]: o for o in old_data.get("objects", [])}
     merged_objects = []
     for new_obj in new_data.get("objects", []):
-        key = _object_key(new_obj)
-        if key in old_by_key:
-            old_obj = old_by_key[key]
+        name = new_obj["name"]
+        if name in old_by_name:
+            old_obj = old_by_name[name]
             obj = dict(new_obj)  # structural fields from new
             if obj.get("kind") == "struct":  # implements only meaningful on structs
                 obj["implements"] = old_obj.get("implements", [])
@@ -769,9 +1028,27 @@ def main() -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help="Print actions without writing files"
     )
+    parser.add_argument(
+        "--parser",
+        choices=("auto", "ast", "regex"),
+        default="auto",
+        help="Declaration reader. ast: go/ast via tools/goastdump (needs a Go "
+        "toolchain, fails loudly without one). regex: the legacy reader, "
+        "known to miss grouped const/var blocks, unnamed receivers, generics "
+        "and code after a string containing '//'. auto (default): ast, "
+        "falling back to regex with a warning where ast is unavailable.",
+    )
+    parser.add_argument(
+        "--detect-implements",
+        action="store_true",
+        help="After generating/merging, detect interface implementations "
+        "by method-set inclusion across all YAMLs in the same directory "
+        "and fill in the implements field. Only effective with --dir.",
+    )
     args = parser.parse_args()
 
     files: list[Path] = [Path(f) for f in args.files]
+    dirs_processed: set[Path] = set()
     if args.dir:
         d = Path(args.dir)
         glob = d.rglob("*.go") if args.recursive else d.glob("*.go")
@@ -780,6 +1057,27 @@ def main() -> None:
     if not files:
         parser.print_help()
         sys.exit(1)
+
+    dumps: dict[Path, dict] = {}
+    if args.parser != "regex":
+        todo = [
+            f
+            for f in sorted(set(files))
+            if f.exists()
+            and not (args.skip_tests and f.name.endswith("_test.go"))
+            and (args.overwrite or args.merge or not f.with_suffix(".yaml").exists())
+        ]
+        try:
+            dumps = _ast_dump(todo) if todo else {}
+        except RuntimeError as e:
+            if args.parser == "ast":
+                print(f"ERROR: {e}", file=sys.stderr)
+                sys.exit(2)
+            print(
+                f"WARNING: {e}; falling back to the regex reader, which is known to "
+                f"miss declarations (use --parser ast to make this an error)",
+                file=sys.stderr,
+            )
 
     generated = merged_count = skipped = errors = 0
     for go_file in sorted(set(files)):
@@ -798,8 +1096,19 @@ def main() -> None:
             skipped += 1
             continue
 
+        dump = dumps.get(go_file.resolve())
+        if dump is not None and dump.get("error"):
+            if args.parser == "ast":
+                print(f"ERROR: {go_file}: {dump['error']}", file=sys.stderr)
+                errors += 1
+                continue
+            print(
+                f"WARNING: {go_file}: {dump['error']}; using the regex reader",
+                file=sys.stderr,
+            )
+            dump = None
         try:
-            data = generate(go_file)
+            data = generate(go_file, dump)
         except Exception as e:
             print(f"ERROR: {go_file}: {e}", file=sys.stderr)
             errors += 1
@@ -830,9 +1139,41 @@ def main() -> None:
         else:
             _write_yaml(data, yaml_file)
             print(f"{action}: {yaml_file}  [{obj_count} objects, {ref_count} refs]")
+            dirs_processed.add(go_file.parent)
 
     summary = f"\nDone: {generated} generated, {merged_count} merged, {skipped} skipped, {errors} errors"
     print(summary)
+
+    # Interface implementation detection pass
+    if args.detect_implements and not args.dry_run and dirs_processed:
+        impl_count = 0
+        for yaml_dir in sorted(dirs_processed):
+            impl_map = _detect_implements(yaml_dir)
+            if not impl_map:
+                continue
+            for yaml_file in sorted(yaml_dir.glob("*.yaml")):
+                try:
+                    with open(yaml_file) as f:
+                        data = yaml.safe_load(f) or {}
+                except (
+                    Exception
+                ):  # nosec B112 - one malformed companion YAML must not abort the scan
+                    continue
+                changed = False
+                for obj in data.get("objects", []):
+                    if obj.get("kind") == "struct":
+                        impls = impl_map.get(obj["name"], [])
+                        if impls and obj.get("implements") != impls:
+                            obj["implements"] = impls
+                            changed = True
+                            impl_count += 1
+                if changed:
+                    _write_yaml(data, yaml_file)
+                    print(
+                        f"IMPLEMENTS: {yaml_file.name} — updated {sum(1 for o in data['objects'] if o.get('kind')=='struct' and o.get('implements'))} structs"
+                    )
+        print(f"Interface detection: {impl_count} struct(s) updated with implements")
+
     if errors:
         sys.exit(1)
 

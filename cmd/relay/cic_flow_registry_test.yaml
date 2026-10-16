@@ -65,6 +65,7 @@ objects:
   - assert.Contains
   - assert.False
   calls:
+  - Error
   - assert.Contains
   - assert.False
   - require.Error
@@ -82,5 +83,6 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error

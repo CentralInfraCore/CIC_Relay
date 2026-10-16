@@ -21,9 +21,8 @@ objects:
     checks if referenced entities (workflow, modules) exist.
   references: []
   calls:
-  - Errorf
-  - GetModule
-  - GetWorkflow
+  - API.GetModule
+  - API.GetWorkflow
   - IsNotFound
 - name: Set
   kind: method
@@ -31,7 +30,6 @@ objects:
   description: Set is the entry point for schema validation and workflow execution.
   references: []
   calls:
+  - API.ValidateSet
   - CanonicalizeSetPayload
-  - Errorf
   - Setx
-  - ValidateSet

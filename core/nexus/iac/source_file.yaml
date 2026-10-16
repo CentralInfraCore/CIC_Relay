@@ -24,11 +24,4 @@ objects:
   receiver: FileSource
   description: FetchConfig walks the directory tree and reads all YAML/JSON files.
   references: []
-  calls:
-  - Ext
-  - IsDir
-  - Name
-  - ReadFile
-  - Rel
-  - ToLower
-  - WalkDir
+  calls: []

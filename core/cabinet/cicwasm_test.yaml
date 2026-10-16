@@ -47,8 +47,8 @@ objects:
   description: ''
   references: []
   calls:
-  - ID
   - Lock
+  - ModuleDescriptor.ID
   - Unlock
 - name: Exists
   kind: method
@@ -70,6 +70,10 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Close
+  - Error
+  - NewHostInstance
+  - NewWasmManager
   - assert.Contains
   - assert.Error
   - assert.NoError
@@ -86,6 +90,14 @@ objects:
   - assert.True
   - assert.Same
   calls:
+  - Checksum
+  - Close
+  - Get
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - PreCompileModule
+  - Put
   - assert.Same
   - assert.True
   - require.NoError
@@ -99,6 +111,13 @@ objects:
   - require.NotNil
   - assert.NoError
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - PreCompileModule
+  - Put
   - assert.Error
   - assert.NoError
   - require.NoError
@@ -111,6 +130,15 @@ objects:
   - assert.True
   - assert.False
   calls:
+  - Checksum
+  - Close
+  - EvictModule
+  - Get
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - PreCompileModule
+  - Put
   - assert.False
   - assert.True
   - require.NoError
@@ -122,6 +150,13 @@ objects:
   - require.NotNil
   - assert.Equal
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Process
+  - Put
   - assert.Equal
   - require.NoError
   - require.NotNil
@@ -132,6 +167,13 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - Close
+  - Get
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Put
   - assert.Equal
   - require.NoError
 - name: TestCicWasmHost_Init
@@ -141,6 +183,13 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - Close
+  - ID
+  - Init
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Put
   - assert.Equal
   - require.NoError
 - name: TestCicWasmHost_Notify
@@ -150,6 +199,13 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Notify
+  - Put
   - assert.Equal
   - require.NoError
 - name: TestWasmManager_NewHostInstance_MissingABI
@@ -161,6 +217,13 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Close
+  - Error
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Put
   - assert.Contains
   - require.Error
   - require.NoError
@@ -173,6 +236,13 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Close
+  - Error
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - PreCompileModule
+  - Put
   - assert.Contains
   - require.Error
   - require.NoError
@@ -185,6 +255,13 @@ objects:
   - assert.Equal
   - assert.Contains
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Process
+  - Put
   - assert.Contains
   - assert.Equal
   - require.NoError
@@ -196,6 +273,13 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Process
+  - Put
   - assert.Equal
   - require.NoError
 - name: TestCicWasmHost_Process_Timeout
@@ -206,6 +290,13 @@ objects:
   - assert.Equal
   - assert.Contains
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Process
+  - Put
   - assert.Contains
   - assert.Equal
   - require.NoError
@@ -230,6 +321,7 @@ objects:
   references:
   - assert.NoError
   calls:
+  - CicWasmHost.Close
   - assert.NoError
 - name: TestWasmManager_EvictModule_Prefix
   kind: func
@@ -239,6 +331,15 @@ objects:
   - require.NoError
   - assert.False
   calls:
+  - Checksum
+  - Close
+  - EvictModule
+  - Get
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - PreCompileModule
+  - Put
   - assert.False
   - require.NoError
 - name: TestCicWasmHost_callGuest_Errors
@@ -252,6 +353,12 @@ objects:
   - assert.Equal
   - assert.JSONEq
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Put
   - assert.Contains
   - assert.Equal
   - assert.JSONEq
@@ -267,6 +374,13 @@ objects:
   - require.Len
   - assert.Equal
   calls:
+  - Close
+  - ID
+  - NewModuleDescriptor
+  - NewWasmManager
+  - PreCompileModule
+  - Put
+  - SetObsSinks
   - assert.Equal
   - require.Len
   - require.NoError
@@ -281,6 +395,13 @@ objects:
   - require.Len
   - assert.Contains
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Put
+  - SetObsSinks
   - assert.Contains
   - require.Len
   - require.NoError
@@ -293,6 +414,14 @@ objects:
   - require.NoError
   - obs.CaptureSink
   calls:
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Process
+  - Put
+  - SetObsSinks
   - require.NoError
 - name: TestCicWasmHost_EmitDeallocWarn_NilSafe
   kind: func
@@ -323,5 +452,7 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - NewWasmManager
   - assert.Contains
   - require.Error

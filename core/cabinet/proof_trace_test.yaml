@@ -22,6 +22,8 @@ objects:
   - assert.Len
   - assert.NotEqual
   calls:
+  - ComputeChainHashV1
+  - ProofTraceStepFromActuation
   - assert.Equal
   - assert.Len
   - assert.NotEmpty
@@ -36,6 +38,10 @@ objects:
   - assert.Len
   - require.NoError
   calls:
+  - ComputeChainHashV1
+  - ProofFromActuation
+  - ProofTraceStepFromActuation
+  - Record
   - assert.Equal
   - assert.Len
   - require.Len
@@ -55,6 +61,7 @@ objects:
   - assert.NotEqual
   - assert.Equal
   calls:
+  - ComputeChainHashV1
   - assert.Equal
   - assert.Len
   - assert.NotEqual

@@ -55,5 +55,4 @@ objects:
   description: MarshalProofArtifact serializes a ProofArtifact to canonical JSON format
     for transport or storage.
   references: []
-  calls:
-  - Marshal
+  calls: []

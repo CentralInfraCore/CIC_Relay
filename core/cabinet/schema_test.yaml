@@ -18,6 +18,7 @@ objects:
   - assert.Nil
   - assert.ErrorIs
   calls:
+  - NewSchema
   - assert.Error
   - assert.ErrorIs
   - assert.Nil

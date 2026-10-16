@@ -15,8 +15,7 @@ objects:
   kind: func
   description: ToJSONOriginal is the original implementation of ToJSON.
   references: []
-  calls:
-  - Bytes
+  calls: []
 - name: ToJSON
   kind: func
   description: ToJSON marshals a Go value into a canonical JSON string. It ensures
@@ -33,31 +32,23 @@ objects:
 - name: writeCanonicalJSON
   kind: func
   description: ''
-  references:
-  - io.Writer.Write
-  calls:
-  - io.Writer.Write
+  references: []
+  calls: []
 - name: writeJSONString
   kind: func
   description: ''
-  references:
-  - io.Writer.Write
-  calls:
-  - io.Writer.Write
+  references: []
+  calls: []
 - name: writeJSONArray
   kind: func
   description: ''
-  references:
-  - io.Writer.Write
-  calls:
-  - io.Writer.Write
+  references: []
+  calls: []
 - name: writeJSONMap
   kind: func
   description: ''
-  references:
-  - io.Writer.Write
-  calls:
-  - io.Writer.Write
+  references: []
+  calls: []
 - name: ToJSONImpl
   kind: var
   description: ToJSONImpl is the actual implementation of ToJSON that can be swapped

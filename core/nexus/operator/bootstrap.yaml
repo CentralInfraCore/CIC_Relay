@@ -45,9 +45,7 @@ objects:
   - logrus.Fields
   calls:
   - Add
-  - Errorf
   - Info
-  - Now
   - UTC
   - WithFields
 - name: ValidateToken
@@ -58,17 +56,14 @@ objects:
   references: []
   calls:
   - After
-  - Equal
-  - Errorf
-  - Now
   - UTC
 - name: computeHMAC
   kind: func
   description: computeHMAC returns hex(HMAC-SHA256(secret, hostID|issuedAt)).
-  references:
-  - time.Time.Format
+  references: []
   calls:
-  - time.Time.Format
+  - Sum
+  - Write
 - name: recordIssuance
   kind: method
   receiver: Bootstrapper
@@ -76,9 +71,10 @@ objects:
     logs WARN if recorder is absent or fails.'
   references:
   - types.ExpectedState
-  - recorder.RecordState
   calls:
-  - recorder.RecordState
+  - RecordState
+  - Warn
+  - WithError
 - name: bootstrapTokenTTL
   kind: const
   description: ''

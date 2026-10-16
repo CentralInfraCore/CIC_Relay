@@ -14,19 +14,29 @@ objects:
   description: 'Canonical number vectors — the source of truth to mirror in the Rust
     test vectors (spec #1).'
   references: []
-  calls:
-  - Errorf
-  - Number
+  calls: []
 - name: TestCanonicalNumber_NonNumeric
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: TestNormalizeNumbers_LeavesStringsAndStructure
   kind: func
   description: ''
   references: []
-  calls:
-  - Errorf
-  - Number
+  calls: []
+- name: TestCanonicalNumber_IntegerKindsKeepFullRange
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestCanonicalNumber_FloatsArePlainShortestDecimal
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestCanonicalNumber_NumericStrings
+  kind: func
+  description: ''
+  references: []
+  calls: []

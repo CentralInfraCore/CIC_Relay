@@ -16,11 +16,7 @@ objects:
     based on the central validateAndChecksum function.
   references: []
   calls:
-  - Background
   - Checksum
-  - Errorf
-  - Fatalf
   - NewModuleDescriptor
   - NewSchema
   - NewWorkflow
-  - Run

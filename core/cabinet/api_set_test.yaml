@@ -73,6 +73,8 @@ objects:
   - assert.ErrorIs
   - assert.Contains
   calls:
+  - API.Set
+  - Error
   - assert.Contains
   - assert.Error
   - assert.ErrorIs
@@ -84,6 +86,12 @@ objects:
   - assert.Error
   - assert.ErrorIs
   calls:
+  - NewAPI
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - Set
   - assert.Error
   - assert.ErrorIs
   - require.NoError
@@ -95,6 +103,8 @@ objects:
   - assert.ErrorIs
   - assert.Contains
   calls:
+  - API.ValidateSet
+  - Error
   - assert.Contains
   - assert.Error
   - assert.ErrorIs
@@ -106,6 +116,8 @@ objects:
   - assert.NotErrorIs
   - assert.Equal
   calls:
+  - NewAPI
+  - ValidateSet
   - assert.Equal
   - assert.Error
   - assert.NotErrorIs
@@ -118,6 +130,9 @@ objects:
   - assert.ErrorIs
   - assert.Contains
   calls:
+  - Error
+  - NewAPI
+  - ValidateSet
   - assert.Contains
   - assert.Error
   - assert.ErrorIs

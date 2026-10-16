@@ -17,6 +17,7 @@ objects:
   - require.NoError
   - mock.Anything
   calls:
+  - mockCabinetService.AssertNotCalled
   - require.NoError
 - name: TestRegisterHTTPCapability_RegistersHTTPModule
   kind: func
@@ -29,11 +30,18 @@ objects:
   - require.NotNil
   - assert.Equal
   - assert.True
-  - cabinet.ID
+  - mock.Arguments.Get
+  - cabinet.ModuleDescriptor.ID
   calls:
+  - Once
+  - Return
+  - Run
   - assert.Equal
   - assert.True
-  - cabinet.ID
+  - cabinet.ModuleDescriptor.ID
+  - mock.Arguments.Get
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On
   - require.NoError
   - require.NotNil
 - name: TestRegisterHTTPCapability_PutModuleErrorPropagates
@@ -44,7 +52,11 @@ objects:
   - require.Error
   - assert.Contains
   calls:
+  - Error
+  - Once
+  - Return
   - assert.Contains
+  - mockCabinetService.On
   - require.Error
 - name: mockActuator
   kind: var

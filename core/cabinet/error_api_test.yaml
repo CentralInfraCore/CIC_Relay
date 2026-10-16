@@ -29,9 +29,10 @@ objects:
   references:
   - cabinet.ValidationError
   - cabinet.ErrInvalid
-  - cabinet.Error
+  - cabinet.ValidationError.Error
   calls:
-  - cabinet.Error
+  - Error
+  - cabinet.ValidationError.Error
 - name: TestValidationError_Error_WithCauses_JSONPrefixed_API
   kind: func
   description: ''
@@ -39,16 +40,15 @@ objects:
   - cabinet.ValidationError
   - cabinet.FieldError
   - cabinet.ErrInvalid
+  - cabinet.ValidationError.Error
   calls:
   - Error
-  - Fatalf
-  - Marshal
-  - Sprintf
+  - cabinet.ValidationError.Error
 - name: TestNewValidationError_API
   kind: func
   description: ''
   references:
-  - cabinet.FieldErrorField
+  - cabinet.FieldError
   - cabinet.NewValidationError
   calls:
   - cabinet.NewValidationError
@@ -57,7 +57,7 @@ objects:
   description: ''
   references:
   - cabinet.NewValidationError
-  - cabinet.FieldErrorField
+  - cabinet.FieldError
   - cabinet.IsInvalid
   calls:
   - cabinet.IsInvalid

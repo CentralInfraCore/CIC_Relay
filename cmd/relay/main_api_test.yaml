@@ -32,6 +32,7 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   calls:
+  - Bytes
   - assert.Equal
   - assert.NoError
   - assert.NotEmpty
@@ -39,18 +40,23 @@ objects:
   kind: func
   description: TestSetHandler_Success tests the happy path for the /set endpoint.
   references:
-  - cabinet.SetResponseResults
+  - cabinet.SetResponse
   - mock.Anything
   - cabinet.Workflow
   - cabinet.ModuleDescriptor
   - logrus.New
   - assert.Equal
-  - cabinet.SetResponse
   - assert.NoError
   calls:
+  - Bytes
+  - Return
+  - Set
+  - SetOutput
   - assert.Equal
   - assert.NoError
   - logrus.New
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On
 - name: TestSetHandler_MethodNotAllowed
   kind: func
   description: TestSetHandler_MethodNotAllowed tests that the /set endpoint only accepts
@@ -59,8 +65,12 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - Get
+  - Header
+  - SetOutput
   - assert.Equal
   - logrus.New
+  - mockCabinetService.AssertNotCalled
 - name: TestSetHandler_BodyTooLarge
   kind: func
   description: TestSetHandler_BodyTooLarge tests that the handler rejects bodies larger
@@ -69,8 +79,13 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - Get
+  - Header
+  - Set
+  - SetOutput
   - assert.Equal
   - logrus.New
+  - mockCabinetService.AssertNotCalled
 - name: TestSetHandler_InvalidJSON
   kind: func
   description: TestSetHandler_InvalidJSON tests that the handler returns a 400 error
@@ -79,8 +94,13 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - Get
+  - Header
+  - Set
+  - SetOutput
   - assert.Equal
   - logrus.New
+  - mockCabinetService.AssertNotCalled
 - name: TestSetHandler_CabinetInvalidError
   kind: func
   description: TestSetHandler_CabinetInvalidError tests the handler's response to
@@ -92,8 +112,15 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - Get
+  - Header
+  - Return
+  - Set
+  - SetOutput
   - assert.Equal
   - logrus.New
+  - mockCabinetService.AssertCalled
+  - mockCabinetService.On
 - name: TestSetHandler_Timeout
   kind: func
   description: TestSetHandler_Timeout tests the handler's response to a timeout from
@@ -105,8 +132,15 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - Get
+  - Header
+  - Return
+  - Set
+  - SetOutput
   - assert.Equal
   - logrus.New
+  - mockCabinetService.AssertCalled
+  - mockCabinetService.On
 - name: TestSetHandler_CabinetInternalError
   kind: func
   description: TestSetHandler_CabinetInternalError tests the handler's response to
@@ -117,8 +151,15 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - Get
+  - Header
+  - Return
+  - Set
+  - SetOutput
   - assert.Equal
   - logrus.New
+  - mockCabinetService.AssertCalled
+  - mockCabinetService.On
 - name: TestSetHandler_ObsEmission_Success
   kind: func
   description: TestSetHandler_ObsEmission_Success verifies that a successful /set
@@ -127,7 +168,7 @@ objects:
   - mock.Anything
   - cabinet.Workflow
   - cabinet.ModuleDescriptor
-  - cabinet.SetResponseResults
+  - cabinet.SetResponse
   - logrus.New
   - obs.CaptureSink
   - assert.Equal
@@ -135,11 +176,14 @@ objects:
   - assert.NotEmpty
   - assert.NotNil
   calls:
+  - Return
+  - SetOutput
   - assert.Equal
   - assert.Len
   - assert.NotEmpty
   - assert.NotNil
   - logrus.New
+  - mockCabinetService.On
 - name: TestSetHandler_ObsEmission_MethodNotAllowed
   kind: func
   description: TestSetHandler_ObsEmission_MethodNotAllowed verifies that a rejected
@@ -151,6 +195,7 @@ objects:
   - assert.Len
   - assert.Empty
   calls:
+  - SetOutput
   - assert.Empty
   - assert.Equal
   - assert.Len
@@ -168,9 +213,12 @@ objects:
   - assert.Equal
   - assert.Len
   calls:
+  - Return
+  - SetOutput
   - assert.Equal
   - assert.Len
   - logrus.New
+  - mockCabinetService.On
 - name: TestSetHandler_ObsEmission_NilSinks
   kind: func
   description: TestSetHandler_ObsEmission_NilSinks verifies that nil sinks do not
@@ -179,14 +227,17 @@ objects:
   - mock.Anything
   - cabinet.Workflow
   - cabinet.ModuleDescriptor
-  - cabinet.SetResponseResults
+  - cabinet.SetResponse
   - logrus.New
   - assert.NotPanics
   - assert.Equal
   calls:
+  - Return
+  - SetOutput
   - assert.Equal
   - assert.NotPanics
   - logrus.New
+  - mockCabinetService.On
 - name: TestSetHandler_ChainAnchor_Success
   kind: func
   description: TestSetHandler_ChainAnchor_Success verifies that when Setx returns
@@ -197,14 +248,17 @@ objects:
   - cabinet.Workflow
   - cabinet.ModuleDescriptor
   - cabinet.SetResponse
-  - cabinet.ProofTraceChainHash
+  - cabinet.ProofTrace
   - logrus.New
   - obs.CaptureSink
   - assert.Equal
   - require.Len
   calls:
+  - Return
+  - SetOutput
   - assert.Equal
   - logrus.New
+  - mockCabinetService.On
   - require.Len
 - name: TestSetHandler_ChainAnchor_Error
   kind: func
@@ -219,9 +273,12 @@ objects:
   - require.Len
   - assert.False
   calls:
+  - Return
+  - SetOutput
   - assert.Equal
   - assert.False
   - logrus.New
+  - mockCabinetService.On
   - require.Len
 - name: TestMetricsHandler_NoSinkConfigured
   kind: func
@@ -232,6 +289,7 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - SetOutput
   - assert.Equal
   - logrus.New
 - name: TestMetricsHandler_ServesPrometheusFormat
@@ -241,10 +299,15 @@ objects:
   references:
   - logrus.New
   - obs.NewPrometheusSink
-  - obs.CounterPointName
+  - obs.CounterPoint
   - assert.Equal
   - assert.Contains
   calls:
+  - Get
+  - Header
+  - RecordCounter
+  - SetOutput
+  - String
   - assert.Contains
   - assert.Equal
   - logrus.New
@@ -260,8 +323,7 @@ objects:
   receiver: failingResponseWriter
   description: ''
   references: []
-  calls:
-  - New
+  calls: []
 - name: WriteHeader
   kind: method
   receiver: failingResponseWriter
@@ -274,10 +336,12 @@ objects:
   references:
   - logrus.New
   - obs.NewPrometheusSink
-  - obs.CounterPointName
+  - obs.CounterPoint
   - assert.NotPanics
   - assert.Contains
   calls:
+  - RecordCounter
+  - SetOutput
   - assert.Contains
   - assert.NotPanics
   - logrus.New
@@ -289,10 +353,14 @@ objects:
   references:
   - logrus.New
   - obs.NewPrometheusSink
-  - obs.CounterPointName
+  - obs.CounterPoint
   - assert.Equal
   - assert.Contains
   calls:
+  - RecordCounter
+  - ServeHTTP
+  - SetOutput
+  - String
   - assert.Contains
   - assert.Equal
   - logrus.New
@@ -306,6 +374,8 @@ objects:
   - assert.Equal
   - assert.JSONEq
   calls:
+  - SetOutput
+  - String
   - assert.Equal
   - assert.JSONEq
   - logrus.New
@@ -314,8 +384,7 @@ objects:
   receiver: errorReader
   description: ''
   references: []
-  calls:
-  - New
+  calls: []
 - name: TestSetHandler_ReadBodyError
   kind: func
   description: ''
@@ -323,6 +392,7 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - SetOutput
   - assert.Equal
   - logrus.New
 - name: TestSetHandler_SourceDigestFromTreeHash
@@ -333,8 +403,12 @@ objects:
   - cabinet.Workflow
   - mock.MatchedBy
   - cabinet.SetPayload
-  - cabinet.SetResponseResults
+  - cabinet.SetResponse
   - logrus.New
   calls:
+  - Return
+  - SetOutput
   - logrus.New
   - mock.MatchedBy
+  - mockCabinetService.AssertExpectations
+  - mockCabinetService.On

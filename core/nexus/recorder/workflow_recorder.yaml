@@ -30,7 +30,5 @@ objects:
   references:
   - types.ExpectedState
   calls:
-  - Errorf
-  - Now
   - RecordState
   - UTC

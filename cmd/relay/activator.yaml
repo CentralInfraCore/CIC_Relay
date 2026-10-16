@@ -36,10 +36,13 @@ objects:
   references:
   - types.ResourceSpec
   - cabinet.SetPayload
-  - cabinet.ModuleIDcabinet
+  - cabinet.ModuleID
   - cabinet.CanonicalizeSetPayload
-  - cabinet.Setx
   - logrus.Fields
   calls:
+  - Info
+  - Setx
+  - WithField
+  - WithFields
   - cabinet.CanonicalizeSetPayload
-  - cabinet.Setx
+  - cabinet.ModuleID

@@ -16,17 +16,18 @@ objects:
 - name: allocate
   kind: func
   description: export allocate
-  references: []
+  references:
+  - C.malloc
+  - C.size_t
   calls: []
 - name: deallocate
   kind: func
   description: export deallocate
-  references: []
-  calls:
-  - Pointer
+  references:
+  - C.free
+  calls: []
 - name: Call
   kind: func
   description: Call is the main entry point for the module. It immediately traps.
-    export Call
   references: []
   calls: []

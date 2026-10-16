@@ -22,7 +22,6 @@ objects:
   references: []
   calls:
   - Cmp
-  - Errorf
   - String
 - name: checkSPKIPinning
   kind: func
@@ -31,13 +30,9 @@ objects:
   references: []
   calls:
   - EncodeToString
-  - Errorf
-  - Sum256
 - name: VerifyCertificateChain
   kind: func
   description: VerifyCertificateChain checks a certificate against a trust store and
     specific key usages. This is the core function for M3 - Private PKI verification.
   references: []
-  calls:
-  - Errorf
-  - Verify
+  calls: []

@@ -42,10 +42,9 @@ objects:
     or mismatched key makes it RECONCILIABLE_DRIFT; a fully-satisfied desired state
     is NONE regardless of extra observed keys.'
   references:
-  - iac.ConformancePlanScalars
+  - iac.ConformancePlan
   - iac.FieldPlan
-  - iac.ObservationObserved
-  - iac.FieldPlanPath
+  - iac.Observation
   - iac.CompareExact
   - iac.Evaluate
   - iac.VerdictDrift
@@ -58,3 +57,25 @@ objects:
   references: []
   calls:
   - Analyze
+- name: None
+  kind: const
+  description: 'None: the actual state satisfies the desired state (extra observed
+    state is not counted against it).'
+  references: []
+- name: SoftDrift
+  kind: const
+  description: 'SoftDrift: the desired state is satisfied but a schema/plan forbids
+    an extra field that is present — reconcilable by pruning. Requires a plan that
+    marks the field forbidden; the default schema-less classification never emits
+    it.'
+  references: []
+- name: ReconciliableDrift
+  kind: const
+  description: 'ReconciliableDrift: the desired state is not fully reflected (a desired
+    key is missing, or holds a different/incomparable value) — reconcilable by re-applying.'
+  references: []
+- name: HardDrift
+  kind: const
+  description: 'HardDrift: a state was declared but nothing is observed (the infrastructure
+    is gone). The physical state cannot be derived from the last valid ProofTrace.'
+  references: []

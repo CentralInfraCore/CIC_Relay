@@ -23,7 +23,13 @@ objects:
   - merkle.BuildContext
   - require.NoError
   - assert.True
+  - mock.Arguments.Get
   calls:
+  - ID
+  - Return
+  - Run
   - assert.True
+  - mock.Arguments.Get
+  - mockCabinetService.On
   - require.NoError
   - require.NotNil

@@ -26,6 +26,9 @@ objects:
   - assert.Equal
   - require.Len
   calls:
+  - Load
+  - NewFileSource
+  - NewLoader
   - assert.Equal
   - assert.Len
   - require.Len
@@ -39,6 +42,9 @@ objects:
   - require.NoError
   - assert.Contains
   calls:
+  - Load
+  - NewFileSource
+  - NewLoader
   - assert.Contains
   - require.NoError
 - name: TestLoader_Load_Errors
@@ -48,6 +54,10 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
+  - Load
+  - NewFileSource
+  - NewLoader
   - assert.Contains
   - assert.Error
 - name: FetchConfig
@@ -63,6 +73,8 @@ objects:
   references:
   - assert.Error
   calls:
+  - FetchConfig
+  - NewFileSource
   - assert.Error
 - name: TestFileSource_FetchConfig_EmptyDir
   kind: func
@@ -71,5 +83,7 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
+  - FetchConfig
+  - NewFileSource
   - assert.Empty
   - require.NoError

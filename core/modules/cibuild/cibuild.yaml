@@ -25,23 +25,27 @@ objects:
   kind: func
   description: 'Execute runs the build and returns an Output. Satisfies the cabinet
     NativeFunc signature: func(context.Context, interface{}) (interface{}, error)'
-  references: []
-  calls: []
+  references:
+  - logrus.WithFields
+  - logrus.Fields
+  - logrus.WithField
+  calls:
+  - CombinedOutput
+  - Info
+  - Warn
+  - logrus.WithField
+  - logrus.WithFields
 - name: fileDigest
   kind: func
   description: fileDigest returns the hex-encoded SHA-256 digest of a file.
   references: []
-  calls:
-  - EncodeToString
-  - ReadFile
-  - Sum256
+  calls: []
 - name: parseInput
   kind: func
   description: parseInput extracts Input from the raw interface{} value passed by
     the cabinet.
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: buildTimeout
   kind: const
   description: buildTimeout is the maximum time a single make invocation may run.

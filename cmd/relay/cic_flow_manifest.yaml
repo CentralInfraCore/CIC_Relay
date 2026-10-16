@@ -48,10 +48,10 @@ objects:
 - name: parseModuleProject
   kind: func
   description: parseModuleProject unmarshals a module's project.yaml.
-  references: []
+  references:
+  - yaml.Unmarshal
   calls:
-  - Errorf
-  - Unmarshal
+  - yaml.Unmarshal
 - name: allows
   kind: method
   receiver: egressPolicy
@@ -66,12 +66,7 @@ objects:
     is rejected. "*.oraclecloud.com" matches "iaas.…oraclecloud.com" but not the apex
     "oraclecloud.com" nor "evil-oraclecloud.com".
   references: []
-  calls:
-  - Contains
-  - CutPrefix
-  - HasSuffix
-  - ToLower
-  - TrimSpace
+  calls: []
 - name: methodAllowed
   kind: func
   description: ''
@@ -86,8 +81,7 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - HasPrefix
+  calls: []
 - name: grantsSign
   kind: method
   receiver: capabilityManifest
@@ -108,8 +102,7 @@ objects:
     sign handle. A nil resolver or an absent sign handle yields a nil signer (sign
     stays inert).'
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: cicFlowImports
   kind: method
   receiver: moduleProject
@@ -124,21 +117,16 @@ objects:
     ops:[sign]; importing `actuate` requires at least one egress entry. Enforced at
     load, not at call time.'
   references: []
-  calls:
-  - Errorf
+  calls: []
 - name: verifyBuildHash
   kind: method
   receiver: moduleProject
   description: 'verifyBuildHash checks the loaded wasm against the module''s declared
     buildHash (integrity: the artifact the signature covers is the one being loaded).'
   references: []
-  calls:
-  - EncodeToString
-  - Errorf
-  - Sum256
+  calls: []
 - name: containsFold
   kind: func
   description: ''
   references: []
-  calls:
-  - EqualFold
+  calls: []

@@ -21,9 +21,7 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - Exit
-  - Fprintf
+  calls: []
 - name: run
   kind: func
   description: ''
@@ -33,9 +31,12 @@ objects:
   - ois.NewAllowlistPolicy
   - ois.Rollback
   calls:
+  - Allow
+  - RecordDrift
+  - Rollback
+  - VerifyChain
   - crypto.NewVaultCryptoService
   - ois.NewAllowlistPolicy
-  - ois.Rollback
   - recorder.NewGitStateRecorder
 - name: printDriftCommit
   kind: func
@@ -43,10 +44,7 @@ objects:
     (with the exact differing keys), parent linkage, and the (truncated) Vault signature.
   references:
   - drift.Report
-  calls:
-  - Join
-  - Printf
-  - Sprint
+  calls: []
 - name: tamper
   kind: func
   description: tamper overwrites actual.json with different content and commits it,
@@ -54,17 +52,11 @@ objects:
   references: []
   calls:
   - CombinedOutput
-  - Command
-  - Errorf
-  - Join
-  - WriteFile
 - name: readJSON
   kind: func
   description: ''
   references: []
-  calls:
-  - ReadFile
-  - Unmarshal
+  calls: []
 - name: short
   kind: func
   description: ''
@@ -74,5 +66,4 @@ objects:
   kind: func
   description: ''
   references: []
-  calls:
-  - Getenv
+  calls: []

@@ -14,8 +14,6 @@ objects:
     to the Rust airlock come back byte-identical through the C-ABI seam.'
   references: []
   calls:
-  - Equal
-  - Fatalf
   - Ping
 - name: TestPingEmpty
   kind: func
@@ -23,7 +21,6 @@ objects:
     no allocation to free).
   references: []
   calls:
-  - Fatalf
   - Ping
 - name: TestConnectionRequestCanonicalizes
   kind: func
@@ -34,9 +31,6 @@ objects:
   references: []
   calls:
   - ConnectionRequest
-  - DeepEqual
-  - Fatalf
-  - Unmarshal
 - name: TestConnectionRequestRejects
   kind: func
   description: TestConnectionRequestRejects checks that the seam rejects bad input
@@ -44,7 +38,6 @@ objects:
   references: []
   calls:
   - ConnectionRequest
-  - Fatal
 - name: TestABIVersion
   kind: func
   description: TestABIVersion checks that the Go package and the linked staticlib
@@ -53,14 +46,12 @@ objects:
   calls:
   - ABIVersion
   - CheckABI
-  - Fatalf
 - name: TestPingRejectsOversizedInput
   kind: func
   description: 'TestPingRejectsOversizedInput drives the seam''s ingress size cap
     (Rust-side MAX_INPUT_LEN = 1 MiB): oversized input is rejected, yielding nil.'
   references: []
   calls:
-  - Fatalf
   - Ping
 - name: TestRunFlowActuatesWithOpenedCredential
   kind: func
@@ -72,15 +63,41 @@ objects:
   references:
   - cabinet.ProofTraceStepFromActuation
   - cabinet.ComputeChainHashV1
-  - cabinet.ProofTraceStepstep
+  - cabinet.ProofTraceStep
   calls:
+  - Close
+  - DecodeString
+  - Get
+  - ParseRunFlowResult
+  - RunFlow
   - cabinet.ComputeChainHashV1
   - cabinet.ProofTraceStepFromActuation
+- name: TestRunFlowDeniedActuationIsAudited
+  kind: func
+  description: 'TestRunFlowDeniedActuationIsAudited proves the deny-path audit crosses
+    the FFI seam: a policy-refused actuation returns ok:false but still carries its
+    tamper-evident deny audit — the refusal is not silent.'
+  references: []
+  calls:
+  - ParseRunFlowResult
+  - RunFlow
 - name: TestRunFlowRejectsMalformed
   kind: func
   description: 'TestRunFlowRejectsMalformed checks the seam''s no-panic rejection
     contract for run-flow: bad input yields an error, not a crash.'
   references: []
   calls:
-  - Fatal
+  - RunFlow
+- name: TestRunFlowLive
+  kind: func
+  description: 'TestRunFlowLive drives the FULL live-Vault trust-flow across the FFI:
+    Go → Rust → real Vault (countersign → mTLS cert-auth login → read_sealed → open)
+    → HTTP actuation → back to Go. It requires the `live-vault` staticlib and a running
+    Vault (env pointed at it by `make test-ffi-live`); it skips otherwise.'
+  references: []
+  calls:
+  - Close
+  - DecodeString
+  - EncodeToString
+  - Get
   - RunFlow

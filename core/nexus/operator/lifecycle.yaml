@@ -63,9 +63,7 @@ objects:
   references:
   - logrus.Fields
   calls:
-  - Errorf
   - Info
-  - Now
   - UTC
   - ValidateToken
   - Warn
@@ -79,9 +77,7 @@ objects:
   references:
   - logrus.Fields
   calls:
-  - Errorf
   - Info
-  - Now
   - UTC
   - WithFields
 - name: record
@@ -90,7 +86,8 @@ objects:
   description: 'record commits a lifecycle event to the audit recorder. Non-fatal:
     logs WARN on failure or absent recorder.'
   references:
-  - types.ExpectedStateRunID
-  - recorder.RecordState
+  - types.ExpectedState
   calls:
-  - recorder.RecordState
+  - RecordState
+  - Warn
+  - WithError

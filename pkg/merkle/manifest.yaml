@@ -59,7 +59,6 @@ objects:
     { final_verification_hash: root, signature: ... } as separate object'
   references: []
   calls:
-  - EncodeToString
   - LeafHash
   - MerkleRoot
   - SizeLeaf

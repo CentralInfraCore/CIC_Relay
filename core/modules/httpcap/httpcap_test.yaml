@@ -15,24 +15,19 @@ objects:
   references: []
   calls:
   - ActuatorFunc
-  - Background
-  - Fatal
-  - Fatalf
-  - Is
-  - New
   - NewRequestFunc
-  - TestRequestFunc_ActuatorErrorPropagates
-  - TestRequestFunc_GarbageResultIsAnError
-  - TestRequestFunc_NilActuator
-  - TestRequestFunc_UnmarshalableInputIsAnError
+- name: TestRequestFunc_RefusedActuationIsAnError
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ActuatorFunc
+  - NewRequestFunc
 - name: TestRequestFunc_NilActuator
   kind: func
   description: ''
   references: []
   calls:
-  - Background
-  - Fatalf
-  - Is
   - NewRequestFunc
 - name: TestRequestFunc_ActuatorErrorPropagates
   kind: func
@@ -40,9 +35,6 @@ objects:
   references: []
   calls:
   - ActuatorFunc
-  - Background
-  - Fatal
-  - New
   - NewRequestFunc
 - name: TestRequestFunc_GarbageResultIsAnError
   kind: func
@@ -50,8 +42,6 @@ objects:
   references: []
   calls:
   - ActuatorFunc
-  - Background
-  - Fatal
   - NewRequestFunc
 - name: TestRequestFunc_UnmarshalableInputIsAnError
   kind: func
@@ -59,8 +49,6 @@ objects:
   references: []
   calls:
   - ActuatorFunc
-  - Background
-  - Fatal
   - NewRequestFunc
 - name: okResult
   kind: const

@@ -15,27 +15,26 @@ objects:
   description: ''
   references:
   - cabinet.Schema
-  - cabinet.SchemaConfigName
-  - cabinet.SchemaIdentityVersion
+  - cabinet.SchemaConfig
+  - cabinet.SchemaIdentity
+  - cabinet.Schema.ID
   calls:
-  - Fatalf
-  - ID
+  - cabinet.Schema.ID
 - name: TestSchema_ID_API_Empty
   kind: func
   description: ''
   references:
   - cabinet.Schema
+  - cabinet.Schema.ID
   calls:
-  - Fatalf
-  - ID
+  - cabinet.Schema.ID
 - name: TestSchema_GetData_API_EqualsConfig
   kind: func
   description: ''
   references:
   - cabinet.SchemaConfig
   - cabinet.Schema
-  - cabinet.SchemaIdentityVersion
+  - cabinet.SchemaIdentity
+  - cabinet.Schema.GetData
   calls:
-  - DeepEqual
-  - Fatalf
-  - GetData
+  - cabinet.Schema.GetData

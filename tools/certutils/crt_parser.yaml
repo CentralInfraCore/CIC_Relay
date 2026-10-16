@@ -18,26 +18,35 @@ objects:
   description: printHelp prints the usage and command-line options for the certificate
     parser.
   references: []
-  calls:
-  - Base
-  - Printf
-  - Println
+  calls: []
 - name: main
   kind: func
   description: ''
-  references: []
+  references:
+  - yaml.Marshal
   calls:
-  - Bool
-  - Decode
-  - Exit
   - Format
-  - Fprintf
-  - Fprintln
-  - Marshal
   - Params
-  - Parse
-  - ParseCertificate
-  - Println
-  - ReadFile
   - Size
   - String
+  - yaml.Marshal
+- name: BuildID
+  kind: var
+  description: ''
+  references: []
+- name: CommitHash
+  kind: var
+  description: ''
+  references: []
+- name: Timestamp
+  kind: var
+  description: ''
+  references: []
+- name: GPGSignature
+  kind: var
+  description: ''
+  references: []
+- name: CAFingerprint
+  kind: var
+  description: ''
+  references: []

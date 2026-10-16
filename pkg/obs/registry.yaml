@@ -32,8 +32,6 @@ objects:
     name is already registered.
   references: []
   calls:
-  - Errorf
-  - HasPrefix
   - Lock
   - Unlock
 - name: Get

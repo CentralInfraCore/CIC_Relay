@@ -15,124 +15,74 @@ objects:
   references: []
   calls:
   - Close
-  - CreateTemp
-  - Fatalf
   - Name
   - WriteString
 - name: createTempGoPackage
   kind: func
   description: Helper function to create a temporary Go package directory and file
   references: []
-  calls:
-  - Fatalf
-  - Join
-  - Mkdir
-  - MkdirTemp
-  - WriteFile
+  calls: []
 - name: readFileContent
   kind: func
   description: Helper function to read file content
   references: []
-  calls:
-  - Fatalf
-  - ReadFile
+  calls: []
 - name: TestRun_Success
   kind: func
   description: ''
   references: []
-  calls:
-  - Contains
-  - Error
-  - Errorf
-  - Join
-  - Printf
-  - Remove
-  - TempDir
+  calls: []
 - name: TestRun_AllowlistNotFound
   kind: func
   description: ''
   references: []
   calls:
-  - Contains
   - Error
-  - Errorf
-  - Join
-  - Printf
-  - Remove
-  - TempDir
 - name: TestRun_GenerateSymbolsError
   kind: func
   description: ''
   references: []
   calls:
-  - Contains
   - Error
-  - Errorf
-  - Join
-  - Printf
-  - Remove
-  - TempDir
 - name: TestGenerateSymbols_Success
   kind: func
   description: ''
   references:
   - packages.Config
-  calls:
-  - Contains
-  - Errorf
-  - Fatal
-  - Fatalf
+  calls: []
 - name: TestGenerateSymbols_NoPackages
   kind: func
   description: ''
   references:
   - packages.Config
-  calls:
-  - Errorf
-  - Fatalf
+  calls: []
 - name: TestGenerateSymbols_PackageLoadError
   kind: func
   description: ''
   references:
   - packages.Config
   calls:
-  - Contains
   - Error
-  - Errorf
 - name: TestGenerateSymbols_PackageWithErrors
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   calls:
-  - Contains
   - Error
-  - Errorf
-  - RemoveAll
 - name: TestGenerateSymbols_CustomPackage
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
-  calls:
-  - Contains
-  - Errorf
-  - Fatal
-  - Fatalf
-  - RemoveAll
-  - Sprintf
+  - packages.Config
+  calls: []
 - name: TestGenerateSymbols_DocNewFromFilesError
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   calls:
-  - Contains
   - Error
-  - Errorf
-  - Fatal
-  - MustCompile
-  - RemoveAll
   - ReplaceAllString
 - name: TestMain_WrongArgCount
   kind: func
@@ -162,5 +112,6 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - assert.Error

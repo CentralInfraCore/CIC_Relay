@@ -35,9 +35,9 @@ objects:
   description: ''
   references: []
   calls:
-  - Called
   - Error
   - Get
+  - MockWatcher.Called
 - name: TestOperator_Run
   kind: func
   description: ''
@@ -47,6 +47,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
+  - MockWatcher.On
+  - NewOperator
+  - Return
+  - Run
   - assert.Contains
   - assert.Error
   - assert.NoError
@@ -57,6 +62,7 @@ objects:
   - assert.NoError
   - assert.Error
   calls:
+  - NewOperator
   - assert.Error
   - assert.NoError
 - name: TestOperatorWithLifecycle_OnApply_Host
@@ -67,6 +73,10 @@ objects:
   - require.True
   - assert.True
   calls:
+  - NewBootstrapper
+  - NewHostRegistry
+  - NewLifecycleManager
+  - NewOperatorWithLifecycle
   - assert.NoError
   - assert.True
   - require.True
@@ -77,6 +87,10 @@ objects:
   - assert.NoError
   - assert.False
   calls:
+  - NewBootstrapper
+  - NewHostRegistry
+  - NewLifecycleManager
+  - NewOperatorWithLifecycle
   - assert.False
   - assert.NoError
 - name: TestOperatorWithLifecycle_OnDelete
@@ -88,6 +102,12 @@ objects:
   - require.True
   - assert.False
   calls:
+  - BootstrapHost
+  - NewBootstrapper
+  - NewHostRegistry
+  - NewLifecycleManager
+  - NewOperatorWithLifecycle
+  - OnboardHost
   - assert.False
   - assert.NoError
   - require.NoError
@@ -99,6 +119,11 @@ objects:
   - assert.Error
   - assert.Contains
   calls:
+  - Error
+  - NewBootstrapper
+  - NewHostRegistry
+  - NewLifecycleManager
+  - NewOperatorWithLifecycle
   - assert.Contains
   - assert.Error
 - name: TestPollingWatcher_Watch
@@ -107,14 +132,14 @@ objects:
   references:
   - require.NoError
   calls:
+  - NewPollingWatcher
+  - Watch
   - require.NoError
 - name: collectEvents
   kind: func
   description: ''
   references: []
-  calls:
-  - After
-  - Helper
+  calls: []
 - name: TestPollingWatcher_StateDiff_Create
   kind: func
   description: ''
@@ -124,6 +149,8 @@ objects:
   - assert.Equal
   - assert.NotEmpty
   calls:
+  - NewPollingWatcher
+  - Watch
   - assert.Equal
   - assert.NotEmpty
   - require.Len
@@ -136,6 +163,8 @@ objects:
   - require.Len
   - assert.Equal
   calls:
+  - NewPollingWatcher
+  - Watch
   - assert.Equal
   - require.Len
   - require.NoError
@@ -148,6 +177,8 @@ objects:
   - assert.Equal
   - assert.Nil
   calls:
+  - NewPollingWatcher
+  - Watch
   - assert.Equal
   - assert.Nil
   - require.Len
@@ -179,6 +210,8 @@ objects:
   - require.Len
   - assert.Equal
   calls:
+  - NewOperator
+  - WithActivator
   - assert.Equal
   - require.Len
   - require.NoError
@@ -189,17 +222,22 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
+  - NewOperator
+  - WithActivator
   - assert.Empty
   - require.NoError
 - name: TestOnApplyService_DepsNotInGraph_Skipped
   kind: func
   description: ''
   references:
-  - types.GraphServices
+  - types.Graph
   - types.Service
   - require.NoError
   - assert.Empty
   calls:
+  - NewOperator
+  - WithActivator
+  - WithGraph
   - assert.Empty
   - require.NoError
 - name: TestOnApplyService_DepsReady_Activated
@@ -210,11 +248,14 @@ objects:
   - types.Service
   - types.ServiceSpec
   - types.ResourceSpec
-  - types.ResourceStateDesired
+  - types.ResourceState
   - require.NoError
   - require.Len
   - assert.Equal
   calls:
+  - NewOperator
+  - WithActivator
+  - WithGraph
   - assert.Equal
   - require.Len
   - require.NoError
@@ -225,6 +266,8 @@ objects:
   - require.NoError
   - assert.Len
   calls:
+  - NewOperator
+  - WithActivator
   - assert.Len
   - require.NoError
 - name: TestPollingWatcher_EmptyDir_NoEvents
@@ -234,6 +277,8 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
+  - NewPollingWatcher
+  - Watch
   - assert.Empty
   - require.NoError
 - name: TestWithValidator_SetsValidator
@@ -242,6 +287,8 @@ objects:
   references:
   - assert.Same
   calls:
+  - NewOperator
+  - WithValidator
   - assert.Same
 - name: TestOnApplyService_ValidatorError_SkipsActivation
   kind: func
@@ -250,6 +297,9 @@ objects:
   - require.NoError
   - assert.Empty
   calls:
+  - NewOperator
+  - WithActivator
+  - WithValidator
   - assert.Empty
   - require.NoError
 - name: TestOnApplyService_ValidatorPass_Activated
@@ -259,5 +309,8 @@ objects:
   - require.NoError
   - require.Len
   calls:
+  - NewOperator
+  - WithActivator
+  - WithValidator
   - require.Len
   - require.NoError

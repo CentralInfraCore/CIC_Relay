@@ -28,7 +28,12 @@ objects:
     or ctx is cancelled. If worker is nil the loop operates in echo mode: the payload
     is returned unchanged. Echo mode is used for testing and for subprocess startup
     before a crypto service is wired in.'
-  references:
-  - context.Context.Done
+  references: []
   calls:
-  - context.Context.Done
+  - Bytes
+  - DecodeString
+  - Encode
+  - EncodeToString
+  - Error
+  - Scan
+  - Worker.Decrypt

@@ -35,10 +35,9 @@ objects:
   kind: method
   receiver: GitSyncer
   description: SyncDaily performs the daily squash and push.
-  references:
-  - time.Time.Format
+  references: []
   calls:
-  - time.Time.Format
+  - Error
 - name: runGit
   kind: method
   receiver: GitSyncer
@@ -46,6 +45,3 @@ objects:
   references: []
   calls:
   - CombinedOutput
-  - Command
-  - Errorf
-  - Join

@@ -23,7 +23,7 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.NoError
   - assert.Equal
   calls:
@@ -33,7 +33,7 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.NoError
   - assert.Equal
   calls:
@@ -43,7 +43,7 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.NoError
   - assert.Equal
   calls:
@@ -53,7 +53,7 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.NoError
   - assert.Equal
   calls:
@@ -63,7 +63,7 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.NoError
   - assert.Empty
   calls:
@@ -73,7 +73,7 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.NoError
   - assert.Empty
   calls:
@@ -83,7 +83,7 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.NoError
   - assert.Empty
   calls:
@@ -93,10 +93,11 @@ objects:
   kind: func
   description: ''
   references:
-  - packages.ConfigDir
+  - packages.Config
   - require.Error
   - assert.Contains
   calls:
+  - Error
   - assert.Contains
   - require.Error
 - name: TestMain_PrintsAffectedPackages
@@ -106,6 +107,8 @@ objects:
   - require.NoError
   - assert.Equal
   calls:
+  - CombinedOutput
+  - Run
   - assert.Equal
   - require.NoError
 - name: TestMain_FatalOnLoadError
@@ -115,5 +118,7 @@ objects:
   - require.NoError
   - assert.True
   calls:
+  - Close
+  - WriteString
   - assert.True
   - require.NoError

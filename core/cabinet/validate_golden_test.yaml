@@ -29,5 +29,6 @@ objects:
   - require.Error
   - assert.ErrorIs
   calls:
+  - NewSchema
   - assert.ErrorIs
   - require.Error

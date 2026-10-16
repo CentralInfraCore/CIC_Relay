@@ -17,12 +17,128 @@ objects:
   - require.NoError
   - require.NotNil
   calls:
+  - NewVaultCryptoService
   - require.NoError
   - require.NotNil
 - name: TestNewVaultCryptoService_Errors
   kind: func
   description: ''
-  references: []
+  references:
+  - assert.Error
+  - assert.Contains
   calls:
-  - Run
-  - Setenv
+  - Error
+  - NewVaultCryptoService
+  - assert.Contains
+  - assert.Error
+- name: TestVaultCryptoService_Sign
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - assert.Error
+  calls:
+  - Encode
+  - Sign
+  - assert.Equal
+  - assert.Error
+  - require.NoError
+- name: TestVaultCryptoService_SignOCI
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - assert.Error
+  calls:
+  - Decode
+  - Encode
+  - EncodeToString
+  - SignOCI
+  - assert.Equal
+  - assert.Error
+  - require.NoError
+- name: TestVaultCryptoService_Verify
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - assert.True
+  - assert.False
+  - assert.Error
+  calls:
+  - Encode
+  - Verify
+  - assert.Equal
+  - assert.Error
+  - assert.False
+  - assert.True
+  - require.NoError
+- name: TestVaultCryptoService_Decrypt
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - assert.Error
+  calls:
+  - Decrypt
+  - Encode
+  - EncodeToString
+  - assert.Equal
+  - assert.Error
+  - require.NoError
+- name: TestVaultCryptoService_HealthCheck
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - HealthCheck
+  - assert.Error
+  - assert.NoError
+- name: TestVaultCryptoService_Sign_NilData
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - Encode
+  - Sign
+  - assert.Error
+- name: TestVaultCryptoService_Sign_MissingSignatureField
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+  calls:
+  - Encode
+  - Error
+  - Sign
+  - assert.Contains
+  - assert.Error
+- name: TestVaultCryptoService_Decrypt_NilData
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - Decrypt
+  - Encode
+  - assert.Error
+- name: TestVaultCryptoService_Decrypt_MissingPlaintextField
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.Contains
+  calls:
+  - Decrypt
+  - Encode
+  - Error
+  - assert.Contains
+  - assert.Error

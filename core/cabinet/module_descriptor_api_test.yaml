@@ -13,39 +13,34 @@ objects:
   kind: func
   description: ''
   references:
-  - cabinet.ModuleDescriptorMeta
-  - cabinet.BaseBlockName
+  - cabinet.ModuleDescriptor
+  - cabinet.BaseBlock
+  - cabinet.ModuleDescriptor.ID
   calls:
-  - Fatalf
-  - ID
+  - cabinet.ModuleDescriptor.ID
 - name: TestModuleDescriptor_ID_API_EmptyParts
   kind: func
   description: ''
   references:
-  - cabinet.ModuleDescriptorMeta
-  - cabinet.BaseBlockName
+  - cabinet.ModuleDescriptor
+  - cabinet.BaseBlock
+  - cabinet.ModuleDescriptor.ID
   calls:
-  - Fatalf
-  - ID
+  - cabinet.ModuleDescriptor.ID
 - name: TestModuleDescriptor_GetData_API_JSONShapeAndValues
   kind: func
   description: ''
   references:
   - cabinet.ModuleDescriptor
-  - cabinet.BaseBlockName
+  - cabinet.BaseBlock
+  - cabinet.ModuleDescriptor.GetData
   calls:
-  - Equal
-  - Fatalf
-  - GetData
-  - Marshal
-  - Unmarshal
+  - cabinet.ModuleDescriptor.GetData
 - name: TestModuleDescriptor_GetData_API_DefensiveCopies
   kind: func
   description: ''
   references:
   - cabinet.ModuleDescriptor
+  - cabinet.ModuleDescriptor.GetData
   calls:
-  - Equal
-  - Fatalf
-  - GetData
-  - Marshal
+  - cabinet.ModuleDescriptor.GetData

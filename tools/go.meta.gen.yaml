@@ -66,10 +66,11 @@ objects:
   references: []
   calls:
   - _remove_comments
+  - alias_m.group
   - block_m.group
   - line.strip
-  - line_m.group
   - m.group
+  - path_m.group
 - name: _find_module_name
   kind: function
   decorators: []
@@ -96,6 +97,41 @@ objects:
   references: []
   calls:
   - _is_stdlib_path
+- name: _extract_interface_methods
+  kind: function
+  decorators: []
+  description: Extract exported method names from an interface body.
+  references: []
+  calls:
+  - m.group
+  - methods.append
+- name: _extract_calls
+  kind: function
+  decorators: []
+  description: 'Extract function/method calls from function body with type resolution.
+    First extracts method names from body (Set, Query, etc). Then resolves types using
+    references (cabinet.Cabinet.Set, sql.DB.Query, etc). Examples: body: "s.Set(db.Query())"  refs:
+    ["cabinet.Cabinet.Set", "sql.DB.Query"] → ["cabinet.Cabinet.Set", "sql.DB.Query"]
+    Falls back to untyped calls if refs unavailable: body: "s.Set(db.Query())"  refs:
+    None → ["Set", "Query"]'
+  references: []
+  calls:
+  - call_names.add
+  - m.group
+  - ref.split
+  - typed_calls.append
+- name: _extract_param_types
+  kind: function
+  decorators: []
+  description: 'Extract {param_name: pkg_alias} from function parameter list. Examples:
+    "s *Service, db *sql.DB" -> {"s": "Service", "db": "sql"} "ops nexusgit.GitOps"
+    -> {"ops": "nexusgit.GitOps"}'
+  references: []
+  calls:
+  - current.append
+  - m.group
+  - part.startswith
+  - parts.append
 - name: _extract_local_typed_vars
   kind: function
   decorators: []
@@ -112,14 +148,16 @@ objects:
 - name: _extract_refs
   kind: function
   decorators: []
-  description: 'Find non-stdlib pkg.Name references in text. Two passes: 1. Direct
+  description: 'Find non-stdlib pkg.Name references in text. Three passes: 1. Direct
     package references: pkg.ExportedName  (types, funcs, consts) 2. Typed variable
-    method calls: var db *sql.DB → db.QueryRow → sql.QueryRow'
+    method calls: var db *sql.DB → db.QueryRow → sql.QueryRow 3. Parameter/receiver
+    method calls: func f(s *Service) { s.Method() } → Service.Method'
   references: []
   calls:
   - _extract_local_typed_vars
   - _is_external
   - local_vars.get
+  - local_vars.update
   - m.group
 - name: _extract_doc_comments
   kind: function
@@ -167,7 +205,10 @@ objects:
   calls:
   - _clean
   - _extract_block_content
+  - _extract_calls
   - _extract_doc_comments
+  - _extract_interface_methods
+  - _extract_param_types
   - _extract_refs
   - clean.find
   - doc.get
@@ -178,45 +219,91 @@ objects:
 - name: generate
   kind: function
   decorators: []
-  description: ''
+  description: Build the companion data for one Go file. With `dump` (one entry of
+    the goastdump output) the declarations come from go/ast; without it the regex
+    reader is used.
   references: []
   calls:
-  - _extract_ast_metadata
   - _extract_package_doc
   - _find_module_name
-  - _merge_ast_into_objects
+  - _objects_from_dump
   - _parse_imports
   - _parse_objects
   - _suggest_tags
   - go_file.read_text
   - pkg_m.group
-- name: _extract_ast_metadata
+- name: _AST_DIR
+  kind: const
+  description: ''
+  references: []
+- name: _AST_CHUNK
+  kind: const
+  description: ''
+  references: []
+- name: _KIND_RANK
+  kind: const
+  description: ''
+  references: []
+- name: _ast_command
   kind: function
   decorators: []
-  description: 'Extract AST metadata using go_ast_extract module. Returns {object_key:
-    ObjectMeta, ...} or {} if extraction fails. Tries direct import first (faster),
-    falls back to subprocess if needed.'
+  description: Return the command that runs goastdump, or None if it cannot be had.
+    GO_META_GOASTDUMP overrides it with a prebuilt binary (or any command). Otherwise
+    the helper is built once with the `go` on PATH.
   references: []
-  calls:
-  - ast_script.exists
-- name: _merge_ast_into_objects
+  calls: []
+- name: _ast_dump
   kind: function
   decorators: []
-  description: 'Merge AST metadata into objects list. AST metadata keys match go_ast_extract._make_key
-    format: methods  → "ReceiverType.MethodName" others   → "Name"'
+  description: 'Run goastdump over files; returns {resolved path: per-file dump}.'
   references: []
   calls:
-  - ast_meta.get
+  - RuntimeError
+  - _ast_command
+  - f.resolve
+- name: _format_call
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _is_external
+  - c.get
+- name: _objects_from_dump
+  kind: function
+  decorators: []
+  description: Turn a goastdump file entry into the objects list the regex reader
+    made. Key order and the kind grouping (structs, interfaces, types, funcs/methods,
+    vars, consts) follow the regex reader so a regenerated YAML differs only by what
+    the syntax tree adds, not by reordering.
+  references: []
+  calls:
+  - _format_call
+  - _is_external
+  - c.get
+  - o.get
+  - objects.append
+  - objects.sort
+  - refs.append
+- name: _detect_implements
+  kind: function
+  decorators: []
+  description: 'Scan all YAML files in yaml_dir and return {struct_name: [interface_names]}
+    based on method-set inclusion. A struct S implements interface I if all exported
+    methods of I appear as kind=method objects with receiver=S across any YAML in
+    the directory. Returns a dict mapping struct names to the list of interfaces they
+    implement. Does NOT modify any files — callers are responsible for applying results.'
+  references: []
+  calls:
+  - data.get
+  - iface_methods.issubset
+  - ifaces.items
+  - impls.append
   - obj.get
-- name: _object_key
-  kind: function
-  decorators: []
-  description: 'Create stable, unique key for object merge. Disambiguates same-named
-    objects across different kinds/receivers: method:Store.Save method:Client.Save
-    func:Save'
-  references: []
-  calls:
-  - obj.get
+  - struct_methods.items
+  - struct_methods.setdefault
+  - yaml.safe_load
+  - yaml_dir.glob
 - name: _merge_data
   kind: function
   decorators: []
@@ -227,11 +314,9 @@ objects:
     value is preserved. Manual fields (never touched): tags, category, used_in, related_nodes,
     objects[].implements Objects: - New objects (added to Go source) → appended -
     Removed objects (deleted from Go source) → dropped - Existing objects → merged
-    per field rules above Object matching uses stable key (kind:name or method:receiver.name)
-    to correctly handle same-named methods on different types.'
+    per field rules above'
   references: []
   calls:
-  - _object_key
   - merged.get
   - merged_objects.append
   - new_data.get
@@ -252,15 +337,27 @@ objects:
   description: ''
   references: []
   calls:
+  - _ast_dump
+  - _detect_implements
   - _merge_data
   - _write_yaml
   - d.glob
   - d.rglob
+  - data.get
+  - dirs_processed.add
+  - dump.get
+  - dumps.get
+  - f.exists
+  - f.with_suffix
   - go_file.exists
+  - go_file.resolve
   - go_file.with_suffix
+  - impl_map.get
   - o.get
+  - obj.get
   - parser.add_argument
   - parser.parse_args
   - parser.print_help
   - yaml.safe_load
+  - yaml_dir.glob
   - yaml_file.exists

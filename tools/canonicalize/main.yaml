@@ -15,7 +15,6 @@ objects:
   description: ''
   references: []
   calls:
-  - Fprintf
   - RunFunc
 - name: Run
   kind: func

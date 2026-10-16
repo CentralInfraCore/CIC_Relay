@@ -55,6 +55,12 @@ objects:
   - wazero.Runtime
   - wazero.Runtime.NewHostModuleBuilder
   calls:
+  - Export
+  - Instantiate
+  - NewFunctionBuilder
+  - WithFunc
+  - WithParameterNames
+  - WithResultNames
   - wazero.Runtime.NewHostModuleBuilder
 - name: perModule
   kind: func
@@ -64,8 +70,9 @@ objects:
     is denied — fail-closed.
   references:
   - api.Module
+  - api.Module.Name
   calls:
-  - Name
+  - api.Module.Name
 - name: makeSignFn
   kind: func
   description: makeSignFn signs the caller-built canonical string (base64 in `data_base64`)
@@ -94,20 +101,13 @@ objects:
   - Error
   - Get
   - Hostname
-  - NewReader
-  - NewRequestWithContext
-  - Parse
-  - ReadAll
   - Set
-  - ToLower
 - name: portOf
   kind: func
   description: 'portOf returns the request''s TCP port: the explicit URL port, else
     the scheme default (443 for https, 80 for http).'
   references: []
-  calls:
-  - Atoi
-  - Port
+  calls: []
 - name: combineHostSetups
   kind: func
   description: combineHostSetups returns a HostSetupFn that runs each setup in order,

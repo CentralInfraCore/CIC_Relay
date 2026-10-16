@@ -22,13 +22,7 @@ objects:
     record hashes cannot collide.
   references: []
   calls:
-  - EncodeToString
-  - Errorf
   - RecordHash
-  - String
-  - Sum256
-  - WriteByte
-  - WriteString
 - name: TypeChainHash
   kind: func
   description: TypeChainHash returns a SHA-256 scoped to a named record type. The
@@ -36,10 +30,4 @@ objects:
     from different types cannot collide even if they contain identical records.
   references: []
   calls:
-  - EncodeToString
-  - Errorf
   - RecordHash
-  - String
-  - Sum256
-  - WriteByte
-  - WriteString

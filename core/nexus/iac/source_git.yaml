@@ -17,9 +17,9 @@ objects:
   kind: struct
   description: 'GitSource implements IaCSource by cloning or fetching a git repository
     and delegating to FileSource for file enumeration. All git commands run with a
-    hardened environment: - GIT_CONFIG_NOSYSTEM=1  (no /etc/gitconfig) - GIT_TERMINAL_PROMPT=0  (no
-    interactive prompts) - GIT_ASKPASS=/bin/false (credential prompts fail fast) -
-    -c core.hooksPath=/dev/null (no hooks)'
+    hardened environment: - GIT_CONFIG_NOSYSTEM=1 (no /etc/gitconfig) - GIT_TERMINAL_PROMPT=0
+    (no interactive prompts) - GIT_ASKPASS=/bin/false (credential prompts fail fast)
+    - -c core.hooksPath=/dev/null (no hooks)'
   implements:
   - IaCSource
   references: []
@@ -36,10 +36,7 @@ objects:
     returns all YAML/JSON files via FileSource.FetchConfig.
   references: []
   calls:
-  - Errorf
-  - FetchConfig
-  - IsNotExist
-  - Stat
+  - FileSource.FetchConfig
 - name: runGit
   kind: method
   receiver: GitSource
@@ -49,9 +46,3 @@ objects:
   references: []
   calls:
   - CombinedOutput
-  - CommandContext
-  - Environ
-  - Errorf
-  - Join
-  - TrimSpace
-  - WithTimeout

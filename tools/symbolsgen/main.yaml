@@ -23,6 +23,7 @@ objects:
   - packages.NeedTypes
   - packages.Load
   calls:
+  - Bytes
   - packages.Load
 - name: run
   kind: func
@@ -30,16 +31,19 @@ objects:
     writes it to the output file.
   references:
   - packages.Config
-  calls:
-  - Errorf
-  - Printf
-  - ReadFile
-  - Split
-  - TrimSpace
-  - WriteFile
+  calls: []
 - name: main
   kind: func
   description: ''
   references: []
-  calls:
-  - Printf
+  calls: []
+- name: exit
+  kind: var
+  description: exit is a variable that holds the os.Exit function. It can be replaced
+    in tests to prevent actual program exit.
+  references: []
+- name: fatalf
+  kind: var
+  description: fatalf is a variable that holds the log.Fatalf function. It can be
+    replaced in tests to prevent actual program exit.
+  references: []

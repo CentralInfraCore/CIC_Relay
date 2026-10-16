@@ -30,24 +30,24 @@ objects:
     tests to specify what cicWasmHost instance (or error) should be returned.
   references: []
   calls:
-  - Called
   - Error
   - Get
+  - MockWasmManager.Called
 - name: Close
   kind: method
   receiver: MockWasmManager
   description: Close mocks the closing of the WasmManager.
   references: []
   calls:
-  - Called
   - Error
+  - MockWasmManager.Called
 - name: Process
   kind: method
   receiver: MockCicWasmHost
   description: ''
   references: []
   calls:
-  - Called
+  - MockCicWasmHost.Called
   - String
 - name: Get
   kind: method
@@ -55,7 +55,7 @@ objects:
   description: ''
   references: []
   calls:
-  - Called
+  - MockCicWasmHost.Called
   - String
 - name: Init
   kind: method
@@ -63,7 +63,7 @@ objects:
   description: ''
   references: []
   calls:
-  - Called
+  - MockCicWasmHost.Called
   - String
 - name: Notify
   kind: method
@@ -71,7 +71,7 @@ objects:
   description: ''
   references: []
   calls:
-  - Called
+  - MockCicWasmHost.Called
   - String
 - name: Close
   kind: method
@@ -79,13 +79,5 @@ objects:
   description: Close mocks the closing of the WasmManager.
   references: []
   calls:
-  - Called
   - Error
-- name: _
-  kind: var
-  description: Ensure MockCicWasmHost implements the cicWasmHost interface.
-  references: []
-- name: _
-  kind: var
-  description: Ensure MockCicWasmHost implements the cicWasmHost interface.
-  references: []
+  - MockCicWasmHost.Called

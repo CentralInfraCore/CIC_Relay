@@ -37,6 +37,5 @@ objects:
     arbitrary filesystem paths.
   references: []
   calls:
-  - Errorf
   - RLock
   - RUnlock

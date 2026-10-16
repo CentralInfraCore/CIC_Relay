@@ -17,6 +17,7 @@ objects:
   references:
   - logrus.New
   calls:
+  - SetOutput
   - logrus.New
 - name: validProofVerifyBody
   kind: func
@@ -42,6 +43,7 @@ objects:
   - logrus.New
   - assert.Equal
   calls:
+  - SetOutput
   - assert.Equal
   - logrus.New
 - name: TestProofVerifyHandler_InvalidJSON
@@ -75,6 +77,10 @@ objects:
   - assert.True
   - assert.Empty
   calls:
+  - Bytes
+  - Get
+  - Header
+  - Set
   - assert.Empty
   - assert.Equal
   - assert.True
@@ -90,6 +96,8 @@ objects:
   - require.NotEmpty
   - assert.Contains
   calls:
+  - Bytes
+  - Set
   - assert.Contains
   - assert.False
   - require.Equal
