@@ -1,0 +1,2 @@
+cic-factory commit e5978f50d2512c5ac7536b9d81ffb1f054b75525 (PR CentralInfraCore/cic-factory#37), fixtures/vcn-v1, vendored unchanged.
+The files are checked against MANIFEST.sha256 by cmd/relay/vcn_slice_test.go; do not edit them here.
