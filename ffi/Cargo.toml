@@ -21,7 +21,6 @@ live-vault = [
     "vault-adapter/live-vault",
     "dep:vault-client-rs",
     "dep:p256",
-    "dep:rand_core",
 ]
 
 # NOTE: this crate deliberately does NOT use `[lints] workspace = true`.
@@ -55,5 +54,4 @@ tokio = { version = "1", features = ["rt-multi-thread", "time", "net"] }
 # Live-Vault profile only (optional): the real countersign / cert-auth / read path.
 vault-adapter = { path = "../vault-adapter", optional = true }
 vault-client-rs = { git = "https://github.com/sinkog/vault-client-rs", rev = "e442b8122a2dcf93146113e987904841e717111b", optional = true }
-p256 = { version = "0.13", features = ["ecdsa", "pem", "std"], optional = true }
-rand_core = { version = "0.6", features = ["getrandom"], optional = true }
+p256 = { version = "0.14", features = ["ecdsa", "pem", "std", "getrandom"], optional = true }
