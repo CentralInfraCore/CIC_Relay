@@ -16,8 +16,8 @@ use std::str::FromStr;
 use connections::vault::port::CertRequest;
 use connections::vault::{AuthScope, Cn, SealedSecret};
 use p256::ecdsa::{DerSignature, SigningKey};
+use p256::elliptic_curve::Generate;
 use p256::pkcs8::{DecodePrivateKey, EncodePublicKey};
-use rand_core::OsRng;
 use secrecy::SecretString;
 use x509_cert::builder::{Builder, RequestBuilder};
 use x509_cert::der::asn1::Ia5String;
@@ -93,7 +93,7 @@ impl ModuleIdentity {
     /// [`ModuleError`] if the subject/CNs cannot be encoded or the CSR cannot be
     /// built and signed.
     pub fn generate(subject: Cn, scope: AuthScope) -> Result<(Self, CertRequest), ModuleError> {
-        let signing_key = SigningKey::random(&mut OsRng);
+        let signing_key = SigningKey::generate();
         let csr_der = build_csr(&signing_key, &subject, &scope)?;
         let request = CertRequest::new(subject, scope, csr_der);
         Ok((Self { signing_key }, request))
@@ -170,8 +170,8 @@ fn build_csr(
     let name = Name::from_str(&format!("CN={}", subject.as_str()))
         .map_err(|e| ModuleError::new(format!("invalid subject: {e}")))?;
 
-    let mut builder = RequestBuilder::new(name, signing_key)
-        .map_err(|e| ModuleError::new(format!("csr builder: {e}")))?;
+    let mut builder =
+        RequestBuilder::new(name).map_err(|e| ModuleError::new(format!("csr builder: {e}")))?;
 
     if !scope.is_empty() {
         let mut sans = Vec::new();
@@ -186,7 +186,7 @@ fn build_csr(
     }
 
     let csr = builder
-        .build::<DerSignature>()
+        .build::<_, DerSignature>(signing_key)
         .map_err(|e| ModuleError::new(format!("csr sign: {e}")))?;
     csr.to_der()
         .map_err(|e| ModuleError::new(format!("csr encode: {e}")))
@@ -256,10 +256,10 @@ mod tests {
     #[test]
     fn from_pkcs8_pem_reconstructs_a_usable_identity() {
         use p256::ecdsa::SigningKey;
+        use p256::elliptic_curve::Generate;
         use p256::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
-        use rand_core::OsRng;
 
-        let key = SigningKey::random(&mut OsRng);
+        let key = SigningKey::generate();
         let pem = key.to_pkcs8_pem(LineEnding::LF).expect("pkcs8 pem");
         let expected_pub = key
             .verifying_key()

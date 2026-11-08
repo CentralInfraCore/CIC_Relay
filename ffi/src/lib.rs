@@ -453,6 +453,7 @@ mod flow {
         use connections::vault::{Cn, SecretRef};
         use module::{seal, ModuleIdentity};
         use p256::ecdsa::SigningKey;
+        use p256::elliptic_curve::Generate;
         use p256::pkcs8::{EncodePrivateKey, LineEnding};
         use serde_json::{json, Value};
         use vault_adapter::{AllowlistPolicy, VaultPkiCountersigner, VaultSecretSource};
@@ -522,7 +523,7 @@ mod flow {
                 .ok_or_else(|| "live profile requires a `vault` config".to_owned())?;
 
             // Module key: CSR signer + mTLS client identity + sealing recipient.
-            let signing = SigningKey::random(&mut rand_core::OsRng);
+            let signing = SigningKey::generate();
             let key_pem = signing.to_pkcs8_pem(LineEnding::LF).map_err(err_string)?;
             let identity = ModuleIdentity::from_pkcs8_pem(&key_pem).map_err(err_string)?;
             let subject = Cn::new(input.subject.clone());
