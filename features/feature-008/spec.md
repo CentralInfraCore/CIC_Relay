@@ -191,6 +191,14 @@ the Relay holds an intermediate *signing key* at runtime. This blocker is
   `cmd/relay/embedded.go` bundles `cmd/relay/embedded/` — which contains **only
   public `.pem` certs** (`rootCA2026.pem`, `CICDeveloperCA2026.pem`,
   `EmbeddedTestRootCA.pem`); no private key.
+
+  *Amendment, 2026-11-08:* the second half of this claim did not cover the whole risk.
+  `EmbeddedTestRootCA.pem` was a **trusted** anchor in the dev trust store, and the private key
+  of that very certificate was `embedded/pki/root_ca.key` in this repository (equal public keys).
+  The certificate has been removed from the embedded directory, and
+  `TestEmbeddedTrustHasNoRepoKnownPrivateKey` (`cmd/relay/embedded_trust_guard_test.go`) fails if a
+  certificate whose key is in the repository is embedded again. The embedded directory now holds
+  `rootCA2026.pem` and `CICDeveloperCA2026.pem`.
 - **The private keys in the repo are not the runtime's.** The repo-root
   `embedded/pki/` holds real `intermediate_ca.key` / `root_ca.key`, but it is an
   offline openssl generation scratch dir (`.csr` / `.srl` artifacts), it is **not**
