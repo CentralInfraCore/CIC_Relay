@@ -20,6 +20,7 @@ use base64::Engine;
 use connections::vault::{AuthScope, Cn, SecretRef};
 use module::{seal, ModuleIdentity};
 use p256::ecdsa::SigningKey;
+use p256::elliptic_curve::Generate;
 use p256::pkcs8::{EncodePrivateKey, LineEnding};
 use secrecy::ExposeSecret;
 use vault_adapter::{AllowlistPolicy, VaultPkiCountersigner, VaultSecretSource};
@@ -87,7 +88,7 @@ async fn full_trust_flow_chain_against_live_vault() {
 
     // 1. The module holds a per-request P-256 key: its CSR signer, its mTLS client
     //    identity, and the recipient a returned secret is sealed to.
-    let signing = SigningKey::random(&mut rand_core::OsRng);
+    let signing = SigningKey::generate();
     let key_pem = signing.to_pkcs8_pem(LineEnding::LF).expect("pkcs8 pem");
     let identity = ModuleIdentity::from_pkcs8_pem(&key_pem).expect("module identity");
     let subject = Cn::new("relay.worker");

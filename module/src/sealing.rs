@@ -14,7 +14,8 @@ use aes_gcm::{Aes256Gcm, Key, Nonce};
 use connections::vault::{SealedSecret, SecretRef};
 use hkdf::Hkdf;
 use p256::ecdh::{diffie_hellman, EphemeralSecret};
-use p256::elliptic_curve::sec1::ToEncodedPoint;
+use p256::elliptic_curve::sec1::ToSec1Point;
+use p256::elliptic_curve::Generate;
 use p256::pkcs8::DecodePublicKey;
 use p256::{NonZeroScalar, PublicKey};
 use rand_core::OsRng;
@@ -53,8 +54,8 @@ pub fn seal(
     let recipient = PublicKey::from_public_key_der(recipient_der)
         .map_err(|e| ModuleError::new(format!("recipient key: {e}")))?;
 
-    let ephemeral = EphemeralSecret::random(&mut OsRng);
-    let eph_pub = ephemeral.public_key().to_encoded_point(false);
+    let ephemeral = EphemeralSecret::generate();
+    let eph_pub = ephemeral.public_key().to_sec1_point(false);
     let shared = ephemeral.diffie_hellman(&recipient);
     let key = derive_key(&shared.raw_secret_bytes()[..])?;
 
