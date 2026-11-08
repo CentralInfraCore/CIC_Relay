@@ -183,6 +183,12 @@ services:
   #     builder cannot see the clone the relay just made
   #   - ProofTrace recording is silently disabled without VAULT_TOKEN, and the
   #     token must be authorised for CIC_VAULT_KEY (not merely valid)
+  # DEVELOPMENT ONLY. This service is not a production deployment pattern:
+  #   - it mounts the host's docker socket, which gives the container the host daemon's reach
+  #   - the HTTP API has no authentication and no TLS
+  #   - CIC_TRUST_MODE defaults to `dev`, which trusts the CA certificates embedded in the binary
+  #   - without VAULT_TOKEN it starts with ProofTrace recording disabled
+  # See SECURITY.md and the "Állapot és biztonsági helyzet" section of README.md.
   relay:
     build:
       context: .
@@ -191,7 +197,9 @@ services:
     container_name: cic-relay
     profiles: ["relay"]
     ports:
-      - "${CIC_RELAY_PORT:-8080}:8080"
+      # Loopback by default: the relay's HTTP API has no authentication and no TLS.
+      # Publishing it on another interface is an explicit decision: set CIC_RELAY_BIND.
+      - "${CIC_RELAY_BIND:-127.0.0.1}:${CIC_RELAY_PORT:-8080}:8080"
     # Vault usually runs on the host, which is not reachable as 127.0.0.1 from a
     # bridge network. Same pattern the py-builder service already uses.
     extra_hosts:
