@@ -6,6 +6,12 @@ They are NOT used in production and must NEVER be used in any real environment.
 These assets exist solely to support the embedded component loading tests.
 Production PKI material is injected at runtime from Vault or a separate secure store.
 
+**Never embed the certificate of a key that is kept here.** The Relay's dev trust store
+(`CIC_TRUST_MODE=dev`, which is also the default) trusts every self-signed CA under
+`cmd/relay/embedded/pki/`. A CA whose private key is in this repository would let anyone who
+can read the repository issue a chain that the dev trust store accepts. A test in `cmd/relay`
+(`TestEmbeddedTrustHasNoRepoKnownPrivateKey`) fails if that happens.
+
 ## Contents
 
 | File | Purpose |
