@@ -1,0 +1,203 @@
+name: nightly
+
+# The nightly check of main.
+#
+#   security     every night: govulncheck and the cargo-deny advisories against today's
+#                databases. A new advisory shows up here the next morning instead of
+#                whenever somebody next pushes a commit.
+#   incremental  the mutation tests of what changed since the last SUCCESSFUL nightly
+#                (the history is that run's commit). If there is none yet, or "full" is
+#                asked for, everything is planned. The weekly FULL without history is
+#                mutation.yml (Tuesday).
+#
+# A failure opens one issue (label nightly-failure) or comments on the open one; the next
+# green night closes it (scripts/ci_report.sh).
+#
+# 02:30 Europe/Budapest. GitHub cron is UTC only: "30 1 * * *" is 02:30 in winter time
+# (CET); in summer time (CEST) it is 03:30 and the cron wants "30 0 * * *".
+on:
+  schedule:
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "plan everything, ignore the last successful nightly"
+        type: boolean
+        default: false
+      report_test:
+        description: "only test the report: skip the checks and report a pretended failure ([TEST] issue)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+env:
+  HEAD_SHA: ${{ github.sha }}
+
+jobs:
+  security:
+    if: ${{ !inputs.report_test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.10"
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: Go vulnerability scan (today's database)
+        run: govulncheck ./...
+
+      - name: cargo-deny advisories (today's database)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
+
+  plan:
+    if: ${{ !inputs.report_test }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read   # gh run list: the commit of the last successful nightly
+    outputs:
+      base: ${{ steps.last.outputs.base }}
+      go_pkgs: ${{ steps.plan.outputs.go_pkgs }}
+      rust: ${{ steps.plan.outputs.rust }}
+    steps:
+      - name: Checkout (full history for the diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Commit of the last successful nightly
+        id: last
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FULL: ${{ inputs.full }}
+        run: |
+          sha=""
+          if [ "$FULL" != "true" ]; then
+            sha=$(gh run list --workflow nightly.yml --branch main --status success \
+              --limit 1 --json headSha --jq '.[0].headSha // empty')
+          fi
+          if [ -n "$sha" ] && ! git cat-file -e "$sha^{commit}" 2>/dev/null; then
+            echo "::warning::the last nightly's commit $sha is not in the history: planning everything"
+            sha=""
+          fi
+          echo "last successful nightly: ${sha:-none (everything is planned)}"
+          echo "base=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Plan from the diff since then (or everything)
+        id: plan
+        env:
+          BASE: ${{ steps.last.outputs.base }}
+        run: |
+          if [ -n "$BASE" ]; then
+            python3 scripts/mutation_plan.py --base "$BASE" --head "$HEAD_SHA"
+          else
+            python3 scripts/mutation_plan.py --all --head "$HEAD_SHA"
+          fi
+
+  go:
+    needs: plan
+    if: ${{ needs.plan.outputs.go_pkgs != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.10"
+
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+
+      - name: Mutation of the packages changed since the last nightly (ratchet)
+        env:
+          GOFLAGS: "-mod=readonly -trimpath"
+          PKGS: ${{ needs.plan.outputs.go_pkgs }}
+        run: python3 scripts/gremlins_gate.py $PKGS
+
+  rust:
+    needs: plan
+    if: ${{ needs.plan.outputs.rust == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout (full history for the diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Install cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+
+      - name: Mutation of the Rust lines changed since the last nightly (no surviving mutants)
+        env:
+          BASE: ${{ needs.plan.outputs.base }}
+        run: |
+          set -e
+          if [ -z "$BASE" ]; then
+            cargo mutants --workspace
+            exit 0
+          fi
+          git diff "$BASE...$HEAD_SHA" -- '*.rs' > /tmp/since.diff
+          n=$(cargo mutants --workspace --list --in-diff /tmp/since.diff | grep -c . || true)
+          echo "Rust mutants in the diff: $n"
+          if [ "$n" -eq 0 ]; then
+            echo "nothing to mutate"
+            exit 0
+          fi
+          cargo mutants --workspace --in-diff /tmp/since.diff
+
+  report:
+    needs: [security, plan, go, rust]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout (for the report script)
+        uses: actions/checkout@v4
+
+      - name: Report (open or update the issue on failure, close it on success)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEST: ${{ inputs.report_test }}
+          SECURITY: ${{ needs.security.result }}
+          PLAN: ${{ needs.plan.result }}
+          GO: ${{ needs.go.result }}
+          RUST: ${{ needs.rust.result }}
+        run: |
+          status=success
+          details="security=$SECURITY plan=$PLAN go=$GO rust=$RUST"
+          for r in "$SECURITY" "$PLAN" "$GO" "$RUST"; do
+            case "$r" in failure|cancelled) status=failure ;; esac
+          done
+          title="Nightly check failed"
+          if [ "$TEST" = "true" ]; then
+            status=failure
+            title="[TEST] Nightly check failed"
+            details="report_test: a pretended failure, close this issue. $details"
+          fi
+          bash scripts/ci_report.sh nightly-failure "$title" "$status" "$details"
