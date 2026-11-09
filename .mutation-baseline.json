@@ -7,8 +7,8 @@
       "not_covered": 1
     },
     "./core/nexus/git": {
-      "killed": 13,
-      "lived": 7,
+      "killed": 8,
+      "lived": 12,
       "not_covered": 1
     },
     "./core/nexus/iac": {
