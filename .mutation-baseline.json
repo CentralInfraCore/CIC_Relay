@@ -1,0 +1,65 @@
+{
+  "_comment": "Ratchet baseline for the diff-mode mutation gate (scripts/gremlins_gate.py). Packages not listed need efficacy >= 90 and mutant coverage >= 90. A listed package must not get worse than its baseline minus the weight of one mutant. Counts are gremlins v0.6.0 results with GOFLAGS=-count=1 (the Go test cache makes gremlins time out), measured on main@dcbdde9 on 2026-11-09. Only ever raise a baseline.",
+  "packages": {
+    "./core/modules/cibuild": {
+      "killed": 7,
+      "lived": 0,
+      "not_covered": 1
+    },
+    "./core/nexus/git": {
+      "killed": 13,
+      "lived": 7,
+      "not_covered": 1
+    },
+    "./core/nexus/iac": {
+      "killed": 110,
+      "lived": 14,
+      "not_covered": 6
+    },
+    "./core/nexus/operator": {
+      "killed": 31,
+      "lived": 4,
+      "not_covered": 1
+    },
+    "./core/nexus/sync": {
+      "killed": 11,
+      "lived": 2,
+      "not_covered": 0
+    },
+    "./pkg/cicffi": {
+      "killed": 1,
+      "lived": 0,
+      "not_covered": 9
+    },
+    "./pkg/obs": {
+      "killed": 24,
+      "lived": 6,
+      "not_covered": 6
+    },
+    "./pkg/sourcedigest": {
+      "killed": 7,
+      "lived": 2,
+      "not_covered": 0
+    },
+    "./tools/oci-sign-demo": {
+      "killed": 0,
+      "lived": 0,
+      "not_covered": 20
+    },
+    "./tools/statechain-demo": {
+      "killed": 0,
+      "lived": 0,
+      "not_covered": 30
+    },
+    "./tools/symbolsgen": {
+      "killed": 33,
+      "lived": 0,
+      "not_covered": 4
+    },
+    "./tools/trustflow-demo": {
+      "killed": 0,
+      "lived": 0,
+      "not_covered": 16
+    }
+  }
+}
