@@ -1,19 +1,25 @@
 name: mutation
 
-# Mutation testing (gremlins for Go, cargo-mutants for Rust) is the slowest,
-# most minute-hungry gate and rarely catches anything the unit/coverage gates
-# miss on a per-commit basis. It is therefore NOT run on every push/PR, and NOT
-# on a schedule either — it is run **manually on demand** (workflow_dispatch),
-# and locally before risky changes (`make mutate-all`, `make mutate-rust`).
+# The FULL mutation run, without history: every Go package of the root module (discovered,
+# not listed, so new packages are included; scripts/gremlins_gate.py, per-package ratchet
+# against .mutation-baseline.json) and the whole Rust workspace (cargo-mutants, no surviving
+# mutant, four parallel shards).
 #
-# The Go and the Rust mutation runs are independent jobs and run in parallel:
-# the wall time is that of the slower one (measured on 2026-11-09: Rust 363 s,
-# all Go packages together 152 s), not their sum (556 s as one job).
+# It runs weekly on Tuesday daytime and on demand (workflow_dispatch, and locally with
+# `make mutate-all` / `make mutate-rust`). The incremental run since the last nightly is
+# nightly.yml; the diff-mode gate of a pull request is mutation-pr.yml.
 #
-# NOTE: because this does not run on pull_request, remove `mutation` from the
-# branch-protection *required status checks* for `main`, or PRs will wait on a
-# check that never reports.
+# A failed weekly run opens one issue (label weekly-failure) or comments on the open one;
+# the next green week closes it (scripts/ci_report.sh).
+#
+# The Go and the Rust run are independent jobs and run in parallel: the wall time is that
+# of the slower one (measured on 2026-11-09: Rust ~185 s sharded, all Go packages a few
+# minutes), not their sum.
+#
+# NOTE: because this does not run on pull_request, it must not be a required status check.
 on:
+  schedule:
+    - cron: "0 9 * * 2"   # Tuesday 09:00 UTC = 10:00 Europe/Budapest in winter (CET), 11:00 in summer
   workflow_dispatch: {}
 
 permissions:
@@ -41,35 +47,15 @@ jobs:
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
-      - name: Mutation — core/cabinet (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/cabinet
+      - name: Plan - every Go package of the root module
+        id: plan
+        run: python3 scripts/mutation_plan.py --all --head HEAD --go-max-jobs 1
 
-      - name: Mutation — core/modules/schemapipeline (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/modules/schemapipeline
-
-      - name: Mutation — core/modules/schemacompile (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/modules/schemacompile
-
-      - name: Mutation — core/modules/httpcap (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/modules/httpcap
-
-      - name: Mutation — core/nexus/ois (efficacy ≥ 90%)
-        run: |
-          GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-            --workers 4 --threshold-efficacy 90 \
-            ./core/nexus/ois
+      - name: Mutation of every package (ratchet)
+        env:
+          GOFLAGS: "-mod=readonly -trimpath"
+          PKGS: ${{ steps.plan.outputs.go_pkgs }}
+        run: python3 scripts/gremlins_gate.py $PKGS
 
   # Rust mutation testing (cargo-mutants). Fails if any viable mutant survives.
   # The mutants are split over parallel shards (cargo-mutants --shard k/n, round-robin):
@@ -95,3 +81,29 @@ jobs:
 
       - name: Mutation — Rust workspace, shard ${{ matrix.shard }}/4 (no surviving mutants)
         run: cargo mutants --workspace --shard ${{ matrix.shard }}/4
+
+  report:
+    needs: [mutation-go, mutation-rust]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout (for the report script)
+        uses: actions/checkout@v4
+
+      - name: Report (open or update the issue on failure, close it on success)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GO: ${{ needs.mutation-go.result }}
+          RUST: ${{ needs.mutation-rust.result }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          # only the scheduled run reports; a manual run is looked at by the person who started it
+          [ "$EVENT" = "schedule" ] || { echo "not a scheduled run: no report"; exit 0; }
+          status=success
+          for r in "$GO" "$RUST"; do
+            case "$r" in failure|cancelled) status=failure ;; esac
+          done
+          bash scripts/ci_report.sh weekly-failure "Weekly mutation FULL failed" "$status" "go=$GO rust=$RUST"
