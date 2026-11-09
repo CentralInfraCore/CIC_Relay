@@ -6,18 +6,25 @@ name: mutation
 # on a schedule either — it is run **manually on demand** (workflow_dispatch),
 # and locally before risky changes (`make mutate-all`, `make mutate-rust`).
 #
+# The Go and the Rust mutation runs are independent jobs and run in parallel:
+# the wall time is that of the slower one (measured on 2026-11-09: Rust 363 s,
+# all Go packages together 152 s), not their sum (556 s as one job).
+#
 # NOTE: because this does not run on pull_request, remove `mutation` from the
 # branch-protection *required status checks* for `main`, or PRs will wait on a
 # check that never reports.
 on:
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 concurrency:
   group: mutation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  mutation:
+  mutation-go:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -64,7 +71,13 @@ jobs:
             --workers 4 --threshold-efficacy 90 \
             ./core/nexus/ois
 
-      # Rust mutation testing (cargo-mutants). Fails if any viable mutant survives.
+  # Rust mutation testing (cargo-mutants). Fails if any viable mutant survives.
+  mutation-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show active-toolchain || rustup toolchain install
 
