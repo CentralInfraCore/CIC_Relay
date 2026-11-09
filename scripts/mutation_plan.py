@@ -11,9 +11,13 @@ Discovers, from the files a pull request changes, what has to be mutated:
 The Go packages are spread over at most --go-max-jobs jobs (round-robin), so the wall
 time stays bounded while the code base grows.
 
+With --all the diff is ignored and everything at --head is planned (the weekly FULL
+and the first nightly, which has no earlier run to compare with).
+
 Output (GITHUB_OUTPUT, or stdout when it is unset):
-  go    JSON list of {"id": n, "pkgs": "./a ./b"}   ("[]" when nothing to do)
-  rust  "true" | "false"
+  go       JSON list of {"id": n, "pkgs": "./a ./b"}   ("[]" when nothing to do)
+  go_pkgs  the same packages as one space-separated line
+  rust     "true" | "false"
 """
 
 import argparse
@@ -83,10 +87,13 @@ def rust_changed(files: list[str]) -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", required=True)
+    ap.add_argument("--base")
     ap.add_argument("--head", required=True)
     ap.add_argument("--go-max-jobs", type=int, default=6)
+    ap.add_argument("--all", action="store_true", help="plan everything at --head")
     a = ap.parse_args()
+    if not a.all and not a.base:
+        ap.error("--base is required unless --all is given")
 
     tracked = subprocess.run(
         ["git", "ls-tree", "-r", "--name-only", a.head],
@@ -100,9 +107,14 @@ def main() -> int:
         if p == "go.mod" or p.endswith("/go.mod")
     }
 
-    files = changed_files(a.base, a.head)
-    go = chunk(go_packages(files, module_dirs), a.go_max_jobs)
-    result = {"go": json.dumps(go), "rust": "true" if rust_changed(files) else "false"}
+    files = tracked if a.all else changed_files(a.base, a.head)
+    pkgs = go_packages(files, module_dirs)
+    go = chunk(pkgs, a.go_max_jobs)
+    result = {
+        "go": json.dumps(go),
+        "go_pkgs": " ".join(pkgs),
+        "rust": "true" if rust_changed(files) else "false",
+    }
 
     print(f"changed files: {len(files)}", file=sys.stderr)
     print(f"go: {result['go']}", file=sys.stderr)
