@@ -1,0 +1,11 @@
+# Quality thresholds for gremlins (mutation testing, Go).
+#
+# They MUST live here: measured with gremlins v0.6.0, the command-line flags
+# --threshold-efficacy / --threshold-mcover are accepted but NOT enforced (exit 0
+# at 70% efficacy even with --threshold-efficacy 100); only this file makes
+# gremlins exit non-zero ("ERROR: below efficacy-threshold", exit 10).
+# Before this file existed, no gremlins step in mutation.yml could fail on efficacy.
+unleash:
+  threshold:
+    efficacy: 90
+    mutant-coverage: 90
