@@ -137,7 +137,14 @@ jobs:
               */tools/oci-sign-demo) echo "$p: skip (self-verifying demo entry; exercised by make demo-oci-sign)"; continue ;;
               */pkg/cicffi)       echo "$p: skip (cgo bridge; tested in the ffi job under -tags ffi_cgo)"; continue ;;
             esac
-            go test -coverprofile=/tmp/pkg_cover.out "$p" > /dev/null 2>&1 || continue
+            # Fail closed: a package whose test run fails here must not be skipped, or
+            # its threshold is never looked at (measured: it was skipped silently).
+            if ! go test -coverprofile=/tmp/pkg_cover.out "$p" > /tmp/pkg_test.log 2>&1; then
+              echo "$p: FAIL: go test failed"
+              tail -n 30 /tmp/pkg_test.log
+              FAIL=1
+              continue
+            fi
             pc=$(go tool cover -func=/tmp/pkg_cover.out | awk 'END{gsub(/%/,""); print $3+0}')
             case "$p" in
               */cmd/relay)                   min=90  ;;
