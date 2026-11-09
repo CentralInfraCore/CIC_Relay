@@ -100,11 +100,15 @@ def repo(tmp_path):
 
 
 def plan(repo, *args):
+    # GitHub Actions sets GITHUB_OUTPUT for every step; with it the planner writes the
+    # file instead of stdout. The test reads stdout, so it must not depend on that.
+    env = {k: v for k, v in os.environ.items() if k != "GITHUB_OUTPUT"}
     out = subprocess.run(
         [sys.executable, PLAN, *args],
         cwd=repo,
         capture_output=True,
         text=True,
+        env=env,
     )
     return out, dict(
         line.split("=", 1) for line in out.stdout.splitlines() if "=" in line
