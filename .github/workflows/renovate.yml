@@ -1,12 +1,22 @@
 name: renovate
 
+# A failed scheduled run opens one issue (label renovate-failure) or comments on the open
+# one; the next green week closes it (scripts/ci_report.sh). This is what was missing when
+# the RENOVATE_TOKEN PAT expired and the weekly run failed for ten weeks without anybody
+# noticing.
 on:
   schedule:
     - cron: "0 4 * * 1"  # every Monday 04:00 UTC
   workflow_dispatch:
+    inputs:
+      report_test:
+        description: "only test the report: skip Renovate and report a pretended failure ([TEST] issue)"
+        type: boolean
+        default: false
 
 jobs:
   renovate:
+    if: ${{ !inputs.report_test }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,3 +38,38 @@ jobs:
           # allowedCommands csak globális/admin szinten állítható (security okból),
           # ezért env-ben adjuk meg: enélkül a postUpgradeTasks.commands tiltott lenne.
           RENOVATE_ALLOWED_COMMANDS: '["^scripts/gen_manifest\\.sh "]'
+
+  report:
+    needs: [renovate]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout (for the report script)
+        uses: actions/checkout@v4
+
+      - name: Report (open or update the issue on failure, close it on success)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RENOVATE: ${{ needs.renovate.result }}
+          EVENT: ${{ github.event_name }}
+          TEST: ${{ inputs.report_test }}
+        run: |
+          # only the scheduled run (or the report test) reports; a manual run is looked
+          # at by the person who started it
+          if [ "$EVENT" != "schedule" ] && [ "$TEST" != "true" ]; then
+            echo "not a scheduled run: no report"
+            exit 0
+          fi
+          status=success
+          case "$RENOVATE" in failure|cancelled) status=failure ;; esac
+          title="Renovate run failed"
+          details="renovate=$RENOVATE. The usual cause is RENOVATE_TOKEN (a PAT that expires): check the log for 401 / Bad credentials (see #130)."
+          if [ "$TEST" = "true" ]; then
+            status=failure
+            title="[TEST] Renovate run failed"
+            details="report_test: a pretended failure, close this issue. $details"
+          fi
+          bash scripts/ci_report.sh renovate-failure "$title" "$status" "$details"
