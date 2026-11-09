@@ -72,7 +72,11 @@ def chunk(pkgs: list[str], max_jobs: int) -> list[dict]:
 def rust_changed(files: list[str]) -> bool:
     for f in files:
         base = f.rsplit("/", 1)[-1]
-        if f.endswith(".rs") or base in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml"):
+        if f.endswith(".rs") or base in (
+            "Cargo.toml",
+            "Cargo.lock",
+            "rust-toolchain.toml",
+        ):
             return True
     return False
 
