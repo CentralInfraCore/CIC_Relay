@@ -116,3 +116,8 @@ mod tests {
         );
     }
 }
+
+// PROBE (do not merge): exercises the mutation-pr gate; has no test on purpose.
+pub fn probe_add(a: u32, b: u32) -> u32 {
+    a + b
+}

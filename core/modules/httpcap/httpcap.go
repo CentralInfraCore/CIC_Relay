@@ -1,3 +1,4 @@
+// PROBE (do not merge): a comment-only change that makes the planner pick this package.
 // Package httpcap implements the relay's `http.request` capability: a native
 // cabinet module that performs an authenticated HTTP actuation through the
 // feature-008/009 trust-flow. Registered in the cabinet, a workflow step like
