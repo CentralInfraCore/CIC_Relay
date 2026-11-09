@@ -73,7 +73,7 @@ jobs:
       actions: read   # gh run list: the commit of the last successful nightly
     outputs:
       base: ${{ steps.last.outputs.base }}
-      go_pkgs: ${{ steps.plan.outputs.go_pkgs }}
+      go: ${{ steps.plan.outputs.go }}
       rust: ${{ steps.plan.outputs.rust }}
     steps:
       - name: Checkout (full history for the diff)
@@ -120,10 +120,15 @@ jobs:
           fi
 
   go:
+    name: go (chunk ${{ matrix.chunk.id }})
     needs: plan
-    if: ${{ needs.plan.outputs.go_pkgs != '' }}
+    if: ${{ needs.plan.outputs.go != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: ${{ fromJSON(needs.plan.outputs.go) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -136,10 +141,10 @@ jobs:
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
-      - name: Mutation of the packages changed since the last nightly (ratchet)
+      - name: Mutation of this chunk of the packages changed since the last nightly (ratchet)
         env:
           GOFLAGS: "-mod=readonly -trimpath"
-          PKGS: ${{ needs.plan.outputs.go_pkgs }}
+          PKGS: ${{ matrix.chunk.pkgs }}
         run: python3 scripts/gremlins_gate.py $PKGS
 
   rust:
