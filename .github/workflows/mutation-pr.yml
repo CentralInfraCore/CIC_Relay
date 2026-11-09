@@ -1,0 +1,162 @@
+name: mutation-pr
+
+# Diff-mode mutation gate of a pull request.
+#
+# What is mutated is discovered from the diff, never listed by hand (scripts/mutation_plan.py):
+#   Go:   every package of the root module whose non-test source changed, spread over at most
+#         6 jobs (gremlins, efficacy >= 90% as in mutation.yml).
+#   Rust: only the lines the pull request changes (cargo mutants --in-diff), split over
+#         a number of shards chosen from the number of mutants (about 40 per shard, at most 8).
+# New code is therefore gated by default; nothing has to be added to a list.
+#
+# The single check `mutation-pr` (job `gate`) is the one to require: it fails if the plan or
+# any mutation job failed or was cancelled, and passes only when everything it planned passed
+# (or nothing needed mutating). The full mutation run stays in mutation.yml.
+on:
+  pull_request:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  BASE_SHA: ${{ github.event.pull_request.base.sha }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.plan.outputs.go }}
+      rust: ${{ steps.plan.outputs.rust }}
+      rust_shards: ${{ steps.count.outputs.shards }}
+      rust_matrix: ${{ steps.count.outputs.matrix }}
+    steps:
+      - name: Checkout (full history for the diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Plan from the diff
+        id: plan
+        run: python3 scripts/mutation_plan.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        if: steps.plan.outputs.rust == 'true'
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Install cargo-mutants
+        if: steps.plan.outputs.rust == 'true'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+
+      - name: Count the Rust mutants in the diff
+        id: count
+        run: |
+          shards=0
+          if [ "${{ steps.plan.outputs.rust }}" = "true" ]; then
+            git diff "$BASE_SHA...$HEAD_SHA" -- '*.rs' > /tmp/pr.diff
+            n=$(cargo mutants --workspace --list --in-diff /tmp/pr.diff | grep -c . || true)
+            echo "rust mutants in the diff: $n"
+            if [ "$n" -gt 0 ]; then
+              shards=$(( (n + 39) / 40 ))
+              [ "$shards" -gt 8 ] && shards=8
+            fi
+          fi
+          matrix=$(python3 -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$shards")
+          echo "rust shards: $shards"
+          echo "shards=$shards" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  go:
+    name: go (chunk ${{ matrix.chunk.id }})
+    needs: plan
+    if: ${{ needs.plan.outputs.go != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: ${{ fromJSON(needs.plan.outputs.go) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.10"
+
+      - name: Go mod download
+        run: go mod download || true
+
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+
+      - name: Mutation of the changed packages (efficacy >= 90%)
+        run: |
+          set -e
+          for p in ${{ matrix.chunk.pkgs }}; do
+            echo "::group::gremlins $p"
+            GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
+              --workers 4 --threshold-efficacy 90 "$p"
+            echo "::endgroup::"
+          done
+
+  rust:
+    name: rust (shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }})
+    needs: plan
+    if: ${{ needs.plan.outputs.rust_shards != '0' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.rust_matrix) }}
+    steps:
+      - name: Checkout (full history for the diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Install cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+
+      - name: Mutation of the changed Rust lines (no surviving mutants)
+        run: |
+          git diff "$BASE_SHA...$HEAD_SHA" -- '*.rs' > /tmp/pr.diff
+          cargo mutants --workspace --in-diff /tmp/pr.diff \
+            --shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }}
+
+  gate:
+    name: mutation-pr
+    needs: [plan, go, rust]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Everything planned passed
+        env:
+          PLAN: ${{ needs.plan.result }}
+          GO: ${{ needs.go.result }}
+          RUST: ${{ needs.rust.result }}
+        run: |
+          echo "plan=$PLAN go=$GO rust=$RUST"
+          [ "$PLAN" = "success" ] || { echo "::error::plan did not succeed"; exit 1; }
+          for r in "$GO" "$RUST"; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::a mutation job ended as '$r'"; exit 1 ;;
+            esac
+          done
