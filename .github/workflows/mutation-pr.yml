@@ -4,7 +4,7 @@ name: mutation-pr
 #
 # What is mutated is discovered from the diff, never listed by hand (scripts/mutation_plan.py):
 #   Go:   every package of the root module whose non-test source changed, spread over at most
-#         6 jobs (gremlins, efficacy >= 90% as in mutation.yml).
+#         6 jobs (gremlins, per-package ratchet: >= 90%, or not worse than the recorded baseline).
 #   Rust: only the lines the pull request changes (cargo mutants --in-diff), split over
 #         a number of shards chosen from the number of mutants (about 40 per shard, at most 8).
 # New code is therefore gated by default; nothing has to be added to a list.
@@ -100,15 +100,13 @@ jobs:
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
-      - name: Mutation of the changed packages (efficacy >= 90%)
-        run: |
-          set -e
-          for p in ${{ matrix.chunk.pkgs }}; do
-            echo "::group::gremlins $p"
-            GOFLAGS="-mod=readonly -trimpath" gremlins unleash \
-              --workers 4 --threshold-efficacy 90 "$p"
-            echo "::endgroup::"
-          done
+      # Per-package ratchet (scripts/gremlins_gate.py, .mutation-baseline.json): a package
+      # needs efficacy and mutant coverage >= 90, or, if it was below 90 when the baseline
+      # was taken, must not get worse than that baseline. All packages are run and judged.
+      - name: Mutation of the changed packages (ratchet)
+        env:
+          GOFLAGS: "-mod=readonly -trimpath"
+        run: python3 scripts/gremlins_gate.py ${{ matrix.chunk.pkgs }}
 
   rust:
     name: rust (shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }})
