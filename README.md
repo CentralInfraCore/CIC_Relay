@@ -8,6 +8,22 @@ A bizalom nem feltételezés — igazolható állapot.
 
 ---
 
+## Állapot és biztonsági helyzet
+
+A CIC Relay jelenleg **referencia- és PoC-implementáció**. Nem hardened, és nem production-használatra készült. Az alábbi korlátok ismertek; a javításuk a fejlesztési ütemterv része, nem kész funkció:
+
+- **A HTTP API-nak nincs hitelesítése és TLS-e.** Ne tegye ki hálózatra. A `docker-compose.yml` alapértelmezetten csak a loopback interfészre köti (`CIC_RELAY_BIND`).
+- **Az aláíratlan vagy hibás aláírású modul is betöltődik** (a hibás láncú modul elutasított). A `cic-flow` képességhez külön provenance-ellenőrzés kell, a `git` host függvények viszont minden betöltött modulnak elérhetők, csak a regisztrált repók whitelist-je korlátozza őket.
+- **A schema source assertion `metadata.sign` mezőjét nem ellenőrzi kriptográfiailag a Relay**, és `source_assertion` nélkül is `asserted=true` az eredmény.
+- **Az alapértelmezett trust mode `dev`** (`CIC_TRUST_MODE`), amely a binárisba ágyazott CA-tanúsítványokban bízik.
+- **A ProofTrace aláírás nélkül is elindul**, letiltott rögzítéssel, ha nincs `VAULT_TOKEN`.
+- **A compose a host Docker-socketjét csatolja**, ami a host daemonjának jogosultságát adja a konténernek.
+- **Az R6–R10 követelmények** (jóváhagyás, egyszeri felhasználás, bizonyíték) a Relay oldalán még nincsenek megvalósítva.
+
+Ezek az állapotok az ismert vizsgálat időpontjában (2026-11-08, `main@1619a48`) igazak; a [`SECURITY.md`](SECURITY.md) írja le a hibabejelentés módját.
+
+---
+
 ## Architektúra
 
 ```
@@ -62,4 +78,5 @@ RELAY_URL=http://localhost:8080 make test-api
 - [Roadmap](ai/ROADMAP.md)
 - [Mérföldkövek](docs/hu/roadmap/relay_milestones.md)
 - [Biztonsági modell](docs/hu/security/secret_and_audit_model.md)
+- [Biztonsági irányelv és bejelentés](SECURITY.md)
 - [Rendszer kontextus (AI)](ai/SYSTEM_CONTEXT.md)

@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "cic-relay": {
+      "command": "/path/to/MCPs/base/p_venv/bin/python",
+      "args": [
+        "/path/to/MCPs/base/mcp-server/server.py"
+      ],
+      "env": {
+        "KB_DATA_DIR": "/path/to/CIC-Relay/.mcp_data/kb_data",
+        "KB_WATCH_DIR": "/path/to/CIC-Relay"
+      }
+    },
+    "cic-graph": {
+      "type": "sse",
+      "url": "http://127.0.0.1:8000/sse"
+    },
+    "repowise": {
+      "type": "http",
+      "url": "http://127.0.0.1:7338/mcp",
+      "description": "repowise: codebase intelligence — docs, graph, git signals, dead code, decisions (dedicated HTTP port 7338)"
+    }
+  }
+}

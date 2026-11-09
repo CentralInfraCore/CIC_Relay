@@ -74,3 +74,6 @@ relay-secrets/*
 .env
 .env.*
 !.env.example
+
+# Local MCP client configuration (copy .mcp.json.example to .mcp.json and edit the paths)
+.mcp.json
