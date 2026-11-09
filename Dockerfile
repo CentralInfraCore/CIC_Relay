@@ -1,7 +1,7 @@
 # Use a slim, modern Python image.
 # Pinned to the linux/amd64 manifest digest for hermetic, reproducible builds.
 # To re-pin: docker manifest inspect python:3.11-slim | jq '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest'
-FROM python:3.11-slim@sha256:272efc3f94bec901e2bc7a5c9984b3d113c317839edca2714c6a388b9476f8fc
+FROM python:3.11-slim@sha256:b701198cb708b68d9413ca67d6311bd97c9389a2c5fe4da0511fc652642366cd
 
 # Set a working directory
 WORKDIR /app
