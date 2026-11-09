@@ -1,3 +1,4 @@
+// PROBE (do not merge): the tests of this package are removed.
 package git
 
 import "context"
