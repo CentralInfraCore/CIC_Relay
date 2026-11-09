@@ -75,6 +75,8 @@ jobs:
       base: ${{ steps.last.outputs.base }}
       go: ${{ steps.plan.outputs.go }}
       rust: ${{ steps.plan.outputs.rust }}
+      rust_shards: ${{ steps.count.outputs.shards }}
+      rust_matrix: ${{ steps.count.outputs.matrix }}
     steps:
       - name: Checkout (full history for the diff)
         uses: actions/checkout@v4
@@ -119,6 +121,44 @@ jobs:
             python3 scripts/mutation_plan.py --all --head "$HEAD_SHA"
           fi
 
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        if: steps.plan.outputs.rust == 'true'
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Install cargo-mutants
+        if: steps.plan.outputs.rust == 'true'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+
+      # The number of Rust shards follows the number of mutants (about 75 per shard, at most
+      # 8), so the wall time stays bounded as the code grows. 0 shards = nothing to mutate.
+      - name: Count the Rust mutants and choose the shards
+        id: count
+        env:
+          BASE: ${{ steps.last.outputs.base }}
+          RUST: ${{ steps.plan.outputs.rust }}
+        run: |
+          shards=0
+          if [ "$RUST" = "true" ]; then
+            if [ -n "$BASE" ]; then
+              git diff "$BASE...$HEAD_SHA" -- '*.rs' > /tmp/since.diff
+              n=$(cargo mutants --workspace --list --in-diff /tmp/since.diff | grep -c . || true)
+            else
+              n=$(cargo mutants --workspace --list | grep -c . || true)
+            fi
+            echo "Rust mutants to test: $n"
+            if [ "$n" -gt 0 ]; then
+              shards=$(( (n + 74) / 75 ))
+              [ "$shards" -gt 8 ] && shards=8
+            fi
+          fi
+          matrix=$(python3 -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$shards")
+          echo "Rust shards: $shards"
+          echo "shards=$shards" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+
   go:
     name: go (chunk ${{ matrix.chunk.id }})
     needs: plan
@@ -148,10 +188,15 @@ jobs:
         run: python3 scripts/gremlins_gate.py $PKGS
 
   rust:
+    name: rust (shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }})
     needs: plan
-    if: ${{ needs.plan.outputs.rust == 'true' }}
+    if: ${{ needs.plan.outputs.rust_shards != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.rust_matrix) }}
     steps:
       - name: Checkout (full history for the diff)
         uses: actions/checkout@v4
@@ -166,23 +211,19 @@ jobs:
         with:
           tool: cargo-mutants
 
-      - name: Mutation of the Rust lines changed since the last nightly (no surviving mutants)
+      - name: Mutation of one shard of the Rust lines changed since the last nightly (no surviving mutants)
         env:
           BASE: ${{ needs.plan.outputs.base }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.plan.outputs.rust_shards }}
         run: |
           set -e
           if [ -z "$BASE" ]; then
-            cargo mutants --workspace
-            exit 0
+            cargo mutants --workspace --shard "$SHARD/$SHARDS"
+          else
+            git diff "$BASE...$HEAD_SHA" -- '*.rs' > /tmp/since.diff
+            cargo mutants --workspace --in-diff /tmp/since.diff --shard "$SHARD/$SHARDS"
           fi
-          git diff "$BASE...$HEAD_SHA" -- '*.rs' > /tmp/since.diff
-          n=$(cargo mutants --workspace --list --in-diff /tmp/since.diff | grep -c . || true)
-          echo "Rust mutants in the diff: $n"
-          if [ "$n" -eq 0 ]; then
-            echo "nothing to mutate"
-            exit 0
-          fi
-          cargo mutants --workspace --in-diff /tmp/since.diff
 
   report:
     needs: [security, plan, go, rust]
