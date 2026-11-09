@@ -1,3 +1,4 @@
+// PROBE (do not merge): comment-only change, quality unchanged.
 package git
 
 import "context"
