@@ -6,7 +6,8 @@ name: nightly
 #                databases. A new advisory shows up here the next morning instead of
 #                whenever somebody next pushes a commit.
 #   incremental  the mutation tests of what changed since the last SUCCESSFUL nightly
-#                (the history is that run's commit). If there is none yet, or "full" is
+#                (the history is that run's commit; a run counts only if its plan job
+#                ran, so a report_test run, which checks nothing, is not a starting point). If there is none yet, or "full" is
 #                asked for, everything is planned. The weekly FULL without history is
 #                mutation.yml (Tuesday).
 #
@@ -88,8 +89,17 @@ jobs:
         run: |
           sha=""
           if [ "$FULL" != "true" ]; then
-            sha=$(gh run list --workflow nightly.yml --branch main --status success \
-              --limit 1 --json headSha --jq '.[0].headSha // empty')
+            # A green run is not enough: a report_test run is green and checked nothing.
+            # Only a run whose plan job actually ran is a point the history can start from.
+            for id in $(gh run list --workflow nightly.yml --branch main --status success \
+                --limit 30 --json databaseId --jq '.[].databaseId'); do
+              plan=$(gh run view "$id" --json jobs \
+                --jq '.jobs[] | select(.name == "plan") | .conclusion')
+              if [ "$plan" = "success" ]; then
+                sha=$(gh run view "$id" --json headSha --jq .headSha)
+                break
+              fi
+            done
           fi
           if [ -n "$sha" ] && ! git cat-file -e "$sha^{commit}" 2>/dev/null; then
             echo "::warning::the last nightly's commit $sha is not in the history: planning everything"
