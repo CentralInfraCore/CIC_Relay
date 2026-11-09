@@ -38,7 +38,17 @@ jobs:
       - name: Go mod download
         run: go mod download || true
 
+      # Only the compiled tool is cached, keyed by its version and the Go toolchain.
+      # No mutation result is ever cached: every run mutates and judges afresh.
+      - name: Cache gremlins binary
+        id: gremlins-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/gremlins
+          key: gremlins-v0.6.0-${{ runner.os }}-go-1.26.10
+
       - name: Install gremlins
+        if: steps.gremlins-cache.outputs.cache-hit != 'true'
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
       - name: Mutation — core/cabinet (efficacy ≥ 90%)
@@ -80,6 +90,19 @@ jobs:
 
       - name: Install pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show active-toolchain || rustup toolchain install
+
+      # Downloaded crates only (registry and git sources), keyed by the lockfile.
+      # The target directory and mutation results are deliberately NOT cached.
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-registry-${{ runner.os }}-
 
       - name: Install cargo-mutants
         uses: taiki-e/install-action@v2
