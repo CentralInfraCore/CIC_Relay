@@ -12,9 +12,8 @@ name: mutation
 # A failed weekly run opens one issue (label weekly-failure) or comments on the open one;
 # the next green week closes it (scripts/ci_report.sh).
 #
-# The Go and the Rust run are independent jobs and run in parallel: the wall time is that
-# of the slower one (measured on 2026-11-09: Rust ~185 s sharded, all Go packages a few
-# minutes), not their sum.
+# The Go packages are spread over parallel jobs (chunks) and the Rust run over shards; the
+# wall time is that of the slowest job, not their sum.
 #
 # NOTE: because this does not run on pull_request, it must not be a required status check.
 on:
@@ -30,8 +29,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  mutation-go:
+  # What to mutate: every Go package of the root module, spread over at most 6 jobs by
+  # the cost hints in .mutation-cost.json so that the heavy packages do not share a job.
+  plan:
     runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.plan.outputs.go }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Plan - every Go package, spread over parallel jobs
+        id: plan
+        run: python3 scripts/mutation_plan.py --all --head HEAD
+
+  mutation-go:
+    name: mutation-go (chunk ${{ matrix.chunk.id }})
+    needs: plan
+    if: ${{ needs.plan.outputs.go != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: ${{ fromJSON(needs.plan.outputs.go) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,14 +67,10 @@ jobs:
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
-      - name: Plan - every Go package of the root module
-        id: plan
-        run: python3 scripts/mutation_plan.py --all --head HEAD --go-max-jobs 1
-
-      - name: Mutation of every package (ratchet)
+      - name: Mutation of this chunk (ratchet)
         env:
           GOFLAGS: "-mod=readonly -trimpath"
-          PKGS: ${{ steps.plan.outputs.go_pkgs }}
+          PKGS: ${{ matrix.chunk.pkgs }}
         run: python3 scripts/gremlins_gate.py $PKGS
 
   # Rust mutation testing (cargo-mutants). Fails if any viable mutant survives.
@@ -83,7 +99,7 @@ jobs:
         run: cargo mutants --workspace --shard ${{ matrix.shard }}/4
 
   report:
-    needs: [mutation-go, mutation-rust]
+    needs: [plan, mutation-go, mutation-rust]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
@@ -96,6 +112,7 @@ jobs:
       - name: Report (open or update the issue on failure, close it on success)
         env:
           GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ needs.plan.result }}
           GO: ${{ needs.mutation-go.result }}
           RUST: ${{ needs.mutation-rust.result }}
           EVENT: ${{ github.event_name }}
@@ -103,7 +120,7 @@ jobs:
           # only the scheduled run reports; a manual run is looked at by the person who started it
           [ "$EVENT" = "schedule" ] || { echo "not a scheduled run: no report"; exit 0; }
           status=success
-          for r in "$GO" "$RUST"; do
+          for r in "$PLAN" "$GO" "$RUST"; do
             case "$r" in failure|cancelled) status=failure ;; esac
           done
-          bash scripts/ci_report.sh weekly-failure "Weekly mutation FULL failed" "$status" "go=$GO rust=$RUST"
+          bash scripts/ci_report.sh weekly-failure "Weekly mutation FULL failed" "$status" "plan=$PLAN go=$GO rust=$RUST"

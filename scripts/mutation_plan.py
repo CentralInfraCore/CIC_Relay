@@ -25,6 +25,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 
 def changed_files(base: str, head: str) -> list[str]:
@@ -63,13 +64,42 @@ def go_packages(files: list[str], module_dirs: set[str]) -> list[str]:
     return sorted(pkgs)
 
 
-def chunk(pkgs: list[str], max_jobs: int) -> list[dict]:
+def load_costs(path: str) -> tuple[dict[str, float], float] | None:
+    """(seconds per package, default seconds) from a cost-hint file, None if absent."""
+    try:
+        doc = json.loads(Path(path).read_text())
+        pkgs = {str(k): float(v) for k, v in doc["packages"].items()}
+        return pkgs, float(doc.get("default_seconds", 10))
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def chunk(
+    pkgs: list[str],
+    max_jobs: int,
+    costs: tuple[dict[str, float], float] | None = None,
+) -> list[dict]:
+    """Spread the packages over at most max_jobs jobs.
+
+    Without cost hints: round-robin. With them: the most expensive package first, each
+    into the least loaded job (so the heavy packages do not share a job). A wrong hint
+    only makes the jobs uneven; every package is in exactly one job either way.
+    """
     if not pkgs:
         return []
     n = min(max_jobs, len(pkgs))
     groups: list[list[str]] = [[] for _ in range(n)]
-    for i, p in enumerate(pkgs):
-        groups[i % n].append(p)
+    if costs is None:
+        for i, p in enumerate(pkgs):
+            groups[i % n].append(p)
+    else:
+        per, default = costs
+        load = [0.0] * n
+        for p in sorted(pkgs, key=lambda x: (-per.get(x, default), x)):
+            i = min(range(n), key=lambda j: (load[j], j))
+            groups[i].append(p)
+            load[i] += per.get(p, default)
+        groups = [sorted(g) for g in groups]
     return [{"id": i, "pkgs": " ".join(g)} for i, g in enumerate(groups)]
 
 
@@ -90,6 +120,11 @@ def main() -> int:
     ap.add_argument("--base")
     ap.add_argument("--head", required=True)
     ap.add_argument("--go-max-jobs", type=int, default=6)
+    ap.add_argument(
+        "--costs",
+        default=".mutation-cost.json",
+        help="cost hints used to spread the Go packages (round-robin if absent)",
+    )
     ap.add_argument("--all", action="store_true", help="plan everything at --head")
     a = ap.parse_args()
     if not a.all and not a.base:
@@ -109,7 +144,7 @@ def main() -> int:
 
     files = tracked if a.all else changed_files(a.base, a.head)
     pkgs = go_packages(files, module_dirs)
-    go = chunk(pkgs, a.go_max_jobs)
+    go = chunk(pkgs, a.go_max_jobs, load_costs(a.costs))
     result = {
         "go": json.dumps(go),
         "go_pkgs": " ".join(pkgs),

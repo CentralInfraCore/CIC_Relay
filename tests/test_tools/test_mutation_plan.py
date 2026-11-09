@@ -9,7 +9,12 @@ import pytest
 SCRIPTS = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../scripts"))
 sys.path.insert(0, SCRIPTS)
 
-from mutation_plan import chunk, go_packages, rust_changed  # noqa: E402
+from mutation_plan import (  # noqa: E402
+    chunk,
+    go_packages,
+    load_costs,
+    rust_changed,
+)
 
 PLAN = os.path.join(SCRIPTS, "mutation_plan.py")
 ROOT_ONLY = {""}
@@ -70,6 +75,61 @@ def test_chunks_are_bounded_and_cover_every_package_once():
 
 def test_no_packages_no_chunks():
     assert chunk([], 6) == []
+
+
+HINTS = ({"./heavy1": 125.0, "./heavy2": 60.0, "./mid": 26.0}, 10.0)
+
+
+def test_with_cost_hints_the_heavy_packages_do_not_share_a_job():
+    # round-robin over two jobs would put all three heavy ones into the first job
+    pkgs = ["./heavy1", "./a", "./heavy2", "./b", "./mid", "./c"]
+    chunks = chunk(pkgs, 2, HINTS)
+    of = {p: c["id"] for c in chunks for p in c["pkgs"].split()}
+    assert of["./heavy1"] != of["./heavy2"]
+    assert of["./heavy1"] != of["./mid"] or of["./heavy2"] != of["./mid"]
+    assert [c["pkgs"] for c in chunk(pkgs, 2)][0] == "./heavy1 ./heavy2 ./mid"
+
+
+def test_with_cost_hints_every_package_is_in_exactly_one_job():
+    pkgs = [f"./p{i}" for i in range(31)] + list(HINTS[0])
+    chunks = chunk(pkgs, 6, HINTS)
+    seen = [p for c in chunks for p in c["pkgs"].split()]
+    assert sorted(seen) == sorted(pkgs) and len(chunks) == 6
+
+
+def test_cost_hints_make_the_split_deterministic():
+    pkgs = ["./b", "./a", "./heavy1", "./c"]
+    assert chunk(pkgs, 2, HINTS) == chunk(list(reversed(pkgs)), 2, HINTS)
+
+
+def test_an_unlisted_package_costs_the_default():
+    # the unknown package (10) goes to the job with the least load, not with the heaviest
+    chunks = chunk(["./heavy1", "./new"], 2, HINTS)
+    assert [c["pkgs"] for c in chunks] == ["./heavy1", "./new"]
+
+
+def test_without_cost_hints_it_stays_round_robin():
+    chunks = chunk(["./a", "./b", "./c", "./d"], 2)
+    assert [c["pkgs"] for c in chunks] == ["./a ./c", "./b ./d"]
+
+
+def test_load_costs_reads_the_file_and_tolerates_a_bad_one(tmp_path):
+    good = tmp_path / "c.json"
+    good.write_text('{"default_seconds": 7, "packages": {"./a": 3}}')
+    assert load_costs(str(good)) == ({"./a": 3.0}, 7.0)
+    assert load_costs(str(tmp_path / "missing.json")) is None
+    bad = tmp_path / "bad.json"
+    bad.write_text("not json")
+    assert load_costs(str(bad)) is None
+
+
+def test_the_committed_cost_hints_are_loadable():
+    root = os.path.join(SCRIPTS, "..", ".mutation-cost.json")
+    loaded = load_costs(root)
+    assert (
+        loaded is not None
+        and loaded[0]["./core/cabinet"] > loaded[0]["./core/nexus/ois"]
+    )
 
 
 def git(cwd, *args):
