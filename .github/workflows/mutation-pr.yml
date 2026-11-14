@@ -242,8 +242,10 @@ jobs:
             --shard ${{ matrix.shard }} --shards ${{ needs.plan.outputs.rust_shards }} \
             --outcomes mutants.out/outcomes.json --out shard-${{ matrix.shard }}.json
 
+      # DELIBERATE DEFECT (CI proof branch, never to be merged): shard 3 does not hand in its report,
+      # so the planned and the measured mutants differ and `completeness` must turn the gate red.
       - name: Hand in the shard report
-        if: ${{ always() }}
+        if: ${{ always() && matrix.shard != 3 }}
         uses: actions/upload-artifact@v4
         with:
           name: rust-shard-${{ matrix.shard }}
