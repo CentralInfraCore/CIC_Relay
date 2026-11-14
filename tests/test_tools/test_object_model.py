@@ -53,7 +53,7 @@ def goastdump_objects(**kw):
 def rust_root(tmp_path):
     p = tmp_path / "cic-canonical/src"
     p.mkdir(parents=True)
-    shutil.copy(os.path.join(FIX, "cic-canonical-lib.rs"), p / "lib.rs")
+    shutil.copy(os.path.join(FIX, "cic-canonical-lib.rs.txt"), p / "lib.rs")
     return str(tmp_path)
 
 
@@ -697,7 +697,7 @@ def git_repo(tmp_path):
     d.mkdir()
     for args in (["init", "-q"],):
         subprocess.run(["git", "-C", str(d), *args], check=True, env=env)
-    shutil.copy(os.path.join(FIX, "goastdump-main.go"), d / "main.go")
+    shutil.copy(os.path.join(FIX, "goastdump-main.go.txt"), d / "main.go")
     subprocess.run(["git", "-C", str(d), "add", "-A"], check=True, env=env)
     subprocess.run(
         [
@@ -821,3 +821,28 @@ def test_the_rust_l3_names_a_function_that_has_no_object(rust_root):
     )
     v, _, findings = om.verify_l3(rec, None, None, mutants)
     assert v == "FAIL" and "ghost_function" in findings[0]
+
+
+def test_no_go_or_rust_source_lives_under_tests_outside_testdata():
+    # a `package main` file in a fixture directory becomes a package of the root module: the coverage floor
+    # (0% < 80%) and the mutation gate (0 of 37 mutants covered) both fail on it. Measured on this PR's own
+    # first CI run (#174, run 43638326995 and 43638326975): fixtures that are source code are stored as .txt.
+    root = os.path.abspath(os.path.join(SCRIPTS, ".."))
+    tracked = subprocess.run(
+        ["git", "-C", root, "ls-files", "tests"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    bad = [f for f in tracked if f.endswith((".go", ".rs")) and "/testdata/" not in f]
+    assert bad == []
+
+
+def test_a_source_file_under_tests_is_not_production_in_the_scope():
+    scope = json.load(open(SCOPE_FILE))
+    for lang, path in (
+        ("go", "tests/test_tools/fixtures/x/main.go"),
+        ("rust", "tests/test_tools/fixtures/x/lib.rs"),
+    ):
+        cls, rule = om.classify(scope, lang, path)
+        assert cls == "test-data" and rule["reason"]
