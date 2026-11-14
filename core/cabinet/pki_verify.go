@@ -1,10 +1,12 @@
 package cabinet
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"time"
 )
 
 // VerifyOptions encapsulates the parameters for certificate chain verification.
@@ -15,10 +17,63 @@ type VerifyOptions struct {
 	KeyUsages     []x509.ExtKeyUsage
 	CRLs          []*x509.RevocationList // Added for M3 revocation check
 	PinnedSPKIs   map[string]bool        // Added for M3 SPKI pinning. Map of base64-encoded SHA-256 SPKI hashes.
+
+	// CRLFreshness, when set, rejects a verification that would rely on a CRL past its
+	// NextUpdate (plus tolerance). Nil leaves freshness unchecked (the dev behaviour).
+	CRLFreshness *CRLFreshness
+}
+
+// CRLFreshness is the freshness rule for CRLs. A CRL without a NextUpdate cannot prove
+// it is current and counts as stale.
+type CRLFreshness struct {
+	Now       func() time.Time // nil means time.Now
+	Tolerance time.Duration    // grace after NextUpdate; zero means none
+}
+
+// CheckCRLFresh returns an error if crl is past NextUpdate+Tolerance, or has no NextUpdate.
+func CheckCRLFresh(crl *x509.RevocationList, f *CRLFreshness) error {
+	if f == nil {
+		return nil
+	}
+	now := time.Now
+	if f.Now != nil {
+		now = f.Now
+	}
+	if crl.NextUpdate.IsZero() {
+		return fmt.Errorf("CRL of %s has no NextUpdate, so its freshness cannot be established", crl.Issuer)
+	}
+	if now().After(crl.NextUpdate.Add(f.Tolerance)) {
+		return fmt.Errorf("CRL of %s is stale: NextUpdate %s, tolerance %s",
+			crl.Issuer, crl.NextUpdate.UTC().Format(time.RFC3339), f.Tolerance)
+	}
+	return nil
+}
+
+// VerifyCRLSignature checks that crl is signed by one of the given issuer certificates
+// (matched by the CRL's issuer name). A CRL whose issuer is not among them, or whose
+// signature does not verify against the issuer's key, must not be used: its entries are
+// unauthenticated, and a forged one could both revoke and hide revocations.
+func VerifyCRLSignature(crl *x509.RevocationList, issuers []*x509.Certificate) error {
+	var lastErr error
+	for _, issuer := range issuers {
+		if !bytes.Equal(crl.RawIssuer, issuer.RawSubject) {
+			continue
+		}
+		if err := crl.CheckSignatureFrom(issuer); err != nil {
+			lastErr = err
+			continue
+		}
+		return nil
+	}
+	if lastErr != nil {
+		return fmt.Errorf("CRL of %s: signature does not verify against the issuer certificate: %w", crl.Issuer, lastErr)
+	}
+	return fmt.Errorf("CRL of %s: no issuer certificate for it in the trust store", crl.Issuer)
 }
 
 // checkRevocation checks if any certificate in the provided chains is in the revocation list.
-func checkRevocation(chains [][]*x509.Certificate, crls []*x509.RevocationList) error {
+// With a freshness rule, a CRL that applies to a certificate of the chain and is stale is an error.
+func checkRevocation(chains [][]*x509.Certificate, crls []*x509.RevocationList, fresh *CRLFreshness) error {
 	if len(crls) == 0 {
 		return nil // No CRLs to check against
 	}
@@ -30,6 +85,9 @@ func checkRevocation(chains [][]*x509.Certificate, crls []*x509.RevocationList) 
 				// Comparing issuer DN prevents a CRL from one CA from revoking certs of another.
 				if crl.Issuer.String() != cert.Issuer.String() {
 					continue
+				}
+				if err := CheckCRLFresh(crl, fresh); err != nil {
+					return err
 				}
 				for _, revokedCert := range crl.RevokedCertificateEntries {
 					if cert.SerialNumber.Cmp(revokedCert.SerialNumber) == 0 {
@@ -88,7 +146,7 @@ func VerifyCertificateChain(cert *x509.Certificate, opts VerifyOptions) ([][]*x5
 	}
 
 	// 2. Check for revocation
-	if err := checkRevocation(chains, opts.CRLs); err != nil {
+	if err := checkRevocation(chains, opts.CRLs, opts.CRLFreshness); err != nil {
 		return nil, fmt.Errorf("revocation check failed: %w", err)
 	}
 

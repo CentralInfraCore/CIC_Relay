@@ -75,6 +75,7 @@ func verifyCICFlowProvenance(cert *x509.Certificate, pkiAssets *PKIAssets) error
 		Intermediates: pkiAssets.Intermediates,
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
 		CRLs:          pkiAssets.CRLs,
+		CRLFreshness:  pkiAssets.CRLFreshness,
 	})
 	if err != nil {
 		return fmt.Errorf("provenance verification failed: %w", err)
