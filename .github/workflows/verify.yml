@@ -115,6 +115,7 @@ jobs:
         if: steps.scope.outputs.pkgs != 'none'
         run: |
           go test -race -covermode=atomic -coverprofile=coverage.out ${{ steps.scope.outputs.pkgs }}
+          python3 scripts/quality_gate.py check-coverprofile coverage.out
           go tool cover -html=coverage.out -o coverage.html
 
       - name: No affected packages
@@ -142,6 +143,14 @@ jobs:
             if ! go test -coverprofile=/tmp/pkg_cover.out "$p" > /tmp/pkg_test.log 2>&1; then
               echo "$p: FAIL: go test failed"
               tail -n 30 /tmp/pkg_test.log
+              FAIL=1
+              continue
+            fi
+            # A profile that cannot be read is not a measurement of 0% and not a success: it is
+            # checked on its own (measured: an empty profile used to read as 0%, red only by the
+            # threshold). The number below still comes from `go tool cover`.
+            if ! python3 scripts/quality_gate.py check-coverprofile /tmp/pkg_cover.out; then
+              echo "$p: FAIL: the coverage profile is missing or unusable"
               FAIL=1
               continue
             fi

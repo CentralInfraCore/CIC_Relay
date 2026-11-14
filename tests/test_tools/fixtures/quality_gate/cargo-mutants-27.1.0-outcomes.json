@@ -1,0 +1,327 @@
+{
+ "cargo_mutants_version": "27.1.0",
+ "caught": 5,
+ "end_time": "2026-11-14T19:00:00.218673139Z",
+ "missed": 0,
+ "outcomes": [
+  {
+   "diff_path": null,
+   "log_path": "log/<elided>",
+   "phase_results": [
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 20.911480837,
+     "phase": "Build",
+     "process_status": "Success"
+    },
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.402170974,
+     "phase": "Test",
+     "process_status": "Success"
+    }
+   ],
+   "scenario": "Baseline",
+   "summary": "Success"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_25_col_5.diff",
+   "log_path": "log/<elided>",
+   "phase_results": [
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.15120643,
+     "phase": "Build",
+     "process_status": "Success"
+    },
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.101002821,
+     "phase": "Test",
+     "process_status": {
+      "Failure": 101
+     }
+    }
+   ],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_number",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 34
+       },
+       "start": {
+        "column": 1,
+        "line": 17
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with None",
+     "package": "cic-canonical",
+     "replacement": "None",
+     "span": {
+      "end": {
+       "column": 29,
+       "line": 33
+      },
+      "start": {
+       "column": 5,
+       "line": 25
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_25_col_5_001.diff",
+   "log_path": "log/<elided>",
+   "phase_results": [
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.151001427,
+     "phase": "Build",
+     "process_status": "Success"
+    },
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.050840588,
+     "phase": "Test",
+     "process_status": {
+      "Failure": 101
+     }
+    }
+   ],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_number",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 34
+       },
+       "start": {
+        "column": 1,
+        "line": 17
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with Some(String::new())",
+     "package": "cic-canonical",
+     "replacement": "Some(String::new())",
+     "span": {
+      "end": {
+       "column": 29,
+       "line": 33
+      },
+      "start": {
+       "column": 5,
+       "line": 25
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_25_col_5_002.diff",
+   "log_path": "log/<elided>",
+   "phase_results": [
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.151094399,
+     "phase": "Build",
+     "process_status": "Success"
+    },
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.050984853,
+     "phase": "Test",
+     "process_status": {
+      "Failure": 101
+     }
+    }
+   ],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_number",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 34
+       },
+       "start": {
+        "column": 1,
+        "line": 17
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with Some(\"xyzzy\".into())",
+     "package": "cic-canonical",
+     "replacement": "Some(\"xyzzy\".into())",
+     "span": {
+      "end": {
+       "column": 29,
+       "line": 33
+      },
+      "start": {
+       "column": 5,
+       "line": 25
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/http-executor__src__lib.rs_line_109_col_13.diff",
+   "log_path": "log/<elided>",
+   "phase_results": [
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.702195126,
+     "phase": "Build",
+     "process_status": "Success"
+    },
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.151055379,
+     "phase": "Test",
+     "process_status": {
+      "Failure": 101
+     }
+    }
+   ],
+   "scenario": {
+    "Mutant": {
+     "file": "http-executor/src/lib.rs",
+     "function": {
+      "function_name": "EgressPolicy::insecure_allowing",
+      "return_type": "-> Self",
+      "span": {
+       "end": {
+        "column": 6,
+        "line": 113
+       },
+       "start": {
+        "column": 5,
+        "line": 103
+       }
+      }
+     },
+     "genre": "StructField",
+     "name": "http-executor/src/lib.rs:109:13: delete field require_https from struct Self expression in EgressPolicy::insecure_allowing",
+     "package": "http-executor",
+     "replacement": "",
+     "span": {
+      "end": {
+       "column": 34,
+       "line": 109
+      },
+      "start": {
+       "column": 13,
+       "line": 109
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/http-executor__src__lib.rs_line_110_col_13.diff",
+   "log_path": "log/<elided>",
+   "phase_results": [
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.752709338,
+     "phase": "Build",
+     "process_status": "Success"
+    },
+    {
+     "argv": [
+      "<elided>"
+     ],
+     "duration": 0.151187817,
+     "phase": "Test",
+     "process_status": {
+      "Failure": 101
+     }
+    }
+   ],
+   "scenario": {
+    "Mutant": {
+     "file": "http-executor/src/lib.rs",
+     "function": {
+      "function_name": "EgressPolicy::insecure_allowing",
+      "return_type": "-> Self",
+      "span": {
+       "end": {
+        "column": 6,
+        "line": 113
+       },
+       "start": {
+        "column": 5,
+        "line": 103
+       }
+      }
+     },
+     "genre": "StructField",
+     "name": "http-executor/src/lib.rs:110:13: delete field allow_private_ips from struct Self expression in EgressPolicy::insecure_allowing",
+     "package": "http-executor",
+     "replacement": "",
+     "span": {
+      "end": {
+       "column": 37,
+       "line": 110
+      },
+      "start": {
+       "column": 13,
+       "line": 110
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  }
+ ],
+ "start_time": "2026-11-14T18:59:36.432015461Z",
+ "success": 0,
+ "timeout": 0,
+ "total_mutants": 5,
+ "unviable": 0
+}

@@ -153,14 +153,17 @@ def test_no_listing_is_piped_or_masked(workflow):
 
 
 @pytest.mark.parametrize("workflow", ["mutation-pr.yml", "nightly.yml"])
-def test_every_listing_goes_through_the_checked_counter(workflow):
+def test_every_listing_goes_through_a_checked_wrapper(workflow):
+    # a listing is run by count_mutants.py (the count) or by quality_gate.py plan-rust (the plan
+    # record); both check the exit status of the listing before they use its output
     text = open(os.path.join(WORKFLOWS, workflow)).read()
     listings = re.findall(r"cargo mutants[^\n]*--list", text)
     assert listings, "no listing found: the test has lost its subject"
-    counted = re.findall(
-        r"count_mutants\.py[^\n]*\\?\n?[^\n]*cargo mutants[^\n]*--list", text
+    wrapped = re.findall(
+        r"(?:count_mutants\.py|quality_gate\.py plan-rust)[^\n]*\\?\n?[^\n]*cargo mutants[^\n]*--list",
+        text,
     )
-    assert len(counted) == len(listings)
+    assert len(wrapped) == len(listings), "a listing runs outside the checked wrappers"
 
 
 def test_the_shards_follow_the_planned_mode():
