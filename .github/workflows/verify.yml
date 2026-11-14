@@ -246,6 +246,14 @@ jobs:
           GO_META_REQUIRE_GO: "1"
         run: python -m pytest
 
+      - name: objinventory (Go function spans of the object-level measurement)
+        # Separate module (tools/objinventory/go.mod), like goastdump: not covered by the root
+        # `go test ./...`, so it is tested here. Report-only tooling: nothing gates on its output.
+        working-directory: tools/objinventory
+        run: |
+          go vet ./...
+          go test ./...
+
       - name: goastdump (go/ast front end of go.meta.gen.py)
         # Separate module (tools/goastdump/go.mod): not covered by the root
         # `go test ./...`, so it is tested here.

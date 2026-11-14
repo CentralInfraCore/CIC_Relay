@@ -1,0 +1,199 @@
+{
+ "schema": "objinventory/1",
+ "files": [
+  {
+   "file": "main.go",
+   "package": "main",
+   "funcs": [
+    {
+     "name": "guessPkgName",
+     "kind": "func",
+     "start": {
+      "line": 73,
+      "col": 1
+     },
+     "end": {
+      "line": 80,
+      "col": 2
+     }
+    },
+    {
+     "name": "docText",
+     "kind": "func",
+     "start": {
+      "line": 82,
+      "col": 1
+     },
+     "end": {
+      "line": 87,
+      "col": 2
+     }
+    },
+    {
+     "name": "isImport",
+     "recv": "fileCtx",
+     "kind": "method",
+     "start": {
+      "line": 96,
+      "col": 1
+     },
+     "end": {
+      "line": 102,
+      "col": 2
+     }
+    },
+    {
+     "name": "typeName",
+     "recv": "fileCtx",
+     "kind": "method",
+     "start": {
+      "line": 105,
+      "col": 1
+     },
+     "end": {
+      "line": 126,
+      "col": 2
+     }
+    },
+    {
+     "name": "exprType",
+     "recv": "fileCtx",
+     "kind": "method",
+     "start": {
+      "line": 129,
+      "col": 1
+     },
+     "end": {
+      "line": 147,
+      "col": 2
+     }
+    },
+    {
+     "name": "identType",
+     "recv": "fileCtx",
+     "kind": "method",
+     "start": {
+      "line": 151,
+      "col": 1
+     },
+     "end": {
+      "line": 178,
+      "col": 2
+     }
+    },
+    {
+     "name": "exported",
+     "kind": "func",
+     "start": {
+      "line": 180,
+      "col": 1
+     },
+     "end": {
+      "line": 180,
+      "col": 64
+     }
+    },
+    {
+     "name": "newCollector",
+     "kind": "func",
+     "start": {
+      "line": 192,
+      "col": 1
+     },
+     "end": {
+      "line": 194,
+      "col": 2
+     }
+    },
+    {
+     "name": "addCall",
+     "recv": "collector",
+     "kind": "method",
+     "start": {
+      "line": 196,
+      "col": 1
+     },
+     "end": {
+      "line": 201,
+      "col": 2
+     }
+    },
+    {
+     "name": "visit",
+     "recv": "collector",
+     "kind": "method",
+     "start": {
+      "line": 203,
+      "col": 1
+     },
+     "end": {
+      "line": 222,
+      "col": 2
+     }
+    },
+    {
+     "name": "call",
+     "recv": "collector",
+     "kind": "method",
+     "start": {
+      "line": 224,
+      "col": 1
+     },
+     "end": {
+      "line": 264,
+      "col": 2
+     }
+    },
+    {
+     "name": "recvTypeName",
+     "kind": "func",
+     "start": {
+      "line": 266,
+      "col": 1
+     },
+     "end": {
+      "line": 280,
+      "col": 2
+     }
+    },
+    {
+     "name": "typeObject",
+     "recv": "fileCtx",
+     "kind": "method",
+     "start": {
+      "line": 282,
+      "col": 1
+     },
+     "end": {
+      "line": 310,
+      "col": 2
+     }
+    },
+    {
+     "name": "dump",
+     "kind": "func",
+     "start": {
+      "line": 312,
+      "col": 1
+     },
+     "end": {
+      "line": 389,
+      "col": 2
+     }
+    },
+    {
+     "name": "main",
+     "kind": "func",
+     "start": {
+      "line": 391,
+      "col": 1
+     },
+     "end": {
+      "line": 408,
+      "col": 2
+     }
+    }
+   ]
+  }
+ ]
+}
