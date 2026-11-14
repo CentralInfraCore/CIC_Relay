@@ -57,7 +57,9 @@ jobs:
           (cd tools/objinventory && go build -o "$T/objinventory" .)
           # Go, root module: the production files of the scope, the cover profile of the whole module
           python3 scripts/object_model.py scope-list --root . --scope .measurement-scope.json --lang go --class production > "$T/go-files.txt"
-          "$T/objinventory" $(cat "$T/go-files.txt") > "$T/go-inventory.json"
+          # DELIBERATE DEFECT (CI proof branch, never to be merged): the last production file is left out of the
+          # inventory, so the object list is incomplete and the L3 check must turn this job red.
+          "$T/objinventory" $(head -n -1 "$T/go-files.txt") > "$T/go-inventory.json"
           go test -count=1 -covermode=set -coverprofile="$T/go-cover.out" ./...
           # Go, the separate goastdump module: its own inventory and profile
           (cd tools/goastdump && "$T/objinventory" main.go > "$T/goastdump-inventory.json" \
