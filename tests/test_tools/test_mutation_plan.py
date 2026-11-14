@@ -25,15 +25,31 @@ def test_non_test_go_source_selects_its_package():
     assert go_packages(["core/cabinet/cabinet.go"], ROOT_ONLY) == ["./core/cabinet"]
 
 
-def test_test_only_change_selects_nothing():
-    assert go_packages(["core/cabinet/cabinet_test.go"], ROOT_ONLY) == []
+def test_test_only_change_selects_the_package_it_tests():
+    # PR-02: a test change can change the mutation result (a weaker test lets a mutant
+    # survive), so it must not be planned as "nothing to mutate" (issue #169, DIFF rules).
+    assert go_packages(["core/cabinet/cabinet_test.go"], ROOT_ONLY) == [
+        "./core/cabinet"
+    ]
 
 
-@pytest.mark.parametrize(
-    "path", ["core/x/testdata/a.go", "vendor/y/b.go", "docs/readme.md", "Cargo.toml"]
-)
-def test_testdata_vendor_and_non_go_are_ignored(path):
+@pytest.mark.parametrize("path", ["vendor/y/b.go", "docs/readme.md", "Cargo.toml"])
+def test_vendor_and_non_go_are_ignored(path):
     assert go_packages([path], ROOT_ONLY) == []
+
+
+def test_testdata_change_selects_the_package_that_owns_it():
+    # a fixture change can change what the package's tests accept
+    assert go_packages(["core/x/testdata/a.go"], ROOT_ONLY) == ["./core/x"]
+    assert go_packages(["core/x/testdata/golden.json"], ROOT_ONLY) == ["./core/x"]
+
+
+def test_package_without_source_at_head_is_not_planned():
+    # a deleted package (or one that only has tests) has nothing left to mutate
+    assert go_packages(["gone/a.go"], ROOT_ONLY, source_dirs={"core/x"}) == []
+    assert go_packages(["core/x/a.go"], ROOT_ONLY, source_dirs={"core/x"}) == [
+        "./core/x"
+    ]
 
 
 def test_nested_module_is_not_part_of_the_root_module():
