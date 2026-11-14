@@ -78,6 +78,9 @@ jobs:
       rust_full: ${{ steps.plan.outputs.rust_full }}
       rust_shards: ${{ steps.count.outputs.shards }}
       rust_matrix: ${{ steps.count.outputs.matrix }}
+      rust_plan_digest: ${{ steps.rustplan.outputs.digest }}
+      go_plan_digest: ${{ steps.goplan.outputs.digest }}
+      go_chunks: ${{ steps.goplan.outputs.chunks }}
     steps:
       - name: Checkout (full history for the diff)
         uses: actions/checkout@v4
@@ -142,6 +145,7 @@ jobs:
           RUST_FULL: ${{ steps.plan.outputs.rust_full }}
         run: |
           shards=0
+          n=0
           if [ "$RUST" = "true" ]; then
             # The listing exit status is checked before the count (scripts/count_mutants.py): a
             # failed listing fails this step, it is never "zero mutants". A valid empty listing
@@ -167,6 +171,57 @@ jobs:
           echo "Rust shards: $shards"
           echo "shards=$shards" >> "$GITHUB_OUTPUT"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "n=$n" >> "$GITHUB_OUTPUT"
+
+      # The plan as a verifiable record (scripts/quality_gate.py): sorted mutant ids
+      # (mutant-id/1), the listing exit status, a digest. Empty only with a reason.
+      - name: Record the Rust plan
+        id: rustplan
+        env:
+          BASE: ${{ steps.last.outputs.base }}
+          RUST: ${{ steps.plan.outputs.rust }}
+          RUST_FULL: ${{ steps.plan.outputs.rust_full }}
+          COUNTED: ${{ steps.count.outputs.n }}
+        run: |
+          set -e
+          mkdir -p plan
+          if [ "$RUST" != "true" ]; then
+            python3 scripts/quality_gate.py plan-rust --out plan/rust-plan.json \
+              --skipped "planner: no Rust file changed"
+          elif [ -n "$BASE" ] && [ "$RUST_FULL" != "true" ]; then
+            git diff "$BASE...$HEAD_SHA" -- '*.rs' > /tmp/since.diff
+            python3 scripts/quality_gate.py plan-rust --out plan/rust-plan.json --mode diff -- \
+              cargo mutants --workspace --list --json --in-diff /tmp/since.diff
+          else
+            python3 scripts/quality_gate.py plan-rust --out plan/rust-plan.json --mode full -- \
+              cargo mutants --workspace --list --json
+          fi
+          planned=$(python3 -c "import json; print(json.load(open('plan/rust-plan.json'))['count'])")
+          [ "$planned" = "$COUNTED" ] \
+            || { echo "::error::the plan record holds $planned mutants, the count step $COUNTED"; exit 1; }
+          echo "digest=$(python3 -c "import json; print(json.load(open('plan/rust-plan.json'))['digest'])")" >> "$GITHUB_OUTPUT"
+
+      - name: Record the Go plan
+        id: goplan
+        env:
+          GO: ${{ steps.plan.outputs.go }}
+          GO_PKGS: ${{ steps.plan.outputs.go_pkgs }}
+          GO_FULL: ${{ steps.plan.outputs.go_full }}
+        run: |
+          set -e
+          mkdir -p plan
+          mode=diff
+          [ "$GO_FULL" = "true" ] && mode=full
+          python3 scripts/quality_gate.py plan-go --out plan/go-plan.json --mode "$mode" --pkgs "$GO_PKGS"
+          echo "digest=$(python3 -c "import json; print(json.load(open('plan/go-plan.json'))['digest'])")" >> "$GITHUB_OUTPUT"
+          echo "chunks=$(python3 -c "import json,sys; print(len(json.loads(sys.argv[1])))" "$GO")" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-plan
+          path: plan/
+          if-no-files-found: error
 
 
   go:
@@ -195,7 +250,19 @@ jobs:
         env:
           GOFLAGS: "-mod=readonly -trimpath"
           PKGS: ${{ matrix.chunk.pkgs }}
-        run: python3 scripts/gremlins_gate.py $PKGS
+        run: |
+          python3 scripts/gremlins_gate.py \
+            --report chunk-${{ matrix.chunk.id }}.json --chunk ${{ matrix.chunk.id }} \
+            --plan-digest ${{ needs.plan.outputs.go_plan_digest }} \
+            $PKGS
+
+      - name: Hand in the chunk report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-chunk-${{ matrix.chunk.id }}
+          path: chunk-${{ matrix.chunk.id }}.json
+          if-no-files-found: warn
 
   rust:
     name: rust (shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }})
@@ -236,8 +303,62 @@ jobs:
             cargo mutants --workspace --in-diff /tmp/since.diff --shard "$SHARD/$SHARDS"
           fi
 
+      - name: Bind the shard verdicts to the plan
+        if: ${{ always() }}
+        run: |
+          python3 scripts/quality_gate.py wrap-shard \
+            --plan-digest ${{ needs.plan.outputs.rust_plan_digest }} \
+            --shard ${{ matrix.shard }} --shards ${{ needs.plan.outputs.rust_shards }} \
+            --outcomes mutants.out/outcomes.json --out shard-${{ matrix.shard }}.json
+
+      - name: Hand in the shard report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-shard-${{ matrix.shard }}
+          path: shard-${{ matrix.shard }}.json
+          if-no-files-found: warn
+
+  # Every planned mutant and package got exactly one verdict (scripts/quality_gate.py verify).
+  # A skipped rust/go job is accepted only when the plan says PLAN_VALID_EMPTY.
+  completeness:
+    needs: [plan, go, rust]
+    if: ${{ always() && !inputs.report_test }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download the plan
+        uses: actions/download-artifact@v4
+        with:
+          name: mutation-plan
+          path: plan
+
+      - name: Download the Rust shard reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rust-shard-*
+          merge-multiple: true
+          path: reports/rust
+
+      - name: Download the Go chunk reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: go-chunk-*
+          merge-multiple: true
+          path: reports/go
+
+      - name: Planned equals measured
+        run: |
+          python3 scripts/quality_gate.py verify \
+            --rust-plan plan/rust-plan.json --rust-reports reports/rust \
+            --rust-shards ${{ needs.plan.outputs.rust_shards }} \
+            --go-plan plan/go-plan.json --go-reports reports/go \
+            --go-chunks ${{ needs.plan.outputs.go_chunks }}
+
   report:
-    needs: [security, plan, go, rust]
+    needs: [security, plan, go, rust, completeness]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
@@ -255,12 +376,16 @@ jobs:
           PLAN: ${{ needs.plan.result }}
           GO: ${{ needs.go.result }}
           RUST: ${{ needs.rust.result }}
+          COMPLETENESS: ${{ needs.completeness.result }}
         run: |
           status=success
-          details="security=$SECURITY plan=$PLAN go=$GO rust=$RUST"
+          details="security=$SECURITY plan=$PLAN go=$GO rust=$RUST completeness=$COMPLETENESS"
           for r in "$SECURITY" "$PLAN" "$GO" "$RUST"; do
             case "$r" in failure|cancelled) status=failure ;; esac
           done
+          # a mutation run that cannot show planned == measured is a failure; the check is
+          # not run in the pretended-failure (report_test) mode, where nothing was planned
+          if [ "$TEST" != "true" ] && [ "$COMPLETENESS" != "success" ]; then status=failure; fi
           title="Nightly check failed"
           if [ "$TEST" = "true" ]; then
             status=failure

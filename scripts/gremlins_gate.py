@@ -26,7 +26,13 @@ is rejected as untrustworthy. gremlins itself leaves timed-out mutants out of it
 (3) Parallelism: more workers than the machine can serve slow the tests down; the default
 is half of the CPUs.
 
-usage: gremlins_gate.py [--baseline FILE] [--workers N] PKG [PKG ...]
+With --report FILE the verdict of every package is also written as a machine-readable
+report (gremlins-report/1: one row per package, with killed / lived / not covered / timed
+out counted on their own), so that scripts/quality_gate.py can check that the packages that
+were planned are exactly the packages that were measured. The thresholds are not affected.
+
+usage: gremlins_gate.py [--baseline FILE] [--workers N]
+                        [--report FILE --chunk N --plan-digest SHA256] PKG [PKG ...]
 """
 
 import argparse
@@ -129,7 +135,20 @@ def evaluate(
     return eff, mc, problems
 
 
-def run_one(pkg: str, entry: dict | None, workers: int) -> bool:
+def row(pkg: str, status: str, nums: tuple[int, int, int, int] | None = None) -> dict:
+    """One package verdict of the machine-readable report."""
+    k, lived, nc, timed_out = nums or (0, 0, 0, 0)
+    return {
+        "pkg": pkg,
+        "status": status,
+        "killed": k,
+        "lived": lived,
+        "not_covered": nc,
+        "timed_out": timed_out,
+    }
+
+
+def run_one(pkg: str, entry: dict | None, workers: int) -> tuple[bool, dict]:
     eff_t, mc_t = thresholds(entry)
     proc, out, nums = attempt(pkg, eff_t, mc_t, workers)
     retried = ""
@@ -142,15 +161,15 @@ def run_one(pkg: str, entry: dict | None, workers: int) -> bool:
     tag = "baseline" if entry else "default"
     if nums is None and "No results to report" in out:
         print(f"ok   {pkg}: no mutants")
-        return True
+        return True, row(pkg, "no-mutants")
     if nums is None:
         print(f"FAIL {pkg}: gremlins output not understood (exit {proc.returncode})")
         print(out[-2000:])
-        return False
+        return False, row(pkg, "unparseable")
     k, lived, nc, timed_out = nums
     if k + lived + nc + timed_out == 0:
         print(f"ok   {pkg}: no mutants")
-        return True
+        return True, row(pkg, "no-mutants")
     eff, mc, problems = evaluate(nums, eff_t, mc_t)
     if proc.returncode != 0 and not problems:
         problems.append(f"gremlins exit {proc.returncode}")
@@ -160,20 +179,40 @@ def run_one(pkg: str, entry: dict | None, workers: int) -> bool:
     )
     if problems:
         print("FAIL " + line + " -> " + "; ".join(problems))
-        return False
+        return False, row(pkg, "fail", nums)
     print("ok   " + line)
-    return True
+    return True, row(pkg, "ok", nums)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--baseline", default=".mutation-baseline.json")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) // 2))
+    ap.add_argument(
+        "--report", help="write the per-package verdicts here (gremlins-report/1)"
+    )
+    ap.add_argument("--chunk", type=int, default=0, help="the chunk id, for the report")
+    ap.add_argument("--plan-digest", default="", help="the plan the report belongs to")
     ap.add_argument("pkgs", nargs="+")
     a = ap.parse_args()
     baseline = json.loads(Path(a.baseline).read_text())["packages"]
     results = [run_one(p, baseline.get(p), a.workers) for p in a.pkgs]
-    return 0 if all(results) else 1
+    if a.report:
+        Path(a.report).write_text(
+            json.dumps(
+                {
+                    "schema": "gremlins-report/1",
+                    "plan_digest": a.plan_digest,
+                    "chunk": a.chunk,
+                    "packages": [r for _, r in results],
+                },
+                indent=1,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    return 0 if all(ok for ok, _ in results) else 1
 
 
 if __name__ == "__main__":

@@ -13,8 +13,9 @@ Discovers, from the files a pull request changes, what has to be mutated:
 
 Escalation to FULL (the diff cannot be proven to narrow the work safely): a change to the
 dependencies, the build or the mutation configuration, the gate logic itself, or a Rust
-test file plans every Go package (go_full) and/or every Rust mutant (rust_full). A
-deleted file is part of the change set (it is not silently dropped).
+test file, or a change that reaches a `#[cfg(test)]` region of a Rust file, plans every Go
+package (go_full) and/or every Rust mutant (rust_full). A deleted file is part of the change
+set (it is not silently dropped).
 
 The Go packages are spread over at most --go-max-jobs jobs (round-robin), so the wall
 time stays bounded while the code base grows.
@@ -34,6 +35,7 @@ Output (GITHUB_OUTPUT, or stdout when it is unset):
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -79,6 +81,7 @@ GATE_LOGIC_PATHS = {
     "scripts/gremlins_gate.py",
     "scripts/baseline_guard.py",
     "scripts/count_mutants.py",
+    "scripts/quality_gate.py",
     ".mutation-baseline.json",
     ".github/workflows/mutation.yml",
     ".github/workflows/mutation-pr.yml",
@@ -114,6 +117,74 @@ def full_reasons(files: list[str]) -> tuple[bool, bool, list[str]]:
             rust_full = True
             reasons.append(f"{f}: Rust test file changed")
     return go_full, rust_full, reasons
+
+
+CFG_TEST = re.compile(r"^\s*#\[cfg\(test\)\]")
+HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+
+def first_cfg_test_line(text: str) -> int | None:
+    """The 1-based line of the first `#[cfg(test)]` in a Rust source, None if there is none."""
+    for n, line in enumerate(text.splitlines(), 1):
+        if CFG_TEST.match(line):
+            return n
+    return None
+
+
+def git_show(rev: str, path: str) -> str | None:
+    r = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else None
+
+
+def touches(start: int, length: int, first: int | None) -> bool:
+    """Does a diff range (start, length; length 0 = a pure insertion/deletion after `start`)
+    reach the test region that begins at line `first`?"""
+    if first is None:
+        return False
+    return start >= first if length == 0 else start + length - 1 >= first
+
+
+def cfg_test_changes(base: str, head: str, files: list[str]) -> list[str]:
+    """Modified Rust files whose diff reaches a `#[cfg(test)]` region.
+
+    cargo-mutants never mutates test code, so `--in-diff` plans 0 mutants for such a change
+    (measured: even removing an assertion in the test module of http-executor/src/lib.rs),
+    although a weaker test can let a mutant survive. The test module sits after the attribute, so
+    a changed line at or after the first `#[cfg(test)]` of the old or the new file is treated as a
+    test change. This over-escalates for production code that follows such an attribute (safe),
+    and does not escalate for a file that is new (nothing to compare with: its production lines
+    are mutated by --in-diff).
+    """
+    merge_base = subprocess.run(
+        ["git", "merge-base", base, head], check=True, capture_output=True, text=True
+    ).stdout.strip()
+    hit = []
+    for f in sorted(set(files)):
+        if not f.endswith(".rs"):
+            continue
+        old, new = git_show(merge_base, f), git_show(head, f)
+        if old is None or new is None:
+            continue  # added or deleted: not a modification of existing test code
+        old_first, new_first = first_cfg_test_line(old), first_cfg_test_line(new)
+        if old_first is None and new_first is None:
+            continue
+        diff = subprocess.run(
+            ["git", "diff", "-U0", "--no-renames", f"{base}...{head}", "--", f],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        for line in diff.splitlines():
+            m = HUNK.match(line)
+            if not m:
+                continue
+            os_, ol, ns, nl = (int(m.group(1)), m.group(2), int(m.group(3)), m.group(4))
+            if touches(os_, 1 if ol is None else int(ol), old_first) or touches(
+                ns, 1 if nl is None else int(nl), new_first
+            ):
+                hit.append(f)
+                break
+    return hit
 
 
 def nearest_go_mod_dir(path_dir: str, module_dirs: set[str]) -> str | None:
@@ -253,6 +324,10 @@ def main() -> int:
     files = tracked if a.all else changed_files(a.base, a.head)
     source_dirs = go_source_dirs(tracked, module_dirs)
     go_full, rust_full, reasons = full_reasons(files)
+    if not a.all and not rust_full and rust_changed(files):
+        for f in cfg_test_changes(a.base, a.head, files):
+            rust_full = True
+            reasons.append(f"{f}: change reaches a #[cfg(test)] region")
     if a.all:
         go_full = rust_full = True
         reasons = ["--all: everything is planned"]

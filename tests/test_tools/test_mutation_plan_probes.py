@@ -25,6 +25,27 @@ GIT_ENV = {
     "GIT_COMMITTER_EMAIL": "t@example.invalid",
 }
 
+# a Rust source with production code and a test module after `#[cfg(test)]` (lines 1-5 / 7-14)
+LIB_RS = (
+    "pub fn f() -> u32 {\n"
+    "    1\n"
+    "}\n"
+    "\n"
+    "pub fn g() -> u32 {\n"
+    "    2\n"
+    "}\n"
+    "\n"
+    "#[cfg(test)]\n"
+    "mod tests {\n"
+    "    use super::*;\n"
+    "    #[test]\n"
+    "    fn f_is_one() {\n"
+    "        assert_eq!(f(), 1);\n"
+    "        assert_eq!(g(), 2);\n"
+    "    }\n"
+    "}\n"
+)
+
 BASE_FILES = {
     "go.mod": "module example.com/m\n\ngo 1.22\n",
     "go.sum": "",
@@ -38,7 +59,7 @@ BASE_FILES = {
     "tools/goastdump/main.go": "package main\n",
     "scripts/gremlins_gate.py": "# gate\n",
     "Cargo.toml": "[workspace]\n",
-    "crate/src/lib.rs": "pub fn f() {}\n",
+    "crate/src/lib.rs": LIB_RS,
     "crate/tests/it.rs": "#[test] fn t() {}\n",
     "README.md": "x\n",
 }
@@ -156,7 +177,7 @@ def test_rust_test_file_escalates_rust(repo):
 
 
 def test_rust_source_change_stays_narrow(repo):
-    change(repo, {"crate/src/lib.rs": "pub fn f() { let _ = 1; }\n"})
+    change(repo, {"crate/src/lib.rs": LIB_RS.replace("    1\n", "    1 + 0\n", 1)})
     out = plan(repo)
     assert out["rust"] == "true" and out["rust_full"] == "false"
 
@@ -197,3 +218,50 @@ def test_p9_unknown_base_is_fail_closed(repo):
         text=True,
     )
     assert r.returncode != 0
+
+
+# --- a change inside a `#[cfg(test)]` region of a Rust source (the blind spot of --in-diff) ---
+
+
+def test_cfg_test_edit_inside_the_test_module_escalates_rust(repo):
+    change(
+        repo,
+        {
+            "crate/src/lib.rs": LIB_RS.replace(
+                "assert_eq!(f(), 1)", "assert_eq!(f(), 1u32)"
+            )
+        },
+    )
+    out = plan(repo)
+    assert out["rust_full"] == "true" and "#[cfg(test)]" in out["full_reasons"]
+
+
+def test_cfg_test_removed_assertion_escalates_rust(repo):
+    # measured with cargo-mutants 27.1.0: removing an assertion lists 0 mutants under --in-diff
+    change(
+        repo, {"crate/src/lib.rs": LIB_RS.replace("        assert_eq!(g(), 2);\n", "")}
+    )
+    assert plan(repo)["rust_full"] == "true"
+
+
+def test_cfg_test_insertion_right_after_the_attribute_escalates_rust(repo):
+    change(
+        repo,
+        {
+            "crate/src/lib.rs": LIB_RS.replace(
+                "mod tests {\n", "mod tests {\n    // new\n"
+            )
+        },
+    )
+    assert plan(repo)["rust_full"] == "true"
+
+
+def test_cfg_test_production_edit_before_the_test_module_stays_narrow(repo):
+    change(repo, {"crate/src/lib.rs": LIB_RS.replace("    2\n", "    2 + 0\n")})
+    out = plan(repo)
+    assert out["rust"] == "true" and out["rust_full"] == "false"
+
+
+def test_cfg_test_a_new_rust_file_with_a_test_module_stays_narrow(repo):
+    change(repo, {"crate/src/new.rs": LIB_RS})
+    assert plan(repo)["rust_full"] == "false"

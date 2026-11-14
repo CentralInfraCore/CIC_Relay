@@ -1,0 +1,162 @@
+[
+ {
+  "diff": "--- cic-canonical/src/lib.rs\n+++ replace canonical_number -> Option<String> with None\n@@ -17,25 +17,17 @@\n /// Returns the canonical decimal form of a JSON numeric literal, or `None` if `s`\n /// is not a number.\n ///\n /// Integer literals are normalized as exact digit strings (sign, leading zeros and\n /// negative zero folded); other numeric literals normalize through `f64`'s shortest\n /// plain-decimal form.\n #[must_use]\n pub fn canonical_number(s: &str) -> Option<String> {\n-    let s = s.trim();\n-    if s.is_empty() {\n-        return None;\n-    }\n-    if let Some(int) = canonical_integer(s) {\n-        return Some(int);\n-    }\n-    let f: f64 = s.parse().ok()?;\n-    Some(canonical_float(f))\n+    None /* ~ changed by cargo-mutants ~ */\n }\n \n /// Normalizes an integer literal to exact digits, or `None` if `s` is not an\n /// integer literal. Mirrors Go's `big.Int` path: strips a leading `+`, folds\n /// leading zeros, and renders negative zero as `\"0\"`.\n fn canonical_integer(s: &str) -> Option<String> {\n     let (neg, digits) = match s.strip_prefix('-') {\n         Some(rest) => (true, rest),\n",
+  "file": "cic-canonical/src/lib.rs",
+  "function": {
+   "function_name": "canonical_number",
+   "return_type": "-> Option<String>",
+   "span": {
+    "end": {
+     "column": 2,
+     "line": 34
+    },
+    "start": {
+     "column": 1,
+     "line": 17
+    }
+   }
+  },
+  "genre": "FnValue",
+  "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with None",
+  "package": "cic-canonical",
+  "replacement": "None",
+  "span": {
+   "end": {
+    "column": 29,
+    "line": 33
+   },
+   "start": {
+    "column": 5,
+    "line": 25
+   }
+  }
+ },
+ {
+  "diff": "--- cic-canonical/src/lib.rs\n+++ replace canonical_number -> Option<String> with Some(String::new())\n@@ -17,25 +17,17 @@\n /// Returns the canonical decimal form of a JSON numeric literal, or `None` if `s`\n /// is not a number.\n ///\n /// Integer literals are normalized as exact digit strings (sign, leading zeros and\n /// negative zero folded); other numeric literals normalize through `f64`'s shortest\n /// plain-decimal form.\n #[must_use]\n pub fn canonical_number(s: &str) -> Option<String> {\n-    let s = s.trim();\n-    if s.is_empty() {\n-        return None;\n-    }\n-    if let Some(int) = canonical_integer(s) {\n-        return Some(int);\n-    }\n-    let f: f64 = s.parse().ok()?;\n-    Some(canonical_float(f))\n+    Some(String::new()) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Normalizes an integer literal to exact digits, or `None` if `s` is not an\n /// integer literal. Mirrors Go's `big.Int` path: strips a leading `+`, folds\n /// leading zeros, and renders negative zero as `\"0\"`.\n fn canonical_integer(s: &str) -> Option<String> {\n     let (neg, digits) = match s.strip_prefix('-') {\n         Some(rest) => (true, rest),\n",
+  "file": "cic-canonical/src/lib.rs",
+  "function": {
+   "function_name": "canonical_number",
+   "return_type": "-> Option<String>",
+   "span": {
+    "end": {
+     "column": 2,
+     "line": 34
+    },
+    "start": {
+     "column": 1,
+     "line": 17
+    }
+   }
+  },
+  "genre": "FnValue",
+  "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with Some(String::new())",
+  "package": "cic-canonical",
+  "replacement": "Some(String::new())",
+  "span": {
+   "end": {
+    "column": 29,
+    "line": 33
+   },
+   "start": {
+    "column": 5,
+    "line": 25
+   }
+  }
+ },
+ {
+  "diff": "--- cic-canonical/src/lib.rs\n+++ replace canonical_number -> Option<String> with Some(\"xyzzy\".into())\n@@ -17,25 +17,17 @@\n /// Returns the canonical decimal form of a JSON numeric literal, or `None` if `s`\n /// is not a number.\n ///\n /// Integer literals are normalized as exact digit strings (sign, leading zeros and\n /// negative zero folded); other numeric literals normalize through `f64`'s shortest\n /// plain-decimal form.\n #[must_use]\n pub fn canonical_number(s: &str) -> Option<String> {\n-    let s = s.trim();\n-    if s.is_empty() {\n-        return None;\n-    }\n-    if let Some(int) = canonical_integer(s) {\n-        return Some(int);\n-    }\n-    let f: f64 = s.parse().ok()?;\n-    Some(canonical_float(f))\n+    Some(\"xyzzy\".into()) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Normalizes an integer literal to exact digits, or `None` if `s` is not an\n /// integer literal. Mirrors Go's `big.Int` path: strips a leading `+`, folds\n /// leading zeros, and renders negative zero as `\"0\"`.\n fn canonical_integer(s: &str) -> Option<String> {\n     let (neg, digits) = match s.strip_prefix('-') {\n         Some(rest) => (true, rest),\n",
+  "file": "cic-canonical/src/lib.rs",
+  "function": {
+   "function_name": "canonical_number",
+   "return_type": "-> Option<String>",
+   "span": {
+    "end": {
+     "column": 2,
+     "line": 34
+    },
+    "start": {
+     "column": 1,
+     "line": 17
+    }
+   }
+  },
+  "genre": "FnValue",
+  "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with Some(\"xyzzy\".into())",
+  "package": "cic-canonical",
+  "replacement": "Some(\"xyzzy\".into())",
+  "span": {
+   "end": {
+    "column": 29,
+    "line": 33
+   },
+   "start": {
+    "column": 5,
+    "line": 25
+   }
+  }
+ },
+ {
+  "diff": "--- http-executor/src/lib.rs\n+++ delete field require_https from struct Self expression in EgressPolicy::insecure_allowing\n@@ -101,17 +101,17 @@\n     }\n \n     /// Like [`allowing`](Self::allowing) but also permits plain `http` **and**\n     /// private/loopback IP ranges \u2014 intended for loopback/testing against a local\n     /// mock server, never for production egress.\n     #[must_use]\n     pub fn insecure_allowing(hosts: impl IntoIterator<Item = impl Into<String>>) -> Self {\n         Self {\n-            require_https: false,\n+             /* ~ changed by cargo-mutants ~ */\n             allow_private_ips: true,\n             ..Self::allowing(hosts)\n         }\n     }\n \n     /// Narrows the permitted request methods to exactly `methods` (an M43 method\n     /// allowlist). A request whose method is not listed is `Denied`.\n     #[must_use]\n",
+  "file": "http-executor/src/lib.rs",
+  "function": {
+   "function_name": "EgressPolicy::insecure_allowing",
+   "return_type": "-> Self",
+   "span": {
+    "end": {
+     "column": 6,
+     "line": 113
+    },
+    "start": {
+     "column": 5,
+     "line": 103
+    }
+   }
+  },
+  "genre": "StructField",
+  "name": "http-executor/src/lib.rs:109:13: delete field require_https from struct Self expression in EgressPolicy::insecure_allowing",
+  "package": "http-executor",
+  "replacement": "",
+  "span": {
+   "end": {
+    "column": 34,
+    "line": 109
+   },
+   "start": {
+    "column": 13,
+    "line": 109
+   }
+  }
+ },
+ {
+  "diff": "--- http-executor/src/lib.rs\n+++ delete field allow_private_ips from struct Self expression in EgressPolicy::insecure_allowing\n@@ -102,17 +102,17 @@\n \n     /// Like [`allowing`](Self::allowing) but also permits plain `http` **and**\n     /// private/loopback IP ranges \u2014 intended for loopback/testing against a local\n     /// mock server, never for production egress.\n     #[must_use]\n     pub fn insecure_allowing(hosts: impl IntoIterator<Item = impl Into<String>>) -> Self {\n         Self {\n             require_https: false,\n-            allow_private_ips: true,\n+             /* ~ changed by cargo-mutants ~ */\n             ..Self::allowing(hosts)\n         }\n     }\n \n     /// Narrows the permitted request methods to exactly `methods` (an M43 method\n     /// allowlist). A request whose method is not listed is `Denied`.\n     #[must_use]\n     pub fn with_allowed_methods(mut self, methods: impl IntoIterator<Item = Method>) -> Self {\n",
+  "file": "http-executor/src/lib.rs",
+  "function": {
+   "function_name": "EgressPolicy::insecure_allowing",
+   "return_type": "-> Self",
+   "span": {
+    "end": {
+     "column": 6,
+     "line": 113
+    },
+    "start": {
+     "column": 5,
+     "line": 103
+    }
+   }
+  },
+  "genre": "StructField",
+  "name": "http-executor/src/lib.rs:110:13: delete field allow_private_ips from struct Self expression in EgressPolicy::insecure_allowing",
+  "package": "http-executor",
+  "replacement": "",
+  "span": {
+   "end": {
+    "column": 37,
+    "line": 110
+   },
+   "start": {
+    "column": 13,
+    "line": 110
+   }
+  }
+ }
+]
