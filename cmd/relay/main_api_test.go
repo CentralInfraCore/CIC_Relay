@@ -670,3 +670,71 @@ func TestSetHandler_SourceDigestFromTreeHash(t *testing.T) {
 	server.setHandler(w, req)
 	mockAPI.AssertExpectations(t)
 }
+
+// TestSetHandler_EvidenceRequired: the workflow ran, but its proof was not persisted
+// and evidence is required — an explicit 503, never a plain 200.
+func TestSetHandler_EvidenceRequired(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil,
+		fmt.Errorf("%w: workflow \"any\" executed but its proof was not persisted (record_failed), chain_hash=deadbeef", cabinet.ErrEvidenceRequired))
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{api: mockAPI, config: &config{MaxJSONInputSize: 1024}, logger: logger}
+
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assertErrorJSON(t, w, "evidence_required")
+	assert.Contains(t, w.Body.String(), "chain_hash=deadbeef", "the chain hash must reach the caller")
+}
+
+// TestSetHandler_ProofInResponse: a successful execution reports the proof outcome.
+func TestSetHandler_ProofInResponse(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(&cabinet.SetResponse{
+		Results: map[string]any{"ok": true},
+		Proof:   &cabinet.ProofStatus{Persisted: false, ErrorCode: cabinet.ProofErrRecordFailed},
+	}, nil)
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{api: mockAPI, config: &config{MaxJSONInputSize: 1024}, logger: logger}
+
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, "evidence not required: a successful execution keeps HTTP 200")
+	var body struct {
+		Proof struct {
+			Persisted bool   `json:"persisted"`
+			ErrorCode string `json:"error_code"`
+		} `json:"proof"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Proof.Persisted)
+	assert.Equal(t, "record_failed", body.Proof.ErrorCode)
+}
+
+func TestEvidenceRequiredFromEnv(t *testing.T) {
+	for in, want := range map[string]bool{"": false, "false": false, " true ": true, "true": true} {
+		t.Setenv("CIC_EVIDENCE_REQUIRED", in)
+		got, err := evidenceRequiredFromEnv()
+		require.NoError(t, err, "value %q", in)
+		assert.Equal(t, want, got, "value %q", in)
+	}
+	for _, bad := range []string{"1", "yes", "TRUE", "tru"} {
+		t.Setenv("CIC_EVIDENCE_REQUIRED", bad)
+		_, err := evidenceRequiredFromEnv()
+		assert.Error(t, err, "value %q must be rejected, not silently treated as false", bad)
+	}
+}

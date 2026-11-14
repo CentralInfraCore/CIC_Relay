@@ -16,6 +16,10 @@ var (
 	ErrConflict = errors.New("conflict")  // conflicting resource state
 	ErrNotFound = errors.New("not_found") // resource not found
 	ErrTimeout  = errors.New("timeout")   // execution exceeded time budget
+
+	// ErrEvidenceRequired: the workflow ran, but the ProofTrace was not persisted
+	// and the service is configured to require persisted evidence.
+	ErrEvidenceRequired = errors.New("evidence_required")
 )
 
 // IsInvalid checks if an error is an ErrInvalid validation or integrity failure.
@@ -29,6 +33,10 @@ func IsNotFound(err error) bool { return errors.Is(err, ErrNotFound) }
 
 // IsTimeout checks if an error is an ErrTimeout execution exceeded time budget.
 func IsTimeout(err error) bool { return errors.Is(err, ErrTimeout) }
+
+// IsEvidenceRequired checks if an error is an ErrEvidenceRequired: the execution
+// happened, but its proof was not persisted although the service requires it.
+func IsEvidenceRequired(err error) bool { return errors.Is(err, ErrEvidenceRequired) }
 
 // FieldError describes a validation error for a specific field.
 type FieldError struct {

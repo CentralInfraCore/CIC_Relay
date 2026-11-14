@@ -97,6 +97,11 @@ type cabinetService struct {
 	wasmManager wasmManager
 	clock       func() string     // injected; returns UTC timestamp for ProofTrace
 	recorder    ExecutionRecorder // optional; nil = skip recording
+
+	// evidenceRequired makes an execution whose proof was not persisted (recording
+	// failed, or no recorder is configured) fail with ErrEvidenceRequired instead of
+	// returning a plain success.
+	evidenceRequired bool
 }
 
 // CabinetOption is a functional option for configuring a cabinetService.
@@ -107,6 +112,16 @@ type CabinetOption func(*cabinetService)
 func WithRecorder(r ExecutionRecorder) CabinetOption {
 	return func(s *cabinetService) {
 		s.recorder = r
+	}
+}
+
+// WithEvidenceRequired makes persisted evidence mandatory: when the ProofTrace of an
+// execution is not persisted, Setx returns ErrEvidenceRequired (the message carries
+// the chain hash) instead of a success. Off by default: a recording outage is then
+// reported in SetResponse.Proof only.
+func WithEvidenceRequired(required bool) CabinetOption {
+	return func(s *cabinetService) {
+		s.evidenceRequired = required
 	}
 }
 
@@ -295,21 +310,47 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		Timestamp:    clockFn(),
 	}
 
-	// 4. Record the execution (non-fatal: Vault may be unavailable).
-	if c.recorder != nil {
-		if err := c.recorder.Record(ctx, workflow.ID(), trace); err != nil {
-			logrus.WithFields(logrus.Fields{
-				"workflow_id": workflow.ID(),
-				"error":       err,
-			}).Warn("ProofTrace recording failed, continuing")
-		}
+	// 4. Record the execution. A failure is non-fatal by default (Vault may be
+	// unavailable) but is always reported in the response; with evidenceRequired it
+	// fails the call. The workflow has already run at this point, so the error
+	// carries the chain hash: the partial evidence is not lost.
+	proof := c.recordProof(ctx, workflow.ID(), trace)
+	if c.evidenceRequired && !proof.Persisted {
+		return nil, fmt.Errorf("%w: workflow %q executed but its proof was not persisted (%s), chain_hash=%s",
+			ErrEvidenceRequired, workflow.ID(), proof.ErrorCode, trace.ChainHash)
 	}
 
 	return &SetResponse{
 		Results:  execCtx.variables,
 		Warnings: nil,
 		Trace:    trace,
+		Proof:    proof,
 	}, nil
+}
+
+// recordProof persists the trace through the configured recorder and reports the outcome.
+func (c *cabinetService) recordProof(ctx context.Context, workflowID string, trace *ProofTrace) *ProofStatus {
+	if c.recorder == nil {
+		logrus.WithField("workflow_id", workflowID).Warn("ProofTrace not persisted: no recorder configured")
+		return &ProofStatus{ErrorCode: ProofErrRecorderNotConfigured}
+	}
+	var (
+		commit string
+		err    error
+	)
+	if cr, ok := c.recorder.(CommitRecorder); ok {
+		commit, err = cr.RecordCommit(ctx, workflowID, trace)
+	} else {
+		err = c.recorder.Record(ctx, workflowID, trace)
+	}
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"workflow_id": workflowID,
+			"error":       err,
+		}).Warn("ProofTrace recording failed")
+		return &ProofStatus{ErrorCode: ProofErrRecordFailed}
+	}
+	return &ProofStatus{Persisted: true, Commit: commit}
 }
 
 // Close closes the underlying WASM runtime and frees all associated resources.
