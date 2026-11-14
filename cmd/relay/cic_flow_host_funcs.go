@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -178,12 +179,23 @@ func makeActuateFn(deps cicFlowDeps) func(context.Context, api.Module, uint32, u
 		}
 		resp, err := deps.doer.Do(httpReq)
 		if err != nil {
+			if errors.Is(err, errEgressBlockedAddr) {
+				return egressWriteError(mod, outPtr, outLen, "blocked_address", err.Error())
+			}
 			return gitWriteError(mod, outPtr, outLen, err.Error())
 		}
 		defer func() { _ = resp.Body.Close() }()
-		respBody, err := io.ReadAll(resp.Body)
+		// A response over the cap is a typed error and is never held in memory: the declared
+		// length is checked first, and the read stops one byte past the cap.
+		if resp.ContentLength > egressMaxResponseBytes {
+			return egressWriteError(mod, outPtr, outLen, "response_too_large", egressTooLargeMsg)
+		}
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, egressMaxResponseBytes+1))
 		if err != nil {
 			return gitWriteError(mod, outPtr, outLen, err.Error())
+		}
+		if len(respBody) > egressMaxResponseBytes {
+			return egressWriteError(mod, outPtr, outLen, "response_too_large", egressTooLargeMsg)
 		}
 		respHeaders := make(map[string]string, len(resp.Header))
 		for k := range resp.Header {
@@ -195,6 +207,15 @@ func makeActuateFn(deps cicFlowDeps) func(context.Context, api.Module, uint32, u
 			"body_base64": base64.StdEncoding.EncodeToString(respBody),
 		})
 	}
+}
+
+// egressTooLargeMsg is the message of the response_too_large error.
+var egressTooLargeMsg = "egress: response exceeds the " + strconv.Itoa(egressMaxResponseBytes) + "-byte limit"
+
+// egressWriteError writes a typed egress error: {"error": <msg>, "code": <code>}. The "error"
+// key is the one every guest already reads; "code" is additive.
+func egressWriteError(mod api.Module, outPtr, outLen uint32, code, msg string) int32 {
+	return gitWriteJSON(mod, outPtr, outLen, map[string]string{"error": msg, "code": code})
 }
 
 // portOf returns the request's TCP port: the explicit URL port, else the scheme
