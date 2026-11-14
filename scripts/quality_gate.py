@@ -24,7 +24,7 @@ scripts/mutation_plan.py):
                        do not matter; two different mutants never share an id (a listing
                        with a duplicate id is an invalid plan, not a merged one).
   mutation-shard-report/1, gremlins-report/1   the reports of a shard / a chunk
-  mutation-policy/1    how the verdicts are accounted (see POLICY)
+  mutation-policy/2    how the verdicts are accounted and the primary score (see POLICY)
 
 Plan states (named in the output):
   PLAN_VALID_NONEMPTY  a valid plan with at least one mutant/package
@@ -54,15 +54,21 @@ NONEMPTY = "PLAN_VALID_NONEMPTY"
 EMPTY = "PLAN_VALID_EMPTY"
 INVALID = "PLAN_INVALID"
 
-# mutation-policy/1: the verdicts of a Rust mutant, each counted on its own. The plan size is
-# the denominator: nothing leaves it (a timed-out or unviable mutant stays a planned mutant).
+# mutation-policy/2 (owner decisions of 2026-11-14): the verdicts of a Rust mutant, each counted on
+# its own; the plan size stays the denominator of the accounting (nothing leaves the plan).
 #   caught    detected by the tests                      -> ok
 #   missed    survived                                   -> FAIL
 #   timeout   no verdict in time                         -> FAIL (it is not a detection here)
-#   unviable  the mutant does not compile                -> reported, does not fail
-#             (the behaviour the gate had; the owner decides whether it becomes a failure,
-#              and that decision is a change of this policy version, not an exception)
-POLICY = "mutation-policy/1"
+#   unviable  the mutant does not compile                -> neither caught nor missed; reported as a
+#             mandatory metric of its own (count and ratio); does NOT fail. Tightening it is a
+#             change of this policy version (mutation-policy/3), never an exception.
+# The primary score is caught / (caught + missed). timeout and unviable are not in its denominator
+# and are therefore always printed next to it: a timeout fails the gate (so it is 0 in a green run),
+# an unviable never changes the score. Nothing is stricter or weaker than before: `missed > 0` and
+# `timeout > 0` are red, a score threshold (the 90% target) is a reported ratchet value and never
+# replaces that rule. A zero denominator is not 100% and not 0%: see primary_score().
+# (mutation-policy/1 printed caught/planned as the primary value; that stays printed as `legacy`.)
+POLICY = "mutation-policy/2"
 SUMMARY_TO_VERDICT = {
     "CaughtMutant": "caught",
     "MissedMutant": "missed",
@@ -75,6 +81,49 @@ FAILING = ("missed", "timeout")
 
 class GateError(Exception):
     """The input cannot be trusted: the gate fails."""
+
+
+def primary_score(acct: dict | None) -> dict:
+    """The primary mutation score, caught / (caught + missed), as a state, never a bare number.
+
+    {"state": "MEASURED", "value": 0..100, "caught": c, "evaluable": c + m}
+    {"state": "NOT_APPLICABLE", "reason": ...}        nothing evaluable, for a stated reason
+    {"state": "UNVERIFIABLE", "reason": "MEASUREMENT_MISSING"}   no accounting at all
+
+    A zero denominator is neither 100% nor 0%: with no mutant planned the score does not apply
+    (NO_MUTANTS_PLANNED); with every mutant unviable (ALL_UNVIABLE) or only unviable and timed-out
+    ones (NO_EVALUABLE_MUTANT) nothing could be evaluated.
+    """
+    if not acct or "planned" not in acct:
+        return {"state": "UNVERIFIABLE", "reason": "MEASUREMENT_MISSING"}
+    caught, missed = acct.get("caught", 0), acct.get("missed", 0)
+    evaluable = caught + missed
+    if evaluable:
+        return {
+            "state": "MEASURED",
+            "value": 100.0 * caught / evaluable,
+            "caught": caught,
+            "evaluable": evaluable,
+        }
+    if acct["planned"] == 0:
+        return {"state": "NOT_APPLICABLE", "reason": "NO_MUTANTS_PLANNED"}
+    if acct.get("unviable", 0) == acct["planned"]:
+        return {"state": "NOT_APPLICABLE", "reason": "ALL_UNVIABLE"}
+    return {"state": "NOT_APPLICABLE", "reason": "NO_EVALUABLE_MUTANT"}
+
+
+def unviable_ratio(acct: dict | None) -> dict:
+    """The unviable share of the plan: a mandatory metric of its own (report-only)."""
+    if not acct or "planned" not in acct:
+        return {"state": "UNVERIFIABLE", "reason": "MEASUREMENT_MISSING"}
+    if not acct["planned"]:
+        return {"state": "NOT_APPLICABLE", "reason": "NO_MUTANTS_PLANNED"}
+    return {
+        "state": "MEASURED",
+        "count": acct["unviable"],
+        "planned": acct["planned"],
+        "value": 100.0 * acct["unviable"] / acct["planned"],
+    }
 
 
 def sha256_hex(data: bytes) -> str:
@@ -567,11 +616,22 @@ def cmd_verify(a: argparse.Namespace) -> int:
             )
             line = " ".join(f"{k}={acct[k]}" for k in ("planned", *VERDICTS))
             print(f"rust {plan['state']} [{POLICY}]: {line}")
-            if acct["planned"]:
-                viable = acct["planned"] - acct["unviable"]
+            ps, ur = primary_score(acct), unviable_ratio(acct)
+            if ps["state"] == "MEASURED":
                 print(
-                    f"rust score: caught/planned = {acct['caught']}/{acct['planned']}; "
-                    f"caught/(planned-unviable) = {acct['caught']}/{viable}"
+                    f"rust score (primary, {POLICY}): caught/(caught+missed) = "
+                    f"{ps['caught']}/{ps['evaluable']} = {ps['value']:.2f}%"
+                )
+            else:
+                print(f"rust score (primary, {POLICY}): {ps['state']} ({ps['reason']})")
+            if ur["state"] == "MEASURED":
+                print(
+                    f"rust unviable (mandatory metric, report-only): "
+                    f"{ur['count']}/{ur['planned']} = {ur['value']:.2f}%"
+                )
+            if acct["planned"]:
+                print(
+                    f"rust legacy (policy/1 primary): caught/planned = {acct['caught']}/{acct['planned']}"
                 )
             bad = [f"{v}={acct[v]}" for v in FAILING if acct[v]]
             if bad:

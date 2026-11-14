@@ -82,6 +82,8 @@ GATE_LOGIC_PATHS = {
     "scripts/baseline_guard.py",
     "scripts/count_mutants.py",
     "scripts/quality_gate.py",
+    "scripts/object_model.py",
+    ".measurement-scope.json",
     ".mutation-baseline.json",
     ".github/workflows/mutation.yml",
     ".github/workflows/mutation-pr.yml",
