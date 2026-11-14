@@ -89,7 +89,7 @@ A `relay` szolgáltatás ezeket olvassa a környezetből (a `docker-compose.yml`
 | `VAULT_CACERT` | — | pl. `/run/secrets/relay/vault-ca.crt` |
 | `CIC_VAULT_MOUNT` | `transit` | Vault transit mount |
 | `CIC_VAULT_KEY` | — | Aláíró kulcs; a tokennek **erre a kulcsra** kell jogosultnak lennie |
-| `CIC_TRUST_MODE` | `dev` | PKI trust mód |
+| `CIC_TRUST_MODE` | — | PKI trust mód (`dev` vagy `prod`); **kötelező**, nincs alapértelmezés, üres érték indulási hiba |
 
 ### A `CIC_BUILD_DIR`-t meg kell osztani a builder konténerrel
 

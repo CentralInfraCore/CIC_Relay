@@ -15,18 +15,43 @@ const (
 	TrustModeProd = "prod" // scaffold: CICPlatformCA not embedded — out-of-band provisioning required
 )
 
-// resolveTrustMode reads the CIC_TRUST_MODE environment variable and returns the trust mode (dev or prod).
-// Missing or empty values default to "dev" with a warning log.
-func resolveTrustMode(logger *logrus.Logger) string {
+// resolveTrustMode reads the CIC_TRUST_MODE environment variable and returns the trust mode.
+// There is no default: a missing, empty or whitespace-only value is an error, so the
+// operator always chooses the trust anchor explicitly instead of inheriting the
+// development CAs embedded in the binary. Unknown values are rejected by bootstrapPKI.
+func resolveTrustMode() (string, error) {
 	mode := strings.TrimSpace(os.Getenv("CIC_TRUST_MODE"))
 	if mode == "" {
-		logger.WithFields(logrus.Fields{
-			"trust_mode": TrustModeDev,
-			"reason":     "CIC_TRUST_MODE not set — defaulting to dev",
-		}).Warn("trust mode defaulting to dev")
-		return TrustModeDev
+		return "", fmt.Errorf("CIC_TRUST_MODE is not set (valid: %q, %q); there is no default", TrustModeDev, TrustModeProd)
 	}
-	return mode
+	return mode, nil
+}
+
+// requireTrustStore refuses a prod relay without a loaded trust store. bootstrapPKI
+// already fails in that case today; this is the guard that keeps a later change from
+// reintroducing the silent "trust ecosystem not bootstrapped" skip in loadModule.
+func requireTrustStore(trustMode string, assets *PKIAssets) error {
+	if trustMode == TrustModeProd && (assets == nil || !assets.TrustStoreLoaded) {
+		return fmt.Errorf("CIC_TRUST_MODE=%s requires a loaded trust store", TrustModeProd)
+	}
+	return nil
+}
+
+// bootstrapTrust is the single start-up entry for trust: it resolves the mode,
+// loads the trust store and applies the prod guard.
+func bootstrapTrust(embeddedPKI fs.FS, logger *logrus.Logger) (string, *PKIAssets, error) {
+	trustMode, err := resolveTrustMode()
+	if err != nil {
+		return "", nil, err
+	}
+	assets, err := bootstrapPKI(trustMode, embeddedPKI, logger)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := requireTrustStore(trustMode, assets); err != nil {
+		return "", nil, err
+	}
+	return trustMode, assets, nil
 }
 
 // bootstrapPKI loads the CA trust store based on trustMode.

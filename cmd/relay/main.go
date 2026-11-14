@@ -690,8 +690,7 @@ func main() {
 	defer cancel()
 
 	// --- PKI Trust Bootstrap ---
-	trustMode := resolveTrustMode(logger)
-	pkiAssets, err := bootstrapPKI(trustMode, embeddedFS, logger)
+	trustMode, pkiAssets, err := bootstrapTrust(embeddedFS, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("FATAL: PKI bootstrap failed")
 	}
