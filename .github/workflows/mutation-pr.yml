@@ -33,6 +33,7 @@ jobs:
     outputs:
       go: ${{ steps.plan.outputs.go }}
       rust: ${{ steps.plan.outputs.rust }}
+      rust_full: ${{ steps.plan.outputs.rust_full }}
       rust_shards: ${{ steps.count.outputs.shards }}
       rust_matrix: ${{ steps.count.outputs.matrix }}
     steps:
@@ -58,12 +59,27 @@ jobs:
 
       - name: Count the Rust mutants in the diff
         id: count
+        env:
+          RUST: ${{ steps.plan.outputs.rust }}
+          RUST_FULL: ${{ steps.plan.outputs.rust_full }}
         run: |
           shards=0
-          if [ "${{ steps.plan.outputs.rust }}" = "true" ]; then
-            git diff "$BASE_SHA...$HEAD_SHA" -- '*.rs' > /tmp/pr.diff
-            n=$(cargo mutants --workspace --list --in-diff /tmp/pr.diff | grep -c . || true)
-            echo "rust mutants in the diff: $n"
+          if [ "$RUST" = "true" ]; then
+            # The listing exit status is checked before the count (scripts/count_mutants.py): a
+            # failed listing fails this step, it is never "zero mutants". A valid empty listing
+            # prints 0. The plan can escalate to every mutant (rust_full); the shards below
+            # must then not be narrowed by --in-diff either.
+            if [ "$RUST_FULL" = "true" ]; then
+              n=$(python3 scripts/count_mutants.py --out /tmp/mutants.list -- \
+                    cargo mutants --workspace --list) \
+                || { echo "::error::the Rust mutant listing failed"; exit 1; }
+            else
+              git diff "$BASE_SHA...$HEAD_SHA" -- '*.rs' > /tmp/pr.diff
+              n=$(python3 scripts/count_mutants.py --out /tmp/mutants.list -- \
+                    cargo mutants --workspace --list --in-diff /tmp/pr.diff) \
+                || { echo "::error::the Rust mutant listing failed"; exit 1; }
+            fi
+            echo "rust mutants to test: $n (rust_full=$RUST_FULL)"
             if [ "$n" -gt 0 ]; then
               shards=$(( (n + 39) / 40 ))
               [ "$shards" -gt 8 ] && shards=8
@@ -132,11 +148,19 @@ jobs:
         with:
           tool: cargo-mutants
 
-      - name: Mutation of the changed Rust lines (no surviving mutants)
+      - name: Mutation of the changed Rust lines, or of every mutant when the plan escalated (no surviving mutants)
+        env:
+          RUST_FULL: ${{ needs.plan.outputs.rust_full }}
         run: |
-          git diff "$BASE_SHA...$HEAD_SHA" -- '*.rs' > /tmp/pr.diff
-          cargo mutants --workspace --in-diff /tmp/pr.diff \
-            --shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }}
+          set -e
+          if [ "$RUST_FULL" = "true" ]; then
+            cargo mutants --workspace \
+              --shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }}
+          else
+            git diff "$BASE_SHA...$HEAD_SHA" -- '*.rs' > /tmp/pr.diff
+            cargo mutants --workspace --in-diff /tmp/pr.diff \
+              --shard ${{ matrix.shard }}/${{ needs.plan.outputs.rust_shards }}
+          fi
 
   # The ratchet baseline may only get stricter (scripts/baseline_guard.py). The guard and
   # the thresholds function it imports are taken from the BASE commit, so a pull request

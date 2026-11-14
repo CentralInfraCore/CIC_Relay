@@ -75,6 +75,7 @@ jobs:
       base: ${{ steps.last.outputs.base }}
       go: ${{ steps.plan.outputs.go }}
       rust: ${{ steps.plan.outputs.rust }}
+      rust_full: ${{ steps.plan.outputs.rust_full }}
       rust_shards: ${{ steps.count.outputs.shards }}
       rust_matrix: ${{ steps.count.outputs.matrix }}
     steps:
@@ -138,14 +139,23 @@ jobs:
         env:
           BASE: ${{ steps.last.outputs.base }}
           RUST: ${{ steps.plan.outputs.rust }}
+          RUST_FULL: ${{ steps.plan.outputs.rust_full }}
         run: |
           shards=0
           if [ "$RUST" = "true" ]; then
-            if [ -n "$BASE" ]; then
+            # The listing exit status is checked before the count (scripts/count_mutants.py): a
+            # failed listing fails this step, it is never "zero mutants". A valid empty listing
+            # prints 0. Without a base, or when the plan escalated (rust_full), every mutant
+            # is listed, and the shards must not be narrowed by --in-diff either.
+            if [ -n "$BASE" ] && [ "$RUST_FULL" != "true" ]; then
               git diff "$BASE...$HEAD_SHA" -- '*.rs' > /tmp/since.diff
-              n=$(cargo mutants --workspace --list --in-diff /tmp/since.diff | grep -c . || true)
+              n=$(python3 scripts/count_mutants.py --out /tmp/mutants.list -- \
+                    cargo mutants --workspace --list --in-diff /tmp/since.diff) \
+                || { echo "::error::the Rust mutant listing failed"; exit 1; }
             else
-              n=$(cargo mutants --workspace --list | grep -c . || true)
+              n=$(python3 scripts/count_mutants.py --out /tmp/mutants.list -- \
+                    cargo mutants --workspace --list) \
+                || { echo "::error::the Rust mutant listing failed"; exit 1; }
             fi
             echo "Rust mutants to test: $n"
             if [ "$n" -gt 0 ]; then
@@ -214,11 +224,12 @@ jobs:
       - name: Mutation of one shard of the Rust lines changed since the last nightly (no surviving mutants)
         env:
           BASE: ${{ needs.plan.outputs.base }}
+          RUST_FULL: ${{ needs.plan.outputs.rust_full }}
           SHARD: ${{ matrix.shard }}
           SHARDS: ${{ needs.plan.outputs.rust_shards }}
         run: |
           set -e
-          if [ -z "$BASE" ]; then
+          if [ -z "$BASE" ] || [ "$RUST_FULL" = "true" ]; then
             cargo mutants --workspace --shard "$SHARD/$SHARDS"
           else
             git diff "$BASE...$HEAD_SHA" -- '*.rs' > /tmp/since.diff
