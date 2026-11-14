@@ -113,7 +113,11 @@ func TestSetx_Proof_RecorderOutage_Required_Fails(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.True(t, IsEvidenceRequired(err))
-	assert.Contains(t, err.Error(), "chain_hash=", "the chain hash must survive in the error")
+	var evErr *EvidenceRequiredError
+	require.True(t, errors.As(err, &evErr), "the failure must be the structured error")
+	assert.NotEmpty(t, evErr.ChainHash, "the chain hash must survive in the error")
+	assert.Equal(t, ProofErrRecordFailed, evErr.ErrorCode)
+	assert.Contains(t, err.Error(), "chain_hash="+evErr.ChainHash)
 	assert.Contains(t, err.Error(), ProofErrRecordFailed)
 	assert.NotContains(t, err.Error(), "vault unavailable", "the recorder error text must not reach the caller")
 }

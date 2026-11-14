@@ -316,8 +316,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	// carries the chain hash: the partial evidence is not lost.
 	proof := c.recordProof(ctx, workflow.ID(), trace)
 	if c.evidenceRequired && !proof.Persisted {
-		return nil, fmt.Errorf("%w: workflow %q executed but its proof was not persisted (%s), chain_hash=%s",
-			ErrEvidenceRequired, workflow.ID(), proof.ErrorCode, trace.ChainHash)
+		return nil, &EvidenceRequiredError{WorkflowID: workflow.ID(), ChainHash: trace.ChainHash, ErrorCode: proof.ErrorCode}
 	}
 
 	return &SetResponse{

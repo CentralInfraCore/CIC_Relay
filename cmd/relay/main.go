@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -187,6 +188,27 @@ func writeError(w http.ResponseWriter, status int, code, msg string) {
 	json.NewEncoder(w).Encode(map[string]string{"error": msg, "code": code})
 }
 
+// writeEvidenceRequired answers 503 for a workflow that ran but whose proof was not
+// persisted while evidence is required. Besides the usual error/code it states
+// structurally that the execution completed, so a client does not retry it blindly,
+// and returns the chain hash of the executed workflow.
+func writeEvidenceRequired(w http.ResponseWriter, err error) {
+	body := map[string]any{
+		"error":               err.Error(),
+		"code":                "evidence_required",
+		"execution_completed": true,
+		"proof":               cabinet.ProofStatus{Persisted: false},
+	}
+	var evErr *cabinet.EvidenceRequiredError
+	if errors.As(err, &evErr) {
+		body["chain_hash"] = evErr.ChainHash
+		body["proof"] = cabinet.ProofStatus{Persisted: false, ErrorCode: evErr.ErrorCode}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	json.NewEncoder(w).Encode(body)
+}
+
 // newMux creates a new HTTP multiplexer and registers all relay API routes.
 func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -354,7 +376,7 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 			// The workflow ran, but its proof was not persisted and evidence is required.
 			traceStatus = "error"
 			logEntry.WithField("outcome", "evidence_required").WithError(err).Error("Workflow executed but its proof was not persisted")
-			writeError(w, http.StatusServiceUnavailable, "evidence_required", err.Error())
+			writeEvidenceRequired(w, err)
 			return
 		}
 		if cabinet.IsInvalid(err) {

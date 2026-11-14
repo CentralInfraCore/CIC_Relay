@@ -672,12 +672,14 @@ func TestSetHandler_SourceDigestFromTreeHash(t *testing.T) {
 }
 
 // TestSetHandler_EvidenceRequired: the workflow ran, but its proof was not persisted
-// and evidence is required — an explicit 503, never a plain 200.
+// and evidence is required — an explicit 503, never a plain 200. The body states
+// structurally that the execution completed (so a client does not retry it blindly),
+// that the proof was not persisted, and carries the chain hash.
 func TestSetHandler_EvidenceRequired(t *testing.T) {
 	mockAPI := new(mockCabinetService)
 	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
 	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil,
-		fmt.Errorf("%w: workflow \"any\" executed but its proof was not persisted (record_failed), chain_hash=deadbeef", cabinet.ErrEvidenceRequired))
+		&cabinet.EvidenceRequiredError{WorkflowID: "any", ChainHash: "deadbeef", ErrorCode: cabinet.ProofErrRecordFailed})
 
 	logger := logrus.New()
 	logger.SetOutput(new(bytes.Buffer))
@@ -690,8 +692,43 @@ func TestSetHandler_EvidenceRequired(t *testing.T) {
 	server.setHandler(w, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
-	assertErrorJSON(t, w, "evidence_required")
-	assert.Contains(t, w.Body.String(), "chain_hash=deadbeef", "the chain hash must reach the caller")
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	var body struct {
+		Code               string `json:"code"`
+		Error              string `json:"error"`
+		ExecutionCompleted bool   `json:"execution_completed"`
+		ChainHash          string `json:"chain_hash"`
+		Proof              struct {
+			Persisted bool   `json:"persisted"`
+			ErrorCode string `json:"error_code"`
+		} `json:"proof"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.Equal(t, "evidence_required", body.Code)
+	assert.NotEmpty(t, body.Error)
+	assert.True(t, body.ExecutionCompleted, "the workflow ran: the call must not look like a retry-safe failure")
+	assert.Equal(t, "deadbeef", body.ChainHash)
+	assert.False(t, body.Proof.Persisted)
+	assert.Equal(t, cabinet.ProofErrRecordFailed, body.Proof.ErrorCode)
+}
+
+// A wrapped evidence error without the structured type still maps to the same 503.
+func TestSetHandler_EvidenceRequired_Unstructured(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("%w: no detail", cabinet.ErrEvidenceRequired))
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{api: mockAPI, config: &config{MaxJSONInputSize: 1024}, logger: logger}
+
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Contains(t, w.Body.String(), `"execution_completed":true`)
+	assert.NotContains(t, w.Body.String(), "chain_hash")
 }
 
 // TestSetHandler_ProofInResponse: a successful execution reports the proof outcome.

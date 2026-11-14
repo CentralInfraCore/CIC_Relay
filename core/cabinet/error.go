@@ -34,6 +34,23 @@ func IsNotFound(err error) bool { return errors.Is(err, ErrNotFound) }
 // IsTimeout checks if an error is an ErrTimeout execution exceeded time budget.
 func IsTimeout(err error) bool { return errors.Is(err, ErrTimeout) }
 
+// EvidenceRequiredError is the structured form of ErrEvidenceRequired. The workflow has
+// already run when it is returned, so the caller must not treat the call as a plain
+// failure it can safely retry; the fields carry the partial evidence.
+type EvidenceRequiredError struct {
+	WorkflowID string
+	ChainHash  string // the computed chain hash of the executed workflow
+	ErrorCode  string // ProofErrRecordFailed or ProofErrRecorderNotConfigured
+}
+
+func (e *EvidenceRequiredError) Error() string {
+	return fmt.Sprintf("%s: workflow %q executed but its proof was not persisted (%s), chain_hash=%s",
+		ErrEvidenceRequired, e.WorkflowID, e.ErrorCode, e.ChainHash)
+}
+
+// Is makes errors.Is(err, ErrEvidenceRequired) hold for the structured error.
+func (e *EvidenceRequiredError) Is(target error) bool { return target == ErrEvidenceRequired }
+
 // IsEvidenceRequired checks if an error is an ErrEvidenceRequired: the execution
 // happened, but its proof was not persisted although the service requires it.
 func IsEvidenceRequired(err error) bool { return errors.Is(err, ErrEvidenceRequired) }
