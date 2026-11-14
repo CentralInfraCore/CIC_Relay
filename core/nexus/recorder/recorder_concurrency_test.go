@@ -3,6 +3,7 @@ package recorder
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -26,6 +27,24 @@ func commitCount(t *testing.T, repo string) int {
 	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
 	require.NoError(t, err)
 	return n
+}
+
+func gitOutput(t *testing.T, repo string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = repo
+	out, err := cmd.Output()
+	require.NoError(t, err, "git %s", strings.Join(args, " "))
+	return strings.TrimSpace(string(out))
+}
+
+func gitLines(t *testing.T, repo string, args ...string) []string {
+	t.Helper()
+	out := gitOutput(t, repo, args...)
+	if out == "" {
+		return nil
+	}
+	return strings.Split(out, "\n")
 }
 
 // slowSigningMock is signingMock with a delay inside Sign. The delay widens the
@@ -71,6 +90,30 @@ func TestSignAndCommit_ConcurrentRecordsKeepChainVerifiable(t *testing.T) {
 	}
 	assert.Equal(t, n+1, commitCount(t, repo), "root commit plus exactly one commit per record")
 	assert.NoError(t, r.VerifyChain(context.Background()), "the signed chain must verify")
+
+	// A valid chain with the right number of commits does not prove that every record
+	// survived intact: each of the n distinct run-ids must appear exactly once, and the
+	// signed meta.json of each commit must carry the run-id its commit message names
+	// (overwritten files would pair one workflow's message with another's record).
+	got := map[string]int{}
+	for _, c := range gitLines(t, repo, "rev-list", "HEAD") {
+		subject := gitOutput(t, repo, "show", "-s", "--format=%s", c)
+		runID, ok := strings.CutPrefix(subject, "[AUTO] run-id: ")
+		if !ok {
+			continue // the root commit
+		}
+		got[runID]++
+		var meta struct {
+			RunID string `json:"run_id"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(gitOutput(t, repo, "show", c+":meta.json")), &meta))
+		assert.Equal(t, runID, meta.RunID, "commit %s: message and signed meta name different runs", c)
+	}
+	for i := 0; i < n; i++ {
+		runID := fmt.Sprintf("run-%02d", i)
+		assert.Equal(t, 1, got[runID], "run-id %s must be recorded exactly once", runID)
+	}
+	assert.Len(t, got, n)
 }
 
 // A failed HEAD read must fail the record. Signing an empty parent would put a

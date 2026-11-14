@@ -34,8 +34,13 @@ type GitStateRecorder struct {
 	// parent commit read from HEAD, and the four record files have fixed names in
 	// one shared working directory, so two overlapping calls would sign the same
 	// parent, overwrite each other's files, or collide on the git index lock. The
-	// lock is held from the HEAD read until the commit is created. It protects one
-	// process; several writers on one repository would need a file lock.
+	// lock is held from the HEAD read until the commit is created.
+	//
+	// Contract: a single recorder instance per repository (single writer). Two
+	// instances, or two processes, on the same repository are NOT serialized by this
+	// lock and would need a file lock. A caller waits for the lock without regard to
+	// its context: the wait is bounded by the preceding record's Vault Sign call and git
+	// commands, and a context-aware wait would be a separate change.
 	mu sync.Mutex
 }
 
