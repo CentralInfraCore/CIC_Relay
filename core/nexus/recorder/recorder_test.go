@@ -195,8 +195,10 @@ func TestGitStateRecorder_RecordState_Errors(t *testing.T) {
 		recorder, err := NewGitStateRecorder(tmpDir, &MockCryptoService{})
 		require.NoError(t, err)
 
-		// Make git fail by removing the .git directory
-		err = os.RemoveAll(filepath.Join(tmpDir, ".git"))
+		// Make `git add` fail while HEAD stays readable: a corrupt index file.
+		// (Removing .git would now fail earlier, at the parent-commit read, which
+		// TestSignAndCommit_HeadReadFailureIsAnError covers.)
+		err = os.WriteFile(filepath.Join(tmpDir, ".git", "index"), []byte("not an index"), 0o644)
 		require.NoError(t, err)
 
 		_, err = recorder.RecordState(context.Background(), types.ExpectedState{}, nil)
