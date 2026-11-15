@@ -161,6 +161,42 @@ func parsePortcelainStatus(output string) []StatusEntry {
 	return entries
 }
 
+// envAllowlist names the only variables a git child inherits from the relay process. Everything else
+// (API tokens, Vault credentials, CIC_* settings, GIT_* overrides) stays with the relay: git, and the
+// ssh/credential helpers it starts, have no use for them, and a transport that misbehaves must not be
+// able to read them. These are the variables git needs to find itself, its home, a proxy or a CA bundle.
+var envAllowlist = map[string]bool{
+	"PATH": true, "HOME": true, "USER": true, "LOGNAME": true, "TMPDIR": true, "TZ": true,
+	"LANG": true, "LC_ALL": true, "LC_CTYPE": true,
+	"SSH_AUTH_SOCK": true, "GIT_SSH": true, "GIT_SSH_COMMAND": true,
+	"HTTP_PROXY": true, "HTTPS_PROXY": true, "NO_PROXY": true,
+	"http_proxy": true, "https_proxy": true, "no_proxy": true,
+	"SSL_CERT_FILE": true, "SSL_CERT_DIR": true, "GIT_SSL_CAINFO": true,
+}
+
+// gitEnv builds the child environment: the allowlisted inherited variables, then the fixed hardening
+// values, which are appended last and so win over anything inherited.
+func gitEnv(environ []string, allowLocal bool) []string {
+	var out []string
+	for _, kv := range environ {
+		name, _, _ := strings.Cut(kv, "=")
+		if envAllowlist[name] {
+			out = append(out, kv)
+		}
+	}
+	return append(out,
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_ASKPASS=/bin/false",
+		"GIT_AUTHOR_NAME=CIC Nexus",
+		"GIT_AUTHOR_EMAIL=nexus@cic-relay.local",
+		"GIT_COMMITTER_NAME=CIC Nexus",
+		"GIT_COMMITTER_EMAIL=nexus@cic-relay.local",
+		"GIT_LITERAL_PATHSPECS=1",
+		"GIT_ALLOW_PROTOCOL=https:ssh"+localProtocol(allowLocal),
+	)
+}
+
 func localProtocol(allow bool) string {
 	if allow {
 		return ":file"
@@ -203,17 +239,7 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 	if dir != "" {
 		cmd.Dir = dir
 	}
-	cmd.Env = append(os.Environ(),
-		"GIT_CONFIG_NOSYSTEM=1",
-		"GIT_TERMINAL_PROMPT=0",
-		"GIT_ASKPASS=/bin/false",
-		"GIT_AUTHOR_NAME=CIC Nexus",
-		"GIT_AUTHOR_EMAIL=nexus@cic-relay.local",
-		"GIT_COMMITTER_NAME=CIC Nexus",
-		"GIT_COMMITTER_EMAIL=nexus@cic-relay.local",
-		"GIT_LITERAL_PATHSPECS=1",
-		"GIT_ALLOW_PROTOCOL=https:ssh"+localProtocol(e.allowLocalSources),
-	)
+	cmd.Env = gitEnv(os.Environ(), e.allowLocalSources)
 
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
