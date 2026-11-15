@@ -29,6 +29,9 @@ type WasmManagerConfig struct {
 	// additional host modules (e.g., typed git host functions for WASM modules).
 	// It receives the wazero runtime so it can instantiate host module builders.
 	HostSetupFn func(ctx context.Context, r wazero.Runtime) error `yaml:"-"`
+	// InstanceBinding, if non-nil, is called when an instance is created and its result is carried in the
+	// instance's identity (InstanceIdentity.Binding).
+	InstanceBinding func(moduleID string) string `yaml:"-"`
 }
 
 // --- WasmManager: The Caching Compiler and Instance Factory ---
@@ -187,6 +190,9 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 	// The identity exists before the instance does and is on the context of the instantiation itself, so
 	// anything a start section does is already attributed to this instance and this artifact.
 	identity := InstanceIdentity{Name: moduleID, Artifact: artifact, Serial: m.serial.Add(1)}
+	if m.config.InstanceBinding != nil {
+		identity.Binding = m.config.InstanceBinding(moduleID)
+	}
 	ctx = WithInstanceIdentity(ctx, identity)
 
 	// Don't call the _start function, as these are libraries, not applications.

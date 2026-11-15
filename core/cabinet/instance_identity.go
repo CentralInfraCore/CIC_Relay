@@ -12,6 +12,11 @@ type InstanceIdentity struct {
 	Name     string // the module ID the instance was started for
 	Artifact string // checksum of the module artifact that was compiled for this instance
 	Serial   uint64 // unique per instance for the lifetime of the WasmManager
+	// Binding is an opaque token the embedding application supplies for the module when the instance is
+	// created (WasmManagerConfig.InstanceBinding). The cabinet only carries it; the relay uses it to tie
+	// an instance to the capability manifest that was in force when the instance started, which the
+	// artifact checksum alone does not capture (the same wasm can be loaded with another manifest).
+	Binding string
 }
 
 type instanceIdentityKey struct{}

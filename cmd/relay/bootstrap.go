@@ -622,6 +622,10 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 		}
 		return err
 	}
+	// Stored: the staged grant becomes active, for exactly this artifact.
+	if commitModuleCapability != nil {
+		commitModuleCapability(moduleID, moduleDesc.Checksum())
+	}
 	return nil
 }
 

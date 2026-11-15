@@ -718,7 +718,9 @@ func main() {
 	cicFlowReg := newCICFlowRegistry(buildOCIKeyResolver(), nil)
 	// loadModule binds each verified module's cic-flow capability into this
 	// registry via the package-level hook (fail-closed: only verified modules).
-	registerModuleCapability = cicFlowReg.publishVerified
+	registerModuleCapability = cicFlowReg.stageVerified
+	commitModuleCapability = cicFlowReg.commitGrant
+	wasmConfig.InstanceBinding = cicFlowReg.bindingFor
 	revokeModuleCapability = cicFlowReg.revoke
 	wasmConfig.HostSetupFn = combineHostSetups(
 		makeGitHostSetupFn(gitOps, cicFlowReg),

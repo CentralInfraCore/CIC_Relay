@@ -144,8 +144,8 @@ capability_manifest:
 	defer rt.Close(context.Background())
 	require.NoError(t, registerGitHostFunctions(context.Background(), rt, ops, reg))
 
-	gid := inst("granted@1", "art-1")
-	sid := inst("stranger@1", "art-1")
+	gid := instUnder("granted@1", "art-1", manifest)
+	sid := instUnder("stranger@1", "art-1", manifest)
 	reqJSON := func(v map[string]interface{}) string { b, _ := json.Marshal(v); return string(b) }
 	errOf := func(out map[string]interface{}) string { s, _ := out["error"].(string); return s }
 
@@ -159,7 +159,7 @@ capability_manifest:
 		assert.Contains(t, errOf(out), "no verified git capability")
 	})
 	t.Run("authorization stops a stale instance of a granted module", func(t *testing.T) {
-		older := inst("granted@1", "older-artifact")
+		older := instUnder("granted@1", "older-artifact", manifest)
 		out := runGuest(t, rt, "granted@1", &older, "status", reqJSON(map[string]interface{}{"repo_id": "r"}))
 		assert.Contains(t, errOf(out), "not the verified artifact")
 	})
@@ -248,7 +248,7 @@ func TestGitFromAStartSection_RunsUnderTheNewInstancesOwnIdentity(t *testing.T) 
 	reg := newCICFlowRegistry(nil, &stubDoer{})
 	ops := &statusCounter{}
 	mgr, err := cabinet.NewWasmManager(ctx, store, cabinet.WasmManagerConfig{
-		LRUCacheSize: 10, DefaultTimeoutSeconds: 1, HostSetupFn: makeGitHostSetupFn(ops, reg)})
+		LRUCacheSize: 10, DefaultTimeoutSeconds: 1, HostSetupFn: makeGitHostSetupFn(ops, reg), InstanceBinding: reg.bindingFor})
 	require.NoError(t, err)
 	defer mgr.Close(ctx)
 
@@ -453,7 +453,7 @@ func TestGitCapabilityLifecycle_LoadThenInstantiate(t *testing.T) {
 		cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1})
 	require.NoError(t, err)
 	mgr, err := cabinet.NewWasmManager(ctx, store, cabinet.WasmManagerConfig{
-		LRUCacheSize: 10, DefaultTimeoutSeconds: 1, HostSetupFn: makeGitHostSetupFn(ops, reg)})
+		LRUCacheSize: 10, DefaultTimeoutSeconds: 1, HostSetupFn: makeGitHostSetupFn(ops, reg), InstanceBinding: reg.bindingFor})
 	require.NoError(t, err)
 	defer mgr.Close(ctx)
 
@@ -509,4 +509,183 @@ func TestGitCapabilityLifecycle_LoadThenInstantiate(t *testing.T) {
 	wg.Wait()
 	load(y, verified)
 	assert.Equal(t, 1, servedOnStart(), "after the race, a quiet verified load is served again")
+}
+
+// ---- F8.1 / F8.2: the manifest in force, and the window between publishing and storing ----
+
+// callingGuest assembles a module that satisfies the CIC guest ABI and whose Call invokes git.status once
+// with the given request. Unlike the start-section guest it can be instantiated first and asked later,
+// so an instance can outlive a reload of its module.
+func callingGuest(requestJSON string) []byte {
+	tAlloc := []byte{0x60, 0x01, 0x7f, 0x01, 0x7f}
+	tDealloc := []byte{0x60, 0x02, 0x7f, 0x7f, 0x00}
+	tCall := []byte{0x60, 0x06, 0x7f, 0x7f, 0x7f, 0x7f, 0x7f, 0x7f, 0x01, 0x7e}
+	tStatus := []byte{0x60, 0x04, 0x7f, 0x7f, 0x7f, 0x7f, 0x01, 0x7f}
+	body := func(instr ...byte) []byte { b := append([]byte{0x00}, instr...); return append(uleb(len(b)), b...) }
+	call := []byte{0x41, 0x00}
+	call = append(call, append([]byte{0x41}, sleb(len(requestJSON))...)...)
+	call = append(call, append([]byte{0x41}, sleb(2048)...)...)
+	call = append(call, append([]byte{0x41}, sleb(1024)...)...)
+	call = append(call, 0x10, 0x00, 0x1a, 0x42, 0x00, 0x0b) // call git.status; drop; i64.const 0; end
+	data := append([]byte{0x00, 0x41, 0x00, 0x0b}, append(uleb(len(requestJSON)), requestJSON...)...)
+
+	m := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+	m = append(m, section(1, vec(tAlloc, tDealloc, tCall, tStatus))...)
+	m = append(m, section(2, vec(append(append(name("git"), name("status")...), 0x00, 0x03)))...)
+	m = append(m, section(3, vec([]byte{0x00}, []byte{0x01}, []byte{0x02}))...)
+	m = append(m, section(5, vec([]byte{0x00, 0x01}))...)
+	m = append(m, section(7, vec(
+		append(name("memory"), 0x02, 0x00),
+		append(name("allocate"), 0x00, 0x01),
+		append(name("deallocate"), 0x00, 0x02),
+		append(name("Call"), 0x00, 0x03),
+	))...)
+	m = append(m, section(10, vec(
+		body(0x41, 0x80, 0x20, 0x0b), // allocate: i32.const 4096
+		body(0x0b),
+		append(uleb(len(call)+1), append([]byte{0x00}, call...)...),
+	))...)
+	m = append(m, section(11, vec(data))...)
+	return m
+}
+
+const manifestStatusOnly = "abi:\n  imports:\n    - module: git\n      functions: [status]\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [status]\n"
+
+// manifestStatusFetch is the same module with a different, wider manifest.
+const manifestStatusFetch = "abi:\n  imports:\n    - module: git\n      functions: [status]\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [status, fetch]\n      remotes: [origin]\n"
+
+type lifecycleEnv struct {
+	t     *testing.T
+	ctx   context.Context
+	reg   *cicFlowRegistry
+	svc   cabinet.Cabinet
+	mgr   *cabinet.WasmManager
+	ops   *statusCounter
+	wasm  []byte
+	pki   *PKIAssets
+	unver *PKIAssets
+}
+
+func newLifecycleEnv(t *testing.T) *lifecycleEnv {
+	t.Helper()
+	ctx := context.Background()
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	t.Cleanup(hooks(reg))
+	ops := &statusCounter{}
+	store := cabinet.NewMemModuleStore()
+	svc, err := cabinet.NewCabinetService(ctx, cabinet.NewMemSchemaStore(), store, cabinet.NewMemWorkflowStore(),
+		cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1})
+	require.NoError(t, err)
+	mgr, err := cabinet.NewWasmManager(ctx, store, cabinet.WasmManagerConfig{
+		LRUCacheSize: 10, DefaultTimeoutSeconds: 2, HostSetupFn: makeGitHostSetupFn(ops, reg), InstanceBinding: reg.bindingFor})
+	require.NoError(t, err)
+	t.Cleanup(func() { mgr.Close(ctx) })
+	return &lifecycleEnv{t: t, ctx: ctx, reg: reg, svc: svc, mgr: mgr, ops: ops,
+		wasm: callingGuest(`{"repo_id":"infra"}`), pki: loadedPKIWithSource(t), unver: buildLoadedPKIAssets(t)}
+}
+
+func (e *lifecycleEnv) load(manifest string, pki *PKIAssets) {
+	e.t.Helper()
+	fsys, y := gitModuleFSWith(e.t, e.wasm, manifest)
+	require.NoError(e.t, loadModule(e.ctx, e.svc, fsys, "m.yaml", y, pki, int64(16*1024*1024), newDiscardLogger()))
+}
+
+// call runs the instance's Call, which asks git for status; it returns how many times git was reached.
+func (e *lifecycleEnv) call(h interface {
+	Process(context.Context, string, string) (string, string)
+}) int {
+	before := e.ops.n
+	_, _ = h.Process(e.ctx, "{}", "{}")
+	return e.ops.n - before
+}
+
+// F8.1: the same wasm (so the same artifact checksum) loaded again with another capability manifest. An
+// instance created before the reload keeps the manifest it started under: it is refused under the new
+// one, whether wider or narrower, and an instance created after is served under the new one.
+func TestGitCapability_SameArtifactDifferentManifest(t *testing.T) {
+	e := newLifecycleEnv(t)
+	const id = "gitmod@1.0"
+
+	e.load(manifestStatusOnly, e.pki)
+	old, err := e.mgr.NewHostInstance(e.ctx, id)
+	require.NoError(t, err)
+	defer old.Close(e.ctx)
+	assert.Equal(t, 1, e.call(old), "under the manifest it started with, the instance is served")
+
+	stored1, err := e.svc.GetModule(id)
+	require.NoError(t, err)
+	e.load(manifestStatusFetch, e.pki)
+	stored2, err := e.svc.GetModule(id)
+	require.NoError(t, err)
+	require.Equal(t, stored1.Checksum(), stored2.Checksum(), "precondition: same wasm, same artifact checksum")
+
+	assert.Equal(t, 0, e.call(old), "the pre-existing instance must not pick up the new manifest, wider or not")
+
+	require.NoError(t, old.Close(e.ctx))
+	fresh, err := e.mgr.NewHostInstance(e.ctx, id)
+	require.NoError(t, err)
+	defer fresh.Close(e.ctx)
+	assert.Equal(t, 1, e.call(fresh), "an instance created after the reload is served under the new manifest")
+
+	// Reloading the very same manifest again changes nothing for a running instance.
+	e.load(manifestStatusFetch, e.pki)
+	assert.Equal(t, 1, e.call(fresh), "an identical reload does not strand a running instance")
+}
+
+// F8.2: between publishing the grant and storing the artifact the grant is staged and authorises nothing;
+// an instance created in that window carries no binding and stays refused, even for the same artifact.
+func TestGitCapability_StagedGrantAuthorisesNothingUntilStored(t *testing.T) {
+	e := newLifecycleEnv(t)
+	const id = "gitmod@1.0"
+	e.load(manifestStatusOnly, e.pki)
+
+	held, release := make(chan struct{}), make(chan struct{})
+	var first atomic.Bool
+	afterCapabilityPublished = func(string) {
+		if first.CompareAndSwap(false, true) {
+			close(held)
+			<-release
+		}
+	}
+	defer func() { afterCapabilityPublished = nil }()
+
+	done := make(chan struct{})
+	go func() { e.load(manifestStatusFetch, e.pki); close(done) }() // same wasm, new manifest: staged, not yet stored
+	<-held
+
+	inWindow, err := e.mgr.NewHostInstance(e.ctx, id)
+	require.NoError(t, err)
+	defer inWindow.Close(e.ctx)
+	assert.Equal(t, 0, e.call(inWindow), "the grant is staged: nothing is served in the window")
+	assert.Equal(t, "", e.reg.bindingFor(id), "a staged grant yields no binding")
+
+	close(release)
+	<-done
+	assert.Equal(t, 0, e.call(inWindow), "an instance created in the window stays refused after the commit")
+	require.NoError(t, inWindow.Close(e.ctx))
+	after, err := e.mgr.NewHostInstance(e.ctx, id)
+	require.NoError(t, err)
+	defer after.Close(e.ctx)
+	assert.Equal(t, 1, e.call(after), "an instance created after the commit is served")
+}
+
+// commitGrant activates only the grant staged for exactly that artifact.
+func TestGitGrant_CommitIsBoundToTheStagedArtifact(t *testing.T) {
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	require.NoError(t, reg.stageVerified("m@1", []byte(gitManifestYAML), "art-1"))
+	i := inst("m@1", "art-1")
+	assert.Error(t, reg.authorizeGit(i, "status", gitAuthRequest{RepoID: "infra"}), "staged: not active")
+	reg.commitGrant("m@1", "some-other-artifact")
+	assert.Error(t, reg.authorizeGit(i, "status", gitAuthRequest{RepoID: "infra"}), "a commit for another artifact does nothing")
+	reg.commitGrant("m@1", "art-1")
+	assert.NoError(t, reg.authorizeGit(i, "status", gitAuthRequest{RepoID: "infra"}))
+	reg.commitGrant("m@1", "art-1") // idempotent
+	assert.NoError(t, reg.authorizeGit(i, "status", gitAuthRequest{RepoID: "infra"}))
+
+	// An instance with the right artifact but another manifest's binding, or none, is refused.
+	other := instUnder("m@1", "art-1", manifestStatusFetch)
+	assert.Error(t, reg.authorizeGit(other, "status", gitAuthRequest{RepoID: "infra"}))
+	noBinding := inst("m@1", "art-1")
+	noBinding.Binding = ""
+	assert.Error(t, reg.authorizeGit(noBinding, "status", gitAuthRequest{RepoID: "infra"}))
 }

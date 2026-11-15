@@ -39,8 +39,12 @@ type gitGrant struct {
 	wasmDigest     string
 	manifestDigest string
 	// artifact is the checksum of the module artifact the cabinet stores for the load that produced this
-	// grant. Published together with the grant (publishVerified); a grant without it is never usable.
+	// grant. Published together with the grant; a grant without it is never usable.
 	artifact string
+	// active is false while the load that produced the grant has not yet stored its artifact (a staged
+	// grant) and true once it has (commitGrant). Only an active grant authorises anything, so nothing is
+	// ever authorised by a grant whose module is not in the cabinet.
+	active bool
 }
 
 // registerModuleCapability, if set, is called by the module-load path
@@ -49,6 +53,10 @@ type gitGrant struct {
 // tests that do not exercise capability binding. A non-nil error rejects the
 // module at load (fail-closed). It is set once at startup before any load.
 var registerModuleCapability func(moduleID string, projectYAML []byte, artifact string) error
+
+// commitModuleCapability, if set, is called by loadModule once the module's artifact is stored in the
+// cabinet, to activate the grant staged for it. Set once at startup.
+var commitModuleCapability func(moduleID, artifact string)
 
 // revokeModuleCapability, if set, is called by loadModule as soon as a module's ID is known, before the
 // module is examined, to drop whatever an earlier load of the same ID was granted. A grant belongs to
@@ -93,6 +101,40 @@ func (r *cicFlowRegistry) registerVerified(moduleID string, projectYAML []byte) 
 // so there is no moment at which a grant exists without its artifact, or with an artifact that came from
 // another load. A git grant published without an artifact ("") is never usable.
 func (r *cicFlowRegistry) publishVerified(moduleID string, projectYAML []byte, artifact string) error {
+	return r.publish(moduleID, projectYAML, artifact, true)
+}
+
+// stageVerified is publishVerified for the loader: the grant is recorded with its artifact but is NOT yet
+// active; commitGrant activates it once the module has been stored. Between the two nothing is authorised
+// by it, and an instance created in that window carries no binding, so it stays unauthorised for good.
+func (r *cicFlowRegistry) stageVerified(moduleID string, projectYAML []byte, artifact string) error {
+	return r.publish(moduleID, projectYAML, artifact, false)
+}
+
+// commitGrant activates the staged grant of moduleID if, and only if, it is still the one staged for
+// artifact. A stale or foreign commit does nothing.
+func (r *cicFlowRegistry) commitGrant(moduleID, artifact string) {
+	r.mu.Lock()
+	if g, ok := r.git[moduleID]; ok && !g.active && g.artifact == artifact {
+		g.active = true
+		r.git[moduleID] = g
+	}
+	r.mu.Unlock()
+}
+
+// bindingFor is WasmManagerConfig.InstanceBinding: the digest of the manifest of the active grant for
+// moduleID, or "" if there is none. An instance carries it from the moment it is created, so a later reload
+// with a different manifest does not widen (or narrow) what that already-running instance may do.
+func (r *cicFlowRegistry) bindingFor(moduleID string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if g, ok := r.git[moduleID]; ok && g.active {
+		return g.manifestDigest
+	}
+	return ""
+}
+
+func (r *cicFlowRegistry) publish(moduleID string, projectYAML []byte, artifact string, active bool) error {
 	p, err := parseModuleProject(projectYAML)
 	if err != nil {
 		return err
@@ -123,6 +165,7 @@ func (r *cicFlowRegistry) publishVerified(moduleID string, projectYAML []byte, a
 			wasmDigest:     p.WasmDigest,
 			manifestDigest: hex.EncodeToString(sum[:]),
 			artifact:       artifact,
+			active:         active,
 		}
 	}
 	r.mu.Unlock()
@@ -163,8 +206,14 @@ func (r *cicFlowRegistry) authorizeGit(instance cabinet.InstanceIdentity, op str
 	// created from exactly the artifact the grant was bound to. An instance started from an older artifact
 	// (before a reload), from an unverified one, or from none at all carries a different or empty artifact
 	// and is refused; a re-grant binds to the new artifact only.
-	if g.artifact == "" || g.artifact != instance.Artifact {
+	if !g.active || g.artifact == "" || g.artifact != instance.Artifact {
 		return fmt.Errorf("git: the running module is not the verified artifact this capability was granted to")
+	}
+	// ...and under the manifest that was in force when the instance was created. The same wasm loaded
+	// again with another manifest is the same artifact; the instance still carries the manifest it started
+	// under, and an instance that started under a different one is refused.
+	if instance.Binding == "" || instance.Binding != g.manifestDigest {
+		return fmt.Errorf("git: the running module started under a different capability manifest")
 	}
 	for _, rule := range g.rules {
 		if rule.Repo != req.RepoID || !containsFold(rule.Ops, op) {

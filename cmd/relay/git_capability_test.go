@@ -43,7 +43,13 @@ capability_manifest:
 // an instance named id is running that artifact, as after a normal load and instantiation.
 // inst is the identity the WasmManager would attach to an instance of module name built from artifact.
 func inst(name, artifact string) cabinet.InstanceIdentity {
-	return cabinet.InstanceIdentity{Name: name, Artifact: artifact, Serial: 1}
+	return instUnder(name, artifact, gitManifestYAML)
+}
+
+// instUnder is inst for an instance that started while the manifest document manifestYAML was in force.
+func instUnder(name, artifact, manifestYAML string) cabinet.InstanceIdentity {
+	sum := sha256.Sum256([]byte(manifestYAML))
+	return cabinet.InstanceIdentity{Name: name, Artifact: artifact, Serial: 1, Binding: hex.EncodeToString(sum[:])}
 }
 
 // invokeAs runs a host function the way the runtime does: with the instance identity on the context.
@@ -191,7 +197,7 @@ var (
 
 func gitModuleFS(t *testing.T, wasm []byte) (fstest.MapFS, []byte) {
 	t.Helper()
-	fsys, yamlContent := moduleFSWith(t, "gitmod", `abi:
+	return gitModuleFSWith(t, wasm, `abi:
   imports:
     - module: git
       functions: [status]
@@ -200,6 +206,13 @@ capability_manifest:
     - repo: infra
       ops: [status]
 `)
+}
+
+// gitModuleFSWith is gitModuleFS with the module's manifest given: the same wasm can be loaded with
+// different capability manifests.
+func gitModuleFSWith(t *testing.T, wasm []byte, manifest string) (fstest.MapFS, []byte) {
+	t.Helper()
+	fsys, yamlContent := moduleFSWith(t, "gitmod", manifest)
 	if wasm != nil {
 		sum := sha256.Sum256(wasm)
 		y := strings.NewReplacer(
@@ -216,9 +229,10 @@ capability_manifest:
 func hexOf(b []byte) string { s := sha256.Sum256(b); return hex.EncodeToString(s[:]) }
 
 func hooks(reg *cicFlowRegistry) func() {
-	registerModuleCapability = reg.publishVerified
+	registerModuleCapability = reg.stageVerified
+	commitModuleCapability = reg.commitGrant
 	revokeModuleCapability = reg.revoke
-	return func() { registerModuleCapability, revokeModuleCapability = nil, nil }
+	return func() { registerModuleCapability, commitModuleCapability, revokeModuleCapability = nil, nil, nil }
 }
 
 func loadGit(t *testing.T, svc cabinet.Cabinet, fsys fstest.MapFS, y []byte, pki *PKIAssets) {
@@ -242,8 +256,8 @@ func TestGitGrant_FollowsTheVerifiedArtifactAndTheRunningInstance(t *testing.T) 
 	require.NoError(t, err)
 	art1 := d1.Checksum()
 
-	assert.Error(t, reg.authorizeGit(inst(id, "never-stored"), "status", status), "an instance of some other artifact: denied")
-	assert.NoError(t, reg.authorizeGit(inst(id, art1), "status", status), "an instance of the verified artifact: allowed")
+	assert.Error(t, reg.authorizeGit(instUnder(id, "never-stored", string(y1)), "status", status), "an instance of some other artifact: denied")
+	assert.NoError(t, reg.authorizeGit(instUnder(id, art1, string(y1)), "status", status), "an instance of the verified artifact: allowed")
 	g := reg.git[id]
 	assert.NotEmpty(t, g.wasmDigest)
 	assert.NotEmpty(t, g.manifestDigest)
@@ -255,16 +269,16 @@ func TestGitGrant_FollowsTheVerifiedArtifactAndTheRunningInstance(t *testing.T) 
 	d2, err := svc.GetModule(id)
 	require.NoError(t, err)
 	require.NotEqual(t, art1, d2.Checksum(), "a different binary is a different artifact")
-	assert.Error(t, reg.authorizeGit(inst(id, art1), "status", status),
+	assert.Error(t, reg.authorizeGit(instUnder(id, art1, string(y1)), "status", status),
 		"the instance that is still running the old artifact must not use the new artifact's grant")
-	assert.NoError(t, reg.authorizeGit(inst(id, d2.Checksum()), "status", status), "a new instance of the new artifact is granted")
+	assert.NoError(t, reg.authorizeGit(instUnder(id, d2.Checksum(), string(y2)), "status", status), "a new instance of the new artifact is granted")
 
 	// The same ID loads again without the provenance anchor: it loads, but is granted nothing.
 	loadGit(t, svc, fs1, y1, buildLoadedPKIAssets(t))
-	assert.Error(t, reg.authorizeGit(inst(id, d2.Checksum()), "status", status), "an unverified reload must not keep the earlier grant")
+	assert.Error(t, reg.authorizeGit(instUnder(id, d2.Checksum(), string(y2)), "status", status), "an unverified reload must not keep the earlier grant")
 	d3, err := svc.GetModule(id)
 	require.NoError(t, err)
-	assert.Error(t, reg.authorizeGit(inst(id, d3.Checksum()), "status", status),
+	assert.Error(t, reg.authorizeGit(instUnder(id, d3.Checksum(), string(y1)), "status", status),
 		"the unverified artifact must not inherit the earlier grant even once it is stored and running")
 }
 
@@ -381,7 +395,7 @@ capability_manifest:
 	reg := newCICFlowRegistry(nil, &stubDoer{})
 	require.NoError(t, reg.publishVerified("mod@1", []byte(manifest), "art-1"))
 	push := func(spec string) error {
-		return reg.authorizeGit(inst("mod@1", "art-1"), "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: spec})
+		return reg.authorizeGit(instUnder("mod@1", "art-1", manifest), "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: spec})
 	}
 	for _, spec := range []string{"main", "main:main", "main:release/1", "main:refs/heads/release/x", "refs/tags/v1", "main:refs/tags/v2"} {
 		assert.NoError(t, push(spec), spec)
