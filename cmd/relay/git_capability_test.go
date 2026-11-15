@@ -66,8 +66,7 @@ func invokeAs(fn gitHostFn, mod *minMod, id *cabinet.InstanceIdentity, req inter
 func gitRegistryWith(t *testing.T, id, yaml string) *cicFlowRegistry {
 	t.Helper()
 	reg := newCICFlowRegistry(nil, &stubDoer{})
-	require.NoError(t, reg.registerVerified(id, []byte(yaml)))
-	reg.bindArtifact(id, "art-1")
+	require.NoError(t, reg.publishVerified(id, []byte(yaml), "art-1"))
 	return reg
 }
 
@@ -217,10 +216,9 @@ capability_manifest:
 func hexOf(b []byte) string { s := sha256.Sum256(b); return hex.EncodeToString(s[:]) }
 
 func hooks(reg *cicFlowRegistry) func() {
-	registerModuleCapability = reg.registerVerified
+	registerModuleCapability = reg.publishVerified
 	revokeModuleCapability = reg.revoke
-	bindModuleArtifact = reg.bindArtifact
-	return func() { registerModuleCapability, revokeModuleCapability, bindModuleArtifact = nil, nil, nil }
+	return func() { registerModuleCapability, revokeModuleCapability = nil, nil }
 }
 
 func loadGit(t *testing.T, svc cabinet.Cabinet, fsys fstest.MapFS, y []byte, pki *PKIAssets) {
@@ -298,8 +296,7 @@ func TestGitGrant_ConcurrentReloadNeverAuthorizesAStaleInstance(t *testing.T) {
 	}
 	for n := 0; n < 300; n++ {
 		reg.revoke(id)
-		require.NoError(t, reg.registerVerified(id, []byte(gitManifestYAML)))
-		reg.bindArtifact(id, fmt.Sprintf("new-artifact-%d", n))
+		require.NoError(t, reg.publishVerified(id, []byte(gitManifestYAML), fmt.Sprintf("new-artifact-%d", n)))
 	}
 	close(stop)
 	wg.Wait()
@@ -308,12 +305,12 @@ func TestGitGrant_ConcurrentReloadNeverAuthorizesAStaleInstance(t *testing.T) {
 
 func TestGitGrant_UnboundOrUnknownInstanceIsDenied(t *testing.T) {
 	reg := newCICFlowRegistry(nil, &stubDoer{})
-	require.NoError(t, reg.registerVerified("m@1", []byte(gitManifestYAML)))
+	require.NoError(t, reg.publishVerified("m@1", []byte(gitManifestYAML), ""))
 	req := gitAuthRequest{RepoID: "infra"}
 	assert.Error(t, reg.authorizeGit(inst("m@1", "x"), "status", req), "granted but the grant is not bound to a stored artifact")
-	reg.bindArtifact("m@1", "y")
+	require.NoError(t, reg.publishVerified("m@1", []byte(gitManifestYAML), "y"))
 	assert.Error(t, reg.authorizeGit(inst("m@1", "x"), "status", req), "instance of x, granted for y")
-	reg.bindArtifact("m@1", "x")
+	require.NoError(t, reg.publishVerified("m@1", []byte(gitManifestYAML), "x"))
 	assert.NoError(t, reg.authorizeGit(inst("m@1", "x"), "status", req))
 	assert.Error(t, reg.authorizeGit(inst("m@1", ""), "status", req), "an instance with no artifact")
 }

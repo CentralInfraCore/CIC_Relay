@@ -37,8 +37,8 @@ type gitGrant struct {
 	rules          []gitRule
 	wasmDigest     string
 	manifestDigest string
-	// artifact is the checksum of the module artifact the cabinet stored for this load (bindArtifact),
-	// empty until the module is stored. A grant without it is never usable.
+	// artifact is the checksum of the module artifact the cabinet stores for the load that produced this
+	// grant. Published together with the grant (publishVerified); a grant without it is never usable.
 	artifact string
 }
 
@@ -47,17 +47,13 @@ type gitGrant struct {
 // capability. `main` wires it to a registry's registerVerified; it stays nil in
 // tests that do not exercise capability binding. A non-nil error rejects the
 // module at load (fail-closed). It is set once at startup before any load.
-var registerModuleCapability func(moduleID string, projectYAML []byte) error
+var registerModuleCapability func(moduleID string, projectYAML []byte, artifact string) error
 
 // revokeModuleCapability, if set, is called by loadModule as soon as a module's ID is known, before the
 // module is examined, to drop whatever an earlier load of the same ID was granted. A grant belongs to
 // the artifact it was verified for, not to the name; a reload starts from nothing and is re-granted
 // only if it verifies. Set once at startup, like registerModuleCapability.
 var revokeModuleCapability func(moduleID string)
-
-// bindModuleArtifact, if set, is called by loadModule once the module is stored in the cabinet, with the
-// checksum of the stored artifact. Set once at startup.
-var bindModuleArtifact func(moduleID, artifactChecksum string)
 
 // newCICFlowRegistry builds an empty registry. A nil doer defaults to the egress client
 // (newEgressClient: no redirects, no proxy, timeouts, blocked address ranges); a nil
@@ -88,6 +84,14 @@ func (r *cicFlowRegistry) lookup(moduleID string) (cicFlowDeps, bool) {
 //   - A module that imports cic-flow but under-declares its manifest is rejected
 //     (error) — the load path surfaces this as a module-load failure.
 func (r *cicFlowRegistry) registerVerified(moduleID string, projectYAML []byte) error {
+	return r.publishVerified(moduleID, projectYAML, "")
+}
+
+// publishVerified is registerVerified with the checksum of the artifact the cabinet is about to store for
+// this module. The grant and the artifact it belongs to are published in ONE step under the registry lock,
+// so there is no moment at which a grant exists without its artifact, or with an artifact that came from
+// another load. A git grant published without an artifact ("") is never usable.
+func (r *cicFlowRegistry) publishVerified(moduleID string, projectYAML []byte, artifact string) error {
 	p, err := parseModuleProject(projectYAML)
 	if err != nil {
 		return err
@@ -117,21 +121,11 @@ func (r *cicFlowRegistry) registerVerified(moduleID string, projectYAML []byte) 
 			rules:          append([]gitRule(nil), p.CapabilityManifest.Git...),
 			wasmDigest:     p.WasmDigest,
 			manifestDigest: hex.EncodeToString(sum[:]),
+			artifact:       artifact,
 		}
 	}
 	r.mu.Unlock()
 	return nil
-}
-
-// bindArtifact ties moduleID's git grant to the artifact checksum the cabinet stored for it. loadModule
-// calls it once the module is stored; a module that is not stored never becomes usable.
-func (r *cicFlowRegistry) bindArtifact(moduleID, artifactChecksum string) {
-	r.mu.Lock()
-	if g, ok := r.git[moduleID]; ok {
-		g.artifact = artifactChecksum
-		r.git[moduleID] = g
-	}
-	r.mu.Unlock()
 }
 
 // revoke drops every capability bound to moduleID. loadModule calls it before it examines a module, so a

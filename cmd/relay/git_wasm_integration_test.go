@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/fstest"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,8 +138,7 @@ capability_manifest:
       refs: ["main"]
 `, script)
 	reg := newCICFlowRegistry(nil, &stubDoer{})
-	require.NoError(t, reg.registerVerified("granted@1", []byte(manifest)))
-	reg.bindArtifact("granted@1", "art-1")
+	require.NoError(t, reg.publishVerified("granted@1", []byte(manifest), "art-1"))
 
 	rt := wazero.NewRuntime(context.Background())
 	defer rt.Close(context.Background())
@@ -259,11 +262,11 @@ func TestGitFromAStartSection_RunsUnderTheNewInstancesOwnIdentity(t *testing.T) 
 
 	assert.Equal(t, 0, start(), "no grant at all: the start section's call is refused")
 
-	require.NoError(t, reg.registerVerified(id, []byte(manifest)))
-	reg.bindArtifact(id, "some-other-artifact")
+	grant := func(artifact string) { require.NoError(t, reg.publishVerified(id, []byte(manifest), artifact)) }
+	grant("some-other-artifact")
 	assert.Equal(t, 0, start(), "a grant bound to a different artifact: refused")
 
-	reg.bindArtifact(id, artX)
+	grant(artX)
 	assert.Equal(t, 1, start(), "a grant bound to this instance's artifact: the start section may use it")
 
 	// The module is replaced by another artifact. The grant is still bound to the old one; the new
@@ -271,8 +274,239 @@ func TestGitFromAStartSection_RunsUnderTheNewInstancesOwnIdentity(t *testing.T) 
 	artY := put(wasmY)
 	require.NotEqual(t, artX, artY)
 	assert.Equal(t, 0, start(), "the new instance runs artifact Y; a grant for X does not apply to it")
-	reg.bindArtifact(id, artY)
+	grant(artY)
 	assert.Equal(t, 1, start(), "re-granted for Y: the new instance's start section is served, with Y's identity")
 	put(wasmX)
 	assert.Equal(t, 0, start(), "back to X while the grant is for Y: refused, nothing is inherited from the earlier instance")
+}
+
+// ---- F8: a grant and its artifact are published as one, and loads of one module ID do not interleave ----
+
+// Two manifests that differ in the repository they name, published concurrently each with its own
+// artifact. An observer reads the registry the whole time: every state it ever sees pairs a manifest with
+// the artifact that was published WITH it (or has no artifact at all, which is never usable), never the
+// manifest of one call and the artifact of another.
+func TestGitGrant_PublishPairsTheManifestWithItsOwnArtifact(t *testing.T) {
+	mk := func(repo string) []byte {
+		return []byte("abi:\n  imports: []\ncapability_manifest:\n  git:\n    - repo: " + repo + "\n      ops: [status]\n")
+	}
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	const id = "m@1"
+	pairs := map[string]string{"artifact-a": "repo-a", "artifact-b": "repo-b"}
+
+	stop := make(chan struct{})
+	var observed, bad atomic.Int64
+	var obs sync.WaitGroup
+	obs.Add(1)
+	go func() {
+		defer obs.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			reg.mu.RLock()
+			g, ok := reg.git[id]
+			reg.mu.RUnlock()
+			if !ok || g.artifact == "" {
+				continue
+			}
+			observed.Add(1)
+			if pairs[g.artifact] != g.rules[0].Repo {
+				bad.Add(1)
+			}
+		}
+	}()
+
+	var wg sync.WaitGroup
+	for g := 0; g < 8; g++ {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			repo, art := "repo-a", "artifact-a"
+			if g%2 == 1 {
+				repo, art = "repo-b", "artifact-b"
+			}
+			for n := 0; n < 300; n++ {
+				require.NoError(t, reg.publishVerified(id, mk(repo), art))
+			}
+		}(g)
+	}
+	wg.Wait()
+	close(stop)
+	obs.Wait()
+	assert.Positive(t, observed.Load(), "the observer must have seen published grants")
+	assert.Zero(t, bad.Load(), "a grant paired a manifest with another call's artifact")
+}
+
+// Concurrent loads of the same module ID with two different, verified artifacts: when they are done, the
+// cabinet holds one artifact and the registry holds the grant that was published for THAT artifact.
+// (Run with -race.) Loads are serialised, so there is no interleaving to get wrong.
+func TestLoadModule_ConcurrentLoadsOfOneIDLeaveGrantAndArtifactTogether(t *testing.T) {
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	defer hooks(reg)()
+	svc := newCabinetForTest(t)
+	const id = "gitmod@1.0"
+	pki := loadedPKIWithSource(t)
+	fsX, yX := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra"}`))
+	fsY, yY := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra" }`))
+
+	var wg sync.WaitGroup
+	for g := 0; g < 6; g++ {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			fsys, y := fsX, yX
+			if g%2 == 1 {
+				fsys, y = fsY, yY
+			}
+			for n := 0; n < 40; n++ {
+				require.NoError(t, loadModule(context.Background(), svc, fsys, "m.yaml", y, pki, int64(16*1024*1024), newDiscardLogger()))
+			}
+		}(g)
+	}
+	wg.Wait()
+
+	stored, err := svc.GetModule(id)
+	require.NoError(t, err)
+	assert.Equal(t, stored.Checksum(), reg.git[id].artifact, "the registry's grant belongs to the artifact the cabinet holds")
+}
+
+// Loads of one module ID are serialised: while one load sits between publishing its grant and storing its
+// artifact, another load of the same ID can not start. Deterministic: the first load is held at exactly
+// that point and the second is given time to run; it must not.
+func TestLoadModule_LoadsOfOneIDDoNotInterleave(t *testing.T) {
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	defer hooks(reg)()
+	svc := newCabinetForTest(t)
+	pki := loadedPKIWithSource(t)
+	fsX, yX := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra"}`))
+	fsY, yY := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra" }`))
+	load := func(fsys fstest.MapFS, y []byte) error {
+		return loadModule(context.Background(), svc, fsys, "m.yaml", y, pki, int64(16*1024*1024), newDiscardLogger())
+	}
+
+	held, release := make(chan struct{}), make(chan struct{})
+	var first atomic.Bool // not sync.Once: a second caller of Once.Do would wait for the first, hiding the very thing tested
+	afterCapabilityPublished = func(string) {
+		if first.CompareAndSwap(false, true) {
+			close(held)
+			<-release
+		}
+	}
+	defer func() { afterCapabilityPublished = nil }()
+
+	firstDone := make(chan error, 1)
+	go func() { firstDone <- load(fsX, yX) }()
+	<-held // the first load has published its grant and not yet stored its artifact
+
+	secondDone := make(chan error, 1)
+	go func() { secondDone <- load(fsY, yY) }()
+	select {
+	case <-secondDone:
+		t.Fatal("a second load of the same module ID ran inside the first load's publish-and-store section")
+	case <-time.After(300 * time.Millisecond):
+	}
+	close(release)
+	require.NoError(t, <-firstDone)
+	require.NoError(t, <-secondDone)
+
+	stored, err := svc.GetModule("gitmod@1.0")
+	require.NoError(t, err)
+	assert.Equal(t, stored.Checksum(), reg.git["gitmod@1.0"].artifact, "grant and artifact belong to the same (the second) load")
+}
+
+// A module whose artifact can not be built gets no grant, and loses the one it had.
+func TestLoadModule_NoArtifactNoGrant(t *testing.T) {
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	defer hooks(reg)()
+	svc := newCabinetForTest(t)
+	pki := loadedPKIWithSource(t)
+	const id = "gitmod@1.0"
+
+	good, yGood := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra"}`))
+	require.NoError(t, loadModule(context.Background(), svc, good, "m.yaml", yGood, pki, int64(16*1024*1024), newDiscardLogger()))
+	require.NotEmpty(t, reg.git[id].artifact)
+
+	broken, yBroken := gitModuleFS(t, []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff})
+	err := loadModule(context.Background(), svc, broken, "m.yaml", yBroken, pki, int64(16*1024*1024), newDiscardLogger())
+	require.Error(t, err)
+	_, still := reg.git[id]
+	assert.False(t, still, "the artifact could not be built: neither the new grant nor the previous one remains")
+}
+
+// ---- F8 + F9 together: one authorization lifecycle, from the verified load to the running instance ----
+
+// The real loader publishes the grant; the real manager creates the instance; the guest's start section
+// asks git for something. Across reloads, an unverified reload, and loads racing with instantiation, the
+// start section is served exactly when the instance's artifact is the one the current grant was published
+// for.
+func TestGitCapabilityLifecycle_LoadThenInstantiate(t *testing.T) {
+	ctx := context.Background()
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	defer hooks(reg)()
+	ops := &statusCounter{}
+
+	store := cabinet.NewMemModuleStore()
+	svc, err := cabinet.NewCabinetService(ctx, cabinet.NewMemSchemaStore(), store, cabinet.NewMemWorkflowStore(),
+		cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1})
+	require.NoError(t, err)
+	mgr, err := cabinet.NewWasmManager(ctx, store, cabinet.WasmManagerConfig{
+		LRUCacheSize: 10, DefaultTimeoutSeconds: 1, HostSetupFn: makeGitHostSetupFn(ops, reg)})
+	require.NoError(t, err)
+	defer mgr.Close(ctx)
+
+	const id = "gitmod@1.0"
+	verified, unverified := loadedPKIWithSource(t), buildLoadedPKIAssets(t)
+	load := func(wasm []byte, pki *PKIAssets) {
+		fsys, y := gitModuleFS(t, wasm)
+		require.NoError(t, loadModule(ctx, svc, fsys, "m.yaml", y, pki, int64(16*1024*1024), newDiscardLogger()))
+	}
+	servedOnStart := func() int {
+		before := ops.n
+		_, _ = mgr.NewHostInstance(ctx, id)
+		return ops.n - before
+	}
+	x, y := guestWithStartSection(`{"repo_id":"infra"}`), guestWithStartSection(`{"repo_id":"infra" }`)
+
+	load(x, verified)
+	assert.Equal(t, 1, servedOnStart(), "verified load: the instance's start section is served")
+	load(y, verified)
+	assert.Equal(t, 1, servedOnStart(), "verified reload with another artifact: served, under the new artifact's grant")
+	load(x, unverified)
+	assert.Equal(t, 0, servedOnStart(), "unverified reload: no grant, nothing is served, nothing is inherited")
+	load(y, verified)
+	assert.Equal(t, 1, servedOnStart(), "verified again: served")
+
+	// Loads race with instantiation: every start section that is served ran under the grant of the
+	// artifact the instance was built from; none is served from a half-published state. With verified
+	// loads of two artifacts the grant is always present once published, so a refused start section can
+	// only be a window where the previous grant was revoked and the new one not yet published: refusing
+	// there is the intended fail-closed behaviour, serving the wrong artifact is not possible.
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for n := 0; ; n++ {
+			select {
+			case <-stop:
+				return
+			default:
+				if n%2 == 0 {
+					load(x, verified)
+				} else {
+					load(y, verified)
+				}
+			}
+		}
+	}()
+	for n := 0; n < 60; n++ {
+		_, _ = mgr.NewHostInstance(ctx, id)
+	}
+	close(stop)
+	wg.Wait()
+	load(y, verified)
+	assert.Equal(t, 1, servedOnStart(), "after the race, a quiet verified load is served again")
 }

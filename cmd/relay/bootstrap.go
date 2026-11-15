@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/modules/certselfsigned"
@@ -525,9 +526,17 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	}
 
 	moduleID := file.Metadata.Name + "@" + file.Metadata.Version
+
+	// Loads of modules are serialised. Revoking the earlier grant, verifying, publishing the new grant and
+	// storing the artifact are one unit: two loads of the same module ID can not interleave, so the grant
+	// that ends up in the registry and the artifact that ends up in the cabinet always come from the same
+	// load.
+	moduleLoadMu.Lock()
+	defer moduleLoadMu.Unlock()
 	if revokeModuleCapability != nil {
 		revokeModuleCapability(moduleID)
 	}
+	var moduleDesc *cabinet.ModuleDescriptor
 	auditLogger := logger.WithFields(logrus.Fields{"module_id": moduleID, "checksum": calculatedDigest})
 
 	sigPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".pem"
@@ -581,7 +590,10 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 				if registerModuleCapability != nil {
 					if provErr := verifyCICFlowProvenance(cert, pkiAssets); provErr != nil {
 						auditLogger.WithField("outcome", "skipped").WithError(provErr).Warn("cic-flow capability not bound — provenance not verified.")
-					} else if err := registerModuleCapability(moduleID, yamlContent); err != nil {
+					} else if moduleDesc, err = cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode); err != nil {
+						// The artifact the capability would belong to can not be built: nothing is granted.
+						return fmt.Errorf("module validation: %w", err)
+					} else if err := registerModuleCapability(moduleID, yamlContent, moduleDesc.Checksum()); err != nil {
 						auditLogger.WithField("outcome", "rejected").WithError(err).Error("cic-flow capability binding failed — module rejected.")
 						return fmt.Errorf("cic-flow capability binding failed for %q: %w", moduleID, err)
 					}
@@ -591,21 +603,35 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	}
 
 	// Corrected call to NewModuleDescriptor to include 'file.Accepts'
-	moduleDesc, err := cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
-	if err != nil {
-		return fmt.Errorf("module validation: %w", err)
+	if afterCapabilityPublished != nil {
+		afterCapabilityPublished(moduleID)
+	}
+	if moduleDesc == nil {
+		moduleDesc, err = cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode)
+		if err != nil {
+			return fmt.Errorf("module validation: %w", err)
+		}
 	}
 	if _, err := svc.GetModule(moduleDesc.ID()); err == nil {
 		logrus.WithField("module_id", moduleDesc.ID()).Info("Overwriting existing module")
 	}
 	if err := svc.PutModule(moduleDesc); err != nil {
+		// Not stored: a grant published for this artifact must not outlive the failed store.
+		if revokeModuleCapability != nil {
+			revokeModuleCapability(moduleID)
+		}
 		return err
-	}
-	if bindModuleArtifact != nil {
-		bindModuleArtifact(moduleID, moduleDesc.Checksum())
 	}
 	return nil
 }
+
+// moduleLoadMu serialises loadModule (see there).
+var moduleLoadMu sync.Mutex
+
+// afterCapabilityPublished is a test seam: called inside loadModule after the capability grant was
+// published and before the artifact is stored, i.e. at the one point where an interleaving could hurt.
+// Always nil in the relay.
+var afterCapabilityPublished func(moduleID string)
 
 // loadPKIAssets loads X.509 certificates and CRLs from a filesystem path and populates PKIAssets
 // with root certificates, intermediates, and revocation lists.
