@@ -214,6 +214,10 @@ func BuildSchema(_ context.Context, input interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("cic.schema.build: version is required")
 	}
 
+	if err := ValidateSchemaRef(schema, version); err != nil {
+		return nil, fmt.Errorf("cic.schema.build: %w", err)
+	}
+
 	rawArtifact := fmt.Sprintf("apiVersion: cic.com/v1\nkind: SchemaArtifact\nmetadata:\n  name: %s\n  version: %s\nspec: {}\n", schema, version)
 
 	out := map[string]interface{}{

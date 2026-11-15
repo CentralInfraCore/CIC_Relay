@@ -635,3 +635,33 @@ func TestBuildSchema_FromAssertedMetadata(t *testing.T) {
 	assert.NotNil(t, out["metadata"])
 	assert.Equal(t, "metadata:\n  name: pg\n", out["raw_artifact"])
 }
+
+// --- ValidateSchemaRef / BuildSchema sink validation ---
+
+func TestValidateSchemaRef(t *testing.T) {
+	for _, ok := range [][2]string{
+		{"postgresql", "v0.18.dev"}, {"some.schema", "v1.0.0"}, {"cic-compute", "1.2.3+build.5"}, {"a", "1"},
+	} {
+		assert.NoError(t, schemacompile.ValidateSchemaRef(ok[0], ok[1]), "%v", ok)
+	}
+	for _, bad := range [][2]string{
+		{"", "v1"}, {"pg", ""}, {"pg\nkind: Evil", "v1"}, {"pg", "v1\n  checksum: x"}, {"a: b", "v1"},
+		{"../x", "v1"}, {".x", "v1"}, {"pg x", "v1"}, {"pg", "v1;x"}, {"pg{", "v1"},
+	} {
+		assert.Error(t, schemacompile.ValidateSchemaRef(bad[0], bad[1]), "%v", bad)
+	}
+}
+
+// The sink must refuse an injected value itself: the /set endpoint runs the same
+// workflow with an arbitrary payload, so the HTTP handler's check alone is not enough.
+func TestBuildSchema_RejectsYAMLInjection(t *testing.T) {
+	for _, in := range []map[string]interface{}{
+		{"schema": "pg\n  sign: forged", "version": "v1.0.0"},
+		{"schema": "postgresql", "version": "v1.0.0\nspec: {evil: true}"},
+		{"schema": "postgresql", "version": "v1: x"},
+	} {
+		out, err := schemacompile.BuildSchema(context.Background(), in)
+		require.Error(t, err, "%v", in)
+		assert.Nil(t, out, "no artifact may be produced from an injected value")
+	}
+}

@@ -155,6 +155,9 @@ type relayServer struct {
 	// promSink backs the /metrics endpoint. Optional — nil means /metrics
 	// responds 503 (e.g. handler unit tests that build a bare relayServer).
 	promSink *obs.PrometheusSink
+	// apiToken is CIC_API_TOKEN: the bearer token of the authenticated routes. Empty
+	// means not configured, and those routes refuse every request.
+	apiToken string
 }
 
 // emitTrace emits a TraceFrame if a TraceSink is configured.
@@ -189,15 +192,13 @@ func writeError(w http.ResponseWriter, status int, code, msg string) {
 // newMux creates a new HTTP multiplexer and registers all relay API routes.
 func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", s.rootHandler)
-	mux.HandleFunc("/set", s.setHandler)
-	mux.HandleFunc("/v1/schema/compile", s.compileHandler)
-	mux.HandleFunc("/v1/schemas/pipeline", s.pipelineHandler)
-	mux.HandleFunc("/v1/repo/ci", s.repoCIHandler)
-	mux.HandleFunc("/v1/proof/verify", s.proofVerifyHandler)
-	mux.HandleFunc("/healthz", s.healthzHandler)
-	mux.HandleFunc("/readyz", s.readyzHandler)
-	mux.HandleFunc("/metrics", s.metricsHandler)
+	for _, rt := range apiRoutes(s) {
+		h := rt.handler
+		if rt.access == accessAuthenticated {
+			h = s.authenticated(h)
+		}
+		mux.HandleFunc(rt.path, h)
+	}
 	return mux
 }
 
@@ -754,7 +755,15 @@ func main() {
 	// logrusSink/metricSink/promSink are already declared above (wired into
 	// cabinetSvc + gitOps via WithObsSinks/SetObsSinks). Reuse them here so
 	// /metrics aggregates across every component, not just cmd/relay.
+	apiToken, err := apiTokenFromEnv()
+	if err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid API token configuration")
+	}
+	if apiToken == "" {
+		logger.Warn("CIC_API_TOKEN is not set: /v1/schema/compile refuses every request until it is")
+	}
 	server := &relayServer{
+		apiToken:   apiToken,
 		api:        cabinetSvc,
 		config:     cfg,
 		logger:     logger,

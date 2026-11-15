@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/core/modules/schemacompile"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -60,6 +61,11 @@ func (s *relayServer) compileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Schema == "" || req.Version == "" {
 		writeError(w, http.StatusBadRequest, "missing_fields", "schema and version are required")
+		return
+	}
+
+	if err := schemacompile.ValidateSchemaRef(req.Schema, req.Version); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_field", err.Error())
 		return
 	}
 
