@@ -4,7 +4,7 @@ A relay a WASM moduloknak típusos `git` host modult kínál. A modul soha nem k
 
 ## 1. Mit hívhat egy modul
 
-Modul csak akkor töltődik be, ha alá van írva és az aláírás ellenőrizhető; az aláíratlan modult elutasítja, kivéve ha egy `dev` operátor explicit opt-int ad, és akkor sem kap capabilityt. Lásd [module-loading.md](module-loading.md).
+Modul csak akkor töltődik be, ha olyan tanúsítványt hordoz, amelynek lánca ellenőrizhető; tanúsítvány nélkülit elutasít, kivéve ha egy `dev` operátor explicit opt-int ad, és akkor sem kap capabilityt. A betöltés a modul és a manifest feletti kriptográfiai aláírást még nem ellenőrzi (nyitott: #162), ezért az alábbi „aláírt manifest" ellenőrzött tanúsítvánnyal szállított manifestet jelent, nem hitelesítettet. Lásd [module-loading.md](module-loading.md).
 
 | Függvény | Engedett | Megjegyzés |
 |---|---|---|

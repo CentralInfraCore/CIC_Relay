@@ -4,7 +4,7 @@ The relay offers WASM modules a typed `git` host module. A module never receives
 
 ## 1. What a module can call
 
-A module loads only if it is signed and the signature verifies; unsigned modules are refused unless a `dev` operator opts in explicitly, and even then they get no capability. See [module-loading.md](module-loading.md).
+A module loads only if it carries a certificate whose chain verifies; a module without one is refused unless a `dev` operator opts in explicitly, and even then it gets no capability. The load does not yet check a cryptographic signature over the module and its manifest (open: #162), so "the signed manifest" below means the manifest shipped with a verified certificate, not an authenticated one. See [module-loading.md](module-loading.md).
 
 | Function | Allowed | Notes |
 |---|---|---|

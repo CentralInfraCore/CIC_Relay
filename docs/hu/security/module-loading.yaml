@@ -14,4 +14,4 @@ used_in:
   - validation
   - operations
 description: |
-  A WASM modulok betöltésének aláírási szabályai: mit tesz a relay az aláíratlan modullal, az érvényes aláírással és az érvénytelen aláírás minden fajtájával prodban és devben, a csak dev-ben élő CIC_ALLOW_UNSIGNED_MODULES opt-in, amely kizárólag aláírásfájl nélküli modult enged (érvénytelen aláírást soha, és capability nélkül), valamint a betöltött modul számára elérhető, felsorolt host felület.
+  A WASM modulok betöltésének tanúsítványszabályai: mit ellenőriz a betöltő (tanúsítványlánc, WASM digest) és mit nem (a modul és a manifest feletti kriptográfiai aláírás, nyitott: #162), valamint mit tesz a relay a tanúsítvány nélküli modullal, az érvényes tanúsítvánnyal és az érvénytelen minden fajtájával prodban és devben, a csak dev-ben élő CIC_ALLOW_UNSIGNED_MODULES opt-in, amely kizárólag aláírásfájl nélküli modult enged (érvénytelen aláírást soha, és capability nélkül), valamint a betöltött modul számára elérhető, felsorolt host felület.
