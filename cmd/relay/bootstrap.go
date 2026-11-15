@@ -598,7 +598,13 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	if _, err := svc.GetModule(moduleDesc.ID()); err == nil {
 		logrus.WithField("module_id", moduleDesc.ID()).Info("Overwriting existing module")
 	}
-	return svc.PutModule(moduleDesc)
+	if err := svc.PutModule(moduleDesc); err != nil {
+		return err
+	}
+	if bindModuleArtifact != nil {
+		bindModuleArtifact(moduleID, moduleDesc.Checksum())
+	}
+	return nil
 }
 
 // loadPKIAssets loads X.509 certificates and CRLs from a filesystem path and populates PKIAssets

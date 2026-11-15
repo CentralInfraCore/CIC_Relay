@@ -29,6 +29,12 @@ type WasmManagerConfig struct {
 	// additional host modules (e.g., typed git host functions for WASM modules).
 	// It receives the wazero runtime so it can instantiate host module builders.
 	HostSetupFn func(ctx context.Context, r wazero.Runtime) error `yaml:"-"`
+	// OnInstance, if non-nil, is called for every instance right after it is instantiated and before any
+	// guest code runs, with the instance name and the checksum of the exact module artifact that was
+	// compiled for it. Instance names are unique among live instances (the runtime refuses a second one),
+	// so a host function that sees a caller's name can look up which artifact that caller is running,
+	// including a caller that started before its module was reloaded.
+	OnInstance func(instanceName, artifactChecksum string) `yaml:"-"`
 }
 
 // --- WasmManager: The Caching Compiler and Instance Factory ---
@@ -113,20 +119,27 @@ func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManager
 // PreCompileModule compiles a module from the ModuleStore using the module ID and checksum as a cache key,
 // with deduplication via singleflight to avoid redundant compilations.
 func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wazero.CompiledModule, error) {
+	compiled, _, err := m.compile(ctx, moduleID)
+	return compiled, err
+}
+
+// compile is PreCompileModule that also returns the checksum of the descriptor it compiled, read from the
+// same descriptor, so the checksum names exactly the artifact the compiled module came from.
+func (m *WasmManager) compile(ctx context.Context, moduleID string) (wazero.CompiledModule, string, error) {
 	if m.closed.Load() {
-		return nil, errors.New("WasmManager is closed")
+		return nil, "", errors.New("WasmManager is closed")
 	}
 
 	moduleDesc, ok := m.modules.Get(moduleID)
 	if !ok {
-		return nil, fmt.Errorf("module '%s' not found", moduleID)
+		return nil, "", fmt.Errorf("module '%s' not found", moduleID)
 	}
 
 	// Use the module's pre-computed checksum for content-addressable caching.
 	cacheKey := moduleID + ":" + moduleDesc.Checksum()
 
 	if mod, ok := m.compiledModules.Get(cacheKey); ok {
-		return mod, nil
+		return mod, moduleDesc.Checksum(), nil
 	}
 
 	res, err, _ := m.sf.Do(cacheKey, func() (interface{}, error) {
@@ -159,10 +172,10 @@ func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wa
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return res.(wazero.CompiledModule), nil
+	return res.(wazero.CompiledModule), moduleDesc.Checksum(), nil
 }
 
 // NewHostInstance creates a new, live instance of a compiled module with the configured timeout and observability sinks.
@@ -171,7 +184,7 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 		return nil, errors.New("WasmManager is closed")
 	}
 
-	compiledMod, err := m.PreCompileModule(ctx, moduleID)
+	compiledMod, artifact, err := m.compile(ctx, moduleID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +196,9 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 	instance, err := m.runtime.InstantiateModule(ctx, compiledMod, moduleConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate module '%s': %w", moduleID, err)
+	}
+	if m.config.OnInstance != nil {
+		m.config.OnInstance(moduleID, artifact)
 	}
 	if m.metricSink != nil {
 		m.metricSink.RecordHistogram(obs.HistogramPoint{

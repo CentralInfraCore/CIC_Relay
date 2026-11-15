@@ -720,6 +720,8 @@ func main() {
 	// registry via the package-level hook (fail-closed: only verified modules).
 	registerModuleCapability = cicFlowReg.registerVerified
 	revokeModuleCapability = cicFlowReg.revoke
+	bindModuleArtifact = cicFlowReg.bindArtifact
+	wasmConfig.OnInstance = cicFlowReg.noteInstance
 	wasmConfig.HostSetupFn = combineHostSetups(
 		makeGitHostSetupFn(gitOps, cicFlowReg),
 		makeCICFlowHostSetupFn(cicFlowReg),

@@ -25,6 +25,10 @@ type cicFlowRegistry struct {
 	doer    httpDoer    // egress transport shared by all modules
 	deps    map[string]cicFlowDeps
 	git     map[string]gitGrant // per-module git reach, from the verified manifest; absent = denied
+	// running maps a live instance name to the checksum of the module artifact it was instantiated from
+	// (reported by the WasmManager before any guest code runs). Instance names are unique among live
+	// instances, so for a caller this is the artifact that caller is actually executing.
+	running map[string]string
 }
 
 // gitGrant is a module's verified git reach, bound to the exact artifact it was derived from: the wasm
@@ -35,6 +39,9 @@ type gitGrant struct {
 	rules          []gitRule
 	wasmDigest     string
 	manifestDigest string
+	// artifact is the checksum of the module artifact the cabinet stored for this load (bindArtifact),
+	// empty until the module is stored. A grant without it is never usable.
+	artifact string
 }
 
 // registerModuleCapability, if set, is called by the module-load path
@@ -50,6 +57,10 @@ var registerModuleCapability func(moduleID string, projectYAML []byte) error
 // only if it verifies. Set once at startup, like registerModuleCapability.
 var revokeModuleCapability func(moduleID string)
 
+// bindModuleArtifact, if set, is called by loadModule once the module is stored in the cabinet, with the
+// checksum of the stored artifact. Set once at startup.
+var bindModuleArtifact func(moduleID, artifactChecksum string)
+
 // newCICFlowRegistry builds an empty registry. A nil doer defaults to the egress client
 // (newEgressClient: no redirects, no proxy, timeouts, blocked address ranges); a nil
 // resolve leaves every module's signer nil (sign inert) until the OCI-key provisioning
@@ -58,7 +69,7 @@ func newCICFlowRegistry(resolve keyResolver, doer httpDoer) *cicFlowRegistry {
 	if doer == nil {
 		doer = newEgressClient(false)
 	}
-	return &cicFlowRegistry{resolve: resolve, doer: doer, deps: map[string]cicFlowDeps{}, git: map[string]gitGrant{}}
+	return &cicFlowRegistry{resolve: resolve, doer: doer, deps: map[string]cicFlowDeps{}, git: map[string]gitGrant{}, running: map[string]string{}}
 }
 
 // lookup returns the deps bound for moduleID, or false if the module is not
@@ -114,6 +125,24 @@ func (r *cicFlowRegistry) registerVerified(moduleID string, projectYAML []byte) 
 	return nil
 }
 
+// noteInstance records which artifact a freshly instantiated guest is running. WasmManagerConfig.OnInstance.
+func (r *cicFlowRegistry) noteInstance(instanceName, artifactChecksum string) {
+	r.mu.Lock()
+	r.running[instanceName] = artifactChecksum
+	r.mu.Unlock()
+}
+
+// bindArtifact ties moduleID's git grant to the artifact checksum the cabinet stored for it. loadModule
+// calls it once the module is stored; a module that is not stored never becomes usable.
+func (r *cicFlowRegistry) bindArtifact(moduleID, artifactChecksum string) {
+	r.mu.Lock()
+	if g, ok := r.git[moduleID]; ok {
+		g.artifact = artifactChecksum
+		r.git[moduleID] = g
+	}
+	r.mu.Unlock()
+}
+
 // revoke drops every capability bound to moduleID. loadModule calls it before it examines a module, so a
 // reload of the same ID (a different artifact, an unsigned one, one whose verification fails) never keeps
 // the previous artifact's grants.
@@ -140,9 +169,16 @@ type gitAuthRequest struct {
 func (r *cicFlowRegistry) authorizeGit(moduleName, op string, req gitAuthRequest) error {
 	r.mu.RLock()
 	g, ok := r.git[moduleName]
+	live := r.running[moduleName]
 	r.mu.RUnlock()
 	if !ok {
 		return fmt.Errorf("git: module has no verified git capability")
+	}
+	// The grant belongs to the verified artifact, not to the name: the caller must be running exactly
+	// the artifact the grant was bound to. A caller that started before its module was reloaded runs an
+	// older artifact; the reload revoked its grant, and a re-grant binds to the new artifact only.
+	if g.artifact == "" || g.artifact != live {
+		return fmt.Errorf("git: the running module is not the verified artifact this capability was granted to")
 	}
 	for _, rule := range g.rules {
 		if rule.Repo != req.RepoID || !containsFold(rule.Ops, op) {

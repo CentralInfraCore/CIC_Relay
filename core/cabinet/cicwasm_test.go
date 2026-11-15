@@ -735,3 +735,52 @@ func TestNewWasmManager_HostSetupFn_Error(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "host module setup failed")
 }
+
+// OnInstance reports, for every instance and before any guest code runs, the checksum of the exact
+// artifact compiled for it. An instance that is live when its module is replaced keeps reporting the
+// artifact it runs; the replacement is a different artifact with its own checksum.
+func TestWasmManager_OnInstance_ReportsTheRunningArtifact(t *testing.T) {
+	ctx := context.Background()
+	store := newMockModuleStore()
+
+	seen := map[string]string{}
+	var mu sync.Mutex
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1,
+		OnInstance: func(name, checksum string) {
+			mu.Lock()
+			seen[name] = checksum
+			mu.Unlock()
+		}}
+
+	v1 := loadWasmFile(t, "abi_compatible.wasm")
+	md1, err := NewModuleDescriptor(ctx, BaseBlock{Name: "mod", Version: "1"}, "wasm", nil, nil, v1)
+	require.NoError(t, err)
+	store.Put(md1)
+
+	m, err := NewWasmManager(ctx, store, config)
+	require.NoError(t, err)
+	defer m.Close(ctx)
+
+	inst, err := m.NewHostInstance(ctx, md1.ID())
+	require.NoError(t, err)
+	mu.Lock()
+	assert.Equal(t, md1.Checksum(), seen[md1.ID()], "the instance reports the artifact it was compiled from")
+	mu.Unlock()
+
+	// The module is replaced under the same ID while the first instance is live.
+	md2, err := NewModuleDescriptor(ctx, BaseBlock{Name: "mod", Version: "1"}, "wasm", []string{"extra"}, nil, v1)
+	require.NoError(t, err)
+	require.NotEqual(t, md1.Checksum(), md2.Checksum(), "a different descriptor is a different artifact")
+	store.Put(md2)
+	mu.Lock()
+	assert.Equal(t, md1.Checksum(), seen[md1.ID()], "the live instance still reports the old artifact")
+	mu.Unlock()
+
+	require.NoError(t, inst.Close(ctx))
+	inst2, err := m.NewHostInstance(ctx, md2.ID())
+	require.NoError(t, err)
+	defer inst2.Close(ctx)
+	mu.Lock()
+	assert.Equal(t, md2.Checksum(), seen[md2.ID()], "the next instance reports the new artifact")
+	mu.Unlock()
+}
