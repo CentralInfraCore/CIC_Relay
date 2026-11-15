@@ -27,6 +27,8 @@ type ExecGitOps struct {
 	registry   *RepoRegistry
 	logSink    obs.LogSink
 	metricSink obs.MetricSink
+
+	allowLocalSources bool
 }
 
 // NewExecGitOps creates an ExecGitOps backed by the given registry.
@@ -47,7 +49,13 @@ func (e *ExecGitOps) Clone(ctx context.Context, repoID, url, branch string) erro
 	if err != nil {
 		return err
 	}
-	return e.runGit(ctx, "", "clone", "--branch", branch, "--depth", "1", url, localPath)
+	if err := validateCloneURL(url, e.allowLocalSources); err != nil {
+		return err
+	}
+	if err := validateRef(branch); err != nil {
+		return err
+	}
+	return e.runGit(ctx, "", "clone", "--branch", branch, "--depth", "1", "--", url, localPath)
 }
 
 // Fetch fetches the given remote for the registered repo.
@@ -56,7 +64,10 @@ func (e *ExecGitOps) Fetch(ctx context.Context, repoID, remote string) error {
 	if err != nil {
 		return err
 	}
-	return e.runGit(ctx, localPath, "fetch", remote)
+	if err := validateRemoteName(remote); err != nil {
+		return err
+	}
+	return e.runGit(ctx, localPath, "fetch", "--", remote)
 }
 
 // Checkout checks out the given ref in the registered repo.
@@ -65,7 +76,10 @@ func (e *ExecGitOps) Checkout(ctx context.Context, repoID, ref string) error {
 	if err != nil {
 		return err
 	}
-	return e.runGit(ctx, localPath, "checkout", ref)
+	if err := validateRef(ref); err != nil {
+		return err
+	}
+	return e.runGit(ctx, localPath, "checkout", ref, "--")
 }
 
 // Commit stages paths and creates a commit; returns the new commit hash.
@@ -75,6 +89,14 @@ func (e *ExecGitOps) Commit(ctx context.Context, repoID, message string, paths [
 		return "", err
 	}
 
+	if len(paths) == 0 {
+		return "", fmt.Errorf("commit: no paths")
+	}
+	for _, p := range paths {
+		if err := validatePath(p); err != nil {
+			return "", err
+		}
+	}
 	addArgs := append([]string{"add", "--"}, paths...)
 	if err := e.runGit(ctx, localPath, addArgs...); err != nil {
 		return "", fmt.Errorf("git add: %w", err)
@@ -96,7 +118,13 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err != nil {
 		return err
 	}
-	return e.runGit(ctx, localPath, "push", remote, refspec)
+	if err := validateRemoteName(remote); err != nil {
+		return err
+	}
+	if err := validateRefspec(refspec); err != nil {
+		return err
+	}
+	return e.runGit(ctx, localPath, "push", "--", remote, refspec)
 }
 
 // Status returns the working-tree status of the registered repo.
@@ -133,6 +161,13 @@ func parsePortcelainStatus(output string) []StatusEntry {
 	return entries
 }
 
+func localProtocol(allow bool) string {
+	if allow {
+		return ":file"
+	}
+	return ""
+}
+
 // runGit executes a git command with a hardened environment.
 // dir is the working directory; empty string means the caller's working directory.
 func (e *ExecGitOps) runGit(ctx context.Context, dir string, args ...string) error {
@@ -153,8 +188,17 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 		defer cancel()
 	}
 
-	// Prepend -c core.hooksPath=/dev/null before the subcommand.
-	fullArgs := append([]string{"-c", "core.hooksPath=/dev/null"}, args...)
+	// Prepend the hardening configuration before the subcommand: no hooks, and only the https and ssh
+	// transports (no file, no ext helper), whatever a URL or the repository configuration says.
+	fullArgs := append([]string{
+		"-c", "core.hooksPath=/dev/null",
+		"-c", "protocol.allow=never",
+		"-c", "protocol.https.allow=always",
+		"-c", "protocol.ssh.allow=always",
+	}, args...)
+	if e.allowLocalSources {
+		fullArgs = append(fullArgs[:len(fullArgs)-len(args)], append([]string{"-c", "protocol.file.allow=always"}, args...)...)
+	}
 	cmd := exec.CommandContext(ctx, "git", fullArgs...)
 	if dir != "" {
 		cmd.Dir = dir
@@ -167,6 +211,8 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 		"GIT_AUTHOR_EMAIL=nexus@cic-relay.local",
 		"GIT_COMMITTER_NAME=CIC Nexus",
 		"GIT_COMMITTER_EMAIL=nexus@cic-relay.local",
+		"GIT_LITERAL_PATHSPECS=1",
+		"GIT_ALLOW_PROTOCOL=https:ssh"+localProtocol(e.allowLocalSources),
 	)
 
 	var buf bytes.Buffer

@@ -55,6 +55,7 @@ func TestExecGitOps_CloneAndStatus(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("test-repo", cloneDir)
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 
 	// Clone the source into cloneDir.
 	require.NoError(t, ops.Clone(context.Background(), "test-repo", srcDir, "main"))
@@ -69,6 +70,7 @@ func TestExecGitOps_CloneAndStatus(t *testing.T) {
 func TestExecGitOps_UnknownRepo(t *testing.T) {
 	reg := NewRepoRegistry()
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 
 	_, err := ops.Status(context.Background(), "ghost")
 	require.Error(t, err)
@@ -92,6 +94,7 @@ func TestHardenedEnv(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("env-test", repoDir)
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 
 	// The fake git exits 0, so Status should succeed (empty result).
 	_, _ = ops.Status(context.Background(), "env-test")
@@ -129,6 +132,7 @@ func TestExecGitOps_SetObsSinks_MetricEmission(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("obs-repo", cloneDir)
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 
 	sink := &obs.CaptureSink{}
 	ops.SetObsSinks(sink, sink)
@@ -152,6 +156,7 @@ func TestExecGitOps_SetObsSinks_ErrorLog(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("fail-repo", t.TempDir()) // valid path but not a git repo
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 
 	sink := &obs.CaptureSink{}
 	ops.SetObsSinks(sink, sink)
@@ -169,6 +174,7 @@ func TestExecGitOps_SetObsSinks_NilSafe(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("nil-repo", t.TempDir())
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 	ops.SetObsSinks(nil, nil)
 
 	assert.NotPanics(t, func() {
@@ -202,6 +208,7 @@ func TestExecGitOps_Fetch_Success(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("repo", cloneDir)
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 	require.NoError(t, ops.Clone(context.Background(), "repo", srcDir, "main"))
 	require.NoError(t, ops.Fetch(context.Background(), "repo", "origin"))
 }
@@ -212,6 +219,7 @@ func TestExecGitOps_Checkout_Success(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("repo", cloneDir)
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 	require.NoError(t, ops.Clone(context.Background(), "repo", srcDir, "main"))
 	require.NoError(t, ops.Checkout(context.Background(), "repo", "main"))
 }
@@ -222,6 +230,7 @@ func TestExecGitOps_Commit_Success(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("repo", cloneDir)
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 	require.NoError(t, ops.Clone(context.Background(), "repo", srcDir, "main"))
 
 	require.NoError(t, os.WriteFile(filepath.Join(cloneDir, "new.txt"), []byte("hello"), 0644))
@@ -257,6 +266,7 @@ func TestExecGitOps_Push_Success(t *testing.T) {
 	reg := NewRepoRegistry()
 	reg.Register("repo", cloneDir)
 	ops := NewExecGitOps(reg)
+	ops.allowLocalSources = true
 	require.NoError(t, ops.Clone(context.Background(), "repo", remoteDir, "main"))
 
 	require.NoError(t, os.WriteFile(filepath.Join(cloneDir, "new.txt"), []byte("new"), 0644))
