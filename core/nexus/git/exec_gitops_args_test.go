@@ -779,54 +779,78 @@ func TestGuestReachableOperationsDoNotWriteTheConfiguration(t *testing.T) {
 	assert.Equal(t, before, config(), "no guest-reachable operation changed the repository configuration")
 }
 
-// F10: "git push <remote> <ref>" has an implicit destination that git resolves itself, and for a notes
-// or replace ref that is the same namespace on the remote. The destination is made explicit and held to
-// the branch/tag contract, so there is no implicit resolution left to bypass.
-func TestPushDestinationIsExplicitAndBranchOrTag(t *testing.T) {
+// F10, F10.1: a push destination is always fully qualified (refs/heads/ or refs/tags/). Git resolves a
+// SHORT destination against the refs that already exist on the remote, so "notes/commits" would update the
+// remote's refs/notes/commits; the canonical form leaves nothing to resolve. Authorization and execution
+// use the same canonical form.
+func TestPushDestinationIsFullyQualifiedBranchOrTag(t *testing.T) {
 	ctx := context.Background()
-	ok := map[string]string{
-		"main":                     "main:main",
-		"release/1":                "release/1:release/1",
-		"refs/heads/main":          "refs/heads/main:refs/heads/main",
-		"refs/tags/v1":             "refs/tags/v1:refs/tags/v1",
-		"main:feature":             "main:feature",
-		"abc1234:refs/heads/x":     "abc1234:refs/heads/x",
-		"refs/notes/commits:main2": "refs/notes/commits:main2", // a notes COMMIT pushed to a branch: the destination is a branch
+	ok := map[string][2]string{
+		"main":                     {"main", "refs/heads/main"},
+		"release/1":                {"release/1", "refs/heads/release/1"},
+		"refs/heads/main":          {"refs/heads/main", "refs/heads/main"},
+		"refs/tags/v1":             {"refs/tags/v1", "refs/tags/v1"},
+		"main:feature":             {"main", "refs/heads/feature"},
+		"main:notes/commits":       {"main", "refs/heads/notes/commits"}, // a short name is a BRANCH name, whatever exists on the remote
+		"main:replace/abc":         {"main", "refs/heads/replace/abc"},
+		"main:remotes/origin/main": {"main", "refs/heads/remotes/origin/main"},
+		"main:v1":                  {"main", "refs/heads/v1"}, // even if the remote has a tag v1
+		"abc1234:refs/heads/x":     {"abc1234", "refs/heads/x"},
+		"main:refs/tags/v2":        {"main", "refs/tags/v2"},
 	}
 	for in, want := range ok {
-		got, err := normalizeRefspec(in)
+		src, dst, err := CanonicalPushRefspec(in)
 		require.NoError(t, err, in)
-		assert.Equal(t, want, got, in)
+		assert.Equal(t, want, [2]string{src, dst}, in)
+		got, err := normalizeRefspec(in)
+		require.NoError(t, err)
+		assert.Equal(t, want[0]+":"+want[1], got)
 	}
 	for _, in := range []string{
 		"refs/notes/commits", "refs/replace/0123456789abcdef", "refs/remotes/origin/main", "refs/stash", "refs/x",
-		"HEAD", "FETCH_HEAD", "main:HEAD", "main:refs/notes/commits", "main:refs/replace/abc", "+main", "+main:main", ":main", "",
-		"main:", "a..b", "x.lock",
+		"HEAD", "FETCH_HEAD", "main:HEAD", "main:refs/notes/commits", "main:refs/replace/abc", "main:refs/remotes/o/m",
+		"+main", "+main:main", ":main", "", "main:", "a..b", "x.lock",
 	} {
-		_, err := normalizeRefspec(in)
+		_, _, err := CanonicalPushRefspec(in)
 		assert.ErrorIs(t, err, ErrInvalidArgument, "%q must be refused", in)
 	}
 
-	// Through the real operation, against a real remote: nothing outside heads/tags is ever created there.
+	// Against a real remote that ALREADY holds refs in the namespaces that must stay out of reach.
 	ops, work, _ := argTestOps(t)
 	run := func(dir string, args ...string) string {
 		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
 		require.NoError(t, err, string(out))
-		return string(out)
+		return strings.TrimSpace(string(out))
 	}
 	bare := filepath.Join(t.TempDir(), "bare.git")
 	run(t.TempDir(), "init", "--bare", "-b", "main", bare)
 	run(work, "remote", "set-url", "origin", bare)
 	run(work, "-c", "user.name=t", "-c", "user.email=t@t", "notes", "add", "-m", "n")
 	run(work, "tag", "v1")
+	run(work, "push", "origin", "main", "refs/notes/commits", "refs/tags/v1")
+	run(work, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "second")
+	run(work, "update-ref", "refs/replace/"+run(work, "rev-parse", "HEAD~1"), "HEAD")
+	run(work, "push", "origin", "refs/replace/"+run(work, "rev-parse", "HEAD~1"))
+	remote := func(ref string) string { return run(bare, "rev-parse", "--verify", "-q", ref) }
+	notesBefore, tagBefore := remote("refs/notes/commits"), remote("refs/tags/v1")
+	replaceRef := "refs/replace/" + run(work, "rev-parse", "HEAD~1")
+	replaceBefore := remote(replaceRef)
+	head := run(work, "rev-parse", "HEAD")
+	require.NotEqual(t, head, notesBefore)
 
+	// Short destinations that, resolved by git against the remote, WOULD hit the existing refs:
+	for _, spec := range []string{"main:notes/commits", "main:v1", "main:" + strings.TrimPrefix(replaceRef, "refs/")} {
+		require.NoError(t, ops.Push(ctx, "r", "origin", spec), spec)
+	}
+	assert.Equal(t, notesBefore, remote("refs/notes/commits"), "the remote's notes ref was not touched")
+	assert.Equal(t, tagBefore, remote("refs/tags/v1"), "the remote's tag was not touched")
+	assert.Equal(t, replaceBefore, remote(replaceRef), "the remote's replace ref was not touched")
+	assert.Equal(t, head, remote("refs/heads/notes/commits"), "the push created branches with those names instead")
+	assert.Equal(t, head, remote("refs/heads/v1"))
+
+	// Fully qualified forbidden destinations are refused outright.
+	assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "main:refs/notes/commits"), ErrInvalidArgument)
 	assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "refs/notes/commits"), ErrInvalidArgument)
 	assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "HEAD"), ErrInvalidArgument)
-	require.NoError(t, ops.Push(ctx, "r", "origin", "main"))
-	require.NoError(t, ops.Push(ctx, "r", "origin", "refs/tags/v1"))
-	refs := run(bare, "for-each-ref", "--format=%(refname)")
-	assert.Contains(t, refs, "refs/heads/main")
-	assert.Contains(t, refs, "refs/tags/v1")
-	assert.NotContains(t, refs, "refs/notes", "no notes ref was created on the remote")
-	assert.NotContains(t, refs, "refs/replace")
+	assert.Equal(t, notesBefore, remote("refs/notes/commits"))
 }

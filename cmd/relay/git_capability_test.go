@@ -363,3 +363,43 @@ func TestGitManifest_RefsAreBranchesAndTagsOnly(t *testing.T) {
 		assert.NoError(t, newCICFlowRegistry(nil, &stubDoer{}).registerVerified("m@1", []byte(yaml)), ref)
 	}
 }
+
+// F10.1: the manifest is checked against the canonical, fully qualified refspec: the one ExecGitOps runs.
+// A short destination is a branch name, so it can neither reach a notes/replace namespace by resolving
+// against the remote, nor be authorised as if it could.
+func TestGitAuthorize_PushUsesTheCanonicalRefspec(t *testing.T) {
+	const manifest = `
+abi:
+  imports: []
+capability_manifest:
+  git:
+    - repo: infra
+      ops: [push]
+      remotes: [origin]
+      refs: ["main", "release/*", "refs/tags/*"]
+`
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	require.NoError(t, reg.publishVerified("mod@1", []byte(manifest), "art-1"))
+	push := func(spec string) error {
+		return reg.authorizeGit(inst("mod@1", "art-1"), "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: spec})
+	}
+	for _, spec := range []string{"main", "main:main", "main:release/1", "main:refs/heads/release/x", "refs/tags/v1", "main:refs/tags/v2"} {
+		assert.NoError(t, push(spec), spec)
+	}
+	for _, spec := range []string{
+		"main:notes/commits",  // a branch named notes/commits: not in the manifest
+		"main:v1",             // a branch named v1: not in the manifest
+		"main:replace/abc",    //
+		"main:refs/notes/x",   // forbidden namespace
+		"main:refs/replace/x", //
+		"HEAD", "release/1:other", "other:main", "+main", "main:release/../x",
+	} {
+		assert.Error(t, push(spec), "%q", spec)
+	}
+	// The destination that is authorised is the one that is executed.
+	for _, spec := range []string{"main:release/1", "main", "refs/tags/v1"} {
+		_, dstAuthorised, err := nexusgit.CanonicalPushRefspec(spec)
+		require.NoError(t, err)
+		assert.True(t, strings.HasPrefix(dstAuthorised, "refs/heads/") || strings.HasPrefix(dstAuthorised, "refs/tags/"), spec)
+	}
+}

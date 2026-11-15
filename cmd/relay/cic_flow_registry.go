@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"centralrelay/core/cabinet"
+	nexusgit "centralrelay/core/nexus/git"
 )
 
 // R3a live wiring (feature-011, r3-plan.md). The `cic-flow` host module is a
@@ -187,13 +188,33 @@ func gitRuleCovers(rule gitRule, op string, req gitAuthRequest) bool {
 	case "clone":
 		return containsExact(rule.Sources, req.URL) && refAllowed(rule.Refs, req.Branch)
 	case "push":
-		src, dst, hasDst := strings.Cut(req.Refspec, ":")
-		if !containsExact(rule.Remotes, req.Remote) || !refAllowed(rule.Refs, src) {
+		// The refspec is reduced to the canonical form that ExecGitOps will execute (a fully qualified
+		// destination), and that is what the manifest is checked against: what is authorised is what is run.
+		src, dst, err := nexusgit.CanonicalPushRefspec(req.Refspec)
+		if err != nil {
 			return false
 		}
-		return !hasDst || refAllowed(rule.Refs, dst)
+		return containsExact(rule.Remotes, req.Remote) &&
+			refAllowedQualified(rule.Refs, qualifyRef(src)) && refAllowedQualified(rule.Refs, dst)
 	}
 	return false
+}
+
+// qualifyRef gives a short name the refs/heads/ form that a push treats it as.
+func qualifyRef(ref string) string {
+	if strings.HasPrefix(ref, "refs/") {
+		return ref
+	}
+	return "refs/heads/" + ref
+}
+
+// refAllowedQualified is refAllowed with the manifest's patterns qualified the same way as the ref.
+func refAllowedQualified(patterns []string, qualifiedRef string) bool {
+	q := make([]string, 0, len(patterns))
+	for _, p := range patterns {
+		q = append(q, qualifyRef(p))
+	}
+	return refAllowed(q, qualifiedRef)
 }
 
 func containsExact(list []string, v string) bool {

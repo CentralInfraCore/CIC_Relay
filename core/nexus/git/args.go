@@ -68,24 +68,39 @@ func validateBranchRef(ref string) error {
 	return nil
 }
 
-// normalizeRefspec validates a push refspec and returns it in explicit "<src>:<dst>" form, which is what
-// is handed to git. "<ref>" alone means "push <ref> to the ref of the same name", and git resolves that
-// itself (a notes or replace ref is pushed as such, HEAD becomes the current branch's name), so the
-// destination is made explicit here and validated like any other: it must be a branch or tag name, or a
-// refs/heads/ or refs/tags/ name. A source that cannot name a branch or tag (HEAD, refs/notes/...) has no
-// acceptable implicit destination and is refused. A forced ("+") or deleting (empty source) refspec is
-// refused: the typed ABI never offered either, and both change remote history.
-func normalizeRefspec(spec string) (string, error) {
+// CanonicalPushRefspec validates a push refspec and returns its canonical source and destination. The
+// destination is ALWAYS fully qualified: "refs/heads/<name>" or "refs/tags/<name>". A short destination is
+// a branch name and is qualified as refs/heads/; a tag is pushed only by naming refs/tags/<name>. Nothing
+// is left for git to resolve: git matches a short destination against the refs that already exist on the
+// remote (so "notes/commits" would update the remote's refs/notes/commits), which is exactly what must not
+// happen. A push of "<ref>" alone pushes to the same name, qualified the same way. A source that cannot
+// name a branch or tag (HEAD, refs/notes/...) has no acceptable implicit destination and is refused. A
+// forced ("+") or deleting (empty source) refspec is refused: the typed ABI never offered either.
+//
+// The same function serves authorization and execution: what is authorised is what is run.
+func CanonicalPushRefspec(spec string) (src, dst string, err error) {
 	bad := fmt.Errorf("%w: refspec %q", ErrInvalidArgument, clip(spec))
 	src, dst, hasDst := strings.Cut(spec, ":")
 	if err := validateRef(src); err != nil {
-		return "", bad
+		return "", "", bad
 	}
 	if !hasDst {
 		dst = src
 	}
 	if err := validateBranchRef(dst); err != nil {
-		return "", bad
+		return "", "", bad
+	}
+	if !strings.HasPrefix(dst, "refs/") {
+		dst = "refs/heads/" + dst
+	}
+	return src, dst, nil
+}
+
+// normalizeRefspec returns the canonical refspec as the "<src>:<dst>" string handed to git.
+func normalizeRefspec(spec string) (string, error) {
+	src, dst, err := CanonicalPushRefspec(spec)
+	if err != nil {
+		return "", err
 	}
 	return src + ":" + dst, nil
 }
