@@ -177,6 +177,19 @@ def d_single_run(b: Bundle):
     return reseal(r), {}
 
 
+def d_forged_stability(b: Bundle):
+    """A single-run record claims 20 runs and OBSERVED_STABLE, re-sealed: internally consistent (L1), the inputs are
+    untouched, only the re-derivation from the bound profiles (runs counted from them) can see it.
+    """
+    r = copy.deepcopy(b.record)
+    o = r["objects"][
+        _first(r, lambda o: _go(o) and o["coverage"]["state"] == om.MEASURED)
+    ]
+    o["coverage"]["determinism"] = "OBSERVED_STABLE"
+    o["coverage"]["runs"] = om.STABLE_MIN_RUNS
+    return reseal(r), {}
+
+
 def d_nondeterministic(b: Bundle):
     """An object whose coverage differs between runs (the real kind of case: see the PR-05 report)."""
     r = copy.deepcopy(b.record)
@@ -283,6 +296,13 @@ CASES = [
         d_single_run,
         "L1",
         "BAD_DETERMINISM",
+    ),
+    Case(
+        "A.9c",
+        "a stability claim (runs, OBSERVED_STABLE) is forged and the record is re-sealed",
+        d_forged_stability,
+        "L2",
+        "REDERIVATION_MISMATCH",
     ),
     Case(
         "A.9b",

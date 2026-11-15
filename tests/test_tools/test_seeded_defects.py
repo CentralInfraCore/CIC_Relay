@@ -343,6 +343,12 @@ TEETH = [
         {"A.5b"},
     ),
     (
+        "the runs/determinism part of the re-derivation comparison",
+        '("kind", "total", "covered", "runs", "determinism")',
+        '("kind", "total", "covered")',
+        {"A.9c"},
+    ),
+    (
         "the commit/tree identity",
         'if tree != rec["identity"]["tree"] or commit != rec["identity"]["commit"]:',
         "if False:",
@@ -445,3 +451,70 @@ def test_the_harness_goes_red_when_a_check_of_the_verifier_is_removed(
     assert (
         out["control"] is True or label == "the record digest check"
     ), "the positive control must stay honest: the harness caught the defect, not a broken control"
+
+
+# --- F1 (PR-05 review): a stability claim must be provable from the bound input profiles, like a value ---
+
+
+def _go_inv_and_blocks():
+    inv = {
+        "files": [
+            {
+                "file": "a.go",
+                "funcs": [
+                    {
+                        "kind": "func",
+                        "name": "F",
+                        "recv": "",
+                        "start": {"line": 1, "col": 1},
+                        "end": {"line": 9, "col": 2},
+                    }
+                ],
+            }
+        ]
+    }
+    blocks = [("m/a.go", 2, 2, 3, 10, 2, 1), ("m/a.go", 4, 2, 5, 10, 2, 0)]
+    return inv, blocks
+
+
+def test_r_f1_runs_and_determinism_are_part_of_the_comparison():
+    want = {
+        "state": om.MEASURED,
+        "kind": "statement",
+        "total": 4,
+        "covered": 2,
+        "runs": 1,
+        "determinism": "NOT_SHOWN",
+    }
+    assert om._cmp_cov(want, dict(want))
+    assert not om._cmp_cov(want, {**want, "runs": 20})
+    assert not om._cmp_cov(want, {**want, "determinism": "OBSERVED_STABLE"})
+
+
+def test_r_f1_the_derived_runs_are_counted_from_the_bound_profiles():
+    inv, blocks = _go_inv_and_blocks()
+    one = next(iter(om.derive_go_coverage("u", "m", inv, blocks).values()))["coverage"]
+    assert (one["runs"], one["determinism"]) == (1, "NOT_SHOWN")
+    reps = [list(blocks) for _ in range(om.STABLE_MIN_RUNS - 1)]
+    many = next(
+        iter(om.derive_go_coverage("u", "m", inv, blocks, repeats=reps).values())
+    )["coverage"]
+    assert (many["runs"], many["determinism"]) == (
+        om.STABLE_MIN_RUNS,
+        "OBSERVED_STABLE",
+    )
+    short = next(
+        iter(om.derive_go_coverage("u", "m", inv, blocks, repeats=reps[:-1]).values())
+    )["coverage"]
+    assert short["determinism"] == "NOT_SHOWN", "19 runs are not enough"
+
+
+def test_f1_the_forged_stability_passes_l1_and_is_caught_only_by_l2(bundle):
+    rec, over = sd.d_forged_stability(bundle)
+    r = bundle.verify(rec, **over)
+    assert (
+        r["L1"]["verdict"] == "INTEGRITY_OK"
+    ), "the forgery is internally consistent: only a re-derivation can see it"
+    assert r["L2"]["verdict"] == "FAIL" and any(
+        "REDERIVATION_MISMATCH" in f for f in r["L2"]["findings"]
+    )

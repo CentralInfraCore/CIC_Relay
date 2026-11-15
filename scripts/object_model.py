@@ -856,11 +856,15 @@ def stability(rec: dict) -> dict:
 
 
 def _cmp_cov(want: dict, got: dict) -> bool:
-    """Do two coverage fields say the same? (the run/spread detail and the uncovered spans are not compared)"""
+    """Do two coverage fields say the same? runs and determinism ARE compared (a stability claim must be provable from the
+    bound input profiles, like a value); only the uncovered spans are not."""
     if want.get("state") != got.get("state") or want.get("reason") != got.get("reason"):
         return False
     return (
-        all(want.get(k) == got.get(k) for k in ("kind", "total", "covered"))
+        all(
+            want.get(k) == got.get(k)
+            for k in ("kind", "total", "covered", "runs", "determinism")
+        )
         if want.get("state") == MEASURED
         else True
     )
@@ -1023,6 +1027,7 @@ def derive_go_coverage(
         for f in funcs:
             oid = f[4]
             t, c, p = per_run[0][oid]
+            cov: dict
             if not in_profile:
                 cov = {"state": UNVERIFIABLE, "reason": "FILE_NOT_IN_PROFILE"}
             elif p:
@@ -1032,7 +1037,18 @@ def derive_go_coverage(
             elif len({r[oid][1] for r in per_run}) > 1:
                 cov = {"state": UNVERIFIABLE, "reason": "NONDETERMINISTIC"}
             else:
-                cov = {"state": MEASURED, "kind": "statement", "total": t, "covered": c}
+                cov = {
+                    "state": MEASURED,
+                    "kind": "statement",
+                    "total": t,
+                    "covered": c,
+                    "runs": len(per_run),
+                    "determinism": (
+                        "OBSERVED_STABLE"
+                        if len(per_run) >= STABLE_MIN_RUNS
+                        else "NOT_SHOWN"
+                    ),
+                }
             out[oid] = {"unit": unit, "coverage": cov}
     return out
 
@@ -1082,6 +1098,8 @@ def derive_rust_coverage(
                 "kind": "region",
                 "total": total,
                 "covered": covered,
+                "runs": 1,
+                "determinism": "NOT_SHOWN",
             }
         out[key] = {"unit": "rust", "coverage": cov}
     return out
@@ -1406,6 +1424,10 @@ def cmd_build(a: argparse.Namespace) -> int:
         attribution[f"go:{name}"] = st
         note(f"go-inventory:{name}", inv)
         note(f"go-coverprofile:{name}", cover)
+        for i, r in enumerate(
+            (r for r in (a.go_repeat or []) if r.split("=", 1)[0] == name), 1
+        ):
+            note(f"go-coverprofile-repeat:{name}:{i}", r.split("=", 1)[1])
     if a.llvm_cov:
         llvm = _load(a.llvm_cov)
         syms = sorted({f["name"] for f in llvm["data"][0]["functions"]})
@@ -1514,12 +1536,18 @@ def build_context(rec: dict, root: str, scope: dict, inputs: dict[str, str]) -> 
             f"go-coverprofile:{unit}"
         )
         if inv and prof:
+            reps = [
+                parse_coverprofile(Path(path).read_text(encoding="utf-8"))
+                for name, path in sorted(inputs.items())
+                if name.startswith(f"go-coverprofile-repeat:{unit}:")
+            ]
             derived.update(
                 derive_go_coverage(
                     unit,
                     module,
                     _load(inv),
                     parse_coverprofile(Path(prof).read_text(encoding="utf-8")),
+                    repeats=reps or None,
                 )
             )
     rust_files = rust_groups.get("production", [])
