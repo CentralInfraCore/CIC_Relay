@@ -108,9 +108,31 @@ def test_scope_list_prints_the_files_of_a_class():
     assert out.returncode == 0 and out.stdout.split() == ["tools/goastdump/main.go"]
 
 
-@pytest.mark.parametrize("path", ["scripts/object_model.py", ".measurement-scope.json"])
+@pytest.mark.parametrize(
+    "path",
+    ["scripts/object_model.py", "scripts/seeded_defects.py", ".measurement-scope.json"],
+)
 def test_a_change_of_the_object_model_or_the_scope_is_gate_logic(path):
     sys.path.insert(0, os.path.join(ROOT, "scripts"))
     import mutation_plan
 
     assert path in mutation_plan.GATE_LOGIC_PATHS
+
+
+def test_the_seeded_defect_harness_runs_on_the_real_record_with_a_stated_expectation():
+    steps = {s["name"]: s for s in load()["jobs"]["object-evidence"]["steps"]}
+    run = next(v for k, v in steps.items() if k.startswith("Seeded defects"))["run"]
+    # the honest L3 is STATED (not adopted from the result), the harness gets the real inputs
+    for needle in (
+        "seeded_defects.py",
+        "--expect-l3 PARTIAL",
+        "--record",
+        "--root .",
+        "--rust-list",
+        "--input",
+        "go-coverprofile:root",
+    ):
+        assert needle in run
+    assert (
+        "COMPLETE_FOR_SCOPE" not in run
+    )  # the real workspace is not proven complete on the Rust side
