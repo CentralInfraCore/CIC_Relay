@@ -29,9 +29,11 @@ func TestGitChildEnvironment_IsAllowlisted(t *testing.T) {
 
 	reg := NewRepoRegistry()
 	reg.Register("r", t.TempDir())
-	require.NoError(t, NewExecGitOps(reg).Fetch(context.Background(), "r", "origin"))
+	_, err := NewExecGitOps(reg).Status(context.Background(), "r")
+	require.NoError(t, err)
 
-	raw, err := os.ReadFile(record)
+	raw, err2 := os.ReadFile(record)
+	err = err2
 	require.NoError(t, err)
 	got := string(raw)
 	for _, leaked := range []string{"secret-api-token", "secret-vault-token", "CIC_API_TOKEN", "VAULT_TOKEN", "GIT_CONFIG_COUNT", "GIT_EXEC_PATH", "file:ext"} {

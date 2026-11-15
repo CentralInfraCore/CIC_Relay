@@ -73,6 +73,33 @@ func TestGuestValuesNeverReachGitAsOptions(t *testing.T) {
 		assert.Error(t, strict.Clone(ctx, "r", "https://example.invalid/x.git", "--upload-pack="+script))
 		requireNoMarker(t, marker)
 	})
+	t.Run("remote must be configured, and its URL allowed", func(t *testing.T) {
+		resetMarker(marker)
+		// A directory inside the repository that is shaped like a repository: git would read the name as a path.
+		sub := filepath.Join(work, "sub")
+		out, err := exec.Command("git", "init", "--bare", "-b", "main", sub).CombinedOutput()
+		require.NoError(t, err, string(out))
+		for _, name := range []string{"sub", "nosuch", "upstream"} {
+			err := ops.Push(ctx, "r", name, "main")
+			require.Error(t, err, name)
+			assert.ErrorIs(t, err, ErrInvalidArgument, name)
+			assert.Contains(t, err.Error(), "not configured", name)
+			err = ops.Fetch(ctx, "r", name)
+			assert.ErrorIs(t, err, ErrInvalidArgument, name)
+			assert.Contains(t, err.Error(), "not configured", name)
+		}
+		// A configured remote whose URL uses a transport that is not allowed is refused too.
+		for name, u := range map[string]string{"evil": "ext::sh -c " + script, "path": "../elsewhere", "hostless": "https:///x"} {
+			out, err := exec.Command("git", "-C", work, "remote", "add", name, u).CombinedOutput()
+			require.NoError(t, err, string(out))
+			strict := NewExecGitOps(ops.registry)
+			err = strict.Fetch(ctx, "r", name)
+			require.Error(t, err, name)
+			assert.ErrorIs(t, err, ErrInvalidArgument, name)
+			assert.Contains(t, err.Error(), "not allowed", name)
+		}
+		requireNoMarker(t, marker)
+	})
 	t.Run("checkout ref", func(t *testing.T) {
 		resetMarker(marker)
 		assert.Error(t, ops.Checkout(ctx, "r", "--orphan=x"))
@@ -99,4 +126,47 @@ func TestGuestValuesNeverReachGitAsOptions(t *testing.T) {
 		assert.NoError(t, ops.Push(ctx, "r", "up", "main:main"))
 	})
 	requireNoMarker(t, marker)
+}
+
+// Local sources are an explicit, narrow form, not the fallthrough for anything that fails to parse.
+func TestLocalSourcePolicy(t *testing.T) {
+	ok := []string{"/srv/repos/a", "file:///srv/repos/a"}
+	bad := []string{
+		"relative/path", "../up", "./x", "/srv/../etc/x", "/srv//x", "/srv/x/", "file://host/srv/x", "file:relative",
+		"%zz", "ext::sh -c id", "-u/srv/x", "", "/srv/x\n", "https://", "ftp://host/x", "host:path", "git@host:org/repo.git",
+	}
+	for _, v := range ok {
+		assert.NoError(t, validateCloneURL(v, true), v)
+		assert.ErrorIs(t, validateCloneURL(v, false), ErrInvalidArgument, "%q must be refused when local sources are off", v)
+	}
+	for _, v := range bad {
+		assert.ErrorIs(t, validateCloneURL(v, true), ErrInvalidArgument, "%q must be refused even with local sources on", v)
+		assert.ErrorIs(t, validateCloneURL(v, false), ErrInvalidArgument, "%q", v)
+	}
+}
+
+// URLs can carry credentials. They are refused when a password is present, and masked wherever text
+// that may contain a URL leaves the package.
+func TestURLCredentialsNeverLeak(t *testing.T) {
+	ctx := context.Background()
+	reg := NewRepoRegistry()
+	reg.Register("r", filepath.Join(t.TempDir(), "w"))
+	ops := NewExecGitOps(reg)
+
+	err := ops.Clone(ctx, "r", "https://alice:hunter2@example.invalid/x.git", "main")
+	require.ErrorIs(t, err, ErrInvalidArgument)
+	assert.NotContains(t, err.Error(), "hunter2")
+	assert.NotContains(t, err.Error(), "alice")
+
+	// A URL without a password passes validation; the clone fails (no network here), and the failure
+	// text carries neither the user part nor anything git echoed.
+	err = ops.Clone(ctx, "r", "https://alice@example.invalid/x.git", "main")
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, ErrInvalidArgument)
+	assert.NotContains(t, err.Error(), "alice@")
+
+	assert.Equal(t, "fatal: unable to access 'https://***@h/x': failed",
+		scrubURLs("fatal: unable to access 'https://tok:en@h/x': failed"))
+	assert.Equal(t, "ssh://***@h/x", scrubURLs("ssh://git@h/x"))
+	assert.Equal(t, "no url here", scrubURLs("no url here"))
 }

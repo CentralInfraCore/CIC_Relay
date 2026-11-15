@@ -64,7 +64,7 @@ func (e *ExecGitOps) Fetch(ctx context.Context, repoID, remote string) error {
 	if err != nil {
 		return err
 	}
-	if err := validateRemoteName(remote); err != nil {
+	if err := e.requireConfiguredRemote(ctx, localPath, remote); err != nil {
 		return err
 	}
 	return e.runGit(ctx, localPath, "fetch", "--", remote)
@@ -118,10 +118,10 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err != nil {
 		return err
 	}
-	if err := validateRemoteName(remote); err != nil {
+	if err := validateRefspec(refspec); err != nil {
 		return err
 	}
-	if err := validateRefspec(refspec); err != nil {
+	if err := e.requireConfiguredRemote(ctx, localPath, remote); err != nil {
 		return err
 	}
 	return e.runGit(ctx, localPath, "push", "--", remote, refspec)
@@ -159,6 +159,36 @@ func parsePortcelainStatus(output string) []StatusEntry {
 		entries = append(entries, StatusEntry{Path: path, State: state})
 	}
 	return entries
+}
+
+// requireConfiguredRemote proves that name is a remote of this repository and that its URL passes the
+// same transport policy as a clone source. Git would otherwise read an unknown "remote" as a path or a
+// URL; a syntactically valid name is not evidence that it is configured, so the repository is asked.
+func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, name string) error {
+	if err := validateRemoteName(name); err != nil {
+		return err
+	}
+	out, err := e.runGitOutput(ctx, localPath, "remote")
+	if err != nil {
+		return fmt.Errorf("list remotes: %w", err)
+	}
+	configured := false
+	for _, line := range strings.Split(out, "\n") {
+		if strings.TrimSpace(line) == name {
+			configured = true
+		}
+	}
+	if !configured {
+		return fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
+	}
+	rawURL, err := e.runGitOutput(ctx, localPath, "remote", "get-url", "--", name)
+	if err != nil {
+		return fmt.Errorf("read remote url: %w", err)
+	}
+	if err := validateCloneURL(strings.TrimSpace(rawURL), e.allowLocalSources); err != nil {
+		return fmt.Errorf("remote %q has a URL that is not allowed: %w", clip(name), err)
+	}
+	return nil
 }
 
 // envAllowlist names the only variables a git child inherits from the relay process. Everything else
@@ -226,15 +256,16 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 
 	// Prepend the hardening configuration before the subcommand: no hooks, and only the https and ssh
 	// transports (no file, no ext helper), whatever a URL or the repository configuration says.
-	fullArgs := append([]string{
+	pre := []string{
 		"-c", "core.hooksPath=/dev/null",
 		"-c", "protocol.allow=never",
 		"-c", "protocol.https.allow=always",
 		"-c", "protocol.ssh.allow=always",
-	}, args...)
-	if e.allowLocalSources {
-		fullArgs = append(fullArgs[:len(fullArgs)-len(args)], append([]string{"-c", "protocol.file.allow=always"}, args...)...)
 	}
+	if e.allowLocalSources {
+		pre = append(pre, "-c", "protocol.file.allow=always")
+	}
+	fullArgs := append(pre, args...)
 	cmd := exec.CommandContext(ctx, "git", fullArgs...)
 	if dir != "" {
 		cmd.Dir = dir
@@ -266,7 +297,7 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 		if len(out) > maxOutputSize {
 			out = out[:maxOutputSize]
 		}
-		msg := strings.TrimSpace(string(out))
+		msg := scrubURLs(strings.TrimSpace(string(out)))
 		if e.logSink != nil {
 			e.logSink.RecordLog(obs.LogRecord{
 				Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -276,7 +307,7 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 				Attrs:     map[string]string{"op": op, "error": msg},
 			})
 		}
-		return "", fmt.Errorf("git %s: %s (%w)", strings.Join(args, " "), msg, runErr)
+		return "", fmt.Errorf("git %s: %s (%w)", scrubURLs(strings.Join(args, " ")), msg, runErr)
 	}
 
 	out := buf.Bytes()
