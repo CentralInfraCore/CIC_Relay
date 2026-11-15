@@ -419,7 +419,7 @@ func TestEveryURLOfARemoteIsValidated(t *testing.T) {
 // All push URLs count, and no URL at all is a refusal.
 func TestRemoteTargetsAreValidatedPerOperation(t *testing.T) {
 	ctx := context.Background()
-	const good, bad = "https://example.invalid/ok.git", "ext::sh -c id"
+	const good, bad = "https://example.invalid/ok.git", "ext::evil"
 	setup := func(t *testing.T, cmds ...[]string) (*ExecGitOps, string) {
 		ops, work, _ := argTestOps(t)
 		strict := NewExecGitOps(ops.registry)
@@ -438,14 +438,14 @@ func TestRemoteTargetsAreValidatedPerOperation(t *testing.T) {
 		err := pushOK(s, w)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalidArgument)
-		assert.Contains(t, err.Error(), "pushurl that is not allowed")
+		assert.Contains(t, err.Error(), "stored push URL that is not allowed")
 	})
 	t.Run("bad fetch URL, good push URL: push passes, fetch refused", func(t *testing.T) {
 		s, w := setup(t, []string{"remote", "set-url", "origin", bad}, []string{"remote", "set-url", "--push", "origin", good})
 		assert.NoError(t, pushOK(s, w))
 		err := fetchOK(s, w)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "url that is not allowed")
+		assert.Contains(t, err.Error(), "stored fetch URL that is not allowed")
 	})
 	t.Run("several push URLs: every one must pass", func(t *testing.T) {
 		s, w := setup(t, []string{"remote", "set-url", "origin", good},
@@ -546,4 +546,123 @@ func TestStoredURLIsOneRawRecord(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []string{"https://example.invalid/one.git", "https://example.invalid/two\nstill-two.git"}, vals)
 	})
+}
+
+// F1.4-F1.5: the policy applies to what git will actually contact, not only to what was written under
+// remote.<n>.url. The checks here call validateRemoteTargets directly, so they hold even if the
+// repository-configuration audit were bypassed; the public operations are checked as well.
+func TestEffectiveTargetsAreValidated(t *testing.T) {
+	ctx := context.Background()
+	const good = "https://example.invalid/ok.git"
+	setup := func(t *testing.T, cmds ...[]string) (*ExecGitOps, string) {
+		t.Helper()
+		ops, work, _ := argTestOps(t)
+		strict := NewExecGitOps(ops.registry)
+		for _, c := range append([][]string{{"remote", "set-url", "origin", good}}, cmds...) {
+			out, err := exec.Command("git", append([]string{"-C", work}, c...)...).CombinedOutput()
+			require.NoError(t, err, string(out))
+		}
+		return strict, work
+	}
+	refused := func(t *testing.T, s *ExecGitOps, w, op, why string) {
+		t.Helper()
+		err := s.validateRemoteTargets(ctx, w, "origin", op)
+		require.Error(t, err, "%s must be refused", op)
+		assert.ErrorIs(t, err, ErrInvalidArgument, op)
+		assert.Contains(t, err.Error(), why, op)
+	}
+
+	t.Run("insteadOf rewrites an allowed URL into a forbidden transport", func(t *testing.T) {
+		s, w := setup(t, []string{"config", "url.ext::evil/.insteadOf", "https://example.invalid/"})
+		refused(t, s, w, "fetch", "effective fetch target that is not allowed")
+		refused(t, s, w, "push", "effective push target that is not allowed")
+		// ...and through the public operations.
+		assert.ErrorIs(t, s.Fetch(ctx, "r", "origin"), ErrInvalidArgument)
+		assert.ErrorIs(t, s.Push(ctx, "r", "origin", "main"), ErrInvalidArgument)
+	})
+	t.Run("pushInsteadOf affects the push only", func(t *testing.T) {
+		s, w := setup(t, []string{"config", "url.ext::evil/.pushInsteadOf", "https://example.invalid/"})
+		assert.NoError(t, s.validateRemoteTargets(ctx, w, "origin", "fetch"), "a fetch does not use pushInsteadOf")
+		refused(t, s, w, "push", "effective push target that is not allowed")
+		assert.ErrorIs(t, s.Push(ctx, "r", "origin", "main"), ErrInvalidArgument)
+	})
+	t.Run("an allowed rewrite to another https host is fine and is what is validated", func(t *testing.T) {
+		s, w := setup(t, []string{"config", "url.https://mirror.invalid/.insteadOf", "https://example.invalid/"})
+		assert.NoError(t, s.validateRemoteTargets(ctx, w, "origin", "fetch"))
+		assert.NoError(t, s.validateRemoteTargets(ctx, w, "origin", "push"))
+	})
+	t.Run("one of several URLs is rewritten into something forbidden", func(t *testing.T) {
+		s, w := setup(t, []string{"config", "--add", "remote.origin.url", "https://other.invalid/y.git"},
+			[]string{"config", "url.file:///tmp/x/.insteadOf", "https://other.invalid/"})
+		refused(t, s, w, "fetch", "effective fetch target that is not allowed")
+		refused(t, s, w, "push", "effective push target that is not allowed")
+	})
+	t.Run("a pushurl in an included file is seen", func(t *testing.T) {
+		inc := filepath.Join(t.TempDir(), "inc.cfg")
+		require.NoError(t, os.WriteFile(inc, []byte("[remote \"origin\"]\n\tpushurl = ext::evil\n"), 0o644))
+		s, w := setup(t, []string{"config", "--local", "include.path", inc})
+		refused(t, s, w, "push", "not allowed")
+		assert.NoError(t, s.validateRemoteTargets(ctx, w, "origin", "fetch"), "the included pushurl is not a fetch target")
+		assert.ErrorIs(t, s.Push(ctx, "r", "origin", "main"), ErrInvalidArgument)
+	})
+	t.Run("a pushurl in the worktree configuration is seen", func(t *testing.T) {
+		s, w := setup(t, []string{"config", "extensions.worktreeConfig", "true"},
+			[]string{"config", "--worktree", "remote.origin.pushurl", "ext::evil"})
+		refused(t, s, w, "push", "not allowed")
+		assert.ErrorIs(t, s.Push(ctx, "r", "origin", "main"), ErrInvalidArgument)
+	})
+	t.Run("an included url is a fetch target", func(t *testing.T) {
+		inc := filepath.Join(t.TempDir(), "inc.cfg")
+		require.NoError(t, os.WriteFile(inc, []byte("[remote \"origin\"]\n\turl = ext::evil\n"), 0o644))
+		s, w := setup(t, []string{"config", "--local", "include.path", inc})
+		refused(t, s, w, "fetch", "not allowed")
+	})
+}
+
+// F1.6: the URL contract is printable ASCII, stated and enforced as such. Unicode whitespace, control,
+// zero-width, direction-control and look-alike characters are refused, and so are non-ASCII hosts.
+func TestURLContractIsPrintableASCII(t *testing.T) {
+	for name, v := range map[string]string{
+		"no-break space":         "https://example.invalid/a b.git",
+		"line separator":         "https://example.invalid/a b.git",
+		"next line":              "https://example.invalid/a\u0085b.git",
+		"zero-width space":       "https://example.invalid/a​b.git",
+		"right-to-left override": "https://example.invalid/‮ok.git",
+		"fullwidth slash":        "https://example.invalid／ok.git",
+		"internationalised host": "https://bücher.invalid/x.git",
+		"DEL":                    "https://example.invalid/a\x7fb.git",
+		"leading no-break space": " https://example.invalid/x.git",
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := validateCloneURL(v, false)
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrInvalidArgument)
+			assert.Contains(t, err.Error(), "printable ASCII")
+		})
+	}
+	assert.NoError(t, validateCloneURL("https://xn--bcher-kva.invalid/x.git", false), "punycode hosts are the accepted form")
+}
+
+// The stored and the effective target lists must have the same shape. Git offers no way to make them
+// differ with a plain configuration, so the disagreement is simulated with a git front that reports one
+// extra effective target: the operation must be refused, not matched up approximately.
+func TestStoredAndEffectiveTargetCountsMustAgree(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	strict := NewExecGitOps(ops.registry)
+	out, err := exec.Command("git", "-C", work, "remote", "set-url", "origin", "https://example.invalid/ok.git").CombinedOutput()
+	require.NoError(t, err, string(out))
+	require.NoError(t, strict.validateRemoteTargets(ctx, work, "origin", "fetch"), "precondition")
+
+	realGit, err := exec.LookPath("git")
+	require.NoError(t, err)
+	dir := t.TempDir()
+	front := "#!/bin/sh\nfor a in \"$@\"; do if [ \"$a\" = get-url ]; then echo https://example.invalid/ok.git; echo https://example.invalid/extra.git; exit 0; fi; done\nexec " + realGit + " \"$@\"\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "git"), []byte(front), 0o755))
+	t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
+
+	err = strict.validateRemoteTargets(ctx, work, "origin", "fetch")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	assert.Contains(t, err.Error(), "differ from the stored ones")
 }

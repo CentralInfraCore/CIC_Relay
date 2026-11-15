@@ -238,11 +238,15 @@ func checkGlobalConfigFile(path string) error {
 	return nil
 }
 
-// requireConfiguredRemote proves that name is a remote of this repository and that its URL passes the
-// same transport policy as a clone source. Git would otherwise read an unknown "remote" as a path or a
-// URL; a syntactically valid name is not evidence that it is configured, so the repository is asked.
+// requireConfiguredRemote proves that name is a remote of this repository, that the repository's
+// configuration is one we accept, and that every target the operation will use passes the URL policy.
+// A syntactically valid name is not evidence that the remote is configured (git would read an unknown
+// name as a path or a URL), so the repository is asked.
 func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, name, op string) error {
 	if err := validateRemoteName(name); err != nil {
+		return err
+	}
+	if err := e.auditRepoConfig(ctx, localPath); err != nil {
 		return err
 	}
 	out, err := e.runGitOutput(ctx, localPath, "remote")
@@ -258,44 +262,73 @@ func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, nam
 	if !configured {
 		return fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
 	}
-	// The targets differ by operation. A fetch reads from the remote's url value(s); a push writes to its
-	// pushurl value(s), or to its url value(s) when it has no pushurl. Only the targets the operation will
-	// actually use are validated, all of them (a push goes to every one), each exactly as stored.
-	var keys []string
+	return e.validateRemoteTargets(ctx, localPath, name, op)
+}
+
+// validateRemoteTargets checks the targets of a remote for one operation, at two levels that must agree:
+//
+//  1. the stored values, as raw NUL-delimited records, with include files and every other configuration
+//     scope git itself reads applied (so a pushurl that lives in an included file or in the worktree
+//     configuration is seen), each validated exactly as stored;
+//  2. the effective targets git will actually use, from "git remote get-url", which apply insteadOf and
+//     pushInsteadOf rewriting, each validated as well.
+//
+// The two lists must have the same number of entries: a difference means the target was rewritten into
+// something else or a value contains a line break, and either way the operation is refused. The URL policy
+// is applied to what git will contact, not only to what was written down.
+func (e *ExecGitOps) validateRemoteTargets(ctx context.Context, localPath, name, op string) error {
+	var stored []string
+	var getArgs []string
+	var err error
 	switch op {
 	case "fetch":
-		keys = []string{"url"}
+		stored, err = e.remoteConfigValues(ctx, localPath, "remote."+name+".url")
+		getArgs = []string{"remote", "get-url", "--all", "--", name}
 	case "push":
-		keys = []string{"pushurl", "url"} // first non-empty set wins, as in git
+		// A push uses the push URLs when there are any, otherwise the URLs, as git does.
+		stored, err = e.remoteConfigValues(ctx, localPath, "remote."+name+".pushurl")
+		if err == nil && len(stored) == 0 {
+			stored, err = e.remoteConfigValues(ctx, localPath, "remote."+name+".url")
+		}
+		getArgs = []string{"remote", "get-url", "--push", "--all", "--", name}
 	default:
 		return fmt.Errorf("%w: unknown remote operation %q", ErrInvalidArgument, clip(op))
 	}
-	for _, key := range keys {
-		values, err := e.remoteConfigValues(ctx, localPath, "remote."+name+"."+key)
-		if err != nil {
-			return fmt.Errorf("read remote %s: %w", key, err)
-		}
-		if len(values) == 0 {
-			continue
-		}
-		for _, v := range values {
-			// The raw stored value, byte for byte: no trimming, no splitting on newlines. validateCloneURL
-			// refuses control characters and whitespace, so a value that is not exactly one clean URL
-			// never reaches git.
-			if err := validateCloneURL(v, e.allowLocalSources); err != nil {
-				return fmt.Errorf("remote %q has a %s that is not allowed: %w", clip(name), key, err)
-			}
-		}
-		return nil
+	if err != nil {
+		return fmt.Errorf("read remote %s targets: %w", op, err)
 	}
-	return fmt.Errorf("%w: remote %q has no %s target URL", ErrInvalidArgument, clip(name), op)
+	if len(stored) == 0 {
+		return fmt.Errorf("%w: remote %q has no %s target URL", ErrInvalidArgument, clip(name), op)
+	}
+	for _, v := range stored {
+		if err := validateCloneURL(v, e.allowLocalSources); err != nil {
+			return fmt.Errorf("remote %q has a stored %s URL that is not allowed: %w", clip(name), op, err)
+		}
+	}
+
+	raw, err := e.runGitOutput(ctx, localPath, getArgs...)
+	if err != nil {
+		return fmt.Errorf("read effective %s targets: %w", op, err)
+	}
+	raw = strings.TrimSuffix(raw, "\n") // exactly the one terminator git prints; nothing else is removed
+	effective := strings.Split(raw, "\n")
+	if len(effective) != len(stored) {
+		return fmt.Errorf("%w: remote %q: the %s targets git will use differ from the stored ones", ErrInvalidArgument, clip(name), op)
+	}
+	for _, v := range effective {
+		if err := validateCloneURL(v, e.allowLocalSources); err != nil {
+			return fmt.Errorf("remote %q has an effective %s target that is not allowed: %w", clip(name), op, err)
+		}
+	}
+	return nil
 }
 
-// remoteConfigValues returns every value of a repository-local multi-valued key as NUL-delimited records
-// (git config -z), so one record is exactly one stored value however many lines it contains. An absent
-// key is an empty result, not an error.
+// remoteConfigValues returns every value of a multi-valued key as NUL-delimited records (git config -z),
+// so one record is exactly one stored value however many lines it contains. It reads what git itself
+// would read: all configuration scopes that are enabled, with include files applied. An absent key is an
+// empty result, not an error.
 func (e *ExecGitOps) remoteConfigValues(ctx context.Context, localPath, key string) ([]string, error) {
-	out, err := e.runGitOutput(ctx, localPath, "config", "--local", "--get-all", "-z", key)
+	out, err := e.runGitOutput(ctx, localPath, "config", "--includes", "--get-all", "-z", key)
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) && ee.ExitCode() == 1 {

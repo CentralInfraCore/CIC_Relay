@@ -97,10 +97,13 @@ func validateCloneURL(raw string, allowLocal bool) error {
 	if len(raw) == 0 || len(raw) > maxArgLen || strings.HasPrefix(raw, "-") {
 		return bad("empty, too long or leading dash")
 	}
-	// Exactly one clean URL: no control characters (a newline would end the record), no whitespace.
-	for _, r := range raw {
-		if r <= 0x20 || r == 0x7f {
-			return bad("control or whitespace characters")
+	// Exactly one clean URL, in the printable ASCII range: no control characters (a newline would end a
+	// record), no whitespace of any kind, no non-ASCII character (Unicode spaces, zero-width and
+	// direction-control characters can make two different strings look alike). An internationalised host
+	// is given in its ASCII (punycode) form.
+	for i := 0; i < len(raw); i++ {
+		if raw[i] <= 0x20 || raw[i] >= 0x7f {
+			return bad("only printable ASCII without whitespace is accepted")
 		}
 	}
 	if allowLocal && isLocalSource(raw) {
