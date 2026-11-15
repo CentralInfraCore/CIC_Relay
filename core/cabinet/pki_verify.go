@@ -30,7 +30,10 @@ type CRLFreshness struct {
 	Tolerance time.Duration    // grace after NextUpdate; zero means none
 }
 
-// CheckCRLFresh returns an error if crl is past NextUpdate+Tolerance, or has no NextUpdate.
+// CheckCRLFresh returns an error unless crl is currently valid: it must state a sensible
+// interval (a ThisUpdate, and a NextUpdate after it), must not start in the future, and must
+// not be past NextUpdate. Tolerance is the one explicit allowance, applied symmetrically: a
+// grace after NextUpdate and the clock skew accepted before ThisUpdate. Zero means none.
 func CheckCRLFresh(crl *x509.RevocationList, f *CRLFreshness) error {
 	if f == nil {
 		return nil
@@ -39,8 +42,19 @@ func CheckCRLFresh(crl *x509.RevocationList, f *CRLFreshness) error {
 	if f.Now != nil {
 		now = f.Now
 	}
+	if crl.ThisUpdate.IsZero() {
+		return fmt.Errorf("CRL of %s has no ThisUpdate, so its validity cannot be established", crl.Issuer)
+	}
 	if crl.NextUpdate.IsZero() {
 		return fmt.Errorf("CRL of %s has no NextUpdate, so its freshness cannot be established", crl.Issuer)
+	}
+	if !crl.NextUpdate.After(crl.ThisUpdate) {
+		return fmt.Errorf("CRL of %s has an inconsistent interval: NextUpdate %s is not after ThisUpdate %s",
+			crl.Issuer, crl.NextUpdate.UTC().Format(time.RFC3339), crl.ThisUpdate.UTC().Format(time.RFC3339))
+	}
+	if now().Add(f.Tolerance).Before(crl.ThisUpdate) {
+		return fmt.Errorf("CRL of %s is not yet valid: ThisUpdate %s is in the future (tolerance %s)",
+			crl.Issuer, crl.ThisUpdate.UTC().Format(time.RFC3339), f.Tolerance)
 	}
 	if now().After(crl.NextUpdate.Add(f.Tolerance)) {
 		return fmt.Errorf("CRL of %s is stale: NextUpdate %s, tolerance %s",
@@ -79,11 +93,16 @@ func checkRevocation(chains [][]*x509.Certificate, crls []*x509.RevocationList, 
 	}
 
 	for _, chain := range chains {
-		for _, cert := range chain {
+		// chain is leaf-first and verified: chain[i+1] is the certificate that actually issued
+		// chain[i]. The last element is the trust anchor, which has no issuer to be revoked by.
+		for i := 0; i+1 < len(chain); i++ {
+			cert, issuer := chain[i], chain[i+1]
 			for _, crl := range crls {
-				// Only check revocation entries from CRLs issued by this certificate's issuer.
-				// Comparing issuer DN prevents a CRL from one CA from revoking certs of another.
-				if crl.Issuer.String() != cert.Issuer.String() {
+				// A CRL counts for cert only if it was issued by cert's real issuer: same name
+				// AND a signature that verifies against that very certificate's key. Matching the
+				// name alone would let a CA that merely shares a name (with another key) speak
+				// for it, both to revoke and to vouch.
+				if !bytes.Equal(crl.RawIssuer, issuer.RawSubject) || crl.CheckSignatureFrom(issuer) != nil {
 					continue
 				}
 				if err := CheckCRLFresh(crl, fresh); err != nil {

@@ -89,6 +89,8 @@ A `relay` szolgáltatás ezeket olvassa a környezetből (a `docker-compose.yml`
 | `VAULT_CACERT` | — | pl. `/run/secrets/relay/vault-ca.crt` |
 | `CIC_VAULT_MOUNT` | `transit` | Vault transit mount |
 | `CIC_VAULT_KEY` | — | Aláíró kulcs; a tokennek **erre a kulcsra** kell jogosultnak lennie |
+| `CIC_CRL_REQUIRED_ISSUERS` | — | **`prod`-ban kötelező**: mely kibocsátóknak kell CRL-lel rendelkezniük. `none` (explicit: egy kibocsátó sem követel, figyelmeztetés), `all` (a bundle minden CA tanúsítványa) vagy CA-tanúsítvány SHA-256 ujjlenyomatok vesszős listája. Beállítatlan = indulási hiba. A követelt kibocsátóhoz a `CIC_PLATFORM_CA_BUNDLE`-ben (`X509 CRL` blokkként) kell egy pontosan tőle aláírt, jelenleg érvényes CRL; az érvényes, de üres CRL megfelel. Hiányzó, lejárt, hibás aláírású vagy idegen kibocsátótól származó CRL, illetve a bundle egyetlen CA-jára sem illeszkedő ujjlenyomat indulási hiba. A `dev` figyelmen kívül hagyja |
+| `CIC_CRL_MAX_STALENESS` | `0` | Explicit tolerancia a CRL időzítésére `prod`-ban: türelmi idő a `NextUpdate` után és óraeltérés a `ThisUpdate` előtt (Go időtartam, pl. `30m`; érvénytelen vagy negatív érték indulási hiba) |
 | `CIC_TRUST_MODE` | — | PKI trust mód (`dev` vagy `prod`); **kötelező**, nincs alapértelmezés, üres érték indulási hiba |
 
 ### A `CIC_BUILD_DIR`-t meg kell osztani a builder konténerrel

@@ -88,6 +88,8 @@ The `relay` service reads these from the environment (a `.env` file next to
 | `VAULT_CACERT` | — | e.g. `/run/secrets/relay/vault-ca.crt` |
 | `CIC_VAULT_MOUNT` | `transit` | Vault transit mount |
 | `CIC_VAULT_KEY` | — | Signing key; the token must be *authorised for this key* |
+| `CIC_CRL_REQUIRED_ISSUERS` | — | **Required in `prod`**: which issuers must have a CRL. `none` (explicit: no issuer requires one, logged as a warning), `all` (every CA certificate of the bundle) or a comma-separated list of CA certificate SHA-256 fingerprints. Unset is a start-up error. A required issuer needs a CRL in `CIC_PLATFORM_CA_BUNDLE` (as `X509 CRL` blocks) that is signed by that very certificate and currently valid; a valid but empty CRL satisfies it. A missing, expired, badly signed or wrong-issuer CRL, or a fingerprint matching no CA of the bundle, is a start-up error. `dev` ignores it |
+| `CIC_CRL_MAX_STALENESS` | `0` | Explicit tolerance for CRL timing in `prod`: grace after `NextUpdate` and clock skew accepted before `ThisUpdate` (a Go duration such as `30m`; invalid or negative is a start-up error) |
 | `CIC_TRUST_MODE` | — | PKI trust mode (`dev` or `prod`); **required**, no default, an empty value is a start-up error |
 
 ### `CIC_BUILD_DIR` must be shared with the builder container

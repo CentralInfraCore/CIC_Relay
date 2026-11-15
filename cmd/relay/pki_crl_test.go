@@ -242,7 +242,7 @@ func TestCrlToleranceFromEnv(t *testing.T) {
 func emptyCRLPEM(t *testing.T, signer *x509.Certificate, key *ecdsa.PrivateKey, nextUpdate time.Time) []byte {
 	t.Helper()
 	der, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
-		Number: big.NewInt(1), ThisUpdate: nextUpdate.Add(-time.Hour), NextUpdate: nextUpdate,
+		Number: big.NewInt(1), ThisUpdate: time.Now().Add(-time.Hour), NextUpdate: nextUpdate,
 	}, signer, key)
 	require.NoError(t, err)
 	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: der})

@@ -146,6 +146,7 @@ func TestProd_ModuleSignedOutsideOperatorBundle_RejectedOnBothPaths(t *testing.T
 	bundle := filepath.Join(t.TempDir(), "bundle.pem")
 	require.NoError(t, os.WriteFile(bundle, operatorRoot, 0o600))
 	t.Setenv("CIC_PLATFORM_CA_BUNDLE", bundle)
+	t.Setenv("CIC_CRL_REQUIRED_ISSUERS", "none") // the CRL issuer policy is mandatory in prod; not what is tested here
 
 	newProdAssets := func() *PKIAssets {
 		a, err := bootstrapPKI(TrustModeProd, embeddedFS, newDiscardLogger())
