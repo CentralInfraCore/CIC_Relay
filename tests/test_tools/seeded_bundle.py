@@ -132,7 +132,10 @@ def fixture_bundle(
         rust_independent=rust_ids if unmapped == 0 else None,
         required_units={"goastdump", "rust"},
         mutants=mutants,
-        tool_pins={"tools": dict(rec["tools"]), "record_tools": None},
+        tool_pins={
+            "tools": dict(rec["tools"]),
+            "surfaces": {"object-evidence": sorted(rec["tools"])},
+        },
     )
 
 

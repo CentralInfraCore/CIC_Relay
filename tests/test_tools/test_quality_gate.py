@@ -774,36 +774,102 @@ PIN_FILE = os.path.join(REPO_ROOT, ".measurement-tools.json")
 GREMLINS = "v0.6.0 h1:3G2ROO0I3q4bb5bxElQIUITTuEbl1iOfVYFqunGwrJI="
 
 
-def _check_tools(*tools, pins=PIN_FILE):
+def _check_tools(*tools, pins=PIN_FILE, surface="coverage-go"):
     argv = [sys.executable, GATE, "check-tools", "--pins", pins]
+    if surface is not None:
+        argv += ["--surface", surface]
     for t in tools:
         argv += ["--tool", t]
     return subprocess.run(argv, capture_output=True, text=True)
 
 
+def _surfaces():
+    return qg.load_tool_pins(PIN_FILE)["surfaces"]
+
+
+def _pinned(name):
+    return f"{name}={qg.load_tool_pins(PIN_FILE)['tools'][name]}"
+
+
 def test_check_tools_accepts_the_pinned_versions_and_names_them():
-    r = _check_tools("go=go1.26.11", f"gremlins={GREMLINS}")
+    r = _check_tools("go=go1.26.11", f"gremlins={GREMLINS}", surface="mutation-go")
     assert r.returncode == 0, r.stderr
-    assert "tools pinned: go=go1.26.11" in r.stdout
+    assert "tools pinned (mutation-go): go=go1.26.11" in r.stdout
+
+
+@pytest.mark.parametrize("surface", sorted(_surfaces()))
+def test_check_tools_every_surface_is_accepted_with_exactly_its_pinned_tools(surface):
+    r = _check_tools(*[_pinned(t) for t in _surfaces()[surface]], surface=surface)
+    assert r.returncode == 0, r.stderr
 
 
 @pytest.mark.parametrize(
-    "tool, code, word",
+    "surface, missing",
+    [(s, t) for s, tools in sorted(_surfaces().items()) for t in tools],
+)
+def test_check_tools_a_required_tool_that_is_not_declared_is_unverifiable(
+    surface, missing
+):
+    """Review F1: a surface that forgets to pass one of its tools must not pass."""
+    declared = [_pinned(t) for t in _surfaces()[surface] if t != missing]
+    r = (
+        _check_tools(*declared, surface=surface)
+        if declared
+        else _check_tools(surface=surface)
+    )
+    assert r.returncode == 1
+    if declared:
+        assert "[TOOL_UNVERIFIABLE]" in r.stdout and missing in r.stdout
+        assert "UNVERIFIABLE" in r.stderr
+
+
+@pytest.mark.parametrize(
+    "surface, tools, code, word",
     [
-        ("go=go1.26.10", "TOOL_UNUSABLE", "UNUSABLE"),
-        ("rustc=1.96.0", "TOOL_UNUSABLE", "UNUSABLE"),
-        ("cargo-mutants=27.1.1", "TOOL_UNUSABLE", "UNUSABLE"),
-        ("cargo-llvm-cov=0.9.2", "TOOL_UNUSABLE", "UNUSABLE"),
-        (f"gremlins=v0.6.0 h1:{'A' * 43}=", "TOOL_UNUSABLE", "UNUSABLE"),
-        ("gremlins=", "TOOL_UNVERIFIABLE", "UNVERIFIABLE"),
-        ("go=unknown", "TOOL_UNVERIFIABLE", "UNVERIFIABLE"),
-        ("mystery=1.0", "TOOL_NOT_PINNED", "UNVERIFIABLE"),
+        ("coverage-go", ["go=go1.26.10"], "TOOL_UNUSABLE", "UNUSABLE"),
+        (
+            "coverage-rust",
+            ["rustc=1.96.0", "cargo-llvm-cov=0.9.1"],
+            "TOOL_UNUSABLE",
+            "UNUSABLE",
+        ),
+        (
+            "mutation-rust",
+            ["rustc=1.96.1", "cargo-mutants=27.1.1"],
+            "TOOL_UNUSABLE",
+            "UNUSABLE",
+        ),
+        (
+            "coverage-rust",
+            ["rustc=1.96.1", "cargo-llvm-cov=0.9.2"],
+            "TOOL_UNUSABLE",
+            "UNUSABLE",
+        ),
+        (
+            "mutation-go",
+            ["go=go1.26.11", f"gremlins=v0.6.0 h1:{'A' * 43}="],
+            "TOOL_UNUSABLE",
+            "UNUSABLE",
+        ),
+        (
+            "mutation-go",
+            ["go=go1.26.11", "gremlins="],
+            "TOOL_UNVERIFIABLE",
+            "UNVERIFIABLE",
+        ),
+        ("coverage-go", ["go=unknown"], "TOOL_UNVERIFIABLE", "UNVERIFIABLE"),
+        (
+            "coverage-go",
+            ["go=go1.26.11", "mystery=1.0"],
+            "TOOL_NOT_PINNED",
+            "UNVERIFIABLE",
+        ),
     ],
 )
 def test_check_tools_rejects_a_modified_missing_unknown_or_unpinned_tool(
-    tool, code, word
+    surface, tools, code, word
 ):
-    r = _check_tools(tool)
+    r = _check_tools(*tools, surface=surface)
     assert r.returncode == 1
     assert f"[{code}]" in r.stdout and word in r.stderr
 
@@ -813,8 +879,14 @@ def test_check_tools_with_no_tool_is_an_error_not_a_pass():
     assert r.returncode == 1 and "nothing was checked" in r.stderr
 
 
+def test_check_tools_a_surface_is_required_and_must_exist():
+    assert _check_tools("go=go1.26.11", surface=None).returncode == 2
+    r = _check_tools("go=go1.26.11", surface="no-such-surface")
+    assert r.returncode == 1 and "not a measuring surface" in r.stderr
+
+
 def test_check_tools_one_bad_tool_among_good_ones_still_rejects():
-    r = _check_tools("go=go1.26.11", "rustc=9.9.9")
+    r = _check_tools("go=go1.26.11", "rustc=9.9.9", surface="coverage-rust")
     assert r.returncode == 1 and "rustc" in r.stdout
 
 
@@ -824,14 +896,17 @@ def test_check_tools_one_bad_tool_among_good_ones_still_rejects():
         "{}",
         "not json",
         '{"schema": "measurement-tools/1", "tools": {}}',
-        '{"schema": "measurement-tools/9", "tools": {"go": "1"}}',
-        '{"schema": "measurement-tools/1", "tools": {"go": "1"}, "record_tools": ["nope"]}',
+        '{"schema": "measurement-tools/9", "tools": {"go": "1"}, "surfaces": {"s": ["go"]}}',
+        '{"schema": "measurement-tools/1", "tools": {"go": "1"}}',
+        '{"schema": "measurement-tools/1", "tools": {"go": "1"}, "surfaces": {}}',
+        '{"schema": "measurement-tools/1", "tools": {"go": "1"}, "surfaces": {"s": ["nope"]}}',
+        '{"schema": "measurement-tools/1", "tools": {"go": "1"}, "surfaces": {"s": []}}',
     ],
 )
 def test_check_tools_a_bad_pin_file_is_an_error_not_an_empty_pin_set(tmp_path, content):
     f = tmp_path / "pins.json"
     f.write_text(content)
-    r = _check_tools("go=1", pins=str(f))
+    r = _check_tools("go=1", pins=str(f), surface="s")
     assert r.returncode == 1 and "::error::" in r.stderr
 
 
@@ -894,6 +969,14 @@ def test_every_job_that_measures_checks_its_tools_before_it_measures(wf, job, to
     declared = set(re.findall(r'--tool "([a-z+-]+)=', step.group(1)))
     assert declared == tools, f"{wf}/{job}: declares {declared}, must declare {tools}"
     assert "check-tools --pins .measurement-tools.json" in step.group(1)
+    # review F1: the step names its measuring surface, and declares exactly the tools that surface requires
+    surface = re.search(r"--surface ([a-z-]+)", step.group(1))
+    assert surface, f"{wf}/{job}: the tool check names no --surface"
+    required = set(_surfaces().get(surface.group(1), []))
+    assert required, f"{wf}/{job}: unknown surface {surface.group(1)!r}"
+    assert (
+        declared == required
+    ), f"{wf}/{job}: declares {declared}, the surface requires {required}"
     # the check comes before the first step that measures (the check step itself is left out of the search)
     rest = body.replace(step.group(0), "")
     first_measure = min(

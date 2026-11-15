@@ -364,6 +364,12 @@ TEETH = [
         {"P8.a"},
     ),
     (
+        "the missing-pin-configuration finding",
+        '"TOOL_PINS_MISSING",',
+        '"TOOL_PINS_MISSING_X",',
+        {"P8.e"},
+    ),
+    (
         "the pinned-version comparison",
         "elif recorded != want:",
         "elif False:",
@@ -582,7 +588,7 @@ def test_n_a8_unusable_and_unverifiable_name_the_tool(bundle):
 
 
 def test_n_a8_unusable_wins_over_unverifiable():
-    pins = {"tools": {"a": "1", "b": "1"}, "record_tools": None}
+    pins = {"tools": {"a": "1", "b": "1"}, "surfaces": {"object-evidence": ["a", "b"]}}
     rec = {"tools": {"a": "2"}}  # a: wrong version, b: missing
     r = om.verify_tools(rec, pins)
     assert r["verdict"] == "UNUSABLE" and len(r["findings"]) == 2
@@ -609,10 +615,18 @@ def test_n_a8_the_command_line_exits_non_zero_for_a_modified_tool(tmp_path, bund
     rec, _ = sd.d_tool_modified(bundle)
     (tmp_path / "rec.json").write_text(json.dumps(rec))
     (tmp_path / "pins.json").write_text(
-        json.dumps({"schema": "measurement-tools/1", "tools": _pins(bundle)})
+        json.dumps(
+            {
+                "schema": "measurement-tools/1",
+                "tools": _pins(bundle),
+                "surfaces": {"object-evidence": sorted(_pins(bundle))},
+            }
+        )
     )
     argv = [
         "verify",
+        "--mode",
+        "quality",
         "--record",
         str(tmp_path / "rec.json"),
         "--tool-pins",
@@ -629,3 +643,63 @@ def test_r_a8_the_real_pin_file_matches_the_tools_the_workflow_records():
     assert "--tool-pins .measurement-tools.json" in wf
     for tool in ("go", "rustc", "cargo-llvm-cov", "cargo-mutants", "objinventory"):
         assert tool in pins
+
+
+# --- PR-06 review F2: a quality verdict without the pin configuration is UNVERIFIABLE; the two modes are explicit ---
+
+
+def test_n_f2_in_quality_mode_missing_pins_are_unverifiable_and_the_command_exits_non_zero(
+    tmp_path, bundle
+):
+    r = bundle.verify(None, tool_pins=None, quality=True)["tools"]
+    assert r["verdict"] == "UNVERIFIABLE" and any(
+        "TOOL_PINS_MISSING" in f for f in r["findings"]
+    )
+    (tmp_path / "rec.json").write_text(json.dumps(bundle.record))
+    base = ["verify", "--record", str(tmp_path / "rec.json")]
+    assert om.main(base + ["--mode", "quality"]) == 1
+    # the positive control: the same record with the real pins in quality mode
+    (tmp_path / "pins.json").write_text(
+        json.dumps(
+            {
+                "schema": "measurement-tools/1",
+                "tools": bundle.tool_pins["tools"],
+                "surfaces": bundle.tool_pins["surfaces"],
+            }
+        )
+    )
+    assert (
+        om.main(
+            base + ["--mode", "quality", "--tool-pins", str(tmp_path / "pins.json")]
+        )
+        == 0
+    )
+
+
+def test_n_f2_diagnostic_mode_may_omit_the_pins_but_that_is_not_a_pass(
+    tmp_path, bundle
+):
+    r = bundle.verify(None, tool_pins=None, quality=False)["tools"]
+    assert r["verdict"] == "NOT_CHECKED" and r["verdict"] != "TOOLS_PINNED"
+    (tmp_path / "rec.json").write_text(json.dumps(bundle.record))
+    assert (
+        om.main(
+            ["verify", "--mode", "diagnostic", "--record", str(tmp_path / "rec.json")]
+        )
+        == 0
+    )
+
+
+def test_n_f2_the_mode_is_required_so_a_quality_check_cannot_be_chosen_by_accident(
+    tmp_path, bundle
+):
+    (tmp_path / "rec.json").write_text(json.dumps(bundle.record))
+    with pytest.raises(SystemExit) as e:
+        om.main(["verify", "--record", str(tmp_path / "rec.json")])
+    assert e.value.code == 2
+
+
+def test_r_f2_the_object_evidence_workflow_verifies_in_quality_mode():
+    wf = open(os.path.join(ROOT, ".github/workflows/object-evidence.yml")).read()
+    assert "object_model.py verify --mode quality" in wf
+    assert "--mode diagnostic" not in wf

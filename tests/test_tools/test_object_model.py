@@ -802,7 +802,7 @@ def test_n13_the_verifier_output_has_three_levels_and_no_combined_verdict(
     rec = make_record(rust_root)
     p = tmp_path / "rec.json"
     p.write_text(json.dumps(rec))
-    rc = om.main(["verify", "--record", str(p)])
+    rc = om.main(["verify", "--mode", "diagnostic", "--record", str(p)])
     out = capsys.readouterr().out
     assert rc == 0
     for lvl, word in (("L1", "INTEGRITY_OK"), ("L2", "NOT_CHECKED"), ("L3", "PARTIAL")):

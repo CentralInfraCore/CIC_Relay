@@ -91,7 +91,7 @@ jobs:
           T: ${{ runner.temp }}/object-evidence
         run: |
           set -euo pipefail
-          python3 scripts/object_model.py verify --record "$T/evidence.json" --root . --scope .measurement-scope.json \
+          python3 scripts/object_model.py verify --mode quality --record "$T/evidence.json" --root . --scope .measurement-scope.json \
             --rust-list "$T/rust-list.json" \
             --input "go-inventory:root=$T/go-inventory.json" --input "go-coverprofile:root=$T/go-cover.out" \
             --input "go-inventory:goastdump=$T/goastdump-inventory.json" --input "go-coverprofile:goastdump=$T/goastdump-cover.out" \

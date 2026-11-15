@@ -659,13 +659,13 @@ TOOL_PINS_SCHEMA = "measurement-tools/1"
 
 
 def load_tool_pins(path: str) -> dict:
-    """`.measurement-tools.json`: {"schema", "tools": {name: exact version}, optional "record_tools": [names]}."""
+    """`.measurement-tools.json`: {"schema", "tools": {name: exact version}, "surfaces": {surface: [tools it must declare]}}."""
     try:
         pins = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         raise GateError(f"{path}: missing, unreadable or not JSON: {e}") from e
     tools = pins.get("tools") if isinstance(pins, dict) else None
-    record_tools = pins.get("record_tools", None) if isinstance(pins, dict) else None
+    surfaces = pins.get("surfaces") if isinstance(pins, dict) else None
     if (
         not isinstance(pins, dict)
         or pins.get("schema") != TOOL_PINS_SCHEMA
@@ -674,17 +674,20 @@ def load_tool_pins(path: str) -> dict:
         or not all(
             isinstance(k, str) and isinstance(v, str) and v for k, v in tools.items()
         )
-        or (
-            record_tools is not None
-            and not (
-                isinstance(record_tools, list) and all(t in tools for t in record_tools)
-            )
+        or not isinstance(surfaces, dict)
+        or not surfaces
+        or not all(
+            isinstance(k, str)
+            and isinstance(v, list)
+            and v
+            and all(t in tools for t in v)
+            for k, v in surfaces.items()
         )
     ):
         raise GateError(
-            f"{path}: not a {TOOL_PINS_SCHEMA} file with a non-empty tool map (and record_tools within it)"
+            f"{path}: not a {TOOL_PINS_SCHEMA} file with a non-empty tool map and non-empty surfaces made of pinned tools"
         )
-    return {"tools": dict(tools), "record_tools": record_tools}
+    return {"tools": dict(tools), "surfaces": {k: list(v) for k, v in surfaces.items()}}
 
 
 def tool_pin_findings(
@@ -724,6 +727,11 @@ def tool_pin_findings(
 
 def cmd_check_tools(a: argparse.Namespace) -> int:
     pins = load_tool_pins(a.pins)
+    if a.surface not in pins["surfaces"]:
+        raise GateError(
+            f"--surface {a.surface!r} is not a measuring surface of {a.pins} ({', '.join(sorted(pins['surfaces']))})"
+        )
+    required = pins["surfaces"][a.surface]
     declared = {}
     for kv in a.tool or []:
         name, _, ver = kv.partition("=")
@@ -732,7 +740,7 @@ def cmd_check_tools(a: argparse.Namespace) -> int:
         declared[name] = ver.strip()
     if not declared:
         raise GateError("check-tools was given no tool: nothing was checked")
-    unusable, unverifiable = tool_pin_findings(pins["tools"], declared)
+    unusable, unverifiable = tool_pin_findings(pins["tools"], declared, required)
     for line in unusable + unverifiable:
         print(line)
     if unusable or unverifiable:
@@ -741,7 +749,9 @@ def cmd_check_tools(a: argparse.Namespace) -> int:
             + ("UNUSABLE" if unusable else "UNVERIFIABLE")
             + ": the result of this job must not be accepted"
         )
-    print(f"tools pinned: {', '.join(f'{k}={v}' for k, v in sorted(declared.items()))}")
+    print(
+        f"tools pinned ({a.surface}): {', '.join(f'{k}={v}' for k, v in sorted(declared.items()))}"
+    )
     return 0
 
 
@@ -790,6 +800,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("check-tools")
     p.add_argument("--pins", required=True, help=".measurement-tools.json")
+    p.add_argument(
+        "--surface",
+        required=True,
+        help="the measuring surface: every tool it requires must be declared (a missing one is UNVERIFIABLE)",
+    )
     p.add_argument(
         "--tool", action="append", help="NAME=VERSION as read from the installed tool"
     )

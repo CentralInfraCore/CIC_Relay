@@ -220,6 +220,11 @@ def d_tool_unpinned(b: Bundle):
     return _with_tools(b, lambda t: t.__setitem__("mystery-tool", "1.0.0"))
 
 
+def d_pins_missing(b: Bundle):
+    """The honest record, verified in quality mode WITHOUT the pin configuration: the tools cannot be verified."""
+    return b.record, {"tool_pins": None, "quality": True}
+
+
 def d_nondeterministic(b: Bundle):
     """An object whose coverage differs between runs (the real kind of case: see the PR-05 report)."""
     r = copy.deepcopy(b.record)
@@ -369,6 +374,15 @@ CASES = [
         "TOOLS",
         "TOOL_NOT_PINNED",
         "an unknown tool decides nothing",
+        "UNVERIFIABLE",
+    ),
+    Case(
+        "P8.e",
+        "the verification is a quality verdict but no pin configuration was given",
+        d_pins_missing,
+        "TOOLS",
+        "TOOL_PINS_MISSING",
+        "a quality verdict without pins is UNVERIFIABLE, not NOT_CHECKED",
         "UNVERIFIABLE",
     ),
     Case(

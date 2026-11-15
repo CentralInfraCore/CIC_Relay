@@ -70,6 +70,7 @@ jobs:
       - name: Check the measuring tools (fail closed)
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface mutation-go \
             --tool "go=$(go version | awk '{print $3}')" \
             --tool "gremlins=$(go version -m "$(command -v gremlins)" | awk '$1=="mod" && $2 ~ /go-gremlins\/gremlins$/ {print $3, $4}')"
 
@@ -104,6 +105,7 @@ jobs:
       - name: Check the measuring tools (fail closed)
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface mutation-rust \
             --tool "rustc=$(rustc --version | awk '{print $2}')" \
             --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
 

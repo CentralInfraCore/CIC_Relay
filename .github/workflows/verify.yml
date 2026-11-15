@@ -91,6 +91,7 @@ jobs:
       - name: Check the measuring tools (fail closed)
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface coverage-go \
             --tool "go=$(go version | awk '{print $3}')"
 
       # On pull_request, test the full module — this is the merge gate.
@@ -298,6 +299,7 @@ jobs:
       - name: Check the measuring tools (fail closed)
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface coverage-rust \
             --tool "rustc=$(rustc --version | awk '{print $2}')" \
             --tool "cargo-llvm-cov=$(cargo llvm-cov --version | awk '{print $2}')"
 

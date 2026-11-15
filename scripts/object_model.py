@@ -834,7 +834,7 @@ def load_tool_pins(path: str) -> dict:
         raise ModelError(str(e)) from e
 
 
-def verify_tools(rec: dict, pins: dict | None) -> dict:
+def verify_tools(rec: dict, pins: dict | None, quality: bool = False) -> dict:
     """Is every tool of the record the pinned one, and does the record declare every tool it must? Fail closed.
 
     UNUSABLE: the version is known but is not the pinned one. UNVERIFIABLE: the version cannot be established
@@ -843,10 +843,19 @@ def verify_tools(rec: dict, pins: dict | None) -> dict:
     provenance, not checked here. `pins` is the loaded `.measurement-tools.json`; the tools the record must declare
     are its `record_tools` (all pinned tools when absent)."""
     if pins is None:
+        if quality:
+            # a quality verdict without the pin configuration cannot say which tools measured: fail closed
+            return {
+                "verdict": "UNVERIFIABLE",
+                "findings": [
+                    code(
+                        "TOOL_PINS_MISSING",
+                        "no tool pins were given: the tools cannot be verified (quality mode)",
+                    )
+                ],
+            }
         return {"verdict": "NOT_CHECKED", "findings": ["no tool pins were given"]}
-    required = pins["record_tools"]
-    if required is None:
-        required = sorted(pins["tools"])
+    required = pins["surfaces"]["object-evidence"]
     unusable, unverifiable = qg.tool_pin_findings(
         pins["tools"], rec.get("tools") or {}, required
     )
@@ -1336,11 +1345,12 @@ def verify_record(
     rust_independent=None,
     required_units=None,
     tool_pins=None,
+    quality=False,
 ) -> dict:
     """All three levels, each on its own. There is deliberately no combined verdict."""
     l1 = verify_l1(rec)
     res = {"L1": {"verdict": "FAIL" if l1 else "INTEGRITY_OK", "findings": l1}}
-    res["tools"] = verify_tools(rec, tool_pins)
+    res["tools"] = verify_tools(rec, tool_pins, quality)
     if l1:  # the later levels read the record: do not trust a record that is not intact
         res["L2"] = {
             "verdict": "NOT_CHECKED",
@@ -1623,7 +1633,16 @@ def cmd_verify(a: argparse.Namespace) -> int:
         check_scope(scope)
         ctx = build_context(rec, a.root, scope, inputs)
     pins = load_tool_pins(a.tool_pins) if a.tool_pins else None
-    res = verify_record(rec, a.root, inputs, None, mutants, tool_pins=pins, **ctx)
+    res = verify_record(
+        rec,
+        a.root,
+        inputs,
+        None,
+        mutants,
+        tool_pins=pins,
+        quality=a.mode == "quality",
+        **ctx,
+    )
     for lvl in ("L1", "L2", "L3"):
         r = res[lvl]
         print(f"{lvl} {r['verdict']}")
@@ -1708,6 +1727,13 @@ def main(argv: list[str] | None = None) -> int:
         "--input", action="append", help="NAME=PATH of an input file (L2 digest)"
     )
     p.add_argument("--rust-list", help="cargo mutants --list --json output (L3, Rust)")
+    p.add_argument(
+        "--mode",
+        required=True,
+        choices=["quality", "diagnostic"],
+        help="quality: the result decides a quality verdict, so the tool pins are REQUIRED (missing = UNVERIFIABLE, exit 1); "
+        "diagnostic: reading a record, the tool pins are optional (NOT_CHECKED is not a pass)",
+    )
     p.add_argument(
         "--tool-pins",
         help=".measurement-tools.json: the pinned tool versions (fail closed on a different, missing or unpinned tool)",
