@@ -1,68 +1,9 @@
----
-module: test_tools.test_ci_report
-description: One issue per ongoing problem of a scheduled run (scripts/ci_report.sh).
+module: test_ci_report
+description: ''
 tags:
 - test
 category: []
 used_in: []
 entrypoint: false
 related_nodes: []
-objects:
-- name: SCRIPT
-  kind: const
-  description: ''
-  references: []
-- name: FAKE_GH
-  kind: const
-  description: ''
-  references: []
-- name: run
-  kind: function
-  decorators: []
-  description: ''
-  references: []
-  calls:
-  - gh.chmod
-  - gh.stat
-  - gh.write_text
-  - log.exists
-  - log.read_text
-- name: verbs
-  kind: function
-  decorators: []
-  description: ''
-  references: []
-  calls:
-  - c.split
-- name: test_failure_without_an_open_issue_creates_one
-  kind: function
-  decorators: []
-  description: ''
-  references: []
-  calls: []
-- name: test_failure_with_an_open_issue_comments_instead_of_a_second_issue
-  kind: function
-  decorators: []
-  description: ''
-  references: []
-  calls: []
-- name: test_success_closes_the_open_issue
-  kind: function
-  decorators: []
-  description: ''
-  references: []
-  calls: []
-- name: test_success_without_an_open_issue_does_nothing
-  kind: function
-  decorators: []
-  description: ''
-  references: []
-  calls: []
-- name: test_unknown_status_is_an_error
-  kind: function
-  decorators:
-  - pytest.mark.parametrize
-  description: ''
-  references:
-  - pytest.mark
-  calls: []
+objects: []
