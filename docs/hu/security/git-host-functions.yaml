@@ -1,0 +1,16 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - git
+related_nodes:
+  - docs/hu/security/secret_and_audit_model
+  - docs/hu/pipeline/relay-container
+category:
+  - security
+entrypoint: false
+used_in:
+  - validation
+  - operations
+description: |
+  A WASM moduloknak kínált típusos git host modul capability-szerződése: milyen műveletek léteznek, hogyan deklarálja a modul a hatókörét az aláírt capability manifestben, hogyan kötődik az identitás és a grant az ellenőrzött artifacthoz és manifesthez, mit ellenőriz a relay minden híváskor, miért van visszavonva a push, és milyen operátori feltételezések érvényesek.

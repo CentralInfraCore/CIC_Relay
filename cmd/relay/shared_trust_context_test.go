@@ -40,7 +40,7 @@ func loadVia(t *testing.T, path string, files fstest.MapFS, assets *PKIAssets) o
 
 	var bound []string
 	prev := registerModuleCapability
-	registerModuleCapability = func(moduleID string, _ []byte) error {
+	registerModuleCapability = func(moduleID string, _ []byte, _ string) error {
 		bound = append(bound, moduleID)
 		return nil
 	}

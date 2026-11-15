@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -74,7 +75,17 @@ func TestRun_ServerStart(t *testing.T) {
 }
 
 func TestLoadConfig_Defaults(t *testing.T) {
-	// Ensure no env vars are set
+	// Ensure no env vars are set, and put the process environment back afterwards: clearing it for good
+	// takes PATH and HOME away from every test that runs later (anything that starts git, notably).
+	saved := os.Environ()
+	t.Cleanup(func() {
+		os.Clearenv()
+		for _, kv := range saved {
+			if k, v, ok := strings.Cut(kv, "="); ok {
+				_ = os.Setenv(k, v)
+			}
+		}
+	})
 	os.Clearenv()
 
 	cfg, err := loadConfig()

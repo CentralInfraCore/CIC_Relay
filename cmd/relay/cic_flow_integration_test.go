@@ -77,7 +77,7 @@ capability_manifest:
 	moduleFS, yamlContent := moduleFSWith(t, "oci.mod", manifest)
 
 	reg := newCICFlowRegistry(nil, &stubDoer{})
-	registerModuleCapability = reg.registerVerified
+	registerModuleCapability = reg.publishVerified
 	defer func() { registerModuleCapability = nil }()
 
 	err := loadModule(context.Background(), newCabinetForTest(t), moduleFS, "m.yaml", yamlContent,
@@ -107,7 +107,7 @@ capability_manifest:
 	moduleFS, yamlContent := moduleFSWith(t, "oci.mod", manifest)
 
 	reg := newCICFlowRegistry(nil, &stubDoer{})
-	registerModuleCapability = reg.registerVerified
+	registerModuleCapability = reg.publishVerified
 	defer func() { registerModuleCapability = nil }()
 
 	// buildLoadedPKIAssets has no SourceRoots → provenance not verified.
@@ -133,7 +133,7 @@ capability_manifest:
 	moduleFS, yamlContent := moduleFSWith(t, "bad.mod", overDeclared)
 
 	reg := newCICFlowRegistry(nil, &stubDoer{})
-	registerModuleCapability = reg.registerVerified
+	registerModuleCapability = reg.publishVerified
 	defer func() { registerModuleCapability = nil }()
 
 	err := loadModule(context.Background(), newCabinetForTest(t), moduleFS, "m.yaml", yamlContent,
