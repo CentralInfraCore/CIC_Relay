@@ -136,7 +136,7 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err != nil {
 		return err
 	}
-	explicit, err := normalizeRefspec(refspec)
+	src, dst, err := CanonicalPushRefspec(refspec)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,58 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err := e.requireConfiguredRemote(ctx, localPath, remote, "push"); err != nil {
 		return err
 	}
-	return e.runGit(ctx, localPath, "push", "--", remote, explicit)
+	// A qualified name is still not an exact reference to git: it falls back to other ref names ("refs/heads/x"
+	// is found as the tag "refs/tags/refs/heads/x" when no such branch exists), on both ends of a push. So
+	// neither end is handed to git as a name that git may reinterpret:
+	//   - the source is resolved HERE, to the exact ref (git show-ref --verify takes no fallbacks) and its
+	//     object id; the object id is what is pushed, so what was checked is what is read;
+	//   - the destination is checked against the remote's own refs: if the remote holds any other ref that
+	//     git could take the destination for, the push is refused.
+	oid, err := e.resolveExactRef(ctx, localPath, src)
+	if err != nil {
+		return err
+	}
+	if err := e.requireUnambiguousRemoteRef(ctx, localPath, remote, dst); err != nil {
+		return err
+	}
+	return e.runGit(ctx, localPath, "push", "--", remote, oid+":"+dst)
+}
+
+// resolveExactRef returns the object id of the local ref named exactly refname ("refs/heads/..." or
+// "refs/tags/..."), or an error if there is no such ref. "git show-ref --verify" requires the exact ref path:
+// it does not try the other places a short or qualified name could also be looked up.
+func (e *ExecGitOps) resolveExactRef(ctx context.Context, localPath, refname string) (string, error) {
+	out, err := e.runGitOutput(ctx, localPath, "show-ref", "--verify", "--hash", "--", refname)
+	if err != nil {
+		return "", fmt.Errorf("%w: source ref %q does not exist exactly as named", ErrInvalidArgument, clip(refname))
+	}
+	oid := strings.TrimSpace(out)
+	if len(oid) != 40 && len(oid) != 64 || strings.Trim(oid, "0123456789abcdef") != "" {
+		return "", fmt.Errorf("%w: source ref %q did not resolve to an object id", ErrInvalidArgument, clip(refname))
+	}
+	return oid, nil
+}
+
+// requireUnambiguousRemoteRef refuses a push whose destination refname git could match to a different ref
+// of the remote. Given "refs/heads/x", git also accepts the remote's "refs/refs/heads/x",
+// "refs/tags/refs/heads/x", "refs/heads/refs/heads/x", "refs/remotes/refs/heads/x" and ".../HEAD" for it, and
+// updates that one when it is the only match. Everything that could be taken for the destination is asked
+// of the remote; the only acceptable answer is nothing, or exactly the destination.
+func (e *ExecGitOps) requireUnambiguousRemoteRef(ctx context.Context, localPath, remote, refname string) error {
+	out, err := e.runGitOutput(ctx, localPath, "ls-remote", "--refs", "--", remote, refname, refname+"/HEAD")
+	if err != nil {
+		return fmt.Errorf("read the remote's refs: %w", err)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if line == "" {
+			continue
+		}
+		_, name, ok := strings.Cut(line, "\t")
+		if !ok || name != refname {
+			return fmt.Errorf("%w: the remote holds another ref that %q could be taken for; refusing", ErrInvalidArgument, clip(refname))
+		}
+	}
+	return nil
 }
 
 // Status returns the working-tree status of the registered repo.

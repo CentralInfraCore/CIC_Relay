@@ -881,7 +881,8 @@ func TestPushShortSourceIsABranchNeverATag(t *testing.T) {
 	// short name to the tag is exactly what must not happen.
 	err := ops.Push(ctx, "r", "origin", "release/1:release/1")
 	require.Error(t, err, "a short source must not be resolved to the tag")
-	assert.NotErrorIs(t, err, ErrInvalidArgument, "it is a well-formed refspec; git finds no such branch")
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	assert.Contains(t, err.Error(), "does not exist exactly as named")
 	assert.NotContains(t, remoteRefs(), "release/1")
 	err = ops.Push(ctx, "r", "origin", "release/1")
 	require.Error(t, err)
@@ -891,4 +892,83 @@ func TestPushShortSourceIsABranchNeverATag(t *testing.T) {
 	require.NoError(t, ops.Push(ctx, "r", "origin", "refs/tags/release/1:refs/tags/release/1"))
 	assert.Contains(t, remoteRefs(), "refs/tags/release/1")
 	assert.NotContains(t, remoteRefs(), "refs/heads/release/1")
+}
+
+// F10.3: even a FULLY QUALIFIED source name is not exact to git: with no branch refs/heads/release/1, git
+// finds the tag refs/tags/refs/heads/release/1 for it. The source is resolved exactly (show-ref --verify)
+// and pushed as an object id. Reproduction as reported: real git, such a tag, no such branch.
+func TestPushQualifiedSourceIsResolvedExactly(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	run := func(dir string, args ...string) string {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	bare := filepath.Join(t.TempDir(), "bare.git")
+	run(t.TempDir(), "init", "--bare", "-b", "main", bare)
+	run(work, "remote", "set-url", "origin", bare)
+	run(work, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "the tag's content")
+	run(work, "tag", "refs/heads/release/1") // the tag refs/tags/refs/heads/release/1
+	require.Equal(t, "", run(work, "branch", "--list", "release/1"), "precondition: no such branch")
+	require.NotEmpty(t, run(work, "rev-parse", "--verify", "-q", "refs/tags/refs/heads/release/1"), "precondition: the lookalike tag exists")
+	// git itself would find the tag for the qualified name (the reviewer's finding):
+	require.NotEmpty(t, run(work, "rev-parse", "--verify", "-q", "refs/heads/release/1"), "precondition: git's own lookup falls back to the tag")
+
+	err := ops.Push(ctx, "r", "origin", "refs/heads/release/1:refs/heads/release/1")
+	require.Error(t, err, "the exact source does not exist")
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	assert.Empty(t, run(bare, "for-each-ref", "--format=%(refname)"), "nothing reached the remote")
+
+	// With the branch present the same refspec works, and pushes the branch's object.
+	run(work, "branch", "release/1", "HEAD~1")
+	require.NoError(t, ops.Push(ctx, "r", "origin", "refs/heads/release/1:refs/heads/release/1"))
+	exact := func(dir, ref string) string { return run(dir, "show-ref", "--verify", "--hash", ref) } // exact lookup: no fallbacks, no ambiguity warning
+	assert.Equal(t, exact(work, "refs/heads/release/1"), exact(bare, "refs/heads/release/1"))
+	assert.NotEqual(t, exact(work, "refs/tags/refs/heads/release/1"), exact(bare, "refs/heads/release/1"),
+		"the branch's commit was pushed, not the lookalike tag's")
+}
+
+// F10.4: the same on the remote side. If the remote holds refs/heads/refs/heads/release/1 and the guest
+// pushes to refs/heads/release/1, git updates the lookalike (it is the only match) and creates nothing at
+// the granted name. Reproduction as reported, real git.
+func TestPushDestinationAmbiguousOnTheRemoteIsRefused(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	run := func(dir string, args ...string) string {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	bare := filepath.Join(t.TempDir(), "bare.git")
+	run(t.TempDir(), "init", "--bare", "-b", "main", bare)
+	run(work, "remote", "set-url", "origin", bare)
+	run(work, "push", "origin", "main:refs/heads/refs/heads/release/1") // the lookalike, put there out of band
+	lookalike := run(bare, "rev-parse", "refs/heads/refs/heads/release/1")
+	run(work, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "newer")
+	require.NotEqual(t, lookalike, run(work, "rev-parse", "main"))
+
+	// Without the check, git would move the lookalike. It must not, and must create nothing.
+	err := ops.Push(ctx, "r", "origin", "main:release/1")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	assert.Contains(t, err.Error(), "could be taken for")
+	assert.Equal(t, lookalike, run(bare, "rev-parse", "refs/heads/refs/heads/release/1"), "the lookalike ref was not touched")
+	assert.Empty(t, run(bare, "for-each-ref", "--format=%(refname)", "refs/heads/release"), "and nothing was created at the granted name")
+
+	// Other lookalike forms git also matches.
+	for _, other := range []string{"refs/tags/refs/heads/release/2", "refs/refs/heads/release/2", "refs/remotes/refs/heads/release/2", "refs/remotes/refs/heads/release/2/HEAD"} {
+		run(work, "push", "origin", "main:"+other)
+		err = ops.Push(ctx, "r", "origin", "main:release/2")
+		require.Error(t, err, other)
+		assert.Contains(t, err.Error(), "could be taken for", other)
+		run(bare, "update-ref", "-d", other)
+	}
+
+	// No ambiguity: a fresh destination, and an existing exact one, both work.
+	require.NoError(t, ops.Push(ctx, "r", "origin", "main:release/3"))
+	assert.Equal(t, run(work, "rev-parse", "main"), run(bare, "rev-parse", "refs/heads/release/3"))
+	run(work, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "newer still")
+	require.NoError(t, ops.Push(ctx, "r", "origin", "main:release/3"), "updating the exact existing ref is fine")
+	assert.Equal(t, run(work, "rev-parse", "main"), run(bare, "rev-parse", "refs/heads/release/3"))
 }
