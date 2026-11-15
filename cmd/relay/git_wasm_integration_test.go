@@ -129,12 +129,12 @@ func TestGitFromARealGuest(t *testing.T) {
 abi:
   imports:
     - module: git
-      functions: [status, fetch, push]
+      functions: [status, fetch]
 capability_manifest:
   git:
     - repo: r
-      ops: [status, fetch, push]
-      remotes: ["--receive-pack=%s", "upstream", "origin"]
+      ops: [status, fetch]
+      remotes: ["--upload-pack=%s", "upstream", "origin"]
       refs: ["main"]
 `, script)
 	reg := newCICFlowRegistry(nil, &stubDoer{})
@@ -168,11 +168,11 @@ capability_manifest:
 		assert.Contains(t, errOf(out), "not an identified module instance")
 	})
 	t.Run("authorization stops an operation outside the manifest", func(t *testing.T) {
-		out := runGuest(t, rt, "granted@1", &gid, "push", reqJSON(map[string]interface{}{"repo_id": "r", "remote": "origin", "refspec": "dev"}))
+		out := runGuest(t, rt, "granted@1", &gid, "commit", reqJSON(map[string]interface{}{"repo_id": "r", "message": "m", "paths": []string{"x"}}))
 		assert.Contains(t, errOf(out), "not permitted")
 	})
 	t.Run("validation stops a hostile remote the manifest happens to list", func(t *testing.T) {
-		out := runGuest(t, rt, "granted@1", &gid, "push", reqJSON(map[string]interface{}{"repo_id": "r", "remote": "--receive-pack=" + script, "refspec": "main"}))
+		out := runGuest(t, rt, "granted@1", &gid, "fetch", reqJSON(map[string]interface{}{"repo_id": "r", "remote": "--upload-pack=" + script}))
 		assert.Contains(t, errOf(out), "invalid argument")
 		_, err := os.Stat(marker)
 		assert.True(t, os.IsNotExist(err), "a guest-chosen program ran")
@@ -180,12 +180,6 @@ capability_manifest:
 	t.Run("validation stops a listed remote that the repository does not configure", func(t *testing.T) {
 		out := runGuest(t, rt, "granted@1", &gid, "fetch", reqJSON(map[string]interface{}{"repo_id": "r", "remote": "upstream"}))
 		assert.Contains(t, errOf(out), "not configured")
-	})
-	t.Run("validation stops a hostile refspec the manifest does not list", func(t *testing.T) {
-		out := runGuest(t, rt, "granted@1", &gid, "push", reqJSON(map[string]interface{}{"repo_id": "r", "remote": "origin", "refspec": "--receive-pack=" + script}))
-		assert.NotEmpty(t, errOf(out))
-		_, err := os.Stat(marker)
-		assert.True(t, os.IsNotExist(err), "a guest-chosen program ran")
 	})
 }
 

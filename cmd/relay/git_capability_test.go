@@ -30,11 +30,11 @@ wasmDigest: "abc"
 abi:
   imports:
     - module: git
-      functions: [status, fetch, push, checkout]
+      functions: [status, fetch, checkout]
 capability_manifest:
   git:
     - repo: infra
-      ops: [status, fetch, push, checkout]
+      ops: [status, fetch, checkout]
       remotes: [origin]
       refs: ["main", "release/*"]
 `
@@ -81,7 +81,6 @@ func TestGitManifest_Validation(t *testing.T) {
 		"unknown op":            "ops: [rebase]\n      remotes: [origin]",
 		"no ops":                "ops: []",
 		"fetch without remotes": "ops: [fetch]",
-		"push without refs":     "ops: [push]\n      remotes: [origin]",
 		"checkout without refs": "ops: [checkout]",
 		"clone without sources": "ops: [clone]\n      refs: [main]",
 		"star ref":              "ops: [checkout]\n      refs: [\"*\"]",
@@ -130,19 +129,15 @@ func TestGitAuthorize_Matrix(t *testing.T) {
 	ok("fetch", gitAuthRequest{RepoID: "infra", Remote: "origin"})
 	ok("checkout", gitAuthRequest{RepoID: "infra", Ref: "main"})
 	ok("checkout", gitAuthRequest{RepoID: "infra", Ref: "release/1.2"})
-	ok("push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: "main"})
-	ok("push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: "main:release/x"})
 
-	no("status", gitAuthRequest{RepoID: "iac-config"})                                 // other repository
-	no("fetch", gitAuthRequest{RepoID: "infra", Remote: "upstream"})                   // other remote
-	no("fetch", gitAuthRequest{RepoID: "infra", Remote: ""})                           // nothing named
-	no("checkout", gitAuthRequest{RepoID: "infra", Ref: "dev"})                        // other ref
-	no("checkout", gitAuthRequest{RepoID: "infra", Ref: "release/"})                   // pattern needs a segment
-	no("checkout", gitAuthRequest{RepoID: "infra", Ref: "releasex/1"})                 // prefix is a segment boundary
-	no("push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: "main:dev"}) // destination outside
-	no("push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: "dev"})      // source outside
-	no("commit", gitAuthRequest{RepoID: "infra"})                                      // op not granted
-	no("clone", gitAuthRequest{RepoID: "infra", URL: "https://x/y", Branch: "main"})   // op not granted
+	no("status", gitAuthRequest{RepoID: "iac-config"})                               // other repository
+	no("fetch", gitAuthRequest{RepoID: "infra", Remote: "upstream"})                 // other remote
+	no("fetch", gitAuthRequest{RepoID: "infra", Remote: ""})                         // nothing named
+	no("checkout", gitAuthRequest{RepoID: "infra", Ref: "dev"})                      // other ref
+	no("checkout", gitAuthRequest{RepoID: "infra", Ref: "release/"})                 // pattern needs a segment
+	no("checkout", gitAuthRequest{RepoID: "infra", Ref: "releasex/1"})               // prefix is a segment boundary
+	no("commit", gitAuthRequest{RepoID: "infra"})                                    // op not granted
+	no("clone", gitAuthRequest{RepoID: "infra", URL: "https://x/y", Branch: "main"}) // op not granted
 	assert.Error(t, reg.authorizeGit(inst("someone-else@1", "art-1"), "status", gitAuthRequest{RepoID: "infra"}), "an unregistered module has no capability")
 	assert.Error(t, newCICFlowRegistry(nil, nil).authorizeGit(inst("mod@1", "art-1"), "status", gitAuthRequest{RepoID: "infra"}), "an empty registry denies")
 }
@@ -365,85 +360,15 @@ var _ nexusgit.GitOps
 func TestGitManifest_RefsAreBranchesAndTagsOnly(t *testing.T) {
 	for _, ref := range []string{"refs/notes/*", "refs/notes/commits", "refs/replace/abc", "refs/remotes/origin/main", "refs/stash", "refs/*", "refs", "HEAD", "FETCH_HEAD"} {
 		t.Run(ref, func(t *testing.T) {
-			yaml := "abi:\n  imports: []\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [push]\n      remotes: [origin]\n      refs: [\"" + ref + "\"]\n"
+			yaml := "abi:\n  imports: []\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [checkout]\n      refs: [\"" + ref + "\"]\n"
 			reg := newCICFlowRegistry(nil, &stubDoer{})
 			err := reg.registerVerified("m@1", []byte(yaml))
 			require.Error(t, err, "ref pattern %q must be refused at load", ref)
-			assert.Error(t, reg.authorizeGit(inst("m@1", "art-1"), "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: ref}))
+			assert.Error(t, reg.authorizeGit(inst("m@1", "art-1"), "checkout", gitAuthRequest{RepoID: "infra", Ref: ref}))
 		})
 	}
 	for _, ref := range []string{"main", "release/*", "refs/heads/main", "refs/heads/rel/*", "refs/tags/*", "v1"} {
-		yaml := "abi:\n  imports: []\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [push]\n      remotes: [origin]\n      refs: [\"" + ref + "\"]\n"
+		yaml := "abi:\n  imports: []\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [checkout]\n      refs: [\"" + ref + "\"]\n"
 		assert.NoError(t, newCICFlowRegistry(nil, &stubDoer{}).registerVerified("m@1", []byte(yaml)), ref)
-	}
-}
-
-// F10.1: the manifest is checked against the canonical, fully qualified refspec: the one ExecGitOps runs.
-// A short destination is a branch name, so it can neither reach a notes/replace namespace by resolving
-// against the remote, nor be authorised as if it could.
-func TestGitAuthorize_PushUsesTheCanonicalRefspec(t *testing.T) {
-	const manifest = `
-abi:
-  imports: []
-capability_manifest:
-  git:
-    - repo: infra
-      ops: [push]
-      remotes: [origin]
-      refs: ["main", "release/*", "refs/tags/*"]
-`
-	reg := newCICFlowRegistry(nil, &stubDoer{})
-	require.NoError(t, reg.publishVerified("mod@1", []byte(manifest), "art-1"))
-	push := func(spec string) error {
-		return reg.authorizeGit(instUnder("mod@1", "art-1", manifest), "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: spec})
-	}
-	for _, spec := range []string{"main", "main:main", "main:release/1", "main:refs/heads/release/x", "refs/tags/v1", "main:refs/tags/v2"} {
-		assert.NoError(t, push(spec), spec)
-	}
-	for _, spec := range []string{
-		"main:notes/commits",  // a branch named notes/commits: not in the manifest
-		"main:v1",             // a branch named v1: not in the manifest
-		"main:replace/abc",    //
-		"main:refs/notes/x",   // forbidden namespace
-		"main:refs/replace/x", //
-		"HEAD", "release/1:other", "other:main", "+main", "main:release/../x",
-	} {
-		assert.Error(t, push(spec), "%q", spec)
-	}
-	// The destination that is authorised is the one that is executed.
-	for _, spec := range []string{"main:release/1", "main", "refs/tags/v1"} {
-		_, dstAuthorised, err := nexusgit.CanonicalPushRefspec(spec)
-		require.NoError(t, err)
-		assert.True(t, strings.HasPrefix(dstAuthorised, "refs/heads/") || strings.HasPrefix(dstAuthorised, "refs/tags/"), spec)
-	}
-}
-
-// F10.2: a manifest that grants release BRANCHES does not grant the content of a TAG named like one. The
-// source is qualified the way git will be told to read it, so "release/1" is the branch, and the tag
-// needs its own grant.
-func TestGitAuthorize_BranchGrantDoesNotCoverATagSource(t *testing.T) {
-	const manifest = `
-abi:
-  imports: []
-capability_manifest:
-  git:
-    - repo: infra
-      ops: [push]
-      remotes: [origin]
-      refs: ["refs/heads/release/*"]
-`
-	reg := newCICFlowRegistry(nil, &stubDoer{})
-	require.NoError(t, reg.publishVerified("mod@1", []byte(manifest), "art-1"))
-	push := func(spec string) error {
-		return reg.authorizeGit(instUnder("mod@1", "art-1", manifest), "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: spec})
-	}
-	assert.NoError(t, push("release/1:release/1"), "the branch, as the manifest says")
-	assert.NoError(t, push("refs/heads/release/1:release/2"))
-	for _, spec := range []string{
-		"refs/tags/release/1:release/1",           // tag content into a granted branch name
-		"refs/tags/release/1:refs/tags/release/1", // tag to tag: tags are not granted
-		"release/1:refs/tags/release/1",           // branch content as a tag
-	} {
-		assert.Error(t, push(spec), "%q", spec)
 	}
 }

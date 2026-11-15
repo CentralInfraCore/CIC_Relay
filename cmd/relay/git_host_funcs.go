@@ -91,7 +91,7 @@ func registerGitHostFunctions(ctx context.Context, r wazero.Runtime, gitOps nexu
 		Export("commit")
 
 	b.NewFunctionBuilder().
-		WithFunc(authorized(authz, "push", makePushFn(gitOps))).
+		WithFunc(pushDisabledFn).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("push")
@@ -179,22 +179,11 @@ func makeCommitFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32,
 	}
 }
 
-// makePushFn creates a WASM host function that pushes commits to a git remote.
-func makePushFn(ops nexusgit.GitOps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
-	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
-		var req struct {
-			RepoID  string `json:"repo_id"`
-			Remote  string `json:"remote"`
-			Refspec string `json:"refspec"`
-		}
-		if !gitReadJSON(mod, reqPtr, reqLen, &req) {
-			return gitWriteError(mod, outPtr, outLen, "bad request JSON")
-		}
-		if err := ops.Push(ctx, req.RepoID, req.Remote, req.Refspec); err != nil {
-			return gitWriteError(mod, outPtr, outLen, err.Error())
-		}
-		return gitWriteJSON(mod, outPtr, outLen, map[string]bool{"ok": true})
-	}
+// pushDisabledFn is the git.push host function: it exists so that a module that imports it still links, and
+// it refuses every call. It does not read the request, does not consult the authorizer and never reaches
+// GitOps.Push (gitPushDisabled says why).
+func pushDisabledFn(_ context.Context, mod api.Module, _, _, outPtr, outLen uint32) int32 {
+	return gitWriteError(mod, outPtr, outLen, "git: "+gitPushDisabled)
 }
 
 // makeStatusFn creates a WASM host function that queries the status of a git repository.

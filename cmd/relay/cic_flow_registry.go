@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"centralrelay/core/cabinet"
-	nexusgit "centralrelay/core/nexus/git"
 )
 
 // R3a live wiring (feature-011, r3-plan.md). The `cic-flow` host module is a
@@ -196,6 +195,11 @@ type gitAuthRequest struct {
 // authorizeGit decides whether the module (identified by the runtime-assigned instance name) may perform
 // op on this request. No grant, an unlisted repository, operation, remote, ref or source: denied.
 func (r *cicFlowRegistry) authorizeGit(instance cabinet.InstanceIdentity, op string, req gitAuthRequest) error {
+	// Push is withdrawn (gitPushDisabled): refused here whatever any grant says, so that a registry entry
+	// that got past manifest validation by any route still authorises nothing.
+	if op == "push" {
+		return fmt.Errorf("git: %s", gitPushDisabled)
+	}
 	r.mu.RLock()
 	g, ok := r.git[instance.Name]
 	r.mu.RUnlock()
@@ -236,34 +240,8 @@ func gitRuleCovers(rule gitRule, op string, req gitAuthRequest) bool {
 		return refAllowed(rule.Refs, req.Ref)
 	case "clone":
 		return containsExact(rule.Sources, req.URL) && refAllowed(rule.Refs, req.Branch)
-	case "push":
-		// The refspec is reduced to the canonical form that ExecGitOps will execute (fully qualified on both
-		// sides), and that is what the manifest is checked against: what is authorised is what is run.
-		src, dst, err := nexusgit.CanonicalPushRefspec(req.Refspec)
-		if err != nil {
-			return false
-		}
-		return containsExact(rule.Remotes, req.Remote) &&
-			refAllowedQualified(rule.Refs, src) && refAllowedQualified(rule.Refs, dst)
 	}
 	return false
-}
-
-// qualifyRef gives a short name the refs/heads/ form that a push treats it as.
-func qualifyRef(ref string) string {
-	if strings.HasPrefix(ref, "refs/") {
-		return ref
-	}
-	return "refs/heads/" + ref
-}
-
-// refAllowedQualified is refAllowed with the manifest's patterns qualified the same way as the ref.
-func refAllowedQualified(patterns []string, qualifiedRef string) bool {
-	q := make([]string, 0, len(patterns))
-	for _, p := range patterns {
-		q = append(q, qualifyRef(p))
-	}
-	return refAllowed(q, qualifiedRef)
 }
 
 func containsExact(list []string, v string) bool {

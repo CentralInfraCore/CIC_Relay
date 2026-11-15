@@ -59,13 +59,11 @@ func TestGitHostFunctions_GuestOptionsNeverRun(t *testing.T) {
 		fn  hostFn
 		req map[string]interface{}
 	}{
-		"clone":        {makeCloneFn(ops), map[string]interface{}{"repo_id": "r", "url": "--upload-pack=" + script, "branch": "main"}},
-		"clone-ext":    {makeCloneFn(ops), map[string]interface{}{"repo_id": "r", "url": "ext::sh -c " + script, "branch": "main"}},
-		"fetch":        {makeFetchFn(ops), map[string]interface{}{"repo_id": "r", "remote": "--upload-pack=" + script}},
-		"checkout":     {makeCheckoutFn(ops), map[string]interface{}{"repo_id": "r", "ref": "--orphan=x"}},
-		"commit":       {makeCommitFn(ops), map[string]interface{}{"repo_id": "r", "message": "m", "paths": []string{":(top)a.txt"}}},
-		"push":         {makePushFn(ops), map[string]interface{}{"repo_id": "r", "remote": "--receive-pack=" + script, "refspec": "main"}},
-		"push-refspec": {makePushFn(ops), map[string]interface{}{"repo_id": "r", "remote": "origin", "refspec": "--receive-pack=" + script}},
+		"clone":     {makeCloneFn(ops), map[string]interface{}{"repo_id": "r", "url": "--upload-pack=" + script, "branch": "main"}},
+		"clone-ext": {makeCloneFn(ops), map[string]interface{}{"repo_id": "r", "url": "ext::sh -c " + script, "branch": "main"}},
+		"fetch":     {makeFetchFn(ops), map[string]interface{}{"repo_id": "r", "remote": "--upload-pack=" + script}},
+		"checkout":  {makeCheckoutFn(ops), map[string]interface{}{"repo_id": "r", "ref": "--orphan=x"}},
+		"commit":    {makeCommitFn(ops), map[string]interface{}{"repo_id": "r", "message": "m", "paths": []string{":(top)a.txt"}}},
 	}
 	for name, c := range cases {
 		_ = os.Remove(marker)
@@ -78,6 +76,7 @@ func TestGitHostFunctions_GuestOptionsNeverRun(t *testing.T) {
 
 	// Export list: every git.* function is either covered above or takes no free-form value (status).
 	// A new export fails here until someone decides which of the two it is.
+	// push is exported (so modules that import it still link) but is the disabled stub: see TestGitPush_IsWithdrawn.
 	covered := map[string]bool{"clone": true, "fetch": true, "checkout": true, "commit": true, "push": true, "status": true}
 	gitMod := rt.Module("git")
 	require.NotNil(t, gitMod, "the git host module must be instantiated")

@@ -51,13 +51,22 @@ type secretRule struct {
 // repository that is not named is refused.
 type gitRule struct {
 	Repo    string   `yaml:"repo"`    // a registered repository ID, exact
-	Ops     []string `yaml:"ops"`     // clone | fetch | checkout | commit | push | status
-	Remotes []string `yaml:"remotes"` // configured remote names, for fetch and push
-	Refs    []string `yaml:"refs"`    // exact ref names or "prefix/*", for clone, checkout and push
+	Ops     []string `yaml:"ops"`     // clone | fetch | checkout | commit | status  (push is NOT grantable, see gitPushDisabled)
+	Remotes []string `yaml:"remotes"` // configured remote names, for fetch
+	Refs    []string `yaml:"refs"`    // exact ref names or "prefix/*", for clone and checkout
 	Sources []string `yaml:"sources"` // exact clone URLs, for clone
 }
 
 var gitOpSet = map[string]bool{"clone": true, "fetch": true, "checkout": true, "commit": true, "push": true, "status": true}
+
+// gitPushDisabled is why git.push can not be granted. Pushing from a guest needs the exact source object,
+// the exact remote identity, the exact destination ref and the destination's expected previous state to be
+// bound to one authorised decision; the git command line does not give that (it resolves refs by name on
+// both ends, and a remote can show a different ref list to a reader than to a writer or hide that a ref is
+// symbolic). Until a push primitive that does is designed and proven, the capability is withdrawn: no
+// manifest can grant it, no module can import it, and the host function refuses at run time whatever the
+// registry holds. ExecGitOps.Push stays, with its hardening, and is simply not reachable from a guest.
+const gitPushDisabled = "git.push is disabled for guests: no manifest can grant it and the host function refuses"
 
 // validateGit rejects a manifest whose git block is malformed or too loose to enforce. A rule that
 // grants fetch or push without naming a remote, or clone, checkout or push without naming refs, would
@@ -72,16 +81,19 @@ func (m capabilityManifest) validateGit() error {
 		}
 		has := map[string]bool{}
 		for _, op := range r.Ops {
+			if op == "push" {
+				return fmt.Errorf("git rule %d (%s): %s", i, r.Repo, gitPushDisabled)
+			}
 			if !gitOpSet[op] {
 				return fmt.Errorf("git rule %d (%s): unknown op %q", i, r.Repo, op)
 			}
 			has[op] = true
 		}
-		if (has["fetch"] || has["push"]) && len(r.Remotes) == 0 {
-			return fmt.Errorf("git rule %d (%s): fetch/push need an explicit remotes list", i, r.Repo)
+		if has["fetch"] && len(r.Remotes) == 0 {
+			return fmt.Errorf("git rule %d (%s): fetch needs an explicit remotes list", i, r.Repo)
 		}
-		if (has["clone"] || has["checkout"] || has["push"]) && len(r.Refs) == 0 {
-			return fmt.Errorf("git rule %d (%s): clone/checkout/push need an explicit refs list", i, r.Repo)
+		if (has["clone"] || has["checkout"]) && len(r.Refs) == 0 {
+			return fmt.Errorf("git rule %d (%s): clone/checkout need an explicit refs list", i, r.Repo)
 		}
 		if has["clone"] && len(r.Sources) == 0 {
 			return fmt.Errorf("git rule %d (%s): clone needs an explicit sources list", i, r.Repo)
@@ -276,6 +288,9 @@ func (p *moduleProject) checkImportsWithinManifest() error {
 		return err
 	}
 	for fn := range p.gitImports() {
+		if fn == "push" {
+			return fmt.Errorf("module imports git.push: %s", gitPushDisabled)
+		}
 		if !gitOpSet[fn] {
 			return fmt.Errorf("module imports unknown git function %q", fn)
 		}
