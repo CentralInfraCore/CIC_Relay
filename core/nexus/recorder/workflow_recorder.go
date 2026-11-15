@@ -27,13 +27,19 @@ func NewWorkflowRecorder(sr StateRecorder) *WorkflowRecorder {
 // Record persists the ProofTrace via the underlying StateRecorder.
 // workflowID is used as the RunID; trace is stored as the actual state.
 func (w *WorkflowRecorder) Record(ctx context.Context, workflowID string, trace interface{}) error {
+	_, err := w.RecordCommit(ctx, workflowID, trace)
+	return err
+}
+
+// RecordCommit is Record that also returns the persisted record's commit hash. It
+// satisfies cabinet.CommitRecorder, so Setx can return the hash in the response.
+func (w *WorkflowRecorder) RecordCommit(ctx context.Context, workflowID string, trace interface{}) (string, error) {
 	if w.sr == nil {
-		return fmt.Errorf("WorkflowRecorder: underlying StateRecorder is nil")
+		return "", fmt.Errorf("WorkflowRecorder: underlying StateRecorder is nil")
 	}
 	expected := types.ExpectedState{
 		RunID:     workflowID,
 		Timestamp: time.Now().UTC(),
 	}
-	_, err := w.sr.RecordState(ctx, expected, trace)
-	return err
+	return w.sr.RecordState(ctx, expected, trace)
 }

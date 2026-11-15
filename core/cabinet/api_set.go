@@ -5,11 +5,28 @@ import (
 	"fmt"
 )
 
+// Proof error codes reported in ProofStatus.ErrorCode. They carry no error text:
+// the cause (which may name Vault paths or tokens) stays in the relay log.
+const (
+	ProofErrRecorderNotConfigured = "recorder_not_configured"
+	ProofErrRecordFailed          = "record_failed"
+)
+
+// ProofStatus tells the caller whether the ProofTrace of an execution was persisted.
+// Execution succeeded, the chain hash was computed (SetResponse.Trace) and the record
+// was persisted are three separate facts; this is the third.
+type ProofStatus struct {
+	Persisted bool   `json:"persisted"`
+	Commit    string `json:"commit,omitempty"`     // set when the recorder names the persisted record
+	ErrorCode string `json:"error_code,omitempty"` // set when Persisted is false
+}
+
 // SetResponse is the response to a Set call.
 type SetResponse struct {
 	Results  map[string]any
 	Warnings []string
 	Trace    *ProofTrace
+	Proof    *ProofStatus `json:"proof"`
 }
 
 // ValidateSet performs minimal structural validation of SetPayload and checks if referenced

@@ -90,6 +90,7 @@ A `relay` szolgáltatás ezeket olvassa a környezetből (a `docker-compose.yml`
 | `CIC_VAULT_MOUNT` | `transit` | Vault transit mount |
 | `CIC_VAULT_KEY` | — | Aláíró kulcs; a tokennek **erre a kulcsra** kell jogosultnak lennie |
 | `CIC_TRUST_MODE` | — | PKI trust mód (`dev` vagy `prod`); **kötelező**, nincs alapértelmezés, üres érték indulási hiba |
+| `CIC_EVIDENCE_REQUIRED` | `false` | `true` vagy `false` (bármi más indulási hiba). `true`: ha egy `/set` futás ProofTrace-e nem rögzült (a rögzítés hibázott, vagy nincs recorder), a hívás **503 `evidence_required`**-et ad. **A workflow ekkor már lefutott:** a törzs `execution_completed: true`, `proof.persisted: false` és a `chain_hash` mezőt adja. **Ne próbáld újra automatikusan**: az újrapróbálás újra végrehajtja a workflow-t. Alapértelmezés: a hívás sikeres marad, a `proof.persisted` mutatja a rögzítést |
 
 ### A `CIC_BUILD_DIR`-t meg kell osztani a builder konténerrel
 
