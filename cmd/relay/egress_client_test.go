@@ -67,6 +67,29 @@ func TestEgressParity_Fixture(t *testing.T) {
 	assert.Greater(t, ips, 20, "the fixture must keep its address cases")
 }
 
+// isolatedEgressClient is newEgressClient(true) whose dialer refuses, and counts, every destination
+// that is not a loopback IP literal. A test that puts an external host in a redirect (a cloud
+// metadata address, a public name) then cannot touch real infrastructure if a regression starts
+// following redirects: the dial is refused before any name is resolved or any packet is sent, and the
+// returned counter, which must stay zero, shows that the follow-up request was attempted.
+func isolatedEgressClient(t *testing.T) (*http.Client, *atomic.Int32) {
+	t.Helper()
+	c := newEgressClient(true)
+	tr, ok := c.Transport.(*http.Transport)
+	require.True(t, ok)
+	orig := tr.DialContext
+	refused := new(atomic.Int32)
+	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, _, err := net.SplitHostPort(addr)
+		if ip := net.ParseIP(host); err != nil || ip == nil || !ip.IsLoopback() {
+			refused.Add(1)
+			return nil, fmt.Errorf("test isolation: refusing to dial %q", addr)
+		}
+		return orig(ctx, network, addr)
+	}
+	return c, refused
+}
+
 // callActuate runs makeActuateFn against policy/doer and returns the decoded output.
 func callActuate(t *testing.T, doer httpDoer, policy egressPolicy, target string) map[string]interface{} {
 	t.Helper()
@@ -108,9 +131,13 @@ func TestActuate_RedirectToNonAllowedHost_NotFollowed(t *testing.T) {
 			defer allowed.Close()
 
 			// allowPrivate: the test servers are on loopback; redirect handling is what is tested.
-			out := callActuate(t, newEgressClient(true), allowLocal(t, allowed), allowed.URL+"/start")
+			// The isolating client refuses any non-loopback dial, so a regression that follows the
+			// redirect to the metadata address or to a public name cannot reach the network.
+			client, refused := isolatedEgressClient(t)
+			out := callActuate(t, client, allowLocal(t, allowed), allowed.URL+"/start")
 
 			assert.EqualValues(t, 0, hits.Load(), "the redirect target must never be contacted")
+			assert.EqualValues(t, 0, refused.Load(), "no connection beyond the allowed local server may even be attempted")
 			require.Equal(t, float64(http.StatusFound), out["status"], "the 302 is returned to the caller, not followed (output: %v)", out)
 			hdrs, ok := out["headers"].(map[string]interface{})
 			require.True(t, ok, "the response headers must be returned: %v", out)

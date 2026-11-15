@@ -360,10 +360,20 @@ func TestHardeningIntegration_AuthorizationProofAndConcurrency(t *testing.T) {
 // --- #163: the production default egress client -----------------------------------------------
 
 func TestHardeningIntegration_Egress(t *testing.T) {
+	// The redirect target is a second LOCAL server with its own hit counter, which must stay at zero.
+	// Nothing outside the test process is ever contacted, even if a regression starts following
+	// redirects: the forbidden second request would land here and be counted.
+	var targetHits atomic.Int32
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		targetHits.Add(1)
+		_, _ = w.Write([]byte("must not be reached"))
+	}))
+	defer target.Close()
+
 	var hits atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hits.Add(1)
-		http.Redirect(w, r, "http://169.254.169.254/latest/meta-data/", http.StatusFound)
+		http.Redirect(w, r, target.URL+"/latest/meta-data/", http.StatusFound)
 	}))
 	defer srv.Close()
 
@@ -371,12 +381,17 @@ func TestHardeningIntegration_Egress(t *testing.T) {
 		out := callActuate(t, newCICFlowRegistry(nil, nil).doer, allowLocal(t, srv), srv.URL)
 		assert.Equal(t, "blocked_address", out["code"])
 		assert.Zero(t, hits.Load(), "the server was never reached")
+		assert.Zero(t, targetHits.Load())
 	})
 
 	t.Run("a redirect to a non-allowed host is returned, not followed", func(t *testing.T) {
 		out := callActuate(t, newEgressClient(true), allowLocal(t, srv), srv.URL) // private allowed: only the redirect is tested
 		assert.Equal(t, float64(http.StatusFound), out["status"], "%v", out)
 		assert.EqualValues(t, 1, hits.Load(), "only the first hop was made")
+		assert.Zero(t, targetHits.Load(), "the redirect target was never contacted: the forbidden second request did not happen")
+		hdrs, ok := out["headers"].(map[string]interface{})
+		require.True(t, ok, "%v", out)
+		assert.Equal(t, target.URL+"/latest/meta-data/", hdrs["location"], "the redirect is handed back to the caller verbatim")
 	})
 
 	t.Run("an over-cap response is a typed error", func(t *testing.T) {
