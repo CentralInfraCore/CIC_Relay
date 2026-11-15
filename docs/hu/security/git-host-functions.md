@@ -34,9 +34,11 @@ capability_manifest:
 Betöltéskor ellenőrzött (a megsértés a modul elutasítását jelenti):
 
 - minden importált `git.*` függvényt le kell fednie egy manifest-műveletnek;
-- az `ops` csak `clone`, `fetch`, `checkout`, `commit`, `status` lehet; **a `push` hiba**, és a `git.push` importálása is hiba;
+- az `ops` csak `clone`, `fetch`, `checkout`, `commit`, `status` lehet; **a `push` hiba**, és a `git.push` manifestben vagy az `abi.imports`-ban való deklarálása is hiba;
 - a `fetch` `remotes`-t, a `clone` és a `checkout` `refs`-t, a `clone` `sources`-t igényel;
 - a ref-minták csak branch- és tag-neveket jelölhetnek: a `refs/` alatt csak `refs/heads/` és `refs/tags/`, `HEAD` nem, puszta `*` nem.
+
+**Deklarált és tényleges importok.** A betöltéskori importellenőrzés a *deklarált* importokat olvassa (az aláírt manifest `abi.imports`-át). A WASM bináris saját import szekcióját nem olvassa. Az a bináris, amely deklarálás nélkül importál `git.*` függvényt, ezért betöltéskor nem utasítódik el; a hívásai a lent leírt futásidejű védelmekbe ütköznek (a megfelelő grant nélküli modul hívása elutasított, a `git.push` pedig mindig elutasító csonk). A bináris tényleges importlistájának betöltéskori ellenőrzése külön, nyitott feladat.
 
 Minden híváskor ellenőrzött: a hívó példány, a repository, a művelet, a remote, a ref vagy a forrás a fenti szabályokhoz képest. A nem ellenőrzött modul (nincs CICSourceCA-provenance, nincs bootstrapolt trust) egyáltalán nem kap git capabilityt.
 
@@ -48,11 +50,11 @@ Minden híváskor ellenőrzött: a hívó példány, a repository, a művelet, a
 
 ## 3. Amit a relay minden híváskor ellenőriz
 
-- A **remote-oknak** konfiguráltnak kell lenniük a repositoryban. Az URL(ek), ahonnan a fetch olvas (az URL-átírás és a beépített konfiguráció alkalmazása után), `https://` vagy `ssh://` lehetnek (nyomtatható ASCII, szóköz nélkül, hitelesítő adat az URL-ben nélkül). Helyi útvonal vagy `file://` forrás csak operátor által engedélyezett opcióként létezik, amely élesben nincs bekötve.
+- A **remote-oknak** konfiguráltnak kell lenniük a repositoryban. Az URL(ek), ahonnan a fetch olvas (az URL-átírás és a beépített konfiguráció alkalmazása után), `https://` vagy `ssh://` lehetnek (nyomtatható ASCII, szóköz nélkül, **jelszó nélkül az URL-ben**; a puszta felhasználónév megengedett, például az `ssh://git@host/...` URL `git@` része). Helyi útvonal vagy `file://` forrás csak operátor által engedélyezett opcióként létezik, amely élesben nincs bekötve.
 - A **ref-ek** a git ref-névszabályait követik; a `commit` útvonalai relatívak, a repositoryn belüliek, soha nem a `.git` alattiak, és soha nem pathspec-mágiák.
-- **Repository-konfiguráció**: a regisztrált repository csak azokat a kulcsokat tartalmazhatja, amelyeket a `git clone` ír, a remote `url`/`pushurl`/`fetch` kulcsait, a branch `remote`/`merge` kulcsait, a `user.name`/`user.email`-t és a SHA-256 `extensions.objectformat`-ot. Bármely más kulcs (futtatandó program, URL-átírás, include, worktree-konfiguráció, ...) minden műveletet meghiúsít az adott repositoryn. A repositoryt kell javítani, nem a relayt.
+- **Repository-konfiguráció** (minden, *már létező* regisztrált repositoryn végzett művelet előtt ellenőrzött: `status`, `fetch`, `checkout`, `commit`; a `clone` új repositoryt hoz létre üres célkönyvtárba, ezért előtte nincs mit auditálni, és minden későbbi művelet audit alá esik): a regisztrált repository csak azokat a kulcsokat tartalmazhatja, amelyeket a `git clone` ír, a remote `url`/`pushurl`/`fetch` kulcsait, a branch `remote`/`merge` kulcsait, a `user.name`/`user.email`-t és a SHA-256 `extensions.objectformat`-ot. Bármely más kulcs (futtatandó program, URL-átírás, include, worktree-konfiguráció, ...) minden műveletet meghiúsít az adott repositoryn. A repositoryt kell javítani, nem a relayt.
 - **Maga a git** kikapcsolt hookokkal, csak `https` és `ssh` transporttal, literal pathspecekkel, kérdezés nélkül, **globális és rendszerkonfiguráció nélkül** fut (lásd lent a `CIC_GIT_GLOBAL_CONFIG`-ot). A gyerekfolyamat környezete allowlistes, nem a relayé.
-- Az URL-ben lévő hitelesítő adatok maszkolva vannak mindenhol, ahol URL-t tartalmazható szöveg elhagyja a git réteget (hibák, a git saját kimenete, naplók); a validációs hibák az URL-t egyáltalán nem ismétlik.
+- Az URL-ben lévő felhasználói információ maszkolva van mindenhol, ahol URL-t tartalmazható szöveg elhagyja a git réteget (hibák, a git saját kimenete, naplók); a validációs hibák az URL-t egyáltalán nem ismétlik.
 
 ## 4. Operátori konfiguráció
 
@@ -65,7 +67,7 @@ Minden híváskor ellenőrzött: a hívó példány, a repository, a művelet, a
 
 A `git.push` jelenleg nem adható. A guest push-hoz a pontos forrásobjektumot, a remote azonosságát, a pontos célreferenciát és annak elvárt korábbi állapotát egyetlen engedélyezett döntéshez kell kötni; a `git` parancssor mindkét végén név szerint illeszti a referenciákat, és ezt a garanciát nem adja. Amíg nincs megtervezett és bizonyított push-primitív:
 
-- a manifest nem adhat `push`-t és a modul nem importálhatja (mindkettő betöltési hiba);
+- a manifest nem adhat `push`-t és a modul nem deklarálhatja importként (mindkettő betöltési hiba); az a bináris, amely deklarálás nélkül importálja, linkelődik, és az alábbi csonkba ütközik;
 - a regiszter a `push`-t elutasítja, bármit mond a grant;
 - a `git.push` host függvény megmarad, hogy az importáló modul linkelhető legyen, de tiltó csonk: mindig hibával válaszol és nem éri el a git réteget.
 

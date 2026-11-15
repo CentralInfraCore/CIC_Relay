@@ -34,9 +34,11 @@ capability_manifest:
 Checked when the module is loaded (a violation rejects the module):
 
 - every imported `git.*` function must be covered by an op in the manifest;
-- `ops` may contain only `clone`, `fetch`, `checkout`, `commit`, `status`; **`push` is an error**, and importing `git.push` is an error;
+- `ops` may contain only `clone`, `fetch`, `checkout`, `commit`, `status`; **`push` is an error**, and so is declaring `git.push` in the manifest or in `abi.imports`;
 - `fetch` needs `remotes`, `clone` and `checkout` need `refs`, `clone` needs `sources`;
 - ref patterns name branches and tags only: nothing under `refs/` other than `refs/heads/` and `refs/tags/`, no `HEAD`, no bare `*`.
+
+**Declared and actual imports.** The load-time import check reads the *declared* imports (`abi.imports` of the signed manifest). It does not read the import section of the WASM binary itself. A binary that imports a `git.*` function without declaring it is therefore not rejected at load; its calls meet the run-time controls below (a call from a module without a matching grant is refused, and `git.push` is an always-refusing stub). Validating the binary's actual import list at load time is a separate, open work item.
 
 Checked on every call: the calling instance, the repository, the operation, the remote, the ref or the source against the rules above. A module that is not verified (no CICSourceCA provenance, trust not bootstrapped) gets no git capability at all.
 
@@ -48,11 +50,11 @@ Checked on every call: the calling instance, the repository, the operation, the 
 
 ## 3. What the relay checks on every call
 
-- **Remotes** must be configured in the repository. The URL(s) a fetch will read from, with URL rewriting and included configuration applied, must be `https://` or `ssh://` (printable ASCII, no whitespace, no credentials in the URL). A local path or `file://` source exists only as an operator-enabled option that is not wired in production.
+- **Remotes** must be configured in the repository. The URL(s) a fetch will read from, with URL rewriting and included configuration applied, must be `https://` or `ssh://` (printable ASCII, no whitespace, **no password in the URL**; a user name alone, such as the `git@` of an `ssh://git@host/...` URL, is allowed). A local path or `file://` source exists only as an operator-enabled option that is not wired in production.
 - **Refs** follow git's ref-name rules; paths for `commit` are relative, inside the repository, never under `.git`, and never pathspec magic.
-- **Repository configuration**: a registered repository may carry only the keys that `git clone` writes, remote `url`/`pushurl`/`fetch`, branch `remote`/`merge`, `user.name`/`user.email`, and the SHA-256 `extensions.objectformat`. Any other key (a program to run, a URL rewrite, an include, a worktree configuration, ...) makes every operation on that repository fail. Fix the repository, not the relay.
+- **Repository configuration** (checked before every operation on an *existing* registered repository: `status`, `fetch`, `checkout`, `commit`; `clone` creates a new repository into an empty destination, so there is nothing to audit before it, and every later operation is audited): a registered repository may carry only the keys that `git clone` writes, remote `url`/`pushurl`/`fetch`, branch `remote`/`merge`, `user.name`/`user.email`, and the SHA-256 `extensions.objectformat`. Any other key (a program to run, a URL rewrite, an include, a worktree configuration, ...) makes every operation on that repository fail. Fix the repository, not the relay.
 - **Git itself** runs with hooks off, only the `https` and `ssh` transports, literal pathspecs, no prompts, and **no global or system configuration** (see `CIC_GIT_GLOBAL_CONFIG` below). The child process gets an allowlisted environment, not the relay's.
-- Credentials in a URL are masked wherever text that can contain a URL leaves the git layer (errors, git's own output, logs); validation errors do not repeat the URL at all.
+- User information in a URL is masked wherever text that can contain a URL leaves the git layer (errors, git's own output, logs); validation errors do not repeat the URL at all.
 
 ## 4. Operator configuration
 
@@ -65,7 +67,7 @@ Checked on every call: the calling instance, the repository, the operation, the 
 
 `git.push` cannot currently be granted. Pushing from a guest needs the exact source object, the identity of the remote, the exact destination reference and its expected previous state to be tied to one authorised decision; the `git` command line resolves references by name on both ends and cannot give that guarantee. Until a push primitive that does is designed and proven:
 
-- a manifest cannot grant `push` and a module cannot import it (both are load errors);
+- a manifest cannot grant `push` and a module cannot declare it as an import (both are load errors); a binary that imports it without declaring it links, and meets the stub below;
 - the registry refuses `push` whatever a grant says;
 - the `git.push` host function still exists, so a module that imports it can link, but it is a stub that always answers with an error and never reaches the git layer.
 
