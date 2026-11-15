@@ -4,6 +4,8 @@ The relay offers WASM modules a typed `git` host module. A module never receives
 
 ## 1. What a module can call
 
+A module loads only if it is signed and the signature verifies; unsigned modules are refused unless a `dev` operator opts in explicitly, and even then they get no capability. See [module-loading.md](module-loading.md).
+
 | Function | Allowed | Notes |
 |---|---|---|
 | `git.status` | yes | working-tree status of a registered repository |
