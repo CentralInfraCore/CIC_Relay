@@ -20,6 +20,7 @@ import (
 	"centralrelay/pkg/merkle"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // specChecksumHex computes sha256(canonical_json(spec)) as a lowercase hex string.
@@ -634,4 +635,61 @@ func TestBuildSchema_FromAssertedMetadata(t *testing.T) {
 	assert.Equal(t, "pg", out["schema"])
 	assert.NotNil(t, out["metadata"])
 	assert.Equal(t, "metadata:\n  name: pg\n", out["raw_artifact"])
+}
+
+// --- ValidateSchemaRef / BuildSchema sink validation ---
+
+func TestValidateSchemaRef(t *testing.T) {
+	for _, ok := range [][2]string{
+		{"postgresql", "v0.18.dev"}, {"some.schema", "v1.0.0"}, {"cic-compute", "1.2.3+build.5"}, {"a", "1"},
+	} {
+		assert.NoError(t, schemacompile.ValidateSchemaRef(ok[0], ok[1]), "%v", ok)
+	}
+	for _, bad := range [][2]string{
+		{"", "v1"}, {"pg", ""}, {"pg\nkind: Evil", "v1"}, {"pg", "v1\n  checksum: x"}, {"a: b", "v1"},
+		{"../x", "v1"}, {".x", "v1"}, {"pg x", "v1"}, {"pg", "v1;x"}, {"pg{", "v1"},
+	} {
+		assert.Error(t, schemacompile.ValidateSchemaRef(bad[0], bad[1]), "%v", bad)
+	}
+}
+
+// The sink must refuse an injected value itself: the /set endpoint runs the same
+// workflow with an arbitrary payload, so the HTTP handler's check alone is not enough.
+func TestBuildSchema_RejectsYAMLInjection(t *testing.T) {
+	for _, in := range []map[string]interface{}{
+		{"schema": "pg\n  sign: forged", "version": "v1.0.0"},
+		{"schema": "postgresql", "version": "v1.0.0\nspec: {evil: true}"},
+		{"schema": "postgresql", "version": "v1: x"},
+	} {
+		out, err := schemacompile.BuildSchema(context.Background(), in)
+		require.Error(t, err, "%v", in)
+		assert.Nil(t, out, "no artifact may be produced from an injected value")
+	}
+}
+
+// The stub artifact is typed YAML: ordinary values keep the exact bytes of the former template,
+// and values that would parse as another type stay strings.
+func TestRenderStubArtifact_OrdinaryValuesKeepTheFormerBytes(t *testing.T) {
+	out, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{"schema": "postgresql", "version": "v0.18.dev"})
+	require.NoError(t, err)
+	raw := out.(map[string]interface{})["raw_artifact"].(string)
+	assert.Equal(t, "apiVersion: cic.com/v1\nkind: SchemaArtifact\nmetadata:\n  name: postgresql\n  version: v0.18.dev\nspec: {}\n", raw)
+}
+
+func TestRenderStubArtifact_AmbiguousValuesStayStrings(t *testing.T) {
+	// All of these pass the character whitelist, and a plain YAML scalar would not be a string.
+	for _, v := range []string{"1.0", "10", "1e3", "0x1F", "true", "null", "yes", "on", "0o17", "1_000"} {
+		out, err := schemacompile.BuildSchema(context.Background(), map[string]interface{}{"schema": v, "version": v})
+		require.NoError(t, err, v)
+		raw := out.(map[string]interface{})["raw_artifact"].(string)
+
+		var doc map[string]interface{}
+		require.NoError(t, yaml.Unmarshal([]byte(raw), &doc), v)
+		meta := doc["metadata"].(map[string]interface{})
+		name, nameIsString := meta["name"].(string)
+		version, versionIsString := meta["version"].(string)
+		assert.True(t, nameIsString && versionIsString, "%q must stay a string in the signed artifact, got name=%T version=%T", v, meta["name"], meta["version"])
+		assert.Equal(t, v, name)
+		assert.Equal(t, v, version)
+	}
 }

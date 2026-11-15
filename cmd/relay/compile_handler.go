@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/core/modules/schemacompile"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -63,6 +64,11 @@ func (s *relayServer) compileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := schemacompile.ValidateSchemaRef(req.Schema, req.Version); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_field", err.Error())
+		return
+	}
+
 	sourceDigest := SourceTreeHash
 	if sourceDigest == "unknown" {
 		sourceDigest = CommitHash
@@ -76,6 +82,11 @@ func (s *relayServer) compileHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.api.Setx(r.Context(), sp)
 	if err != nil {
+		if cabinet.IsUnauthorized(err) {
+			logEntry.WithField("outcome", "unauthorized").WithError(err).Warn("Protected operation without an authenticated principal")
+			unauthorized(w, "Authentication is required for the protected operation of this workflow")
+			return
+		}
 		if cabinet.IsTimeout(err) {
 			logEntry.WithField("outcome", "timeout").WithError(err).Warn("Compile workflow timed out")
 			writeError(w, http.StatusGatewayTimeout, "timeout", "Workflow timed out: "+err.Error())

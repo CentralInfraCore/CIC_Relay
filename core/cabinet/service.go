@@ -102,6 +102,11 @@ type cabinetService struct {
 	// failed, or no recorder is configured) fail with ErrEvidenceRequired instead of
 	// returning a plain success.
 	evidenceRequired bool
+
+	// protected is the set of component IDs (for example "cic.artifact.sign@1.0") that only an
+	// authenticated principal may run. Setx is the one execution boundary every entry path
+	// (HTTP routes, the activator, tests) goes through, so the decision is made here, once.
+	protected map[string]bool
 }
 
 // CabinetOption is a functional option for configuring a cabinetService.
@@ -112,6 +117,19 @@ type CabinetOption func(*cabinetService)
 func WithRecorder(r ExecutionRecorder) CabinetOption {
 	return func(s *cabinetService) {
 		s.recorder = r
+	}
+}
+
+// WithProtectedModules marks components that only an authenticated principal (WithPrincipal) may
+// run. Setx checks every step of a workflow against this set before it executes anything, so a
+// workflow that contains a protected step is refused with ErrUnauthorized no matter which entry
+// path started it, and no earlier step has run.
+func WithProtectedModules(componentIDs ...string) CabinetOption {
+	return func(s *cabinetService) {
+		s.protected = make(map[string]bool, len(componentIDs))
+		for _, id := range componentIDs {
+			s.protected[id] = true
+		}
 	}
 }
 
@@ -168,6 +186,18 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	graph, err := ParseExecutionGraph(workflow.Config.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("workflow %q: %w", workflow.ID(), err)
+	}
+
+	// 2b. The authorization decision, at the execution boundary: before any step runs, so a
+	// refused call has no side effects. The set of protected components is the operator's.
+	if len(c.protected) > 0 {
+		if _, ok := PrincipalFrom(ctx); !ok {
+			for _, st := range graph.Steps {
+				if c.protected[string(st.ComponentID)] {
+					return nil, fmt.Errorf("%w: workflow %q contains the protected operation %q", ErrUnauthorized, workflow.ID(), st.ComponentID)
+				}
+			}
+		}
 	}
 
 	// 3. Initialize executionContext and run each step.
