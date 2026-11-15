@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -111,6 +112,8 @@ func writeBundle(t *testing.T, parts ...[]byte) string {
 	path := filepath.Join(t.TempDir(), "bundle.pem")
 	require.NoError(t, os.WriteFile(path, all, 0600))
 	t.Setenv("CIC_PLATFORM_CA_BUNDLE", path)
+	// The issuer policy is mandatory in prod; tests that are not about it declare "none".
+	t.Setenv("CIC_CRL_REQUIRED_ISSUERS", "none")
 	return path
 }
 
@@ -231,4 +234,108 @@ func TestCrlToleranceFromEnv(t *testing.T) {
 	d, err = crlToleranceFromEnv()
 	require.NoError(t, err)
 	assert.Equal(t, 30*time.Minute, d)
+}
+
+// --- explicit issuer policy (CIC_CRL_REQUIRED_ISSUERS) ---
+
+// emptyCRLPEM is a valid CRL that revokes nothing.
+func emptyCRLPEM(t *testing.T, signer *x509.Certificate, key *ecdsa.PrivateKey, nextUpdate time.Time) []byte {
+	t.Helper()
+	der, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
+		Number: big.NewInt(1), ThisUpdate: nextUpdate.Add(-time.Hour), NextUpdate: nextUpdate,
+	}, signer, key)
+	require.NoError(t, err)
+	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: der})
+}
+
+// In prod the policy must be declared: unset is a start-up error, never a silent "no CRL needed".
+func TestBootstrapPKI_Prod_IssuerPolicyMustBeDeclared(t *testing.T) {
+	p := newCRLTestPKI(t)
+	writeBundle(t, certPEM(p.rootCert))
+	t.Setenv("CIC_CRL_REQUIRED_ISSUERS", "")
+	_, err := bootstrapPKI(TrustModeProd, embeddedFS, newDiscardLogger())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CIC_CRL_REQUIRED_ISSUERS")
+}
+
+func TestBootstrapPKI_Prod_IssuerPolicy_Table(t *testing.T) {
+	future := time.Now().Add(24 * time.Hour)
+	past := time.Now().Add(-2 * time.Hour)
+
+	type tc struct {
+		name    string
+		policy  func(p *crlTestPKI) string
+		crl     func(t *testing.T, p *crlTestPKI) []byte // nil: no CRL in the bundle
+		wantErr string                                   // empty: ACCEPT
+	}
+	byFingerprint := func(p *crlTestPKI) string { return "sha256:" + certFingerprint(p.rootCert) }
+	all := func(*crlTestPKI) string { return "all" }
+	valid := func(t *testing.T, p *crlTestPKI) []byte { return p.crlPEM(t, p.rootCert, p.rootKey, future) }
+
+	cases := []tc{
+		{"required, valid and fresh: accept", byFingerprint, valid, ""},
+		{"required (all), valid and fresh: accept", all, valid, ""},
+		{"required, valid but empty: accept", byFingerprint,
+			func(t *testing.T, p *crlTestPKI) []byte { return emptyCRLPEM(t, p.rootCert, p.rootKey, future) }, ""},
+		{"required, missing: deny", byFingerprint, nil, "requires a CRL"},
+		{"required (all), missing: deny", all, nil, "requires a CRL"},
+		{"required, expired: deny", byFingerprint,
+			func(t *testing.T, p *crlTestPKI) []byte { return p.crlPEM(t, p.rootCert, p.rootKey, past) }, "stale"},
+		{"required, bad signature: deny", byFingerprint,
+			func(t *testing.T, p *crlTestPKI) []byte { return p.forgedCRLPEM(t) }, "signature does not verify"},
+		{"required, CRL from the wrong issuer: deny", byFingerprint,
+			func(t *testing.T, p *crlTestPKI) []byte {
+				other, otherKey := newCA(t, "A Different Root")
+				return p.crlPEM(t, other, otherKey, future)
+			}, "no issuer certificate"},
+		{"declared fingerprint matches no CA of the bundle: deny",
+			func(*crlTestPKI) string { return "sha256:" + strings.Repeat("ab", 32) }, valid, "no CA certificate of the bundle"},
+		{"malformed fingerprint: deny", func(*crlTestPKI) string { return "sha256:zz" }, valid, "invalid CIC_CRL_REQUIRED_ISSUERS"},
+		{"none, missing CRL: accept (explicit)", func(*crlTestPKI) string { return "none" }, nil, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := newCRLTestPKI(t)
+			parts := [][]byte{certPEM(p.rootCert)}
+			if c.crl != nil {
+				parts = append(parts, c.crl(t, p))
+			}
+			writeBundle(t, parts...)
+			t.Setenv("CIC_CRL_REQUIRED_ISSUERS", c.policy(p))
+			_, err := bootstrapPKI(TrustModeProd, embeddedFS, newDiscardLogger())
+			if c.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), c.wantErr)
+		})
+	}
+}
+
+// dev differs on purpose, and says so: it has no issuer policy, so a missing CRL is not an
+// error there, whatever CIC_CRL_REQUIRED_ISSUERS says.
+func TestLoadPKIAssets_Dev_IgnoresIssuerPolicy(t *testing.T) {
+	p := newCRLTestPKI(t)
+	t.Setenv("CIC_CRL_REQUIRED_ISSUERS", "all")
+	fsys := fstest.MapFS{"pki/root.pem": {Data: certPEM(p.rootCert)}}
+	assets, err := loadPKIAssets(fsys, "pki", newDiscardLogger())
+	require.NoError(t, err)
+	assert.Empty(t, assets.CRLs)
+}
+
+func TestCRLIssuerPolicyFromEnv_Forms(t *testing.T) {
+	fp := strings.Repeat("0f", 32)
+	for in, check := range map[string]func(crlIssuerPolicy) bool{
+		"none":                               func(p crlIssuerPolicy) bool { return p.none },
+		" ALL ":                              func(p crlIssuerPolicy) bool { return p.all },
+		fp:                                   func(p crlIssuerPolicy) bool { return p.fingerprints[fp] },
+		"sha256:" + strings.ToUpper(fp):      func(p crlIssuerPolicy) bool { return p.fingerprints[fp] },
+		fp + ", " + strings.Repeat("a1", 32): func(p crlIssuerPolicy) bool { return len(p.fingerprints) == 2 },
+	} {
+		t.Setenv("CIC_CRL_REQUIRED_ISSUERS", in)
+		p, err := crlIssuerPolicyFromEnv()
+		require.NoError(t, err, "value %q", in)
+		assert.True(t, check(p), "value %q", in)
+	}
 }

@@ -79,6 +79,19 @@ func bootstrapPKI(trustMode string, embeddedPKI fs.FS, logger *logrus.Logger) (*
 		if err != nil {
 			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
 		}
+		// The operator declares which issuers must have a CRL; a required issuer without a
+		// valid, fresh one is a start-up error. dev (the embedded loader) has no such policy:
+		// it stays lenient and ignores CIC_CRL_REQUIRED_ISSUERS.
+		issuerPolicy, err := crlIssuerPolicyFromEnv()
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		if err := enforceCRLIssuerPolicy(issuerPolicy, issuers, crls); err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		if issuerPolicy.none {
+			logger.Warn("CIC_CRL_REQUIRED_ISSUERS=none: no issuer is required to have a CRL")
+		}
 		if len(crls) == 0 {
 			logger.WithField("bundle_path", bundlePath).Warn("Revocation checking is inactive: the CA bundle contains no CRL")
 		}

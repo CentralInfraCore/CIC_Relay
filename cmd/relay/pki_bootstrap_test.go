@@ -50,6 +50,7 @@ func TestBootstrapPKI_ProdMode_WithBundle(t *testing.T) {
 	require.NoError(t, os.WriteFile(bundlePath, pemData, 0600))
 
 	t.Setenv("CIC_PLATFORM_CA_BUNDLE", bundlePath)
+	t.Setenv("CIC_CRL_REQUIRED_ISSUERS", "none")
 	assets, err := bootstrapPKI(TrustModeProd, embeddedFS, newDiscardLogger())
 	require.NoError(t, err)
 	assert.True(t, assets.TrustStoreLoaded)
