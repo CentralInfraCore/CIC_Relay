@@ -136,7 +136,8 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err != nil {
 		return err
 	}
-	if err := validateRefspec(refspec); err != nil {
+	explicit, err := normalizeRefspec(refspec)
+	if err != nil {
 		return err
 	}
 	if err := e.auditRepoConfig(ctx, localPath); err != nil {
@@ -145,7 +146,7 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err := e.requireConfiguredRemote(ctx, localPath, remote, "push"); err != nil {
 		return err
 	}
-	return e.runGit(ctx, localPath, "push", "--", remote, refspec)
+	return e.runGit(ctx, localPath, "push", "--", remote, explicit)
 }
 
 // Status returns the working-tree status of the registered repo.

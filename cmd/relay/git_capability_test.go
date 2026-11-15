@@ -312,3 +312,20 @@ var _ = os.Stat
 var _ = exec.Command
 var _ = filepath.Join
 var _ nexusgit.GitOps
+
+// A manifest can grant branch and tag names only: not HEAD, and nothing under refs/ except heads/ and tags/.
+func TestGitManifest_RefsAreBranchesAndTagsOnly(t *testing.T) {
+	for _, ref := range []string{"refs/notes/*", "refs/notes/commits", "refs/replace/abc", "refs/remotes/origin/main", "refs/stash", "refs/*", "refs", "HEAD", "FETCH_HEAD"} {
+		t.Run(ref, func(t *testing.T) {
+			yaml := "abi:\n  imports: []\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [push]\n      remotes: [origin]\n      refs: [\"" + ref + "\"]\n"
+			reg := newCICFlowRegistry(nil, &stubDoer{})
+			err := reg.registerVerified("m@1", []byte(yaml))
+			require.Error(t, err, "ref pattern %q must be refused at load", ref)
+			assert.Error(t, reg.authorizeGit("m@1", "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: ref}))
+		})
+	}
+	for _, ref := range []string{"main", "release/*", "refs/heads/main", "refs/heads/rel/*", "refs/tags/*", "v1"} {
+		yaml := "abi:\n  imports: []\ncapability_manifest:\n  git:\n    - repo: infra\n      ops: [push]\n      remotes: [origin]\n      refs: [\"" + ref + "\"]\n"
+		assert.NoError(t, newCICFlowRegistry(nil, &stubDoer{}).registerVerified("m@1", []byte(yaml)), ref)
+	}
+}

@@ -68,19 +68,26 @@ func validateBranchRef(ref string) error {
 	return nil
 }
 
-// validateRefspec accepts "<ref>" or "<ref>:<ref>". A forced ("+") or deleting (empty source) refspec is
+// normalizeRefspec validates a push refspec and returns it in explicit "<src>:<dst>" form, which is what
+// is handed to git. "<ref>" alone means "push <ref> to the ref of the same name", and git resolves that
+// itself (a notes or replace ref is pushed as such, HEAD becomes the current branch's name), so the
+// destination is made explicit here and validated like any other: it must be a branch or tag name, or a
+// refs/heads/ or refs/tags/ name. A source that cannot name a branch or tag (HEAD, refs/notes/...) has no
+// acceptable implicit destination and is refused. A forced ("+") or deleting (empty source) refspec is
 // refused: the typed ABI never offered either, and both change remote history.
-func validateRefspec(spec string) error {
+func normalizeRefspec(spec string) (string, error) {
+	bad := fmt.Errorf("%w: refspec %q", ErrInvalidArgument, clip(spec))
 	src, dst, hasDst := strings.Cut(spec, ":")
 	if err := validateRef(src); err != nil {
-		return fmt.Errorf("%w: refspec %q", ErrInvalidArgument, clip(spec))
+		return "", bad
 	}
-	if hasDst {
-		if err := validateBranchRef(dst); err != nil {
-			return fmt.Errorf("%w: refspec %q", ErrInvalidArgument, clip(spec))
-		}
+	if !hasDst {
+		dst = src
 	}
-	return nil
+	if err := validateBranchRef(dst); err != nil {
+		return "", bad
+	}
+	return src + ":" + dst, nil
 }
 
 // validateCloneURL accepts https:// and ssh:// URLs with a plain host and no password. Everything else

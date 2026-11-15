@@ -232,9 +232,12 @@ func TestBranchRefsAreBranchesOrTags(t *testing.T) {
 	for _, bad := range []string{"HEAD", "FETCH_HEAD", "refs/remotes/origin/main", "refs/notes/x", "refs/stash", "refs/replace/abc", "refs/x", ".x", "a.lock", "x/.y"} {
 		assert.ErrorIs(t, validateBranchRef(bad), ErrInvalidArgument, bad)
 	}
-	assert.ErrorIs(t, validateRefspec("main:HEAD"), ErrInvalidArgument)
-	assert.ErrorIs(t, validateRefspec("main:refs/notes/commits"), ErrInvalidArgument)
-	assert.NoError(t, validateRefspec("main:refs/heads/main"))
+	_, err := normalizeRefspec("main:HEAD")
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	_, err = normalizeRefspec("main:refs/notes/commits")
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	_, err = normalizeRefspec("main:refs/heads/main")
+	assert.NoError(t, err)
 }
 
 // F3: configuration that can name a program or rewrite a URL is refused before git acts on it. The
@@ -774,4 +777,56 @@ func TestGuestReachableOperationsDoNotWriteTheConfiguration(t *testing.T) {
 	assert.Error(t, ops.Checkout(ctx, "r", "feature"), "a remote-only branch name is not turned into a tracking branch (no config write)")
 
 	assert.Equal(t, before, config(), "no guest-reachable operation changed the repository configuration")
+}
+
+// F10: "git push <remote> <ref>" has an implicit destination that git resolves itself, and for a notes
+// or replace ref that is the same namespace on the remote. The destination is made explicit and held to
+// the branch/tag contract, so there is no implicit resolution left to bypass.
+func TestPushDestinationIsExplicitAndBranchOrTag(t *testing.T) {
+	ctx := context.Background()
+	ok := map[string]string{
+		"main":                     "main:main",
+		"release/1":                "release/1:release/1",
+		"refs/heads/main":          "refs/heads/main:refs/heads/main",
+		"refs/tags/v1":             "refs/tags/v1:refs/tags/v1",
+		"main:feature":             "main:feature",
+		"abc1234:refs/heads/x":     "abc1234:refs/heads/x",
+		"refs/notes/commits:main2": "refs/notes/commits:main2", // a notes COMMIT pushed to a branch: the destination is a branch
+	}
+	for in, want := range ok {
+		got, err := normalizeRefspec(in)
+		require.NoError(t, err, in)
+		assert.Equal(t, want, got, in)
+	}
+	for _, in := range []string{
+		"refs/notes/commits", "refs/replace/0123456789abcdef", "refs/remotes/origin/main", "refs/stash", "refs/x",
+		"HEAD", "FETCH_HEAD", "main:HEAD", "main:refs/notes/commits", "main:refs/replace/abc", "+main", "+main:main", ":main", "",
+		"main:", "a..b", "x.lock",
+	} {
+		_, err := normalizeRefspec(in)
+		assert.ErrorIs(t, err, ErrInvalidArgument, "%q must be refused", in)
+	}
+
+	// Through the real operation, against a real remote: nothing outside heads/tags is ever created there.
+	ops, work, _ := argTestOps(t)
+	run := func(dir string, args ...string) string {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+		return string(out)
+	}
+	bare := filepath.Join(t.TempDir(), "bare.git")
+	run(t.TempDir(), "init", "--bare", "-b", "main", bare)
+	run(work, "remote", "set-url", "origin", bare)
+	run(work, "-c", "user.name=t", "-c", "user.email=t@t", "notes", "add", "-m", "n")
+	run(work, "tag", "v1")
+
+	assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "refs/notes/commits"), ErrInvalidArgument)
+	assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "HEAD"), ErrInvalidArgument)
+	require.NoError(t, ops.Push(ctx, "r", "origin", "main"))
+	require.NoError(t, ops.Push(ctx, "r", "origin", "refs/tags/v1"))
+	refs := run(bare, "for-each-ref", "--format=%(refname)")
+	assert.Contains(t, refs, "refs/heads/main")
+	assert.Contains(t, refs, "refs/tags/v1")
+	assert.NotContains(t, refs, "refs/notes", "no notes ref was created on the remote")
+	assert.NotContains(t, refs, "refs/replace")
 }

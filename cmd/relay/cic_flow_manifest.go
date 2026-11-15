@@ -90,6 +90,15 @@ func (m capabilityManifest) validateGit() error {
 			if ref == "" || ref == "*" || strings.Contains(strings.TrimSuffix(ref, "/*"), "*") {
 				return fmt.Errorf("git rule %d (%s): ref pattern %q is not allowed (exact name or \"prefix/*\")", i, r.Repo, ref)
 			}
+			// Only branch and tag names can be granted: not HEAD and the like, and nothing under refs/ other
+			// than refs/heads/ and refs/tags/ (notes, replace, remotes, stash, ...), whole-namespace patterns included.
+			switch ref {
+			case "HEAD", "FETCH_HEAD", "ORIG_HEAD", "MERGE_HEAD", "refs", "refs/*":
+				return fmt.Errorf("git rule %d (%s): ref pattern %q is not a branch or tag", i, r.Repo, ref)
+			}
+			if strings.HasPrefix(ref, "refs/") && !strings.HasPrefix(ref, "refs/heads/") && !strings.HasPrefix(ref, "refs/tags/") {
+				return fmt.Errorf("git rule %d (%s): ref pattern %q is outside refs/heads/ and refs/tags/", i, r.Repo, ref)
+			}
 		}
 	}
 	return nil
