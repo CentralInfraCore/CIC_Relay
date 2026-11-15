@@ -89,6 +89,7 @@ The `relay` service reads these from the environment (a `.env` file next to
 | `CIC_VAULT_MOUNT` | `transit` | Vault transit mount |
 | `CIC_VAULT_KEY` | — | Signing key; the token must be *authorised for this key* |
 | `CIC_TRUST_MODE` | — | PKI trust mode (`dev` or `prod`); **required**, no default, an empty value is a start-up error |
+| `CIC_EVIDENCE_REQUIRED` | `false` | `true` or `false` (anything else is a start-up error). `true`: when the ProofTrace of a `/set` run was not persisted (recording failed, or no recorder is configured), the call returns **503 `evidence_required`**. **The workflow has already run:** the body says `execution_completed: true`, `proof.persisted: false` and carries the `chain_hash`. **Do not retry it automatically**: a retry executes the workflow again. Default: the call stays a success and `proof.persisted` reports the recording |
 
 ### `CIC_BUILD_DIR` must be shared with the builder container
 
