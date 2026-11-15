@@ -84,6 +84,7 @@ GATE_LOGIC_PATHS = {
     "scripts/quality_gate.py",
     "scripts/object_model.py",
     "scripts/seeded_defects.py",
+    "scripts/gate_selftest.py",
     ".measurement-scope.json",
     ".measurement-tools.json",
     ".mutation-baseline.json",
