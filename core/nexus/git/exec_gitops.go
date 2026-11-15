@@ -257,14 +257,26 @@ func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, nam
 	if !configured {
 		return fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
 	}
-	// Fetches use the remote's URL, pushes use its push URL when one is set: both must pass.
-	for _, getArgs := range [][]string{{"remote", "get-url", "--", name}, {"remote", "get-url", "--push", "--", name}} {
-		rawURL, err := e.runGitOutput(ctx, localPath, getArgs...)
+	// A remote can carry several URLs (a fetch uses the first; a push goes to every push URL, or to every
+	// URL when there is no push URL), so every one of them must pass, not just the first.
+	for _, getArgs := range [][]string{{"remote", "get-url", "--all", "--", name}, {"remote", "get-url", "--push", "--all", "--", name}} {
+		raw, err := e.runGitOutput(ctx, localPath, getArgs...)
 		if err != nil {
 			return fmt.Errorf("read remote url: %w", err)
 		}
-		if err := validateCloneURL(strings.TrimSpace(rawURL), e.allowLocalSources); err != nil {
-			return fmt.Errorf("remote %q has a URL that is not allowed: %w", clip(name), err)
+		urls := 0
+		for _, line := range strings.Split(raw, "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			urls++
+			if err := validateCloneURL(line, e.allowLocalSources); err != nil {
+				return fmt.Errorf("remote %q has a URL that is not allowed: %w", clip(name), err)
+			}
+		}
+		if urls == 0 {
+			return fmt.Errorf("%w: remote %q has no URL", ErrInvalidArgument, clip(name))
 		}
 	}
 	return nil

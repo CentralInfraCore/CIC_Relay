@@ -369,3 +369,42 @@ func TestSafeDirectoryStillWorksForForeignOwner(t *testing.T) {
 	_, err = ops.Status(context.Background(), "r")
 	assert.NoError(t, err)
 }
+
+// A remote may have several URLs, and a push goes to all of them. The first being fine proves nothing
+// about the rest, so each one is validated, for fetch URLs and for push URLs alike.
+func TestEveryURLOfARemoteIsValidated(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name string
+		args [][]string
+	}{
+		{"second fetch url", [][]string{{"config", "--add", "remote.origin.url", "ext::sh -c id"}}},
+		{"second push url", [][]string{{"remote", "set-url", "--push", "origin", "https://example.invalid/p1.git"}, {"remote", "set-url", "--push", "--add", "origin", "https://user:pw@example.invalid/p2.git"}}},
+		{"second push url, other transport", [][]string{{"remote", "set-url", "--push", "origin", "https://example.invalid/p1.git"}, {"remote", "set-url", "--push", "--add", "origin", "file:///tmp/elsewhere"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ops, work, _ := argTestOps(t)
+			strict := NewExecGitOps(ops.registry)
+			// The fixture's origin is a local path, which strict mode refuses on its own; start from a
+			// URL that passes, so that only the added second URL can be the reason for a refusal.
+			out, err := exec.Command("git", "-C", work, "remote", "set-url", "origin", "https://example.invalid/a.git").CombinedOutput()
+			require.NoError(t, err, string(out))
+			require.NoError(t, strict.requireConfiguredRemote(ctx, work, "origin"), "precondition: a single https URL passes")
+			for _, a := range tc.args {
+				out, err := exec.Command("git", append([]string{"-C", work}, a...)...).CombinedOutput()
+				require.NoError(t, err, string(out))
+			}
+			require.Error(t, strict.requireConfiguredRemote(ctx, work, "origin"), "precondition: the second URL is the only difference")
+			for _, call := range []func() error{
+				func() error { return strict.Push(ctx, "r", "origin", "main") },
+				func() error { return strict.Fetch(ctx, "r", "origin") },
+			} {
+				err := call()
+				require.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidArgument)
+				assert.Contains(t, err.Error(), "not allowed")
+				assert.NotContains(t, err.Error(), "pw@")
+			}
+		})
+	}
+}
