@@ -15,7 +15,7 @@ A CIC Relay jelenleg **referencia- és PoC-implementáció**. Nem hardened, és 
 - **A HTTP API-nak nincs hitelesítése és TLS-e.** Ne tegye ki hálózatra. A `docker-compose.yml` alapértelmezetten csak a loopback interfészre köti (`CIC_RELAY_BIND`).
 - **Az aláíratlan vagy hibás aláírású modul is betöltődik** (a hibás láncú modul elutasított). A `cic-flow` képességhez külön provenance-ellenőrzés kell, a `git` host függvények viszont minden betöltött modulnak elérhetők, csak a regisztrált repók whitelist-je korlátozza őket.
 - **A schema source assertion `metadata.sign` mezőjét nem ellenőrzi kriptográfiailag a Relay**, és `source_assertion` nélkül is `asserted=true` az eredmény.
-- **Az alapértelmezett trust mode `dev`** (`CIC_TRUST_MODE`), amely a binárisba ágyazott CA-tanúsítványokban bízik.
+- **A `CIC_TRUST_MODE` kötelező, nincs alapértelmezése** (üres vagy hiányzó érték indulási hiba). A `dev` mód a binárisba ágyazott fejlesztői CA-tanúsítványokban bízik; a compose fájl alapból `dev`-et ad át.
 - **A ProofTrace aláírás nélkül is elindul**, letiltott rögzítéssel, ha nincs `VAULT_TOKEN`.
 - **A compose a host Docker-socketjét csatolja**, ami a host daemonjának jogosultságát adja a konténernek.
 - **Az R6–R10 követelmények** (jóváhagyás, egyszeri felhasználás, bizonyíték) a Relay oldalán még nincsenek megvalósítva.

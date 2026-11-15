@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+
+	"centralrelay/core/cabinet"
 )
 
 const (
@@ -15,18 +17,43 @@ const (
 	TrustModeProd = "prod" // scaffold: CICPlatformCA not embedded — out-of-band provisioning required
 )
 
-// resolveTrustMode reads the CIC_TRUST_MODE environment variable and returns the trust mode (dev or prod).
-// Missing or empty values default to "dev" with a warning log.
-func resolveTrustMode(logger *logrus.Logger) string {
+// resolveTrustMode reads the CIC_TRUST_MODE environment variable and returns the trust mode.
+// There is no default: a missing, empty or whitespace-only value is an error, so the
+// operator always chooses the trust anchor explicitly instead of inheriting the
+// development CAs embedded in the binary. Unknown values are rejected by bootstrapPKI.
+func resolveTrustMode() (string, error) {
 	mode := strings.TrimSpace(os.Getenv("CIC_TRUST_MODE"))
 	if mode == "" {
-		logger.WithFields(logrus.Fields{
-			"trust_mode": TrustModeDev,
-			"reason":     "CIC_TRUST_MODE not set — defaulting to dev",
-		}).Warn("trust mode defaulting to dev")
-		return TrustModeDev
+		return "", fmt.Errorf("CIC_TRUST_MODE is not set (valid: %q, %q); there is no default", TrustModeDev, TrustModeProd)
 	}
-	return mode
+	return mode, nil
+}
+
+// requireTrustStore refuses a prod relay without a loaded trust store. bootstrapPKI
+// already fails in that case today; this is the guard that keeps a later change from
+// reintroducing the silent "trust ecosystem not bootstrapped" skip in loadModule.
+func requireTrustStore(trustMode string, assets *PKIAssets) error {
+	if trustMode == TrustModeProd && (assets == nil || !assets.TrustStoreLoaded) {
+		return fmt.Errorf("CIC_TRUST_MODE=%s requires a loaded trust store", TrustModeProd)
+	}
+	return nil
+}
+
+// bootstrapTrust is the single start-up entry for trust: it resolves the mode,
+// loads the trust store and applies the prod guard.
+func bootstrapTrust(embeddedPKI fs.FS, logger *logrus.Logger) (string, *PKIAssets, error) {
+	trustMode, err := resolveTrustMode()
+	if err != nil {
+		return "", nil, err
+	}
+	assets, err := bootstrapPKI(trustMode, embeddedPKI, logger)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := requireTrustStore(trustMode, assets); err != nil {
+		return "", nil, err
+	}
+	return trustMode, assets, nil
 }
 
 // bootstrapPKI loads the CA trust store based on trustMode.
@@ -62,15 +89,50 @@ func bootstrapPKI(trustMode string, embeddedPKI fs.FS, logger *logrus.Logger) (*
 		if !pool.AppendCertsFromPEM(pemData) {
 			return nil, fmt.Errorf("pki bootstrap (prod): no valid certificates in %q", bundlePath)
 		}
+		// CRLs travel in the same bundle (X509 CRL blocks). In prod a CRL that cannot be
+		// parsed, is not signed by a CA of the bundle, or is stale is a start-up error.
+		tolerance, err := crlToleranceFromEnv()
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		policy := crlPolicy{Strict: true, Freshness: &cabinet.CRLFreshness{Tolerance: tolerance}}
+		issuers, candidateCRLs, err := parseBundleCRLs(pemData, policy, logger)
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		crls, err := acceptCRLs(candidateCRLs, issuers, policy, logger)
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		// The operator declares which issuers must have a CRL; a required issuer without a
+		// valid, fresh one is a start-up error. dev (the embedded loader) has no such policy:
+		// it stays lenient and ignores CIC_CRL_REQUIRED_ISSUERS.
+		issuerPolicy, err := crlIssuerPolicyFromEnv()
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		if err := enforceCRLIssuerPolicy(issuerPolicy, issuers, crls); err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		if issuerPolicy.none {
+			logger.Warn("CIC_CRL_REQUIRED_ISSUERS=none: no issuer is required to have a CRL")
+		}
+		if len(crls) == 0 {
+			logger.WithField("bundle_path", bundlePath).Warn("Revocation checking is inactive: the CA bundle contains no CRL")
+		}
+		// No pin source exists yet: pinning is off, and in prod that is stated, not implicit.
+		logger.WithField("spki_pins", 0).Warn("SPKI pinning is not configured: the pin set is empty")
 		logger.WithFields(logrus.Fields{
 			"trust_mode":         trustMode,
 			"trust_store_loaded": true,
 			"bundle_path":        bundlePath,
+			"crls":               len(crls),
 		}).Info("PKI trust store bootstrapped (prod)")
 		return &PKIAssets{
 			Roots:            pool,
 			Intermediates:    x509.NewCertPool(),
-			CRLs:             []*x509.RevocationList{},
+			CRLs:             crls,
+			CRLFreshness:     policy.Freshness,
 			TrustStoreLoaded: true,
 		}, nil
 

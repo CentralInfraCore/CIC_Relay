@@ -75,6 +75,7 @@ func registerNativeComponents(ctx context.Context, svc cabinet.Cabinet, pkiAsset
 				Intermediates: pkiAssets.Intermediates,
 				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
 				CRLs:          pkiAssets.CRLs,
+				CRLFreshness:  pkiAssets.CRLFreshness,
 			}
 			_, err := cabinet.VerifyCertificateChain(cert, opts)
 			return err
@@ -310,9 +311,10 @@ type PKIAssets struct {
 	Roots            *x509.CertPool
 	Intermediates    *x509.CertPool
 	CRLs             []*x509.RevocationList
-	TrustStoreLoaded bool   // true when at least one root CA was loaded
-	CAFingerprint    string // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
-	CertChainHash    string // sha256 of all loaded CA cert DER bytes concatenated, "sha256:<hex>"
+	CRLFreshness     *cabinet.CRLFreshness // set in prod: verification rejects a stale CRL
+	TrustStoreLoaded bool                  // true when at least one root CA was loaded
+	CAFingerprint    string                // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
+	CertChainHash    string                // sha256 of all loaded CA cert DER bytes concatenated, "sha256:<hex>"
 
 	// R3b (feature-011): the cic-flow provenance/entitlement anchors, delivered by
 	// their own detached-companion path — NOT embedded, so the relay binary's hash
@@ -355,12 +357,18 @@ type ModuleFile struct {
 	WasmSize   int64             `yaml:"wasmSize"`
 }
 
-// loadEmbeddedComponents loads schemas, workflows, and PKI assets from the embedded filesystem.
-// It processes all embedded components and registers them with the cabinet service.
-func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas fs.FS, workflows fs.FS, pki fs.FS, pkiPath string, maxWasmModuleSize int64, logger *logrus.Logger) error {
-	pkiAssets, err := loadPKIAssets(pki, pkiPath, logger)
-	if err != nil {
-		return fmt.Errorf("failed to load embedded PKI assets: %w", err)
+// loadEmbeddedComponents loads schemas, workflows and modules from the embedded filesystems and
+// registers them with the cabinet service.
+//
+// Embedded components are verified against the SAME trust context as installed ones
+// (pkiAssets, the result of bootstrapTrust): being compiled into the binary grants no extra
+// trust. Origin (the signer chain against the configured anchors), authenticity and the
+// capability a module receives are decided by the same rules on both load paths. The loader
+// used to build a second trust store from the embedded CAs, so in prod an embedded module was
+// judged against the development CAs instead of the operator's bundle.
+func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas fs.FS, workflows fs.FS, pkiAssets *PKIAssets, maxWasmModuleSize int64, logger *logrus.Logger) error {
+	if pkiAssets == nil {
+		return fmt.Errorf("loadEmbeddedComponents: the shared trust context (pkiAssets) is required")
 	}
 	if err := loadComponentsFromFS(ctx, svc, schemas, ".", true, pkiAssets, maxWasmModuleSize, logger); err != nil {
 		return fmt.Errorf("failed to load embedded schemas: %w", err)
@@ -549,6 +557,7 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 					Intermediates: pkiAssets.Intermediates,
 					KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
 					CRLs:          pkiAssets.CRLs,
+					CRLFreshness:  pkiAssets.CRLFreshness,
 				}
 				chains, verifyErr := cabinet.VerifyCertificateChain(cert, verifyOpts)
 				if verifyErr != nil {
@@ -591,7 +600,12 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 
 // loadPKIAssets loads X.509 certificates and CRLs from a filesystem path and populates PKIAssets
 // with root certificates, intermediates, and revocation lists.
+//
+// This is the lenient (dev) loader: every CRL still needs a valid signature from a CA
+// certificate loaded here, and one that fails is never used, but an unparsable or stale CRL
+// is only logged. The strict (prod) path is the CA bundle in bootstrapPKI.
 func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, error) {
+	policy := crlPolicy{}
 	assets := &PKIAssets{
 		Roots:         x509.NewCertPool(),
 		Intermediates: x509.NewCertPool(),
@@ -599,6 +613,9 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 	}
 	// chainHasher accumulates all loaded CA cert DER bytes for CertChainHash.
 	chainHasher := sha256.New()
+	// CRLs are verified after the whole directory is read: a CRL may precede its issuer.
+	var caCerts []*x509.Certificate
+	var candidateCRLs []*x509.RevocationList
 
 	// If path is empty, there are no PKI assets to load from a directory.
 	// Return empty assets without trying to read a directory.
@@ -645,6 +662,7 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 					continue
 				}
 				if cert.IsCA {
+					caCerts = append(caCerts, cert)
 					chainHasher.Write(cert.Raw)
 					if cert.Subject.String() == cert.Issuer.String() { // Self-signed, so it's a root
 						assets.Roots.AddCert(cert)
@@ -663,13 +681,19 @@ func loadPKIAssets(fsys fs.FS, path string, logger *logrus.Logger) (*PKIAssets, 
 					logger.WithFields(logrus.Fields{"path": file.Name(), "error": err}).Warn("Failed to parse CRL")
 					continue
 				}
-				assets.CRLs = append(assets.CRLs, crl)
+				candidateCRLs = append(candidateCRLs, crl)
 			}
 		}
 		if !anyBlock {
 			logger.WithField("path", file.Name()).Warn("No PEM data found in file")
 		}
 	}
+	crls, err := acceptCRLs(candidateCRLs, caCerts, policy, logger)
+	if err != nil {
+		return nil, err
+	}
+	assets.CRLs = crls
+	assets.CRLFreshness = policy.Freshness
 	if assets.TrustStoreLoaded {
 		assets.CertChainHash = "sha256:" + hex.EncodeToString(chainHasher.Sum(nil))
 	}

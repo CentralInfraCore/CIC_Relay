@@ -1039,6 +1039,45 @@ mod tests {
         assert_eq!(to_reqwest_method(Method::Delete), reqwest::Method::DELETE);
     }
 
+    /// The policy fixture shared with the Go `actuate` host function
+    /// (`cmd/relay/egress_client_test.go`, `TestEgressParity_Fixture`): the same limits and
+    /// the same blocked/allowed address verdicts, so a drift on either side fails a test.
+    #[test]
+    fn egress_parity_fixture_matches_policy() {
+        let fixture = include_str!("../../testdata/egress-parity/policy.txt");
+        let limits = Limits::default();
+        let mut consts_seen = 0;
+        let mut ips_seen = 0;
+        for (n, raw) in fixture.lines().enumerate() {
+            let line = raw.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let fields: Vec<&str> = line.split_whitespace().collect();
+            match fields.as_slice() {
+                ["const", name, value] => {
+                    let want: u64 = value.parse().expect("integer const");
+                    let got: u64 = match *name {
+                        "request_timeout_secs" => limits.request_timeout.as_secs(),
+                        "connect_timeout_secs" => limits.connect_timeout.as_secs(),
+                        "max_response_bytes" => limits.max_response_bytes as u64,
+                        other => panic!("line {}: unknown const {other}", n + 1),
+                    };
+                    assert_eq!(want, got, "const {name}");
+                    consts_seen += 1;
+                }
+                ["ip", verdict, addr] => {
+                    let ip: IpAddr = addr.parse().expect("ip literal");
+                    assert_eq!(*verdict == "blocked", is_blocked_ip(ip), "address {addr}");
+                    ips_seen += 1;
+                }
+                _ => panic!("line {}: cannot parse {line:?}", n + 1),
+            }
+        }
+        assert_eq!(consts_seen, 3, "fixture must keep all three consts");
+        assert!(ips_seen > 20, "fixture must keep its address cases");
+    }
+
     #[test]
     fn default_limits_are_conservative() {
         let l = Limits::default();
