@@ -525,6 +525,9 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	}
 
 	moduleID := file.Metadata.Name + "@" + file.Metadata.Version
+	if revokeModuleCapability != nil {
+		revokeModuleCapability(moduleID)
+	}
 	auditLogger := logger.WithFields(logrus.Fields{"module_id": moduleID, "checksum": calculatedDigest})
 
 	sigPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".pem"

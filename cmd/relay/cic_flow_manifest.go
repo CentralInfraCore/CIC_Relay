@@ -23,6 +23,7 @@ import (
 type capabilityManifest struct {
 	Egress  egressPolicy `yaml:"egress"`
 	Secrets []secretRule `yaml:"secrets"`
+	Git     []gitRule    `yaml:"git"`
 }
 
 // egressRule is one permitted outbound reach. Host is an exact host or a leading
@@ -44,9 +45,60 @@ type secretRule struct {
 	Ops    []string `yaml:"ops"`
 }
 
+// gitRule is one permitted git reach: which registered repository, which operations on it, and for the
+// operations that name something outside the repository (a remote, a ref, a clone source) exactly which
+// ones. Nothing is implied: an operation that is not listed, a remote or ref that is not listed, or a
+// repository that is not named is refused.
+type gitRule struct {
+	Repo    string   `yaml:"repo"`    // a registered repository ID, exact
+	Ops     []string `yaml:"ops"`     // clone | fetch | checkout | commit | push | status
+	Remotes []string `yaml:"remotes"` // configured remote names, for fetch and push
+	Refs    []string `yaml:"refs"`    // exact ref names or "prefix/*", for clone, checkout and push
+	Sources []string `yaml:"sources"` // exact clone URLs, for clone
+}
+
+var gitOpSet = map[string]bool{"clone": true, "fetch": true, "checkout": true, "commit": true, "push": true, "status": true}
+
+// validateGit rejects a manifest whose git block is malformed or too loose to enforce. A rule that
+// grants fetch or push without naming a remote, or clone, checkout or push without naming refs, would
+// be unbounded, so it is an error at load, never a silent widening.
+func (m capabilityManifest) validateGit() error {
+	for i, r := range m.Git {
+		if r.Repo == "" || strings.ContainsAny(r.Repo, "*?[ ") {
+			return fmt.Errorf("git rule %d: repo must be one exact registered repository ID", i)
+		}
+		if len(r.Ops) == 0 {
+			return fmt.Errorf("git rule %d (%s): no ops", i, r.Repo)
+		}
+		has := map[string]bool{}
+		for _, op := range r.Ops {
+			if !gitOpSet[op] {
+				return fmt.Errorf("git rule %d (%s): unknown op %q", i, r.Repo, op)
+			}
+			has[op] = true
+		}
+		if (has["fetch"] || has["push"]) && len(r.Remotes) == 0 {
+			return fmt.Errorf("git rule %d (%s): fetch/push need an explicit remotes list", i, r.Repo)
+		}
+		if (has["clone"] || has["checkout"] || has["push"]) && len(r.Refs) == 0 {
+			return fmt.Errorf("git rule %d (%s): clone/checkout/push need an explicit refs list", i, r.Repo)
+		}
+		if has["clone"] && len(r.Sources) == 0 {
+			return fmt.Errorf("git rule %d (%s): clone needs an explicit sources list", i, r.Repo)
+		}
+		for _, ref := range r.Refs {
+			if ref == "" || ref == "*" || strings.Contains(strings.TrimSuffix(ref, "/*"), "*") {
+				return fmt.Errorf("git rule %d (%s): ref pattern %q is not allowed (exact name or \"prefix/*\")", i, r.Repo, ref)
+			}
+		}
+	}
+	return nil
+}
+
 // moduleProject is the subset of a module's project.yaml the relay reads at load.
 type moduleProject struct {
-	Metadata struct {
+	WasmDigest string `yaml:"wasmDigest"` // verified against the loaded wasm bytes by loadModule before binding
+	Metadata   struct {
 		BuildHash string `yaml:"buildHash"`
 		CICSign   string `yaml:"cicSign"` // verified in R3b (pki_verify.go)
 	} `yaml:"metadata"`
@@ -185,6 +237,20 @@ func (p *moduleProject) cicFlowImports() map[string]bool {
 	return out
 }
 
+// gitImports returns the set of git host functions the module declares it imports.
+func (p *moduleProject) gitImports() map[string]bool {
+	out := map[string]bool{}
+	for _, imp := range p.ABI.Imports {
+		if imp.Module != "git" {
+			continue
+		}
+		for _, fn := range imp.Functions {
+			out[fn] = true
+		}
+	}
+	return out
+}
+
 // checkImportsWithinManifest rejects a module whose cic-flow imports exceed its
 // capability_manifest: importing `sign` requires a secrets entry with ops:[sign];
 // importing `actuate` requires at least one egress entry. Enforced at load, not
@@ -196,6 +262,23 @@ func (p *moduleProject) checkImportsWithinManifest() error {
 	}
 	if imports["actuate"] && len(p.CapabilityManifest.Egress) == 0 {
 		return fmt.Errorf("module imports cic-flow.actuate but declares no egress")
+	}
+	if err := p.CapabilityManifest.validateGit(); err != nil {
+		return err
+	}
+	for fn := range p.gitImports() {
+		if !gitOpSet[fn] {
+			return fmt.Errorf("module imports unknown git function %q", fn)
+		}
+		granted := false
+		for _, r := range p.CapabilityManifest.Git {
+			if containsFold(r.Ops, fn) {
+				granted = true
+			}
+		}
+		if !granted {
+			return fmt.Errorf("module imports git.%s but declares no git rule with that op", fn)
+		}
 	}
 	return nil
 }

@@ -53,7 +53,7 @@ func TestGitHostFunctions_GuestOptionsNeverRun(t *testing.T) {
 
 	rt := wazero.NewRuntime(context.Background())
 	defer rt.Close(context.Background())
-	require.NoError(t, registerGitHostFunctions(context.Background(), rt, ops))
+	require.NoError(t, registerGitHostFunctions(context.Background(), rt, ops, nil))
 
 	cases := map[string]struct {
 		fn  hostFn

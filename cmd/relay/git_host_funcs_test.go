@@ -141,12 +141,12 @@ func TestRegisterGitHostFunctions(t *testing.T) {
 	ctx := context.Background()
 	r := wazero.NewRuntime(ctx)
 	defer r.Close(ctx)
-	require.NoError(t, registerGitHostFunctions(ctx, r, &stubGitOps{}))
+	require.NoError(t, registerGitHostFunctions(ctx, r, &stubGitOps{}, nil))
 }
 
 func TestMakeGitHostSetupFn(t *testing.T) {
 	ctx := context.Background()
-	fn := makeGitHostSetupFn(&stubGitOps{})
+	fn := makeGitHostSetupFn(&stubGitOps{}, nil)
 	r := wazero.NewRuntime(ctx)
 	defer r.Close(ctx)
 	require.NoError(t, fn(ctx, r))

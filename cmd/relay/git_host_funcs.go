@@ -14,9 +14,34 @@ import (
 // typed git host module ("git") on the wazero runtime.
 // WASM modules can import these functions to perform git operations through the
 // relay's capability boundary — they never receive arbitrary exec access.
-func makeGitHostSetupFn(gitOps nexusgit.GitOps) func(ctx context.Context, r wazero.Runtime) error {
+func makeGitHostSetupFn(gitOps nexusgit.GitOps, authz gitAuthorizer) func(ctx context.Context, r wazero.Runtime) error {
 	return func(ctx context.Context, r wazero.Runtime) error {
-		return registerGitHostFunctions(ctx, r, gitOps)
+		return registerGitHostFunctions(ctx, r, gitOps, authz)
+	}
+}
+
+// gitAuthorizer decides whether the calling module may perform op. A nil authorizer denies everything.
+type gitAuthorizer interface {
+	authorizeGit(moduleName, op string, req gitAuthRequest) error
+}
+
+// authorized wraps a git host function so that it runs only if the *calling* module is permitted. The
+// caller's identity is mod.Name(), the name the host gave the instance; the request body is read for
+// the policy fields only and can not name a different module. The guest is suspended while a host
+// function runs, so the fields checked here are the fields the wrapped function then reads.
+func authorized(authz gitAuthorizer, op string, inner hostFn) hostFn {
+	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
+		var req gitAuthRequest
+		if !gitReadJSON(mod, reqPtr, reqLen, &req) {
+			return gitWriteError(mod, outPtr, outLen, "bad request JSON")
+		}
+		if authz == nil {
+			return gitWriteError(mod, outPtr, outLen, "git: module has no verified git capability")
+		}
+		if err := authz.authorizeGit(mod.Name(), op, req); err != nil {
+			return gitWriteError(mod, outPtr, outLen, err.Error())
+		}
+		return inner(ctx, mod, reqPtr, reqLen, outPtr, outLen)
 	}
 }
 
@@ -28,41 +53,41 @@ func makeGitHostSetupFn(gitOps nexusgit.GitOps) func(ctx context.Context, r waze
 // The caller passes a JSON-encoded request in WASM linear memory at (reqPtr, reqLen).
 // The response JSON is written to (outPtr, outLen), and the return value is the number
 // of bytes written, or -1 on error.
-func registerGitHostFunctions(ctx context.Context, r wazero.Runtime, gitOps nexusgit.GitOps) error {
+func registerGitHostFunctions(ctx context.Context, r wazero.Runtime, gitOps nexusgit.GitOps, authz gitAuthorizer) error {
 	b := r.NewHostModuleBuilder("git")
 
 	b.NewFunctionBuilder().
-		WithFunc(makeCloneFn(gitOps)).
+		WithFunc(authorized(authz, "clone", makeCloneFn(gitOps))).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("clone")
 
 	b.NewFunctionBuilder().
-		WithFunc(makeFetchFn(gitOps)).
+		WithFunc(authorized(authz, "fetch", makeFetchFn(gitOps))).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("fetch")
 
 	b.NewFunctionBuilder().
-		WithFunc(makeCheckoutFn(gitOps)).
+		WithFunc(authorized(authz, "checkout", makeCheckoutFn(gitOps))).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("checkout")
 
 	b.NewFunctionBuilder().
-		WithFunc(makeCommitFn(gitOps)).
+		WithFunc(authorized(authz, "commit", makeCommitFn(gitOps))).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("commit")
 
 	b.NewFunctionBuilder().
-		WithFunc(makePushFn(gitOps)).
+		WithFunc(authorized(authz, "push", makePushFn(gitOps))).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("push")
 
 	b.NewFunctionBuilder().
-		WithFunc(makeStatusFn(gitOps)).
+		WithFunc(authorized(authz, "status", makeStatusFn(gitOps))).
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("status")

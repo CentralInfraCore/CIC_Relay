@@ -158,7 +158,7 @@ func TestCheckImportsWithinManifest(t *testing.T) {
 	p3.ABI.Imports = []struct {
 		Module    string   `yaml:"module"`
 		Functions []string `yaml:"functions"`
-	}{{Module: "git", Functions: []string{"clone"}}}
+	}{{Module: "env", Functions: []string{"abort"}}}
 	require.NoError(t, p3.checkImportsWithinManifest())
 }
 
