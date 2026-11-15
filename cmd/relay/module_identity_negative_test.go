@@ -103,7 +103,7 @@ func (ca *testCA) assets(crls ...*x509.RevocationList) *PKIAssets {
 	}
 }
 
-func loadWithSigner(t *testing.T, signerPEM []byte, assets *PKIAssets) (error, string) {
+func loadWithSigner(t *testing.T, signerPEM []byte, assets *PKIAssets) (string, error) {
 	t.Helper()
 	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(),
 		cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1})
@@ -114,7 +114,7 @@ func loadWithSigner(t *testing.T, signerPEM []byte, assets *PKIAssets) (error, s
 	logger := logrus.New()
 	logger.SetOutput(&logBuf)
 	err = loadModule(context.Background(), svc, moduleFS, yamlPath, moduleFS[yamlPath].Data, assets, int64(16*1024*1024), logger)
-	return err, logBuf.String()
+	return logBuf.String(), err
 }
 
 func TestLoadModule_SignerCertificate_Acceptable_And_Unacceptable(t *testing.T) {
@@ -145,7 +145,7 @@ func TestLoadModule_SignerCertificate_Acceptable_And_Unacceptable(t *testing.T) 
 					crls = append(crls, ca.crl(t, 99999))
 				}
 			}
-			err, log := loadWithSigner(t, signer, ca.assets(crls...))
+			log, err := loadWithSigner(t, signer, ca.assets(crls...))
 			if c.wantErr == "" {
 				require.NoError(t, err)
 				assert.Contains(t, log, "verified")
