@@ -1,0 +1,87 @@
+{
+  "schema": "measurement-scope/1",
+  "version": 1,
+  "comment": "Which files the object-level measurement covers. The first matching rule decides; a tracked Go or Rust file that matches no rule is an error (nothing is left out silently). A change of this file is a change of the gate logic and is reviewed as such.",
+  "rules": [
+    {
+      "lang": "go",
+      "match": "*_test.go",
+      "class": "test",
+      "reason": "test code is not a production object"
+    },
+    {
+      "lang": "go",
+      "match": "*/testdata/*",
+      "class": "test-data",
+      "reason": "fixtures read by tests; Go tooling ignores testdata"
+    },
+    {
+      "lang": "go",
+      "match": "tests/*",
+      "class": "test-data",
+      "reason": "test fixtures and the tests of the scripts: not part of the Go module's production code (a source file stored here would also become a package of the root module)"
+    },
+    {
+      "lang": "go",
+      "match": "tools/goastdump/*",
+      "class": "separate",
+      "unit": "goastdump",
+      "reason": "a separate Go module (tools/goastdump/go.mod): measured and reported on its own, never averaged into the root module (owner decision 2026-11-14)"
+    },
+    {
+      "lang": "go",
+      "match": "tools/objinventory/*",
+      "class": "tool",
+      "unit": "objinventory",
+      "reason": "the measuring tool itself (a separate Go module); it is tested in the python job and is not an object of the Relay"
+    },
+    {
+      "lang": "go",
+      "match": "tools/statechain-demo/*",
+      "class": "experimental",
+      "reason": "live demo entry, exercised by make demo; already excluded from the coverage floors in verify.yml"
+    },
+    {
+      "lang": "go",
+      "match": "tools/trustflow-demo/*",
+      "class": "experimental",
+      "reason": "live cgo demo entry, exercised by make demo-trustflow; excluded from the coverage floors in verify.yml"
+    },
+    {
+      "lang": "go",
+      "match": "tools/oci-sign-demo/*",
+      "class": "experimental",
+      "reason": "self-verifying demo entry, exercised by make demo-oci-sign; excluded from the coverage floors in verify.yml"
+    },
+    {
+      "lang": "go",
+      "match": "*.go",
+      "class": "production",
+      "reason": "every other Go file of the root module"
+    },
+    {
+      "lang": "rust",
+      "match": "tests/*",
+      "class": "test-data",
+      "reason": "test fixtures and the tests of the scripts: not Rust workspace members"
+    },
+    {
+      "lang": "rust",
+      "match": "*/tests/*",
+      "class": "test",
+      "reason": "integration tests are not production objects"
+    },
+    {
+      "lang": "rust",
+      "match": "*/benches/*",
+      "class": "test",
+      "reason": "benchmarks are not production objects"
+    },
+    {
+      "lang": "rust",
+      "match": "*.rs",
+      "class": "production",
+      "reason": "every other Rust source (a #[cfg(test)] region inside a file is excluded by the object model, counted, not dropped)"
+    }
+  ]
+}

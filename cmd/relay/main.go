@@ -654,7 +654,8 @@ func main() {
 	// Register the "git" host module and the "cic-flow" host module (feature-011:
 	// the decomposed sign-then-send provider capability). cic-flow deps are bound
 	// per-module from each module's verified manifest at load
-	// (loadEmbeddedComponents populates cicFlowReg); a module with no verified
+	// (loadModule, on the embedded and the installed path alike, against the one
+	// shared trust context); a module with no verified
 	// capability is denied — fail-closed. `resolve` is nil for now: egress binds
 	// per-module, but the signer stays inert until the OCI-key provisioning path
 	// wires a resolver (r3-plan.md).
@@ -690,8 +691,7 @@ func main() {
 	defer cancel()
 
 	// --- PKI Trust Bootstrap ---
-	trustMode := resolveTrustMode(logger)
-	pkiAssets, err := bootstrapPKI(trustMode, embeddedFS, logger)
+	trustMode, pkiAssets, err := bootstrapTrust(embeddedFS, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("FATAL: PKI bootstrap failed")
 	}
@@ -728,7 +728,7 @@ func main() {
 	logger.Info("Native components registered.")
 
 	// Load embedded schemas and workflows.
-	if err := loadEmbeddedComponents(loadCtx, cabinetSvc, embeddedFS, embeddedFS, embeddedFS, "embedded/pki", cfg.MaxWASMModuleSize, logger); err != nil {
+	if err := loadEmbeddedComponents(loadCtx, cabinetSvc, embeddedFS, embeddedFS, pkiAssets, cfg.MaxWASMModuleSize, logger); err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to load embedded components")
 	}
 
