@@ -54,7 +54,7 @@ def test_each_seeded_defect_is_caught_at_the_expected_level_with_its_own_code(
 def test_the_honest_bundle_has_none_of_the_findings_the_defect_causes(bundle, case):
     # the pair of every negative case: without the defect the same level has no finding with that code
     res = bundle.verify()
-    findings = res[case.level].get("findings", [])
+    findings = res["tools" if case.level == "TOOLS" else case.level].get("findings", [])
     assert case.code not in sd._codes(findings), findings
 
 
@@ -79,7 +79,9 @@ def test_the_harness_does_not_change_the_bundle_or_the_checkout(bundle):
 
 def test_the_cases_have_unique_ids_and_name_a_code():
     assert len(CASE_IDS) == len(set(CASE_IDS))
-    assert all(c.code and c.level in ("L1", "L2", "L3", "STABILITY") for c in sd.CASES)
+    assert all(
+        c.code and c.level in ("L1", "L2", "L3", "STABILITY", "TOOLS") for c in sd.CASES
+    )
 
 
 # --------------------------------------------------------------------------- R: the changed behaviour (count -> set)
@@ -349,6 +351,30 @@ TEETH = [
         {"A.9c"},
     ),
     (
+        "the unknown-tool-version finding",
+        '"TOOL_UNKNOWN",',
+        '"TOOL_UNKNOWN_X",',
+        {"P8.a"},
+    ),
+    (
+        "the pinned-version comparison",
+        "elif recorded != want:",
+        "elif False:",
+        {"P8.b"},
+    ),
+    (
+        "the unpinned-tool check",
+        "for name in sorted(set(declared) - set(pins)):",
+        "for name in []:",
+        {"P8.d"},
+    ),
+    (
+        "the missing-tool check",
+        "if not recorded or str(recorded).strip().lower() in (",
+        "if False and str(recorded).strip().lower() in (",
+        {"P8.c"},
+    ),
+    (
         "the commit/tree identity",
         'if tree != rec["identity"]["tree"] or commit != rec["identity"]["commit"]:',
         "if False:",
@@ -518,3 +544,79 @@ def test_f1_the_forged_stability_passes_l1_and_is_caught_only_by_l2(bundle):
     assert r["L2"]["verdict"] == "FAIL" and any(
         "REDERIVATION_MISMATCH" in f for f in r["L2"]["findings"]
     )
+
+
+# --- PR-06 A.8 (probe 8): a modified, missing, unknown or unpinned measuring tool makes the result unusable ---
+
+
+def _pins(bundle):
+    return dict(bundle.record["tools"])
+
+
+def test_n_a8_the_honest_record_with_the_right_pins_is_accepted(bundle):
+    assert bundle.verify()["tools"] == {"verdict": "TOOLS_PINNED", "findings": []}
+
+
+def test_n_a8_without_pins_the_tools_are_not_checked_and_that_is_not_a_pass(bundle):
+    r = om.verify_tools(bundle.record, None)
+    assert r["verdict"] == "NOT_CHECKED" and r["verdict"] != "TOOLS_PINNED"
+
+
+def test_n_a8_unusable_and_unverifiable_name_the_tool(bundle):
+    tool = sorted(bundle.record["tools"])[0]
+    rec, _ = sd.d_tool_modified(bundle)
+    r = bundle.verify(rec)["tools"]
+    assert r["verdict"] == "UNUSABLE" and any(tool in f for f in r["findings"])
+    rec, _ = sd.d_tool_missing(bundle)
+    r = bundle.verify(rec)["tools"]
+    assert r["verdict"] == "UNVERIFIABLE" and any(tool in f for f in r["findings"])
+
+
+def test_n_a8_unusable_wins_over_unverifiable():
+    pins = {"a": "1", "b": "1"}
+    rec = {"tools": {"a": "2"}}  # a: wrong version, b: missing
+    r = om.verify_tools(rec, pins)
+    assert r["verdict"] == "UNUSABLE" and len(r["findings"]) == 2
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "{}",
+        '{"schema": "measurement-tools/1", "tools": {}}',
+        '{"schema": "measurement-tools/2", "tools": {"go": "1"}}',
+        '{"schema": "measurement-tools/1", "tools": {"go": ""}}',
+        "not json",
+    ],
+)
+def test_n_a8_a_bad_pin_file_is_an_error_not_an_empty_pin_set(tmp_path, content):
+    f = tmp_path / "pins.json"
+    f.write_text(content)
+    with pytest.raises(om.ModelError):
+        om.load_tool_pins(str(f))
+
+
+def test_n_a8_the_command_line_exits_non_zero_for_a_modified_tool(tmp_path, bundle):
+    rec, _ = sd.d_tool_modified(bundle)
+    (tmp_path / "rec.json").write_text(json.dumps(rec))
+    (tmp_path / "pins.json").write_text(
+        json.dumps({"schema": "measurement-tools/1", "tools": _pins(bundle)})
+    )
+    argv = [
+        "verify",
+        "--record",
+        str(tmp_path / "rec.json"),
+        "--tool-pins",
+        str(tmp_path / "pins.json"),
+    ]
+    assert om.main(argv) == 1
+    (tmp_path / "rec.json").write_text(json.dumps(bundle.record))
+    assert om.main(argv) == 0
+
+
+def test_r_a8_the_real_pin_file_matches_the_tools_the_workflow_records():
+    pins = om.load_tool_pins(os.path.join(ROOT, ".measurement-tools.json"))
+    wf = open(os.path.join(ROOT, ".github/workflows/object-evidence.yml")).read()
+    assert "--tool-pins .measurement-tools.json" in wf
+    for tool in ("go", "rustc", "cargo-llvm-cov", "cargo-mutants", "objinventory"):
+        assert tool in pins

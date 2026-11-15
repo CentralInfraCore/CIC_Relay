@@ -1,0 +1,12 @@
+{
+  "schema": "measurement-tools/1",
+  "note": "Exact versions of the tools whose output decides a quality verdict. Values observed in the object-evidence CI run 43701788247 (main 7386565). A recorded version that differs is UNUSABLE, a missing, unknown or unpinned one is UNVERIFIABLE; both reject the measurement. Changing this file is a gate-logic change (planner escalates to FULL).",
+  "tools": {
+    "c++filt": "GNU c++filt (GNU Binutils for Ubuntu) 2.46",
+    "cargo-llvm-cov": "0.9.1",
+    "cargo-mutants": "27.1.0",
+    "go": "go1.26.11",
+    "objinventory": "objinventory/1",
+    "rustc": "1.96.1"
+  }
+}

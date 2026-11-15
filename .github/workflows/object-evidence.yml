@@ -96,7 +96,8 @@ jobs:
             --input "go-inventory:root=$T/go-inventory.json" --input "go-coverprofile:root=$T/go-cover.out" \
             --input "go-inventory:goastdump=$T/goastdump-inventory.json" --input "go-coverprofile:goastdump=$T/goastdump-cover.out" \
             --input "llvm-cov-json=$T/llvm-cov.json" --input "rust-mutant-list=$T/rust-list.json" \
-            --input "scope=.measurement-scope.json" | tee "$T/verify.txt"
+            --input "scope=.measurement-scope.json" \
+            --tool-pins .measurement-tools.json | tee "$T/verify.txt"
 
       # The self-test of the verifier: deliberate defects are derived from the REAL record and must each be caught at the
       # expected level (L1/L2/L3) with their own diagnostic code, and the honest record must get the honest verdict. The
@@ -112,7 +113,8 @@ jobs:
             --input "go-inventory:root=$T/go-inventory.json" --input "go-coverprofile:root=$T/go-cover.out" \
             --input "go-inventory:goastdump=$T/goastdump-inventory.json" --input "go-coverprofile:goastdump=$T/goastdump-cover.out" \
             --input "llvm-cov-json=$T/llvm-cov.json" --input "rust-mutant-list=$T/rust-list.json" \
-            --input "scope=.measurement-scope.json" | tee "$T/seeded-defects.txt"
+            --input "scope=.measurement-scope.json" \
+            --tool-pins .measurement-tools.json | tee "$T/seeded-defects.txt"
 
       - name: Keep the record
         if: ${{ always() }}

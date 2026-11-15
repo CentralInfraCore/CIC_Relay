@@ -38,6 +38,7 @@ class Bundle:
     required_units: set | None = None
     mutants: list | None = None
     go_files: dict | None = None
+    tool_pins: dict | None = None
 
     def verify(self, record: dict | None = None, **over) -> dict:
         kw = dict(
@@ -49,6 +50,7 @@ class Bundle:
             go_independent=self.go_independent,
             rust_independent=self.rust_independent,
             required_units=self.required_units,
+            tool_pins=self.tool_pins,
         )
         kw.update(over)
         return om.verify_record(record if record is not None else self.record, **kw)
@@ -190,6 +192,34 @@ def d_forged_stability(b: Bundle):
     return reseal(r), {}
 
 
+def _with_tools(b: Bundle, edit: Callable[[dict], None]):
+    r = copy.deepcopy(b.record)
+    edit(r["tools"])
+    return reseal(r), {}
+
+
+def d_tool_unknown(b: Bundle):
+    """The version of a measuring tool is recorded as `unknown`."""
+    return _with_tools(b, lambda t: t.__setitem__(sorted(t)[0], "unknown"))
+
+
+def d_tool_modified(b: Bundle):
+    """A pinned tool was a different (known) version."""
+    return _with_tools(
+        b, lambda t: t.__setitem__(sorted(t)[0], t[sorted(t)[0]] + "-modified")
+    )
+
+
+def d_tool_missing(b: Bundle):
+    """A pinned tool is not in the record at all."""
+    return _with_tools(b, lambda t: t.pop(sorted(t)[0]))
+
+
+def d_tool_unpinned(b: Bundle):
+    """The record names a tool that is not pinned."""
+    return _with_tools(b, lambda t: t.__setitem__("mystery-tool", "1.0.0"))
+
+
 def d_nondeterministic(b: Bundle):
     """An object whose coverage differs between runs (the real kind of case: see the PR-05 report)."""
     r = copy.deepcopy(b.record)
@@ -208,9 +238,12 @@ class Case:
     id: str
     title: str
     derive: Callable[[Bundle], tuple]
-    level: str  # L1 | L2 | L3 | STABILITY
+    level: str  # L1 | L2 | L3 | STABILITY | TOOLS
     code: str  # the diagnostic code that must appear
     why: str = ""
+    verdict: str = (
+        "FAIL"  # the verdict the level must reach (TOOLS: UNUSABLE | UNVERIFIABLE)
+    )
 
 
 CASES = [
@@ -305,6 +338,40 @@ CASES = [
         "REDERIVATION_MISMATCH",
     ),
     Case(
+        "P8.a",
+        "a measuring tool's version is recorded as `unknown` (re-sealed)",
+        d_tool_unknown,
+        "L1",
+        "TOOL_UNKNOWN",
+    ),
+    Case(
+        "P8.b",
+        "a pinned tool was a different, known version (re-sealed)",
+        d_tool_modified,
+        "TOOLS",
+        "TOOL_UNUSABLE",
+        "the version is known but not the pinned one",
+        "UNUSABLE",
+    ),
+    Case(
+        "P8.c",
+        "a pinned tool is missing from the record (re-sealed)",
+        d_tool_missing,
+        "TOOLS",
+        "TOOL_UNVERIFIABLE",
+        "the version cannot be established",
+        "UNVERIFIABLE",
+    ),
+    Case(
+        "P8.d",
+        "the record names a tool that is not pinned (re-sealed)",
+        d_tool_unpinned,
+        "TOOLS",
+        "TOOL_NOT_PINNED",
+        "an unknown tool decides nothing",
+        "UNVERIFIABLE",
+    ),
+    Case(
         "A.9b",
         "an object whose coverage differs between runs",
         d_nondeterministic,
@@ -331,9 +398,9 @@ def run_case(b: Bundle, c: Case) -> dict:
             "got": got,
             "detail": res["stability"],
         }
-    lvl = res[c.level]
+    lvl = res["tools" if c.level == "TOOLS" else c.level]
     findings = lvl.get("findings", [])
-    ok = lvl["verdict"] == "FAIL" and c.code in _codes(findings)
+    ok = lvl["verdict"] == c.verdict and c.code in _codes(findings)
     return {
         "id": c.id,
         "caught": ok,
@@ -345,7 +412,10 @@ def run_case(b: Bundle, c: Case) -> dict:
 def control(b: Bundle, honest: dict) -> dict:
     """The positive control: the honest bundle reaches the honest verdict."""
     res = b.verify()
-    got = {k: res[k]["verdict"] for k in ("L1", "L2", "L3")}
+    got = {
+        k: res[k]["verdict"]
+        for k in ("L1", "L2", "L3") + (("tools",) if "tools" in honest else ())
+    }
     return {
         "ok": all(got[k] == v for k, v in honest.items()),
         "got": got,
@@ -378,6 +448,7 @@ def bundle_from_files(
     scope_path: str,
     input_args: list[str],
     rust_list: str | None,
+    tool_pins: str | None = None,
 ) -> Bundle:
     """The bundle of a REAL record: the record, the checkout and the real input files; everything else is derived from them."""
     rec = json.loads(open(record_path, encoding="utf-8").read())
@@ -396,6 +467,7 @@ def bundle_from_files(
         mutants=(
             json.loads(open(rust_list, encoding="utf-8").read()) if rust_list else None
         ),
+        tool_pins=om.load_tool_pins(tool_pins) if tool_pins else None,
     )
 
 
@@ -413,6 +485,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--rust-list", help="cargo mutants --list --json")
     ap.add_argument(
+        "--tool-pins",
+        help=".measurement-tools.json (enables the tool-version cases P8.*)",
+    )
+    ap.add_argument(
         "--expect-l3",
         choices=["COMPLETE_FOR_SCOPE", "PARTIAL"],
         help="the L3 verdict the HONEST record must get. It is STATED here, not read from the result: a harness that "
@@ -425,9 +501,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if not (a.record and a.root and a.scope and a.expect_l3):
         ap.error("--record, --root, --scope and --expect-l3 are required (or --list)")
-    b = bundle_from_files(a.record, a.root, a.scope, a.input, a.rust_list)
+    b = bundle_from_files(a.record, a.root, a.scope, a.input, a.rust_list, a.tool_pins)
+    honest = {"L1": "INTEGRITY_OK", "L2": "BOUND_TO_INPUTS", "L3": a.expect_l3}
+    if a.tool_pins:
+        honest["tools"] = "TOOLS_PINNED"
     ok, lines = run_all(
-        b, {"L1": "INTEGRITY_OK", "L2": "BOUND_TO_INPUTS", "L3": a.expect_l3}
+        b, honest, [c for c in CASES if a.tool_pins or c.level != "TOOLS"]
     )
     print("\n".join(lines))
     print(

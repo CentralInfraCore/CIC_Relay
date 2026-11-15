@@ -85,6 +85,7 @@ GATE_LOGIC_PATHS = {
     "scripts/object_model.py",
     "scripts/seeded_defects.py",
     ".measurement-scope.json",
+    ".measurement-tools.json",
     ".mutation-baseline.json",
     ".github/workflows/mutation.yml",
     ".github/workflows/mutation-pr.yml",
