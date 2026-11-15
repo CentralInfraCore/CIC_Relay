@@ -626,15 +626,15 @@ func TestEffectiveTargetsAreValidated(t *testing.T) {
 // zero-width, direction-control and look-alike characters are refused, and so are non-ASCII hosts.
 func TestURLContractIsPrintableASCII(t *testing.T) {
 	for name, v := range map[string]string{
-		"no-break space":         "https://example.invalid/a b.git",
-		"line separator":         "https://example.invalid/a b.git",
+		"no-break space":         "https://example.invalid/a\u00a0b.git",
+		"line separator":         "https://example.invalid/a\u2028b.git",
 		"next line":              "https://example.invalid/a\u0085b.git",
-		"zero-width space":       "https://example.invalid/a​b.git",
-		"right-to-left override": "https://example.invalid/‮ok.git",
-		"fullwidth slash":        "https://example.invalid／ok.git",
-		"internationalised host": "https://bücher.invalid/x.git",
+		"zero-width space":       "https://example.invalid/a\u200bb.git",
+		"right-to-left override": "https://example.invalid/\u202eok.git",
+		"fullwidth slash":        "https://example.invalid\uff0fok.git",
+		"internationalised host": "https://b\u00fccher.invalid/x.git",
 		"DEL":                    "https://example.invalid/a\x7fb.git",
-		"leading no-break space": " https://example.invalid/x.git",
+		"leading no-break space": "\u00a0https://example.invalid/x.git",
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := validateCloneURL(v, false)
