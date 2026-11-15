@@ -730,3 +730,48 @@ func TestRemoteHelperAndTransportKeysAreRefused(t *testing.T) {
 		})
 	}
 }
+
+// F1.2 evidence: the operations a guest can reach do not write the repository configuration at all.
+// Together with "the guest has no file access" (core/cabinet/cicwasm.go: the module is instantiated with
+// no filesystem), this is what limits who can change the configuration between a validation and the git
+// command that follows: not the guest, through any operation it can reach.
+//
+// Note a behaviour this pins: checkout runs "git checkout <ref> --", and with "--" git does not create a
+// local tracking branch from a remote-only name (the DWIM that would write branch.<n>.remote/merge). A
+// branch that exists locally, a tag or a commit check out as before.
+func TestGuestReachableOperationsDoNotWriteTheConfiguration(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	run := func(dir string, args ...string) {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
+	config := func() string {
+		out, err := exec.Command("git", "-C", work, "config", "--local", "--list", "-z").CombinedOutput()
+		require.NoError(t, err, string(out))
+		return string(out)
+	}
+	bare := filepath.Join(t.TempDir(), "bare.git")
+	run(t.TempDir(), "init", "--bare", "-b", "main", bare)
+	run(work, "remote", "set-url", "origin", bare)
+	run(work, "branch", "feature")
+	run(work, "push", "origin", "main", "feature")
+	run(work, "branch", "-D", "feature")
+	run(work, "branch", "local-only")
+
+	require.NoError(t, ops.auditRepoConfig(ctx, work), "precondition")
+	before := config()
+
+	require.NoError(t, ops.Fetch(ctx, "r", "origin"))
+	require.NoError(t, ops.Checkout(ctx, "r", "local-only"))
+	require.NoError(t, os.WriteFile(filepath.Join(work, "g.txt"), []byte("x"), 0o644))
+	_, err := ops.Commit(ctx, "r", "from a guest", []string{"g.txt"})
+	require.NoError(t, err)
+	require.NoError(t, ops.Push(ctx, "r", "origin", "local-only"))
+	_, err = ops.Status(ctx, "r")
+	require.NoError(t, err)
+	require.NoError(t, ops.Checkout(ctx, "r", "main"))
+	assert.Error(t, ops.Checkout(ctx, "r", "feature"), "a remote-only branch name is not turned into a tracking branch (no config write)")
+
+	assert.Equal(t, before, config(), "no guest-reachable operation changed the repository configuration")
+}
