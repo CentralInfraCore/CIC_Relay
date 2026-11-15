@@ -166,7 +166,9 @@ func TestExecGitOps_SetObsSinks_ErrorLog(t *testing.T) {
 	require.NotEmpty(t, sink.Logs, "expected WARN log on failure")
 	assert.Equal(t, "WARN", sink.Logs[0].Level)
 	assert.Equal(t, "git op failed", sink.Logs[0].Message)
-	assert.Equal(t, "status", sink.Logs[0].Attrs["op"])
+	// The repository configuration is audited before the operation; in a directory that is not a
+	// repository that read is what fails first.
+	assert.Equal(t, "config", sink.Logs[0].Attrs["op"])
 }
 
 // TestExecGitOps_SetObsSinks_NilSafe verifies that nil sinks don't cause panics. (M31)

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -29,11 +31,14 @@ type ExecGitOps struct {
 	metricSink obs.MetricSink
 
 	allowLocalSources bool
+	// globalConfig is an operator-designated git configuration file (CIC_GIT_GLOBAL_CONFIG). Without
+	// it git reads no global configuration at all. It is never derived from anything a guest sends.
+	globalConfig string
 }
 
 // NewExecGitOps creates an ExecGitOps backed by the given registry.
 func NewExecGitOps(registry *RepoRegistry) *ExecGitOps {
-	return &ExecGitOps{registry: registry}
+	return &ExecGitOps{registry: registry, globalConfig: os.Getenv("CIC_GIT_GLOBAL_CONFIG")}
 }
 
 // SetObsSinks wires observability sinks into ExecGitOps.
@@ -64,6 +69,9 @@ func (e *ExecGitOps) Fetch(ctx context.Context, repoID, remote string) error {
 	if err != nil {
 		return err
 	}
+	if err := e.auditRepoConfig(ctx, localPath); err != nil {
+		return err
+	}
 	if err := e.requireConfiguredRemote(ctx, localPath, remote); err != nil {
 		return err
 	}
@@ -79,6 +87,9 @@ func (e *ExecGitOps) Checkout(ctx context.Context, repoID, ref string) error {
 	if err := validateRef(ref); err != nil {
 		return err
 	}
+	if err := e.auditRepoConfig(ctx, localPath); err != nil {
+		return err
+	}
 	return e.runGit(ctx, localPath, "checkout", ref, "--")
 }
 
@@ -89,6 +100,9 @@ func (e *ExecGitOps) Commit(ctx context.Context, repoID, message string, paths [
 		return "", err
 	}
 
+	if err := e.auditRepoConfig(ctx, localPath); err != nil {
+		return "", err
+	}
 	if len(paths) == 0 {
 		return "", fmt.Errorf("commit: no paths")
 	}
@@ -124,6 +138,9 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err := validateRefspec(refspec); err != nil {
 		return err
 	}
+	if err := e.auditRepoConfig(ctx, localPath); err != nil {
+		return err
+	}
 	if err := e.requireConfiguredRemote(ctx, localPath, remote); err != nil {
 		return err
 	}
@@ -137,6 +154,9 @@ func (e *ExecGitOps) Status(ctx context.Context, repoID string) ([]StatusEntry, 
 		return nil, err
 	}
 
+	if err := e.auditRepoConfig(ctx, localPath); err != nil {
+		return nil, err
+	}
 	out, err := e.runGitOutput(ctx, localPath, "status", "--porcelain")
 	if err != nil {
 		return nil, err
@@ -164,6 +184,59 @@ func parsePortcelainStatus(output string) []StatusEntry {
 	return entries
 }
 
+// repoConfigAllowed lists the repository-local configuration keys a registered repository may carry.
+// Anything else is refused: git configuration can name programs to run (core.sshCommand, core.fsmonitor,
+// remote.<n>.receivepack, filter and diff drivers, credential helpers, aliases, includes) and can rewrite
+// URLs (url.<base>.insteadOf), which would undo the transport and URL policy. The list is what
+// "git clone" itself writes, plus remote and branch tracking.
+var repoConfigAllowed = []*regexp.Regexp{
+	regexp.MustCompile(`^core\.(repositoryformatversion|filemode|bare|logallrefupdates|ignorecase|precomposeunicode|symlinks)$`),
+	regexp.MustCompile(`^remote\.[A-Za-z0-9][A-Za-z0-9._-]*\.(url|pushurl|fetch)$`),
+	regexp.MustCompile(`^branch\.[^\x00]+\.(remote|merge)$`),
+	regexp.MustCompile(`^user\.(name|email)$`),
+}
+
+// auditRepoConfig reads the repository's local configuration and refuses it if it carries a key outside
+// repoConfigAllowed. It runs before any operation that would otherwise let git act on that configuration.
+func (e *ExecGitOps) auditRepoConfig(ctx context.Context, localPath string) error {
+	out, err := e.runGitOutput(ctx, localPath, "config", "--local", "--list", "-z")
+	if err != nil {
+		return fmt.Errorf("read repository configuration: %w", err)
+	}
+	for _, entry := range strings.Split(out, "\x00") {
+		if entry == "" {
+			continue
+		}
+		key, _, _ := strings.Cut(entry, "\n")
+		key = strings.ToLower(key)
+		allowed := false
+		for _, re := range repoConfigAllowed {
+			if re.MatchString(key) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return fmt.Errorf("%w: repository configuration key %q is not permitted", ErrInvalidArgument, clip(key))
+		}
+	}
+	return nil
+}
+
+// checkGlobalConfigFile validates the operator-designated global configuration file, if one is set: an
+// absolute path to a regular file that only its owner can write. Anything else disables git operations
+// (fail closed) instead of being read.
+func checkGlobalConfigFile(path string) error {
+	if path == "" {
+		return nil
+	}
+	fi, err := os.Stat(path)
+	if err != nil || !filepath.IsAbs(path) || !fi.Mode().IsRegular() || fi.Mode().Perm()&0o022 != 0 {
+		return fmt.Errorf("git: CIC_GIT_GLOBAL_CONFIG must be an absolute path to a regular file not writable by group or others")
+	}
+	return nil
+}
+
 // requireConfiguredRemote proves that name is a remote of this repository and that its URL passes the
 // same transport policy as a clone source. Git would otherwise read an unknown "remote" as a path or a
 // URL; a syntactically valid name is not evidence that it is configured, so the repository is asked.
@@ -184,12 +257,15 @@ func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, nam
 	if !configured {
 		return fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
 	}
-	rawURL, err := e.runGitOutput(ctx, localPath, "remote", "get-url", "--", name)
-	if err != nil {
-		return fmt.Errorf("read remote url: %w", err)
-	}
-	if err := validateCloneURL(strings.TrimSpace(rawURL), e.allowLocalSources); err != nil {
-		return fmt.Errorf("remote %q has a URL that is not allowed: %w", clip(name), err)
+	// Fetches use the remote's URL, pushes use its push URL when one is set: both must pass.
+	for _, getArgs := range [][]string{{"remote", "get-url", "--", name}, {"remote", "get-url", "--push", "--", name}} {
+		rawURL, err := e.runGitOutput(ctx, localPath, getArgs...)
+		if err != nil {
+			return fmt.Errorf("read remote url: %w", err)
+		}
+		if err := validateCloneURL(strings.TrimSpace(rawURL), e.allowLocalSources); err != nil {
+			return fmt.Errorf("remote %q has a URL that is not allowed: %w", clip(name), err)
+		}
 	}
 	return nil
 }
@@ -209,7 +285,7 @@ var envAllowlist = map[string]bool{
 
 // gitEnv builds the child environment: the allowlisted inherited variables, then the fixed hardening
 // values, which are appended last and so win over anything inherited.
-func gitEnv(environ []string, allowLocal bool) []string {
+func gitEnv(environ []string, allowLocal bool, globalConfig string) []string {
 	var out []string
 	for _, kv := range environ {
 		name, _, _ := strings.Cut(kv, "=")
@@ -217,8 +293,12 @@ func gitEnv(environ []string, allowLocal bool) []string {
 			out = append(out, kv)
 		}
 	}
+	if globalConfig == "" {
+		globalConfig = "/dev/null"
+	}
 	return append(out,
 		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL="+globalConfig,
 		"GIT_TERMINAL_PROMPT=0",
 		"GIT_ASKPASS=/bin/false",
 		"GIT_AUTHOR_NAME=CIC Nexus",
@@ -268,12 +348,20 @@ func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...st
 	if e.allowLocalSources {
 		pre = append(pre, "-c", "protocol.file.allow=always")
 	}
+	if dir != "" {
+		// safe.directory is honoured on the command line, so a registered repository owned by another
+		// account keeps working although no global configuration is read.
+		pre = append(pre, "-c", "safe.directory="+dir)
+	}
+	if err := checkGlobalConfigFile(e.globalConfig); err != nil {
+		return "", err
+	}
 	fullArgs := append(pre, args...)
 	cmd := exec.CommandContext(ctx, "git", fullArgs...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
-	cmd.Env = gitEnv(os.Environ(), e.allowLocalSources)
+	cmd.Env = gitEnv(os.Environ(), e.allowLocalSources, e.globalConfig)
 
 	var buf bytes.Buffer
 	cmd.Stdout = &buf

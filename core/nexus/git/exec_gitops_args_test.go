@@ -236,3 +236,136 @@ func TestBranchRefsAreBranchesOrTags(t *testing.T) {
 	assert.ErrorIs(t, validateRefspec("main:refs/notes/commits"), ErrInvalidArgument)
 	assert.NoError(t, validateRefspec("main:refs/heads/main"))
 }
+
+// F3: configuration that can name a program or rewrite a URL is refused before git acts on it. The
+// fsmonitor case is a real execution: git would run the program on `git status`.
+func TestRepoConfigThatCanRunProgramsIsRefused(t *testing.T) {
+	ctx := context.Background()
+	script, marker := markerProgram(t)
+	dangerous := map[string]string{
+		"core.fsmonitor":               script,
+		"core.sshCommand":              script,
+		"core.hooksPath":               "/tmp/hooks",
+		"core.pager":                   script,
+		"core.editor":                  script,
+		"core.askPass":                 script,
+		"remote.origin.receivepack":    script,
+		"remote.origin.uploadpack":     script,
+		"remote.origin.proxy":          "http://proxy.invalid",
+		"url.https://x/.insteadOf":     "https://y/",
+		"url.https://x/.pushInsteadOf": "https://y/",
+		"include.path":                 "/tmp/other.cfg",
+		"alias.status":                 "!" + script,
+		"credential.helper":            script,
+		"diff.external":                script,
+		"filter.x.clean":               script,
+		"merge.x.driver":               script,
+		"gpg.program":                  script,
+		"protocol.ext.allow":           "always",
+		"uploadpack.packObjectsHook":   script,
+		"extensions.worktreeConfig":    "true",
+	}
+	for key, val := range dangerous {
+		t.Run(key, func(t *testing.T) {
+			ops, work, _ := argTestOps(t)
+			resetMarker(marker)
+			out, err := exec.Command("git", "-C", work, "config", "--local", key, val).CombinedOutput()
+			require.NoError(t, err, string(out))
+
+			_, err = ops.Status(ctx, "r")
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrInvalidArgument)
+			assert.Contains(t, err.Error(), "not permitted")
+			assert.ErrorIs(t, ops.Checkout(ctx, "r", "main"), ErrInvalidArgument)
+			assert.ErrorIs(t, ops.Fetch(ctx, "r", "origin"), ErrInvalidArgument)
+			assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "main"), ErrInvalidArgument)
+			_, err = ops.Commit(ctx, "r", "m", []string{"relay.yaml"})
+			assert.ErrorIs(t, err, ErrInvalidArgument)
+			requireNoMarker(t, marker)
+		})
+	}
+	t.Run("a repository with only the keys git clone writes passes", func(t *testing.T) {
+		ops, _, _ := argTestOps(t)
+		_, err := ops.Status(ctx, "r")
+		assert.NoError(t, err)
+	})
+}
+
+// A push URL is a URL: a remote whose fetch URL is fine but whose push URL is not must be refused.
+func TestPushURLIsValidatedToo(t *testing.T) {
+	ops, work, _ := argTestOps(t)
+	out, err := exec.Command("git", "-C", work, "remote", "set-url", "--push", "origin", "ext::sh -c id").CombinedOutput()
+	require.NoError(t, err, string(out))
+	err = ops.Push(context.Background(), "r", "origin", "main")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	assert.Contains(t, err.Error(), "not allowed")
+}
+
+// No global or XDG configuration is read: a hostile or merely different ~/.gitconfig has no effect.
+// The test asks git itself, with the exact environment and options the relay uses.
+func TestGlobalConfigurationIsNotRead(t *testing.T) {
+	home := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(home, ".gitconfig"), []byte("[alias]\n\tleak = status\n[user]\n\tsigningkey = leak-global\n"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(home, ".config", "git"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(home, ".config", "git", "config"), []byte("[user]\n\tname = leak-xdg\n"), 0o644))
+
+	cmd := exec.Command("git", "config", "--list", "--show-origin")
+	cmd.Dir = t.TempDir() // outside any repository, so only global-level configuration can show up
+	cmd.Env = gitEnv([]string{"HOME=" + home, "PATH=" + os.Getenv("PATH")}, false, "")
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.NotContains(t, string(out), "leak")
+
+	// An operator-designated file is read, and only that.
+	cfg := filepath.Join(t.TempDir(), "operator.gitconfig")
+	require.NoError(t, os.WriteFile(cfg, []byte("[user]\n\tname = operator-chosen\n"), 0o644))
+	cmd = exec.Command("git", "config", "--list")
+	cmd.Dir = t.TempDir()
+	cmd.Env = gitEnv([]string{"HOME=" + home, "PATH=" + os.Getenv("PATH")}, false, cfg)
+	out, err = cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Contains(t, string(out), "operator-chosen")
+	assert.NotContains(t, string(out), "leak")
+}
+
+func TestOperatorGlobalConfigMustBeSafe(t *testing.T) {
+	dir := t.TempDir()
+	loose := filepath.Join(dir, "loose")
+	require.NoError(t, os.WriteFile(loose, []byte(""), 0o666))
+	require.NoError(t, os.Chmod(loose, 0o666))
+	tight := filepath.Join(dir, "tight")
+	require.NoError(t, os.WriteFile(tight, []byte(""), 0o644))
+
+	assert.NoError(t, checkGlobalConfigFile(""))
+	assert.NoError(t, checkGlobalConfigFile(tight))
+	assert.Error(t, checkGlobalConfigFile(loose), "writable by others")
+	assert.Error(t, checkGlobalConfigFile(filepath.Join(dir, "missing")))
+	assert.Error(t, checkGlobalConfigFile(dir), "a directory is not a config file")
+	assert.Error(t, checkGlobalConfigFile("relative/path"))
+
+	ops, _, _ := argTestOps(t)
+	ops.globalConfig = loose
+	_, err := ops.Status(context.Background(), "r")
+	assert.Error(t, err, "a configured but unsafe global file disables git operations")
+}
+
+// Dropping the global configuration must not break a repository owned by another account:
+// safe.directory is given on the command line for the registered path. Needs root to create the case.
+func TestSafeDirectoryStillWorksForForeignOwner(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("needs root to hand the repository to another uid")
+	}
+	ops, work, _ := argTestOps(t)
+	out, err := exec.Command("chown", "-R", "65534:65534", work).CombinedOutput()
+	require.NoError(t, err, string(out))
+
+	// Without the option git refuses ("dubious ownership"); that is the case being handled.
+	raw := exec.Command("git", "-C", work, "status")
+	raw.Env = gitEnv([]string{"PATH=" + os.Getenv("PATH")}, false, "")
+	_, rawErr := raw.CombinedOutput()
+	require.Error(t, rawErr, "precondition: git must refuse a repository owned by another uid")
+
+	_, err = ops.Status(context.Background(), "r")
+	assert.NoError(t, err)
+}
