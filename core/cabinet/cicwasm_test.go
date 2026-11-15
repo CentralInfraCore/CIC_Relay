@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 
 	"centralrelay/pkg/obs"
 )
@@ -736,51 +737,154 @@ func TestNewWasmManager_HostSetupFn_Error(t *testing.T) {
 	assert.Contains(t, err.Error(), "host module setup failed")
 }
 
-// OnInstance reports, for every instance and before any guest code runs, the checksum of the exact
-// artifact compiled for it. An instance that is live when its module is replaced keeps reporting the
-// artifact it runs; the replacement is a different artifact with its own checksum.
-func TestWasmManager_OnInstance_ReportsTheRunningArtifact(t *testing.T) {
+// Every instance gets its own identity, created before it exists: the module ID, the checksum of the
+// artifact compiled for it, and a serial no other instance shares. An instance that is live when its
+// module is replaced keeps the identity of the artifact it runs; the next instance gets the new one.
+func TestWasmManager_InstanceIdentity(t *testing.T) {
 	ctx := context.Background()
 	store := newMockModuleStore()
-
-	seen := map[string]string{}
-	var mu sync.Mutex
-	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1,
-		OnInstance: func(name, checksum string) {
-			mu.Lock()
-			seen[name] = checksum
-			mu.Unlock()
-		}}
-
 	v1 := loadWasmFile(t, "abi_compatible.wasm")
 	md1, err := NewModuleDescriptor(ctx, BaseBlock{Name: "mod", Version: "1"}, "wasm", nil, nil, v1)
 	require.NoError(t, err)
 	store.Put(md1)
 
-	m, err := NewWasmManager(ctx, store, config)
+	m, err := NewWasmManager(ctx, store, WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1})
 	require.NoError(t, err)
 	defer m.Close(ctx)
 
-	inst, err := m.NewHostInstance(ctx, md1.ID())
+	h1, err := m.NewHostInstance(ctx, md1.ID())
 	require.NoError(t, err)
-	mu.Lock()
-	assert.Equal(t, md1.Checksum(), seen[md1.ID()], "the instance reports the artifact it was compiled from")
-	mu.Unlock()
+	i1 := h1.(*CicWasmHost).identity
+	assert.Equal(t, InstanceIdentity{Name: md1.ID(), Artifact: md1.Checksum(), Serial: i1.Serial}, i1)
+	assert.NotZero(t, i1.Serial)
 
 	// The module is replaced under the same ID while the first instance is live.
 	md2, err := NewModuleDescriptor(ctx, BaseBlock{Name: "mod", Version: "1"}, "wasm", []string{"extra"}, nil, v1)
 	require.NoError(t, err)
 	require.NotEqual(t, md1.Checksum(), md2.Checksum(), "a different descriptor is a different artifact")
 	store.Put(md2)
-	mu.Lock()
-	assert.Equal(t, md1.Checksum(), seen[md1.ID()], "the live instance still reports the old artifact")
-	mu.Unlock()
+	assert.Equal(t, md1.Checksum(), h1.(*CicWasmHost).identity.Artifact, "the live instance keeps the artifact it runs")
 
-	require.NoError(t, inst.Close(ctx))
-	inst2, err := m.NewHostInstance(ctx, md2.ID())
+	require.NoError(t, h1.Close(ctx))
+	h2, err := m.NewHostInstance(ctx, md2.ID())
 	require.NoError(t, err)
-	defer inst2.Close(ctx)
+	defer h2.Close(ctx)
+	i2 := h2.(*CicWasmHost).identity
+	assert.Equal(t, md2.Checksum(), i2.Artifact, "the next instance carries the new artifact")
+	assert.NotEqual(t, i1.Serial, i2.Serial, "and its own serial: a reused name is not a reused identity")
+}
+
+func TestInstanceIdentityFrom(t *testing.T) {
+	ctx := context.Background()
+	_, ok := InstanceIdentityFrom(ctx)
+	assert.False(t, ok, "no identity on a bare context")
+	for _, incomplete := range []InstanceIdentity{{}, {Name: "m", Artifact: "a"}, {Name: "m", Serial: 1}, {Artifact: "a", Serial: 1}} {
+		_, ok = InstanceIdentityFrom(WithInstanceIdentity(ctx, incomplete))
+		assert.False(t, ok, "%+v is not an identity", incomplete)
+	}
+	want := InstanceIdentity{Name: "m", Artifact: "a", Serial: 7}
+	got, ok := InstanceIdentityFrom(WithInstanceIdentity(ctx, want))
+	assert.True(t, ok)
+	assert.Equal(t, want, got)
+}
+
+func wLEB(v int) []byte {
+	var out []byte
+	for {
+		b := byte(v & 0x7f)
+		v >>= 7
+		if v == 0 {
+			return append(out, b)
+		}
+		out = append(out, b|0x80)
+	}
+}
+
+func wSection(id byte, body []byte) []byte {
+	return append(append([]byte{id}, wLEB(len(body))...), body...)
+}
+
+func wVec(items ...[]byte) []byte {
+	out := wLEB(len(items))
+	for _, it := range items {
+		out = append(out, it...)
+	}
+	return out
+}
+
+func wName(s string) []byte { return append(wLEB(len(s)), s...) }
+
+// probeGuest assembles a module that satisfies the CIC guest ABI (allocate, deallocate, Call) and whose
+// Call invokes the imported host function probe.ping. No toolchain: the bytes are the module.
+func probeGuest() []byte {
+	tAlloc := []byte{0x60, 0x01, 0x7f, 0x01, 0x7f}                              // (i32) -> i32
+	tDealloc := []byte{0x60, 0x02, 0x7f, 0x7f, 0x00}                            // (i32 i32) -> ()
+	tCall := []byte{0x60, 0x06, 0x7f, 0x7f, 0x7f, 0x7f, 0x7f, 0x7f, 0x01, 0x7e} // (i32 x6) -> i64
+	tPing := []byte{0x60, 0x00, 0x00}                                           // () -> ()
+	body := func(instr ...byte) []byte { b := append([]byte{0x00}, instr...); return append(wLEB(len(b)), b...) }
+	m := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+	m = append(m, wSection(1, wVec(tAlloc, tDealloc, tCall, tPing))...)
+	m = append(m, wSection(2, wVec(append(append(wName("probe"), wName("ping")...), 0x00, 0x03)))...) // func import, type 3
+	m = append(m, wSection(3, wVec([]byte{0x00}, []byte{0x01}, []byte{0x02}))...)
+	m = append(m, wSection(5, wVec([]byte{0x00, 0x01}))...)
+	m = append(m, wSection(7, wVec(
+		append(wName("memory"), 0x02, 0x00),
+		append(wName("allocate"), 0x00, 0x01),
+		append(wName("deallocate"), 0x00, 0x02),
+		append(wName("Call"), 0x00, 0x03),
+	))...)
+	m = append(m, wSection(10, wVec(
+		body(0x41, 0x80, 0x08, 0x0b),       // allocate: i32.const 1024
+		body(0x0b),                         // deallocate
+		body(0x10, 0x00, 0x42, 0x00, 0x0b), // Call: call ping; i64.const 0
+	))...)
+	return m
+}
+
+// The identity a host function sees, for a call into the instance, is the instance's own, whatever the
+// caller put on the context. Real manager, real guest, a host function that records what it is given.
+func TestCicWasmHost_HostFunctionsSeeTheInstanceIdentityNotTheCallers(t *testing.T) {
+	ctx := context.Background()
+	var mu sync.Mutex
+	var seen []InstanceIdentity
+	var missing int
+	config := WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 2,
+		HostSetupFn: func(ctx context.Context, r wazero.Runtime) error {
+			_, err := r.NewHostModuleBuilder("probe").NewFunctionBuilder().
+				WithFunc(func(ctx context.Context, _ api.Module) {
+					id, ok := InstanceIdentityFrom(ctx)
+					mu.Lock()
+					defer mu.Unlock()
+					if !ok {
+						missing++
+						return
+					}
+					seen = append(seen, id)
+				}).Export("ping").Instantiate(ctx)
+			return err
+		}}
+	store := newMockModuleStore()
+	md, err := NewModuleDescriptor(ctx, BaseBlock{Name: "probe", Version: "1"}, "wasm", nil, nil, probeGuest())
+	require.NoError(t, err)
+	store.Put(md)
+	m, err := NewWasmManager(ctx, store, config)
+	require.NoError(t, err)
+	defer m.Close(ctx)
+
+	h, err := m.NewHostInstance(ctx, md.ID())
+	require.NoError(t, err)
+	defer h.Close(ctx)
+	own := h.(*CicWasmHost).identity
+	require.Equal(t, InstanceIdentity{Name: md.ID(), Artifact: md.Checksum(), Serial: own.Serial}, own)
+
+	forged := WithInstanceIdentity(ctx, InstanceIdentity{Name: "granted@1", Artifact: "forged", Serial: 99})
+	_, _ = h.Process(forged, "{}", "{}")
+	_, _ = h.Process(ctx, "{}", "{}") // no identity from the caller at all
+
 	mu.Lock()
-	assert.Equal(t, md2.Checksum(), seen[md2.ID()], "the next instance reports the new artifact")
-	mu.Unlock()
+	defer mu.Unlock()
+	assert.Equal(t, 0, missing, "every call into the instance carries an identity")
+	require.Len(t, seen, 2)
+	assert.Equal(t, own, seen[0], "the caller's forged identity was replaced by the instance's own")
+	assert.Equal(t, own, seen[1])
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"centralrelay/core/cabinet"
 )
 
 // R3a live wiring (feature-011, r3-plan.md). The `cic-flow` host module is a
@@ -25,10 +27,6 @@ type cicFlowRegistry struct {
 	doer    httpDoer    // egress transport shared by all modules
 	deps    map[string]cicFlowDeps
 	git     map[string]gitGrant // per-module git reach, from the verified manifest; absent = denied
-	// running maps a live instance name to the checksum of the module artifact it was instantiated from
-	// (reported by the WasmManager before any guest code runs). Instance names are unique among live
-	// instances, so for a caller this is the artifact that caller is actually executing.
-	running map[string]string
 }
 
 // gitGrant is a module's verified git reach, bound to the exact artifact it was derived from: the wasm
@@ -69,7 +67,7 @@ func newCICFlowRegistry(resolve keyResolver, doer httpDoer) *cicFlowRegistry {
 	if doer == nil {
 		doer = newEgressClient(false)
 	}
-	return &cicFlowRegistry{resolve: resolve, doer: doer, deps: map[string]cicFlowDeps{}, git: map[string]gitGrant{}, running: map[string]string{}}
+	return &cicFlowRegistry{resolve: resolve, doer: doer, deps: map[string]cicFlowDeps{}, git: map[string]gitGrant{}}
 }
 
 // lookup returns the deps bound for moduleID, or false if the module is not
@@ -125,13 +123,6 @@ func (r *cicFlowRegistry) registerVerified(moduleID string, projectYAML []byte) 
 	return nil
 }
 
-// noteInstance records which artifact a freshly instantiated guest is running. WasmManagerConfig.OnInstance.
-func (r *cicFlowRegistry) noteInstance(instanceName, artifactChecksum string) {
-	r.mu.Lock()
-	r.running[instanceName] = artifactChecksum
-	r.mu.Unlock()
-}
-
 // bindArtifact ties moduleID's git grant to the artifact checksum the cabinet stored for it. loadModule
 // calls it once the module is stored; a module that is not stored never becomes usable.
 func (r *cicFlowRegistry) bindArtifact(moduleID, artifactChecksum string) {
@@ -166,18 +157,18 @@ type gitAuthRequest struct {
 
 // authorizeGit decides whether the module (identified by the runtime-assigned instance name) may perform
 // op on this request. No grant, an unlisted repository, operation, remote, ref or source: denied.
-func (r *cicFlowRegistry) authorizeGit(moduleName, op string, req gitAuthRequest) error {
+func (r *cicFlowRegistry) authorizeGit(instance cabinet.InstanceIdentity, op string, req gitAuthRequest) error {
 	r.mu.RLock()
-	g, ok := r.git[moduleName]
-	live := r.running[moduleName]
+	g, ok := r.git[instance.Name]
 	r.mu.RUnlock()
 	if !ok {
 		return fmt.Errorf("git: module has no verified git capability")
 	}
-	// The grant belongs to the verified artifact, not to the name: the caller must be running exactly
-	// the artifact the grant was bound to. A caller that started before its module was reloaded runs an
-	// older artifact; the reload revoked its grant, and a re-grant binds to the new artifact only.
-	if g.artifact == "" || g.artifact != live {
+	// The grant belongs to the verified artifact, not to the name: the calling instance must have been
+	// created from exactly the artifact the grant was bound to. An instance started from an older artifact
+	// (before a reload), from an unverified one, or from none at all carries a different or empty artifact
+	// and is refused; a re-grant binds to the new artifact only.
+	if g.artifact == "" || g.artifact != instance.Artifact {
 		return fmt.Errorf("git: the running module is not the verified artifact this capability was granted to")
 	}
 	for _, rule := range g.rules {

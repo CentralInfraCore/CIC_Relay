@@ -7,6 +7,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
+	"centralrelay/core/cabinet"
 	nexusgit "centralrelay/core/nexus/git"
 )
 
@@ -22,14 +23,19 @@ func makeGitHostSetupFn(gitOps nexusgit.GitOps, authz gitAuthorizer) func(ctx co
 
 // gitAuthorizer decides whether the calling module may perform op. A nil authorizer denies everything.
 type gitAuthorizer interface {
-	authorizeGit(moduleName, op string, req gitAuthRequest) error
+	authorizeGit(instance cabinet.InstanceIdentity, op string, req gitAuthRequest) error
 }
 
-// authorized wraps a git host function so that it runs only if the *calling* module is permitted. The
-// caller's identity is mod.Name(), the name the host gave the instance; the request body is read for
-// the policy fields only and can not name a different module. The guest is suspended while a host
-// function runs, so the fields checked here are the fields the wrapped function then reads.
-func authorized(authz gitAuthorizer, op string, inner hostFn) hostFn {
+// authorized wraps a git host function so that it runs only if the *calling instance* is permitted.
+// The caller's identity is the one the WasmManager attached to the call context when it created the
+// instance (module ID, the artifact compiled for it, a per-instance serial). It is never read from the
+// request, and a context without it is refused, so a call that does not come from a managed instance (a
+// start section included: it runs under the same identity) can not borrow one. The instance name the
+// runtime reports for the module must agree with the identity; a disagreement is refused as well.
+// gitHostFn is the uniform host-function ABI of the git module.
+type gitHostFn = func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+
+func authorized(authz gitAuthorizer, op string, inner gitHostFn) gitHostFn {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req gitAuthRequest
 		if !gitReadJSON(mod, reqPtr, reqLen, &req) {
@@ -38,7 +44,11 @@ func authorized(authz gitAuthorizer, op string, inner hostFn) hostFn {
 		if authz == nil {
 			return gitWriteError(mod, outPtr, outLen, "git: module has no verified git capability")
 		}
-		if err := authz.authorizeGit(mod.Name(), op, req); err != nil {
+		id, ok := cabinet.InstanceIdentityFrom(ctx)
+		if !ok || id.Name != mod.Name() {
+			return gitWriteError(mod, outPtr, outLen, "git: the caller is not an identified module instance")
+		}
+		if err := authz.authorizeGit(id, op, req); err != nil {
 			return gitWriteError(mod, outPtr, outLen, err.Error())
 		}
 		return inner(ctx, mod, reqPtr, reqLen, outPtr, outLen)

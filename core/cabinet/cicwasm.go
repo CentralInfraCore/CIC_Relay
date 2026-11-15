@@ -29,12 +29,6 @@ type WasmManagerConfig struct {
 	// additional host modules (e.g., typed git host functions for WASM modules).
 	// It receives the wazero runtime so it can instantiate host module builders.
 	HostSetupFn func(ctx context.Context, r wazero.Runtime) error `yaml:"-"`
-	// OnInstance, if non-nil, is called for every instance right after it is instantiated and before any
-	// guest code runs, with the instance name and the checksum of the exact module artifact that was
-	// compiled for it. Instance names are unique among live instances (the runtime refuses a second one),
-	// so a host function that sees a caller's name can look up which artifact that caller is running,
-	// including a caller that started before its module was reloaded.
-	OnInstance func(instanceName, artifactChecksum string) `yaml:"-"`
 }
 
 // --- WasmManager: The Caching Compiler and Instance Factory ---
@@ -48,6 +42,7 @@ type WasmManager struct {
 	compiledModules *lru.Cache[string, wazero.CompiledModule]
 	sf              singleflight.Group
 	closed          atomic.Bool
+	serial          atomic.Uint64 // source of InstanceIdentity.Serial
 	logSink         obs.LogSink
 	metricSink      obs.MetricSink
 }
@@ -189,6 +184,11 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 		return nil, err
 	}
 
+	// The identity exists before the instance does and is on the context of the instantiation itself, so
+	// anything a start section does is already attributed to this instance and this artifact.
+	identity := InstanceIdentity{Name: moduleID, Artifact: artifact, Serial: m.serial.Add(1)}
+	ctx = WithInstanceIdentity(ctx, identity)
+
 	// Don't call the _start function, as these are libraries, not applications.
 	moduleConfig := wazero.NewModuleConfig().WithName(moduleID).WithStartFunctions()
 
@@ -196,9 +196,6 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 	instance, err := m.runtime.InstantiateModule(ctx, compiledMod, moduleConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate module '%s': %w", moduleID, err)
-	}
-	if m.config.OnInstance != nil {
-		m.config.OnInstance(moduleID, artifact)
 	}
 	if m.metricSink != nil {
 		m.metricSink.RecordHistogram(obs.HistogramPoint{
@@ -213,6 +210,9 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 
 	timeout := time.Duration(m.config.DefaultTimeoutSeconds) * time.Second
 	h, err := newCicWasmHost(ctx, instance, timeout, m.logSink)
+	if err == nil {
+		h.identity = identity
+	}
 	if err != nil {
 		instance.Close(ctx)
 		return nil, err
@@ -257,6 +257,7 @@ type CicWasmHost struct {
 	deallocateFn api.Function
 	timeout      time.Duration
 	logSink      obs.LogSink
+	identity     InstanceIdentity // carried on every call into the instance; zero for a host built outside the manager
 }
 
 // newCicWasmHost creates a CicWasmHost from a wazero module instance after verifying that required ABI functions
@@ -316,6 +317,11 @@ func (h *CicWasmHost) Notify(ctx context.Context, authContextJson, eventJson str
 func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJson string) (string, string) {
 	callCtx, cancel := context.WithTimeout(ctx, h.timeout)
 	defer cancel()
+	// Whatever the caller put on ctx, host functions called from inside this instance see this instance's
+	// identity, not one the caller chose.
+	if h.identity.Serial != 0 {
+		callCtx = WithInstanceIdentity(callCtx, h.identity)
+	}
 
 	opPtr, opLen, err := h.writeStringToWasm(callCtx, op)
 	if err != nil {
