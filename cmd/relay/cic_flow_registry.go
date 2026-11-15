@@ -237,14 +237,14 @@ func gitRuleCovers(rule gitRule, op string, req gitAuthRequest) bool {
 	case "clone":
 		return containsExact(rule.Sources, req.URL) && refAllowed(rule.Refs, req.Branch)
 	case "push":
-		// The refspec is reduced to the canonical form that ExecGitOps will execute (a fully qualified
-		// destination), and that is what the manifest is checked against: what is authorised is what is run.
+		// The refspec is reduced to the canonical form that ExecGitOps will execute (fully qualified on both
+		// sides), and that is what the manifest is checked against: what is authorised is what is run.
 		src, dst, err := nexusgit.CanonicalPushRefspec(req.Refspec)
 		if err != nil {
 			return false
 		}
 		return containsExact(rule.Remotes, req.Remote) &&
-			refAllowedQualified(rule.Refs, qualifyRef(src)) && refAllowedQualified(rule.Refs, dst)
+			refAllowedQualified(rule.Refs, src) && refAllowedQualified(rule.Refs, dst)
 	}
 	return false
 }

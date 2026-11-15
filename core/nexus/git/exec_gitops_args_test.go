@@ -786,17 +786,18 @@ func TestGuestReachableOperationsDoNotWriteTheConfiguration(t *testing.T) {
 func TestPushDestinationIsFullyQualifiedBranchOrTag(t *testing.T) {
 	ctx := context.Background()
 	ok := map[string][2]string{
-		"main":                     {"main", "refs/heads/main"},
-		"release/1":                {"release/1", "refs/heads/release/1"},
-		"refs/heads/main":          {"refs/heads/main", "refs/heads/main"},
-		"refs/tags/v1":             {"refs/tags/v1", "refs/tags/v1"},
-		"main:feature":             {"main", "refs/heads/feature"},
-		"main:notes/commits":       {"main", "refs/heads/notes/commits"}, // a short name is a BRANCH name, whatever exists on the remote
-		"main:replace/abc":         {"main", "refs/heads/replace/abc"},
-		"main:remotes/origin/main": {"main", "refs/heads/remotes/origin/main"},
-		"main:v1":                  {"main", "refs/heads/v1"}, // even if the remote has a tag v1
-		"abc1234:refs/heads/x":     {"abc1234", "refs/heads/x"},
-		"main:refs/tags/v2":        {"main", "refs/tags/v2"},
+		"main":                      {"refs/heads/main", "refs/heads/main"},
+		"release/1":                 {"refs/heads/release/1", "refs/heads/release/1"}, // a short SOURCE is a branch, never a tag of that name
+		"refs/heads/main":           {"refs/heads/main", "refs/heads/main"},
+		"refs/tags/v1":              {"refs/tags/v1", "refs/tags/v1"},
+		"main:feature":              {"refs/heads/main", "refs/heads/feature"},
+		"main:notes/commits":        {"refs/heads/main", "refs/heads/notes/commits"}, // a short name is a BRANCH name, whatever exists on the remote
+		"main:replace/abc":          {"refs/heads/main", "refs/heads/replace/abc"},
+		"main:remotes/origin/main":  {"refs/heads/main", "refs/heads/remotes/origin/main"},
+		"main:v1":                   {"refs/heads/main", "refs/heads/v1"}, // even if the remote has a tag v1
+		"main:refs/tags/v2":         {"refs/heads/main", "refs/tags/v2"},
+		"refs/tags/v1:refs/tags/v9": {"refs/tags/v1", "refs/tags/v9"},
+		"abc1234:refs/heads/x":      {"refs/heads/abc1234", "refs/heads/x"}, // a commit id is not special: it is a (nonexistent) branch name, and git finds no such branch
 	}
 	for in, want := range ok {
 		src, dst, err := CanonicalPushRefspec(in)
@@ -809,6 +810,7 @@ func TestPushDestinationIsFullyQualifiedBranchOrTag(t *testing.T) {
 	for _, in := range []string{
 		"refs/notes/commits", "refs/replace/0123456789abcdef", "refs/remotes/origin/main", "refs/stash", "refs/x",
 		"HEAD", "FETCH_HEAD", "main:HEAD", "main:refs/notes/commits", "main:refs/replace/abc", "main:refs/remotes/o/m",
+		"HEAD:main", "refs/notes/commits:main", "refs/replace/abc:main", "refs/remotes/origin/main:x", // sources too
 		"+main", "+main:main", ":main", "", "main:", "a..b", "x.lock",
 	} {
 		_, _, err := CanonicalPushRefspec(in)
@@ -853,4 +855,40 @@ func TestPushDestinationIsFullyQualifiedBranchOrTag(t *testing.T) {
 	assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "refs/notes/commits"), ErrInvalidArgument)
 	assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "HEAD"), ErrInvalidArgument)
 	assert.Equal(t, notesBefore, remote("refs/notes/commits"))
+}
+
+// F10.2: a SHORT source is a branch name. Git would resolve it against any local ref of that name, a tag
+// included, so a grant limited to branches could forward the content of a tag. The source is qualified
+// like the destination, and a tag is pushed only as refs/tags/<name>. Real git, a source repository that
+// has a TAG release/1 and no such branch.
+func TestPushShortSourceIsABranchNeverATag(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	run := func(dir string, args ...string) string {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	bare := filepath.Join(t.TempDir(), "bare.git")
+	run(t.TempDir(), "init", "--bare", "-b", "main", bare)
+	run(work, "remote", "set-url", "origin", bare)
+	run(work, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "tagged")
+	run(work, "tag", "release/1") // a TAG named release/1; there is no branch with that name
+	require.Equal(t, "", run(work, "branch", "--list", "release/1"), "precondition: no such branch")
+	remoteRefs := func() string { return run(bare, "for-each-ref", "--format=%(refname)") }
+
+	// The short form names a branch, there is none, so nothing is pushed: git's own resolution of the
+	// short name to the tag is exactly what must not happen.
+	err := ops.Push(ctx, "r", "origin", "release/1:release/1")
+	require.Error(t, err, "a short source must not be resolved to the tag")
+	assert.NotErrorIs(t, err, ErrInvalidArgument, "it is a well-formed refspec; git finds no such branch")
+	assert.NotContains(t, remoteRefs(), "release/1")
+	err = ops.Push(ctx, "r", "origin", "release/1")
+	require.Error(t, err)
+	assert.NotContains(t, remoteRefs(), "release/1")
+
+	// The tag is pushed when it is named as a tag.
+	require.NoError(t, ops.Push(ctx, "r", "origin", "refs/tags/release/1:refs/tags/release/1"))
+	assert.Contains(t, remoteRefs(), "refs/tags/release/1")
+	assert.NotContains(t, remoteRefs(), "refs/heads/release/1")
 }

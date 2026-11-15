@@ -417,3 +417,33 @@ capability_manifest:
 		assert.True(t, strings.HasPrefix(dstAuthorised, "refs/heads/") || strings.HasPrefix(dstAuthorised, "refs/tags/"), spec)
 	}
 }
+
+// F10.2: a manifest that grants release BRANCHES does not grant the content of a TAG named like one. The
+// source is qualified the way git will be told to read it, so "release/1" is the branch, and the tag
+// needs its own grant.
+func TestGitAuthorize_BranchGrantDoesNotCoverATagSource(t *testing.T) {
+	const manifest = `
+abi:
+  imports: []
+capability_manifest:
+  git:
+    - repo: infra
+      ops: [push]
+      remotes: [origin]
+      refs: ["refs/heads/release/*"]
+`
+	reg := newCICFlowRegistry(nil, &stubDoer{})
+	require.NoError(t, reg.publishVerified("mod@1", []byte(manifest), "art-1"))
+	push := func(spec string) error {
+		return reg.authorizeGit(instUnder("mod@1", "art-1", manifest), "push", gitAuthRequest{RepoID: "infra", Remote: "origin", Refspec: spec})
+	}
+	assert.NoError(t, push("release/1:release/1"), "the branch, as the manifest says")
+	assert.NoError(t, push("refs/heads/release/1:release/2"))
+	for _, spec := range []string{
+		"refs/tags/release/1:release/1",           // tag content into a granted branch name
+		"refs/tags/release/1:refs/tags/release/1", // tag to tag: tags are not granted
+		"release/1:refs/tags/release/1",           // branch content as a tag
+	} {
+		assert.Error(t, push(spec), "%q", spec)
+	}
+}

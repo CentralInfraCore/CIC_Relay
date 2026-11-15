@@ -68,30 +68,31 @@ func validateBranchRef(ref string) error {
 	return nil
 }
 
-// CanonicalPushRefspec validates a push refspec and returns its canonical source and destination. The
-// destination is ALWAYS fully qualified: "refs/heads/<name>" or "refs/tags/<name>". A short destination is
-// a branch name and is qualified as refs/heads/; a tag is pushed only by naming refs/tags/<name>. Nothing
-// is left for git to resolve: git matches a short destination against the refs that already exist on the
-// remote (so "notes/commits" would update the remote's refs/notes/commits), which is exactly what must not
-// happen. A push of "<ref>" alone pushes to the same name, qualified the same way. A source that cannot
-// name a branch or tag (HEAD, refs/notes/...) has no acceptable implicit destination and is refused. A
-// forced ("+") or deleting (empty source) refspec is refused: the typed ABI never offered either.
+// CanonicalPushRefspec validates a push refspec and returns its canonical, FULLY QUALIFIED source and
+// destination: "refs/heads/<name>" or "refs/tags/<name>" on both sides. A short name, on either side, is a
+// branch name and is qualified as refs/heads/; a tag is named only as refs/tags/<name>. Nothing is left for
+// git to resolve. Git would otherwise resolve a short SOURCE against whatever local ref has that name (a tag
+// "release/1" when there is no such branch), and a short DESTINATION against the refs that already exist on
+// the remote (so "notes/commits" would update the remote's refs/notes/commits); the manifest grants refs by
+// namespace, so what is checked must be what git is given. A push of "<ref>" alone pushes to the same name.
+// HEAD, a bare commit id and anything under refs/ other than heads/ and tags/ are refused on either side:
+// they have no acceptable qualified form. A forced ("+") or deleting (empty source) refspec is refused: the
+// typed ABI never offered either.
 //
 // The same function serves authorization and execution: what is authorised is what is run.
 func CanonicalPushRefspec(spec string) (src, dst string, err error) {
 	bad := fmt.Errorf("%w: refspec %q", ErrInvalidArgument, clip(spec))
 	src, dst, hasDst := strings.Cut(spec, ":")
-	if err := validateRef(src); err != nil {
-		return "", "", bad
-	}
 	if !hasDst {
 		dst = src
 	}
-	if err := validateBranchRef(dst); err != nil {
-		return "", "", bad
-	}
-	if !strings.HasPrefix(dst, "refs/") {
-		dst = "refs/heads/" + dst
+	for _, side := range []*string{&src, &dst} {
+		if err := validateBranchRef(*side); err != nil {
+			return "", "", bad
+		}
+		if !strings.HasPrefix(*side, "refs/") {
+			*side = "refs/heads/" + *side
+		}
 	}
 	return src, dst, nil
 }
