@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+
+	"centralrelay/core/cabinet"
 )
 
 const (
@@ -87,15 +89,50 @@ func bootstrapPKI(trustMode string, embeddedPKI fs.FS, logger *logrus.Logger) (*
 		if !pool.AppendCertsFromPEM(pemData) {
 			return nil, fmt.Errorf("pki bootstrap (prod): no valid certificates in %q", bundlePath)
 		}
+		// CRLs travel in the same bundle (X509 CRL blocks). In prod a CRL that cannot be
+		// parsed, is not signed by a CA of the bundle, or is stale is a start-up error.
+		tolerance, err := crlToleranceFromEnv()
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		policy := crlPolicy{Strict: true, Freshness: &cabinet.CRLFreshness{Tolerance: tolerance}}
+		issuers, candidateCRLs, err := parseBundleCRLs(pemData, policy, logger)
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		crls, err := acceptCRLs(candidateCRLs, issuers, policy, logger)
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		// The operator declares which issuers must have a CRL; a required issuer without a
+		// valid, fresh one is a start-up error. dev (the embedded loader) has no such policy:
+		// it stays lenient and ignores CIC_CRL_REQUIRED_ISSUERS.
+		issuerPolicy, err := crlIssuerPolicyFromEnv()
+		if err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		if err := enforceCRLIssuerPolicy(issuerPolicy, issuers, crls); err != nil {
+			return nil, fmt.Errorf("pki bootstrap (prod): %w", err)
+		}
+		if issuerPolicy.none {
+			logger.Warn("CIC_CRL_REQUIRED_ISSUERS=none: no issuer is required to have a CRL")
+		}
+		if len(crls) == 0 {
+			logger.WithField("bundle_path", bundlePath).Warn("Revocation checking is inactive: the CA bundle contains no CRL")
+		}
+		// No pin source exists yet: pinning is off, and in prod that is stated, not implicit.
+		logger.WithField("spki_pins", 0).Warn("SPKI pinning is not configured: the pin set is empty")
 		logger.WithFields(logrus.Fields{
 			"trust_mode":         trustMode,
 			"trust_store_loaded": true,
 			"bundle_path":        bundlePath,
+			"crls":               len(crls),
 		}).Info("PKI trust store bootstrapped (prod)")
 		return &PKIAssets{
 			Roots:            pool,
 			Intermediates:    x509.NewCertPool(),
-			CRLs:             []*x509.RevocationList{},
+			CRLs:             crls,
+			CRLFreshness:     policy.Freshness,
 			TrustStoreLoaded: true,
 		}, nil
 
