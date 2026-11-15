@@ -669,9 +669,11 @@ func TestStoredAndEffectiveTargetCountsMustAgree(t *testing.T) {
 	assert.Contains(t, err.Error(), "differ from the stored ones")
 }
 
-// F1.7: git CAN make the stored and effective target counts differ with a plain configuration: two stored
-// URLs that a single pushInsteadOf rule rewrites to the same target are one effective push target. That is
-// refused (fail closed); it is a compatibility limit of this policy, not a gap. Real git, no simulation.
+// F1.7: git CAN make the stored and effective target counts differ with a plain configuration. With two
+// stored URLs and a pushInsteadOf rule that matches only the first, "git remote get-url --push --all"
+// reports one target (the rewritten one), not two; without the rule it reports both. The disagreement
+// is refused (fail closed); for such a remote it is a compatibility limit of this policy, not a gap.
+// Real git, no simulation.
 func TestRealConfigurationCanMakeTheTargetCountsDiffer(t *testing.T) {
 	ctx := context.Background()
 	ops, work, _ := argTestOps(t)
