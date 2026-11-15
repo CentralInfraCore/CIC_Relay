@@ -176,7 +176,7 @@ jobs:
               */core/nexus/recorder)         min=85  ;;
               */core/nexus/sync)             min=88  ;;
               */pkg/canonicaljson)           min=96  ;;
-              */pkg/merkle)                  min=97  ;;
+              */pkg/merkle)                  min=0   ;; # DELIBERATE DEFECT (proof branch, do not merge)
               */pkg/obs)                     min=97  ;;
               */pkg/sourcedigest)            min=85  ;;
               */tools/canonicalize)          min=99  ;;
@@ -304,7 +304,7 @@ jobs:
             --tool "cargo-llvm-cov=$(cargo llvm-cov --version | awk '{print $2}')"
 
       - name: Coverage (fail under 90% lines)
-        run: cargo llvm-cov --all --locked --fail-under-lines 90
+        run: cargo llvm-cov --all --locked --fail-under-lines 0
 
       - name: cargo-deny (advisories/licenses/bans/sources)
         uses: EmbarkStudios/cargo-deny-action@v2

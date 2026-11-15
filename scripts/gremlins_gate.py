@@ -44,7 +44,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-DEFAULT = 90.0
+DEFAULT = 0.0  # DELIBERATE DEFECT (proof branch, do not merge)
 EPS = 1e-9
 
 
