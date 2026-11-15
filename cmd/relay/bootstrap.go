@@ -314,8 +314,12 @@ type PKIAssets struct {
 	CRLs             []*x509.RevocationList
 	CRLFreshness     *cabinet.CRLFreshness // set in prod: verification rejects a stale CRL
 	TrustStoreLoaded bool                  // true when at least one root CA was loaded
-	CAFingerprint    string                // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
-	CertChainHash    string                // sha256 of all loaded CA cert DER bytes concatenated, "sha256:<hex>"
+	// AllowUnsignedModules admits a module that has NO signature file. It is set only in dev mode, only by the
+	// explicit operator opt-in CIC_ALLOW_UNSIGNED_MODULES=1 (allowUnsignedModulesFromEnv), and never for a module
+	// whose signature is present but unreadable, malformed, unverifiable or invalid: those are always refused.
+	AllowUnsignedModules bool
+	CAFingerprint        string // sha256 of the first loaded root CA DER bytes, "sha256:<hex>"
+	CertChainHash        string // sha256 of all loaded CA cert DER bytes concatenated, "sha256:<hex>"
 
 	// R3b (feature-011): the cic-flow provenance/entitlement anchors, delivered by
 	// their own detached-companion path — NOT embedded, so the relay binary's hash
@@ -541,65 +545,73 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 
 	sigPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".pem"
 	sigData, err := fs.ReadFile(fsys, sigPath)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			auditLogger.WithField("outcome", "skipped").Warn("No signature file found, module is unsigned.")
-		} else {
-			auditLogger.WithField("outcome", "failure").WithError(err).Error("Failed to read signature file.")
-		}
-	} else {
+	switch {
+	case err == nil:
+		// A signature is present: it MUST verify. Nothing below is bypassed by any opt-in.
 		block, _ := pem.Decode(sigData)
 		if block == nil || block.Type != "CERTIFICATE" {
-			auditLogger.WithField("outcome", "failure").Error("Invalid PEM format in signature file.")
-		} else {
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				auditLogger.WithField("outcome", "failure").WithError(err).Error("Failed to parse certificate from signature file.")
-			} else if !pkiAssets.TrustStoreLoaded {
-				// Trust ecosystem not bootstrapped — skip verification, log for audit.
-				auditLogger.WithFields(logrus.Fields{
-					"outcome":        "skipped",
-					"reason":         "trust ecosystem not bootstrapped",
-					"signer_subject": cert.Subject.String(),
-				}).Warn("Signature verification skipped: CA chain not available.")
-			} else {
-				// M3: full X.509 chain verification — EKU=CodeSigning, CRL + SPKI pinning included.
-				verifyOpts := cabinet.VerifyOptions{
-					Roots:         pkiAssets.Roots,
-					Intermediates: pkiAssets.Intermediates,
-					KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
-					CRLs:          pkiAssets.CRLs,
-					CRLFreshness:  pkiAssets.CRLFreshness,
-				}
-				chains, verifyErr := cabinet.VerifyCertificateChain(cert, verifyOpts)
-				if verifyErr != nil {
-					auditLogger.WithField("outcome", "rejected").WithError(verifyErr).Error("PKI chain verification failed — module rejected.")
-					return fmt.Errorf("PKI verification failed for %q: %w", moduleID, verifyErr)
-				}
-				auditLogger.WithFields(logrus.Fields{
-					"outcome":        "verified",
-					"signer_subject": cert.Subject.String(),
-					"chain_length":   len(chains[0]),
-				}).Info("Certificate chain verified.")
+			auditLogger.WithField("outcome", "rejected").Error("Invalid PEM format in signature file — module rejected.")
+			return fmt.Errorf("module %q: the signature file is not a PEM certificate", moduleID)
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			auditLogger.WithField("outcome", "rejected").WithError(err).Error("Failed to parse certificate from signature file — module rejected.")
+			return fmt.Errorf("module %q: the signature certificate cannot be parsed: %w", moduleID, err)
+		}
+		if !pkiAssets.TrustStoreLoaded {
+			// A signature that cannot be verified is not a signature.
+			auditLogger.WithFields(logrus.Fields{
+				"outcome":        "rejected",
+				"reason":         "trust ecosystem not bootstrapped",
+				"signer_subject": cert.Subject.String(),
+			}).Error("Signature cannot be verified: no CA chain is loaded — module rejected.")
+			return fmt.Errorf("module %q is signed but no trust store is loaded to verify it", moduleID)
+		}
+		// M3: full X.509 chain verification — EKU=CodeSigning, CRL + SPKI pinning included.
+		verifyOpts := cabinet.VerifyOptions{
+			Roots:         pkiAssets.Roots,
+			Intermediates: pkiAssets.Intermediates,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+			CRLs:          pkiAssets.CRLs,
+			CRLFreshness:  pkiAssets.CRLFreshness,
+		}
+		chains, verifyErr := cabinet.VerifyCertificateChain(cert, verifyOpts)
+		if verifyErr != nil {
+			auditLogger.WithField("outcome", "rejected").WithError(verifyErr).Error("PKI chain verification failed — module rejected.")
+			return fmt.Errorf("PKI verification failed for %q: %w", moduleID, verifyErr)
+		}
+		auditLogger.WithFields(logrus.Fields{
+			"outcome":        "verified",
+			"signer_subject": cert.Subject.String(),
+			"chain_length":   len(chains[0]),
+		}).Info("Certificate chain verified.")
 
-				// R3a/R3b: bind the module's cic-flow capability from its signed
-				// manifest — but only once its provenance verifies against the
-				// CICSourceCA anchor (feature-011). No SourceCA / no provenance →
-				// the module loads but gets no capability (fail-closed). A verified
-				// module that over-declares its cic-flow imports is rejected.
-				if registerModuleCapability != nil {
-					if provErr := verifyCICFlowProvenance(cert, pkiAssets); provErr != nil {
-						auditLogger.WithField("outcome", "skipped").WithError(provErr).Warn("cic-flow capability not bound — provenance not verified.")
-					} else if moduleDesc, err = cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode); err != nil {
-						// The artifact the capability would belong to can not be built: nothing is granted.
-						return fmt.Errorf("module validation: %w", err)
-					} else if err := registerModuleCapability(moduleID, yamlContent, moduleDesc.Checksum()); err != nil {
-						auditLogger.WithField("outcome", "rejected").WithError(err).Error("cic-flow capability binding failed — module rejected.")
-						return fmt.Errorf("cic-flow capability binding failed for %q: %w", moduleID, err)
-					}
-				}
+		// R3a/R3b: bind the module's cic-flow and git capabilities from its signed manifest, but only once its
+		// provenance verifies against the CICSourceCA anchor (feature-011). No SourceCA / no provenance: the
+		// module loads but gets no capability (fail-closed). A verified module that over-declares is rejected.
+		if registerModuleCapability != nil {
+			if provErr := verifyCICFlowProvenance(cert, pkiAssets); provErr != nil {
+				auditLogger.WithField("outcome", "skipped").WithError(provErr).Warn("Capability not bound — provenance not verified.")
+			} else if moduleDesc, err = cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode); err != nil {
+				// The artifact the capability would belong to can not be built: nothing is granted.
+				return fmt.Errorf("module validation: %w", err)
+			} else if err := registerModuleCapability(moduleID, yamlContent, moduleDesc.Checksum()); err != nil {
+				auditLogger.WithField("outcome", "rejected").WithError(err).Error("Capability binding failed — module rejected.")
+				return fmt.Errorf("capability binding failed for %q: %w", moduleID, err)
 			}
 		}
+	case errors.Is(err, fs.ErrNotExist):
+		// No signature file. Refused unless the operator explicitly opted in (dev mode only).
+		if !pkiAssets.AllowUnsignedModules {
+			auditLogger.WithField("outcome", "rejected").Error("No signature file: unsigned modules are refused.")
+			return fmt.Errorf("module %q is unsigned (no %s); unsigned modules are refused (dev mode only: %s=1)", moduleID, filepath.Base(sigPath), allowUnsignedEnv)
+		}
+		auditLogger.WithFields(logrus.Fields{"outcome": "allowed-unsigned", "reason": "explicit operator opt-in " + allowUnsignedEnv + "=1 (dev)"}).
+			Warn("Unsigned module admitted by explicit opt-in: it gets no capability.")
+	default:
+		// The signature file exists but cannot be read: that is not "unsigned", it is a failure.
+		auditLogger.WithField("outcome", "rejected").WithError(err).Error("Failed to read signature file — module rejected.")
+		return fmt.Errorf("module %q: the signature file cannot be read: %w", moduleID, err)
 	}
 
 	// Corrected call to NewModuleDescriptor to include 'file.Accepts'

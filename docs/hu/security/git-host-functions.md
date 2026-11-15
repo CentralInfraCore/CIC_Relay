@@ -4,6 +4,8 @@ A relay a WASM moduloknak típusos `git` host modult kínál. A modul soha nem k
 
 ## 1. Mit hívhat egy modul
 
+Modul csak akkor töltődik be, ha olyan tanúsítványt hordoz, amelynek lánca ellenőrizhető; tanúsítvány nélkülit elutasít, kivéve ha egy `dev` operátor explicit opt-int ad, és akkor sem kap capabilityt. A betöltés a modul és a manifest feletti kriptográfiai aláírást még nem ellenőrzi (nyitott: #162), ezért az alábbi „aláírt manifest" ellenőrzött tanúsítvánnyal szállított manifestet jelent, nem hitelesítettet. Lásd [module-loading.md](module-loading.md).
+
 | Függvény | Engedett | Megjegyzés |
 |---|---|---|
 | `git.status` | igen | a regisztrált repository munkafájának állapota |
