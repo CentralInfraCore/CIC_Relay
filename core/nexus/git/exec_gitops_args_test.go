@@ -438,14 +438,14 @@ func TestRemoteTargetsAreValidatedPerOperation(t *testing.T) {
 		err := pushOK(s, w)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalidArgument)
-		assert.Contains(t, err.Error(), "push URL that is not allowed")
+		assert.Contains(t, err.Error(), "pushurl that is not allowed")
 	})
 	t.Run("bad fetch URL, good push URL: push passes, fetch refused", func(t *testing.T) {
 		s, w := setup(t, []string{"remote", "set-url", "origin", bad}, []string{"remote", "set-url", "--push", "origin", good})
 		assert.NoError(t, pushOK(s, w))
 		err := fetchOK(s, w)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "fetch URL that is not allowed")
+		assert.Contains(t, err.Error(), "url that is not allowed")
 	})
 	t.Run("several push URLs: every one must pass", func(t *testing.T) {
 		s, w := setup(t, []string{"remote", "set-url", "origin", good},
@@ -466,9 +466,9 @@ func TestRemoteTargetsAreValidatedPerOperation(t *testing.T) {
 	})
 }
 
-// A remote with no URL at all is reported by git as its own name, which git would then read as a path.
-// The URL policy refuses that, with local sources on or off. (The "no URL" branch in the validator is
-// therefore defence in depth: git never prints an empty list for a configured remote.)
+// A remote with no URL at all has no target: refused for both operations, local sources on or off.
+// (git itself would print the remote's name as its URL, and read it as a path; the stored values are
+// read directly, so the absence is seen as an absence.)
 func TestRemoteWithoutURLIsRefused(t *testing.T) {
 	ctx := context.Background()
 	ops, work, _ := argTestOps(t)
@@ -479,7 +479,71 @@ func TestRemoteWithoutURLIsRefused(t *testing.T) {
 			err := o.requireConfiguredRemote(ctx, work, "nourl", op)
 			require.Error(t, err, op)
 			assert.ErrorIs(t, err, ErrInvalidArgument, op)
-			assert.Contains(t, err.Error(), "not allowed", op)
+			assert.Contains(t, err.Error(), "target URL", op)
 		}
 	}
+}
+
+// F1.3: a stored URL is one record, exactly as stored. A value that contains a newline (or any control
+// character or whitespace) is not "several URLs" and not a URL with trimmed edges: it is refused whole,
+// before anything is split or normalised.
+func TestStoredURLIsOneRawRecord(t *testing.T) {
+	ctx := context.Background()
+	const good = "https://example.invalid/ok.git"
+	cases := map[string]string{
+		"newline between two urls": good + "\nhttps://evil.invalid/x.git",
+		"newline then ext":         good + "\next::sh -c id",
+		"trailing newline":         good + "\n",
+		"trailing space":           good + " ",
+		"leading space":            " " + good,
+		"tab inside":               "https://example.invalid/\tok.git",
+		"carriage return":          good + "\r",
+		"escape character":         "https://example.invalid/\x1b[0m",
+		"nul-free but empty value": "",
+		"only whitespace":          "   ",
+		"space inside the path":    "https://example.invalid/a b.git",
+	}
+	for name, value := range cases {
+		for _, key := range []string{"url", "pushurl"} {
+			t.Run(name+"/"+key, func(t *testing.T) {
+				ops, work, _ := argTestOps(t)
+				strict := NewExecGitOps(ops.registry)
+				git := func(args ...string) {
+					out, err := exec.Command("git", append([]string{"-C", work}, args...)...).CombinedOutput()
+					require.NoError(t, err, string(out))
+				}
+				git("remote", "set-url", "origin", good)
+				git("config", "--local", "--replace-all", "remote.origin."+key, value)
+				if key == "url" {
+					// git exits 5 when there is nothing to unset; that is the state wanted, so the result is ignored.
+					_ = exec.Command("git", "-C", work, "config", "--local", "--unset-all", "remote.origin.pushurl").Run()
+				}
+				op := "push"
+				if key == "url" {
+					op = "fetch"
+				}
+				err := strict.requireConfiguredRemote(ctx, work, "origin", op)
+				require.Error(t, err, "value %q must be refused whole", value)
+				assert.ErrorIs(t, err, ErrInvalidArgument)
+			})
+		}
+	}
+	t.Run("the stored value is read byte for byte, not trimmed", func(t *testing.T) {
+		ops, work, _ := argTestOps(t)
+		out, err := exec.Command("git", "-C", work, "config", "--local", "remote.origin.url", good+" ").CombinedOutput()
+		require.NoError(t, err, string(out))
+		vals, err := ops.remoteConfigValues(ctx, work, "remote.origin.url")
+		require.NoError(t, err)
+		assert.Equal(t, []string{good + " "}, vals, "no trimming, one record")
+	})
+	t.Run("two stored values are two records, a newline inside one value is not a record boundary", func(t *testing.T) {
+		ops, work, _ := argTestOps(t)
+		for _, v := range []string{"https://example.invalid/one.git", "https://example.invalid/two\nstill-two.git"} {
+			out, err := exec.Command("git", "-C", work, "config", "--local", "--add", "remote.origin.pushurl", v).CombinedOutput()
+			require.NoError(t, err, string(out))
+		}
+		vals, err := ops.remoteConfigValues(ctx, work, "remote.origin.pushurl")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"https://example.invalid/one.git", "https://example.invalid/two\nstill-two.git"}, vals)
+	})
 }

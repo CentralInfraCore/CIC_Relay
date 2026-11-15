@@ -94,8 +94,14 @@ func validateRefspec(spec string) error {
 // Error messages never contain the URL: a URL can carry credentials.
 func validateCloneURL(raw string, allowLocal bool) error {
 	bad := func(reason string) error { return fmt.Errorf("%w: clone url: %s", ErrInvalidArgument, reason) }
-	if len(raw) == 0 || len(raw) > maxArgLen || hasControl(raw) || strings.HasPrefix(raw, "-") {
-		return bad("empty, too long, control characters or leading dash")
+	if len(raw) == 0 || len(raw) > maxArgLen || strings.HasPrefix(raw, "-") {
+		return bad("empty, too long or leading dash")
+	}
+	// Exactly one clean URL: no control characters (a newline would end the record), no whitespace.
+	for _, r := range raw {
+		if r <= 0x20 || r == 0x7f {
+			return bad("control or whitespace characters")
+		}
 	}
 	if allowLocal && isLocalSource(raw) {
 		return nil

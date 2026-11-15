@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -250,45 +251,66 @@ func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, nam
 	}
 	configured := false
 	for _, line := range strings.Split(out, "\n") {
-		if strings.TrimSpace(line) == name {
+		if line == name {
 			configured = true
 		}
 	}
 	if !configured {
 		return fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
 	}
-	// The targets differ by operation. A fetch reads from the remote's URL(s); a push writes to its push
-	// URL(s), or to its URL(s) when it has no push URL. Only the targets the operation will actually use
-	// are validated, and all of them, since a remote can carry several (a push goes to every one). An
-	// empty result is a refusal.
-	var getArgs []string
+	// The targets differ by operation. A fetch reads from the remote's url value(s); a push writes to its
+	// pushurl value(s), or to its url value(s) when it has no pushurl. Only the targets the operation will
+	// actually use are validated, all of them (a push goes to every one), each exactly as stored.
+	var keys []string
 	switch op {
 	case "fetch":
-		getArgs = []string{"remote", "get-url", "--all", "--", name}
+		keys = []string{"url"}
 	case "push":
-		getArgs = []string{"remote", "get-url", "--push", "--all", "--", name}
+		keys = []string{"pushurl", "url"} // first non-empty set wins, as in git
 	default:
 		return fmt.Errorf("%w: unknown remote operation %q", ErrInvalidArgument, clip(op))
 	}
-	raw, err := e.runGitOutput(ctx, localPath, getArgs...)
-	if err != nil {
-		return fmt.Errorf("read remote %s urls: %w", op, err)
-	}
-	urls := 0
-	for _, line := range strings.Split(raw, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
+	for _, key := range keys {
+		values, err := e.remoteConfigValues(ctx, localPath, "remote."+name+"."+key)
+		if err != nil {
+			return fmt.Errorf("read remote %s: %w", key, err)
+		}
+		if len(values) == 0 {
 			continue
 		}
-		urls++
-		if err := validateCloneURL(line, e.allowLocalSources); err != nil {
-			return fmt.Errorf("remote %q has a %s URL that is not allowed: %w", clip(name), op, err)
+		for _, v := range values {
+			// The raw stored value, byte for byte: no trimming, no splitting on newlines. validateCloneURL
+			// refuses control characters and whitespace, so a value that is not exactly one clean URL
+			// never reaches git.
+			if err := validateCloneURL(v, e.allowLocalSources); err != nil {
+				return fmt.Errorf("remote %q has a %s that is not allowed: %w", clip(name), key, err)
+			}
 		}
+		return nil
 	}
-	if urls == 0 {
-		return fmt.Errorf("%w: remote %q has no %s URL", ErrInvalidArgument, clip(name), op)
+	return fmt.Errorf("%w: remote %q has no %s target URL", ErrInvalidArgument, clip(name), op)
+}
+
+// remoteConfigValues returns every value of a repository-local multi-valued key as NUL-delimited records
+// (git config -z), so one record is exactly one stored value however many lines it contains. An absent
+// key is an empty result, not an error.
+func (e *ExecGitOps) remoteConfigValues(ctx context.Context, localPath, key string) ([]string, error) {
+	out, err := e.runGitOutput(ctx, localPath, "config", "--local", "--get-all", "-z", key)
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) && ee.ExitCode() == 1 {
+			return nil, nil // git config exits 1 when the key has no value
+		}
+		return nil, err
 	}
-	return nil
+	if out == "" {
+		return nil, nil
+	}
+	records := strings.Split(out, "\x00")
+	if records[len(records)-1] == "" { // -z terminates every record, including the last
+		records = records[:len(records)-1]
+	}
+	return records, nil
 }
 
 // envAllowlist names the only variables a git child inherits from the relay process. Everything else
