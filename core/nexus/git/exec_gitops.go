@@ -72,7 +72,7 @@ func (e *ExecGitOps) Fetch(ctx context.Context, repoID, remote string) error {
 	if err := e.auditRepoConfig(ctx, localPath); err != nil {
 		return err
 	}
-	if err := e.requireConfiguredRemote(ctx, localPath, remote); err != nil {
+	if err := e.requireConfiguredRemote(ctx, localPath, remote, "fetch"); err != nil {
 		return err
 	}
 	return e.runGit(ctx, localPath, "fetch", "--", remote)
@@ -141,7 +141,7 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err := e.auditRepoConfig(ctx, localPath); err != nil {
 		return err
 	}
-	if err := e.requireConfiguredRemote(ctx, localPath, remote); err != nil {
+	if err := e.requireConfiguredRemote(ctx, localPath, remote, "push"); err != nil {
 		return err
 	}
 	return e.runGit(ctx, localPath, "push", "--", remote, refspec)
@@ -240,7 +240,7 @@ func checkGlobalConfigFile(path string) error {
 // requireConfiguredRemote proves that name is a remote of this repository and that its URL passes the
 // same transport policy as a clone source. Git would otherwise read an unknown "remote" as a path or a
 // URL; a syntactically valid name is not evidence that it is configured, so the repository is asked.
-func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, name string) error {
+func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, name, op string) error {
 	if err := validateRemoteName(name); err != nil {
 		return err
 	}
@@ -257,27 +257,36 @@ func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, nam
 	if !configured {
 		return fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
 	}
-	// A remote can carry several URLs (a fetch uses the first; a push goes to every push URL, or to every
-	// URL when there is no push URL), so every one of them must pass, not just the first.
-	for _, getArgs := range [][]string{{"remote", "get-url", "--all", "--", name}, {"remote", "get-url", "--push", "--all", "--", name}} {
-		raw, err := e.runGitOutput(ctx, localPath, getArgs...)
-		if err != nil {
-			return fmt.Errorf("read remote url: %w", err)
+	// The targets differ by operation. A fetch reads from the remote's URL(s); a push writes to its push
+	// URL(s), or to its URL(s) when it has no push URL. Only the targets the operation will actually use
+	// are validated, and all of them, since a remote can carry several (a push goes to every one). An
+	// empty result is a refusal.
+	var getArgs []string
+	switch op {
+	case "fetch":
+		getArgs = []string{"remote", "get-url", "--all", "--", name}
+	case "push":
+		getArgs = []string{"remote", "get-url", "--push", "--all", "--", name}
+	default:
+		return fmt.Errorf("%w: unknown remote operation %q", ErrInvalidArgument, clip(op))
+	}
+	raw, err := e.runGitOutput(ctx, localPath, getArgs...)
+	if err != nil {
+		return fmt.Errorf("read remote %s urls: %w", op, err)
+	}
+	urls := 0
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
 		}
-		urls := 0
-		for _, line := range strings.Split(raw, "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
-			urls++
-			if err := validateCloneURL(line, e.allowLocalSources); err != nil {
-				return fmt.Errorf("remote %q has a URL that is not allowed: %w", clip(name), err)
-			}
+		urls++
+		if err := validateCloneURL(line, e.allowLocalSources); err != nil {
+			return fmt.Errorf("remote %q has a %s URL that is not allowed: %w", clip(name), op, err)
 		}
-		if urls == 0 {
-			return fmt.Errorf("%w: remote %q has no URL", ErrInvalidArgument, clip(name))
-		}
+	}
+	if urls == 0 {
+		return fmt.Errorf("%w: remote %q has no %s URL", ErrInvalidArgument, clip(name), op)
 	}
 	return nil
 }

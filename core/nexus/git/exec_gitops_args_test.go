@@ -371,40 +371,115 @@ func TestSafeDirectoryStillWorksForForeignOwner(t *testing.T) {
 }
 
 // A remote may have several URLs, and a push goes to all of them. The first being fine proves nothing
-// about the rest, so each one is validated, for fetch URLs and for push URLs alike.
+// about the rest, so each one is validated, for fetch URLs and for push URLs alike. Each case names the
+// operations that must refuse it; the others are not affected by that URL.
 func TestEveryURLOfARemoteIsValidated(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range []struct {
-		name string
-		args [][]string
+		name    string
+		refuses []string
+		args    [][]string
 	}{
-		{"second fetch url", [][]string{{"config", "--add", "remote.origin.url", "ext::sh -c id"}}},
-		{"second push url", [][]string{{"remote", "set-url", "--push", "origin", "https://example.invalid/p1.git"}, {"remote", "set-url", "--push", "--add", "origin", "https://user:pw@example.invalid/p2.git"}}},
-		{"second push url, other transport", [][]string{{"remote", "set-url", "--push", "origin", "https://example.invalid/p1.git"}, {"remote", "set-url", "--push", "--add", "origin", "file:///tmp/elsewhere"}}},
+		{"second fetch url (no push url, so a push uses it too)", []string{"fetch", "push"}, [][]string{{"config", "--add", "remote.origin.url", "ext::sh -c id"}}},
+		{"second push url", []string{"push"}, [][]string{{"remote", "set-url", "--push", "origin", "https://example.invalid/p1.git"}, {"remote", "set-url", "--push", "--add", "origin", "https://user:pw@example.invalid/p2.git"}}},
+		{"second push url, other transport", []string{"push"}, [][]string{{"remote", "set-url", "--push", "origin", "https://example.invalid/p1.git"}, {"remote", "set-url", "--push", "--add", "origin", "file:///tmp/elsewhere"}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ops, work, _ := argTestOps(t)
 			strict := NewExecGitOps(ops.registry)
 			// The fixture's origin is a local path, which strict mode refuses on its own; start from a
-			// URL that passes, so that only the added second URL can be the reason for a refusal.
+			// URL that passes, so that only the added URL can be the reason for a refusal.
 			out, err := exec.Command("git", "-C", work, "remote", "set-url", "origin", "https://example.invalid/a.git").CombinedOutput()
 			require.NoError(t, err, string(out))
-			require.NoError(t, strict.requireConfiguredRemote(ctx, work, "origin"), "precondition: a single https URL passes")
+			for _, op := range []string{"fetch", "push"} {
+				require.NoError(t, strict.requireConfiguredRemote(ctx, work, "origin", op), "precondition: a single https URL passes for %s", op)
+			}
 			for _, a := range tc.args {
 				out, err := exec.Command("git", append([]string{"-C", work}, a...)...).CombinedOutput()
 				require.NoError(t, err, string(out))
 			}
-			require.Error(t, strict.requireConfiguredRemote(ctx, work, "origin"), "precondition: the second URL is the only difference")
-			for _, call := range []func() error{
-				func() error { return strict.Push(ctx, "r", "origin", "main") },
-				func() error { return strict.Fetch(ctx, "r", "origin") },
-			} {
-				err := call()
-				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrInvalidArgument)
-				assert.Contains(t, err.Error(), "not allowed")
-				assert.NotContains(t, err.Error(), "pw@")
+			for _, op := range tc.refuses {
+				err := strict.requireConfiguredRemote(ctx, work, "origin", op)
+				require.Error(t, err, op)
+				assert.ErrorIs(t, err, ErrInvalidArgument, op)
+				assert.Contains(t, err.Error(), "not allowed", op)
+				assert.NotContains(t, err.Error(), "pw@", op)
 			}
+			// And through the public operations.
+			if len(tc.refuses) == 2 {
+				assert.ErrorIs(t, strict.Fetch(ctx, "r", "origin"), ErrInvalidArgument)
+			}
+			assert.ErrorIs(t, strict.Push(ctx, "r", "origin", "main"), ErrInvalidArgument)
 		})
+	}
+}
+
+// Fetch and push have different targets, and each is validated for the operation that uses it: a bad
+// push URL must not block a fetch, and a good push URL must not excuse a bad fetch URL for the fetch.
+// All push URLs count, and no URL at all is a refusal.
+func TestRemoteTargetsAreValidatedPerOperation(t *testing.T) {
+	ctx := context.Background()
+	const good, bad = "https://example.invalid/ok.git", "ext::sh -c id"
+	setup := func(t *testing.T, cmds ...[]string) (*ExecGitOps, string) {
+		ops, work, _ := argTestOps(t)
+		strict := NewExecGitOps(ops.registry)
+		for _, c := range cmds {
+			out, err := exec.Command("git", append([]string{"-C", work}, c...)...).CombinedOutput()
+			require.NoError(t, err, string(out))
+		}
+		return strict, work
+	}
+	fetchOK := func(s *ExecGitOps, w string) error { return s.requireConfiguredRemote(ctx, w, "origin", "fetch") }
+	pushOK := func(s *ExecGitOps, w string) error { return s.requireConfiguredRemote(ctx, w, "origin", "push") }
+
+	t.Run("good fetch URL, bad push URL: fetch passes, push refused", func(t *testing.T) {
+		s, w := setup(t, []string{"remote", "set-url", "origin", good}, []string{"remote", "set-url", "--push", "origin", bad})
+		assert.NoError(t, fetchOK(s, w))
+		err := pushOK(s, w)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidArgument)
+		assert.Contains(t, err.Error(), "push URL that is not allowed")
+	})
+	t.Run("bad fetch URL, good push URL: push passes, fetch refused", func(t *testing.T) {
+		s, w := setup(t, []string{"remote", "set-url", "origin", bad}, []string{"remote", "set-url", "--push", "origin", good})
+		assert.NoError(t, pushOK(s, w))
+		err := fetchOK(s, w)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "fetch URL that is not allowed")
+	})
+	t.Run("several push URLs: every one must pass", func(t *testing.T) {
+		s, w := setup(t, []string{"remote", "set-url", "origin", good},
+			[]string{"remote", "set-url", "--push", "origin", good},
+			[]string{"remote", "set-url", "--push", "--add", "origin", "https://example.invalid/two.git"},
+			[]string{"remote", "set-url", "--push", "--add", "origin", bad})
+		assert.NoError(t, fetchOK(s, w))
+		assert.Error(t, pushOK(s, w), "the third push URL is not allowed")
+	})
+	t.Run("no push URL: a push uses the fetch URL(s), all of them", func(t *testing.T) {
+		s, w := setup(t, []string{"remote", "set-url", "origin", good}, []string{"remote", "set-url", "--add", "origin", bad})
+		assert.Error(t, pushOK(s, w))
+		assert.Error(t, fetchOK(s, w))
+	})
+	t.Run("an unknown operation is refused", func(t *testing.T) {
+		s, w := setup(t, []string{"remote", "set-url", "origin", good})
+		assert.ErrorIs(t, s.requireConfiguredRemote(ctx, w, "origin", "clone"), ErrInvalidArgument)
+	})
+}
+
+// A remote with no URL at all is reported by git as its own name, which git would then read as a path.
+// The URL policy refuses that, with local sources on or off. (The "no URL" branch in the validator is
+// therefore defence in depth: git never prints an empty list for a configured remote.)
+func TestRemoteWithoutURLIsRefused(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	out, err := exec.Command("git", "-C", work, "config", "remote.nourl.fetch", "+refs/heads/*:refs/remotes/nourl/*").CombinedOutput()
+	require.NoError(t, err, string(out))
+	for _, o := range []*ExecGitOps{ops, NewExecGitOps(ops.registry)} {
+		for _, op := range []string{"fetch", "push"} {
+			err := o.requireConfiguredRemote(ctx, work, "nourl", op)
+			require.Error(t, err, op)
+			assert.ErrorIs(t, err, ErrInvalidArgument, op)
+			assert.Contains(t, err.Error(), "not allowed", op)
+		}
 	}
 }
