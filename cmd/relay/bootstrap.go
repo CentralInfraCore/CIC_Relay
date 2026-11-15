@@ -355,12 +355,18 @@ type ModuleFile struct {
 	WasmSize   int64             `yaml:"wasmSize"`
 }
 
-// loadEmbeddedComponents loads schemas, workflows, and PKI assets from the embedded filesystem.
-// It processes all embedded components and registers them with the cabinet service.
-func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas fs.FS, workflows fs.FS, pki fs.FS, pkiPath string, maxWasmModuleSize int64, logger *logrus.Logger) error {
-	pkiAssets, err := loadPKIAssets(pki, pkiPath, logger)
-	if err != nil {
-		return fmt.Errorf("failed to load embedded PKI assets: %w", err)
+// loadEmbeddedComponents loads schemas, workflows and modules from the embedded filesystems and
+// registers them with the cabinet service.
+//
+// Embedded components are verified against the SAME trust context as installed ones
+// (pkiAssets, the result of bootstrapTrust): being compiled into the binary grants no extra
+// trust. Origin (the signer chain against the configured anchors), authenticity and the
+// capability a module receives are decided by the same rules on both load paths. The loader
+// used to build a second trust store from the embedded CAs, so in prod an embedded module was
+// judged against the development CAs instead of the operator's bundle.
+func loadEmbeddedComponents(ctx context.Context, svc cabinet.Cabinet, schemas fs.FS, workflows fs.FS, pkiAssets *PKIAssets, maxWasmModuleSize int64, logger *logrus.Logger) error {
+	if pkiAssets == nil {
+		return fmt.Errorf("loadEmbeddedComponents: the shared trust context (pkiAssets) is required")
 	}
 	if err := loadComponentsFromFS(ctx, svc, schemas, ".", true, pkiAssets, maxWasmModuleSize, logger); err != nil {
 		return fmt.Errorf("failed to load embedded schemas: %w", err)
