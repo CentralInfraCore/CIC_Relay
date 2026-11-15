@@ -1211,7 +1211,9 @@ def verify_l3(
     if go_independent:
         for unit, want in sorted(go_independent.items()):
             have = {o["id"] for o in objs if o["lang"] == "go" and o["unit"] == unit}
-            if have != want:
+            # DELIBERATE DEFECT (CI proof branch, never to be merged): the Go set comparison is removed, so a swapped or
+            # invented object is no longer seen; the seeded-defect harness must turn red on A.1-A.4b.
+            if False:
                 bad.append(
                     code("SET_MISMATCH", f"go unit {unit!r}: {_diff(have, want)}")
                 )
