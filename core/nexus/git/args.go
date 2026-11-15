@@ -37,10 +37,33 @@ func validateRemoteName(name string) error {
 }
 
 func validateRef(ref string) error {
-	if len(ref) == 0 || len(ref) > maxArgLen || !refRe.MatchString(ref) ||
-		strings.Contains(ref, "..") || strings.Contains(ref, "//") || strings.Contains(ref, "@{") ||
-		strings.HasSuffix(ref, "/") || strings.HasSuffix(ref, ".") || strings.HasSuffix(ref, ".lock") {
-		return fmt.Errorf("%w: ref %q", ErrInvalidArgument, clip(ref))
+	bad := fmt.Errorf("%w: ref %q", ErrInvalidArgument, clip(ref))
+	if len(ref) == 0 || len(ref) > maxArgLen || !refRe.MatchString(ref) || ref == "@" ||
+		strings.Contains(ref, "..") || strings.Contains(ref, "@{") || strings.HasSuffix(ref, ".") {
+		return bad
+	}
+	// The git check-ref-format rules per path component: not empty, not starting with a dot, not ending in .lock.
+	for _, comp := range strings.Split(ref, "/") {
+		if comp == "" || strings.HasPrefix(comp, ".") || strings.HasSuffix(comp, ".lock") {
+			return bad
+		}
+	}
+	return nil
+}
+
+// validateBranchRef is validateRef for a name the operation will CREATE or MOVE (a clone branch, a push
+// destination): a short branch or tag name, or a fully qualified refs/heads/ or refs/tags/ name. HEAD and
+// other refs/ namespaces (refs/remotes, refs/notes, refs/replace, refs/stash, ...) are not accepted.
+func validateBranchRef(ref string) error {
+	if err := validateRef(ref); err != nil {
+		return err
+	}
+	bad := fmt.Errorf("%w: ref %q is not a branch or tag name", ErrInvalidArgument, clip(ref))
+	if ref == "HEAD" || strings.EqualFold(ref, "FETCH_HEAD") || strings.EqualFold(ref, "ORIG_HEAD") {
+		return bad
+	}
+	if strings.HasPrefix(ref, "refs/") && !strings.HasPrefix(ref, "refs/heads/") && !strings.HasPrefix(ref, "refs/tags/") {
+		return bad
 	}
 	return nil
 }
@@ -53,7 +76,7 @@ func validateRefspec(spec string) error {
 		return fmt.Errorf("%w: refspec %q", ErrInvalidArgument, clip(spec))
 	}
 	if hasDst {
-		if err := validateRef(dst); err != nil {
+		if err := validateBranchRef(dst); err != nil {
 			return fmt.Errorf("%w: refspec %q", ErrInvalidArgument, clip(spec))
 		}
 	}

@@ -52,7 +52,7 @@ func (e *ExecGitOps) Clone(ctx context.Context, repoID, url, branch string) erro
 	if err := validateCloneURL(url, e.allowLocalSources); err != nil {
 		return err
 	}
-	if err := validateRef(branch); err != nil {
+	if err := validateBranchRef(branch); err != nil {
 		return err
 	}
 	return e.runGit(ctx, "", "clone", "--branch", branch, "--depth", "1", "--", url, localPath)
@@ -101,7 +101,10 @@ func (e *ExecGitOps) Commit(ctx context.Context, repoID, message string, paths [
 	if err := e.runGit(ctx, localPath, addArgs...); err != nil {
 		return "", fmt.Errorf("git add: %w", err)
 	}
-	if err := e.runGit(ctx, localPath, "commit", "-m", message); err != nil {
+	// --only with the explicit paths: the commit holds exactly the paths this request named. Anything
+	// staged earlier by someone else stays staged and out of this commit.
+	commitArgs := append([]string{"commit", "-m", message, "--only", "--"}, paths...)
+	if err := e.runGit(ctx, localPath, commitArgs...); err != nil {
 		return "", fmt.Errorf("git commit: %w", err)
 	}
 
