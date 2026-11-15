@@ -643,9 +643,11 @@ func TestURLContractIsPrintableASCII(t *testing.T) {
 	assert.NoError(t, validateCloneURL("https://xn--bcher-kva.invalid/x.git", false), "punycode hosts are the accepted form")
 }
 
-// The stored and the effective target lists must have the same shape. Git offers no way to make them
-// differ with a plain configuration, so the disagreement is simulated with a git front that reports one
-// extra effective target: the operation must be refused, not matched up approximately.
+// The stored and the effective target lists must have the same shape. A real configuration can make them
+// differ (see TestRealConfigurationCanMakeTheTargetCountsDiffer); this test additionally simulates the
+// disagreement with a git front that reports one extra effective target, so the refusal is checked
+// independently of how git happens to deduplicate. The operation must be refused, not matched up
+// approximately.
 func TestStoredAndEffectiveTargetCountsMustAgree(t *testing.T) {
 	ctx := context.Background()
 	ops, work, _ := argTestOps(t)
@@ -665,4 +667,64 @@ func TestStoredAndEffectiveTargetCountsMustAgree(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrInvalidArgument)
 	assert.Contains(t, err.Error(), "differ from the stored ones")
+}
+
+// F1.7: git CAN make the stored and effective target counts differ with a plain configuration: two stored
+// URLs that a single pushInsteadOf rule rewrites to the same target are one effective push target. That is
+// refused (fail closed); it is a compatibility limit of this policy, not a gap. Real git, no simulation.
+func TestRealConfigurationCanMakeTheTargetCountsDiffer(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	strict := NewExecGitOps(ops.registry)
+	for _, c := range [][]string{
+		{"remote", "set-url", "origin", "https://example.invalid/ok.git"},
+		{"config", "--add", "remote.origin.url", "https://other.invalid/other.git"},
+		{"config", "url.https://mirror.invalid/.pushInsteadOf", "https://example.invalid/"},
+	} {
+		out, err := exec.Command("git", append([]string{"-C", work}, c...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
+	stored, err := strict.remoteConfigValues(ctx, work, "remote.origin.url")
+	require.NoError(t, err)
+	effective, err := strict.runGitOutput(ctx, work, "remote", "get-url", "--push", "--all", "--", "origin")
+	require.NoError(t, err)
+	t.Logf("stored=%d effective push=%q", len(stored), effective)
+
+	assert.NoError(t, strict.validateRemoteTargets(ctx, work, "origin", "fetch"), "the fetch targets are unaffected")
+	if len(strings.Split(strings.TrimSuffix(effective, "\n"), "\n")) != len(stored) {
+		err = strict.validateRemoteTargets(ctx, work, "origin", "push")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidArgument)
+		assert.Contains(t, err.Error(), "differ from the stored ones")
+	} else {
+		t.Skip("this git does not collapse the targets; the simulated test covers the refusal")
+	}
+}
+
+// remote.<name>.vcs would hand the remote to a remote helper program (git-remote-<vcs>). Like every key
+// outside the allowlist it is refused before git acts on the repository, together with the other
+// remote.* keys that change what a remote does.
+func TestRemoteHelperAndTransportKeysAreRefused(t *testing.T) {
+	ctx := context.Background()
+	for key, val := range map[string]string{
+		"remote.origin.vcs":                "ext",
+		"remote.origin.push":               "+refs/heads/*:refs/heads/*",
+		"remote.origin.mirror":             "true",
+		"remote.origin.tagopt":             "--no-tags",
+		"remote.origin.skipfetchall":       "true",
+		"remote.origin.prune":              "true",
+		"remote.origin.promisor":           "true",
+		"remote.origin.partialclonefilter": "blob:none",
+	} {
+		t.Run(key, func(t *testing.T) {
+			ops, work, _ := argTestOps(t)
+			out, err := exec.Command("git", "-C", work, "config", "--local", key, val).CombinedOutput()
+			require.NoError(t, err, string(out))
+			assert.ErrorIs(t, ops.Fetch(ctx, "r", "origin"), ErrInvalidArgument)
+			assert.ErrorIs(t, ops.Push(ctx, "r", "origin", "main"), ErrInvalidArgument)
+			err = ops.auditRepoConfig(ctx, work)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "not permitted")
+		})
+	}
 }
