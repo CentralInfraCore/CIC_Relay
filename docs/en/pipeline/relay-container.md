@@ -88,7 +88,7 @@ The `relay` service reads these from the environment (a `.env` file next to
 | `VAULT_CACERT` | — | e.g. `/run/secrets/relay/vault-ca.crt` |
 | `CIC_VAULT_MOUNT` | `transit` | Vault transit mount |
 | `CIC_VAULT_KEY` | — | Signing key; the token must be *authorised for this key* |
-| `CIC_TRUST_MODE` | `dev` | PKI trust mode |
+| `CIC_TRUST_MODE` | — | PKI trust mode (`dev` or `prod`); **required**, no default, an empty value is a start-up error |
 
 ### `CIC_BUILD_DIR` must be shared with the builder container
 
