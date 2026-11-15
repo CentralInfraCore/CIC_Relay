@@ -335,9 +335,9 @@ func TestLoadEmbeddedComponents(t *testing.T) {
 
 	schemasFS := getSubFS(t, "schemas")
 	workflowsFS := getSubFS(t, "workflows")
-	pkiFS := getSubFS(t, "pki")
+	pkiAssets := buildLoadedPKIAssets(t)
 
-	err = loadEmbeddedComponents(context.Background(), svc, schemasFS, workflowsFS, pkiFS, ".", maxWasmSize, logger)
+	err = loadEmbeddedComponents(context.Background(), svc, schemasFS, workflowsFS, pkiAssets, maxWasmSize, logger)
 	require.NoError(t, err, "loadEmbeddedComponents should not return an error")
 
 	_, err = svc.GetSchema("test.schema@1.0")
@@ -353,30 +353,27 @@ func TestLoadEmbeddedComponents_Error(t *testing.T) {
 	require.NoError(t, err)
 	maxWasmSize := int64(16 * 1024 * 1024)
 	logger := newDiscardLogger()
-	pkiFS := getSubFS(t, "pki")
+	pkiAssets := buildLoadedPKIAssets(t)
 
 	t.Run("invalid schema", func(t *testing.T) {
 		invalidSchemaFS := getSubFS(t, "invalid")
 		validWorkflowsFS := getSubFS(t, "workflows")
-		err := loadEmbeddedComponents(context.Background(), svc, invalidSchemaFS, validWorkflowsFS, pkiFS, ".", maxWasmSize, logger)
+		err := loadEmbeddedComponents(context.Background(), svc, invalidSchemaFS, validWorkflowsFS, pkiAssets, maxWasmSize, logger)
 		assert.Error(t, err, "expected an error when loading invalid embedded schema components")
 		assert.Contains(t, err.Error(), "failed to load embedded schemas")
 	})
 
-	t.Run("pki asset loading error", func(t *testing.T) {
-		failingPKIFS := &failingReadDirFS{FS: getSubFS(t, "pki")}
-		schemasFS := getSubFS(t, "schemas")
-		workflowsFS := getSubFS(t, "workflows")
-		err := loadEmbeddedComponents(context.Background(), svc, schemasFS, workflowsFS, failingPKIFS, ".", maxWasmSize, logger)
-		assert.Error(t, err, "expected an error when loading pki assets fails")
-		assert.Contains(t, err.Error(), "failed to load embedded PKI assets")
-		assert.ErrorIs(t, err, os.ErrPermission)
+	t.Run("no shared trust context", func(t *testing.T) {
+		// There is no second trust store to fall back to: a nil context is refused.
+		err := loadEmbeddedComponents(context.Background(), svc, getSubFS(t, "schemas"), getSubFS(t, "workflows"), nil, maxWasmSize, logger)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "shared trust context")
 	})
 
 	t.Run("invalid workflow", func(t *testing.T) {
 		validSchemaFS := getSubFS(t, "schemas")
 		invalidWorkflowsFS := getSubFS(t, "invalid")
-		err := loadEmbeddedComponents(context.Background(), svc, validSchemaFS, invalidWorkflowsFS, pkiFS, ".", maxWasmSize, logger)
+		err := loadEmbeddedComponents(context.Background(), svc, validSchemaFS, invalidWorkflowsFS, pkiAssets, maxWasmSize, logger)
 		assert.Error(t, err, "expected an error when loading invalid embedded workflow components")
 		assert.Contains(t, err.Error(), "failed to load embedded workflows")
 	})
