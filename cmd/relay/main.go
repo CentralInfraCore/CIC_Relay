@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -186,6 +188,27 @@ func writeError(w http.ResponseWriter, status int, code, msg string) {
 	json.NewEncoder(w).Encode(map[string]string{"error": msg, "code": code})
 }
 
+// writeEvidenceRequired answers 503 for a workflow that ran but whose proof was not
+// persisted while evidence is required. Besides the usual error/code it states
+// structurally that the execution completed, so a client does not retry it blindly,
+// and returns the chain hash of the executed workflow.
+func writeEvidenceRequired(w http.ResponseWriter, err error) {
+	body := map[string]any{
+		"error":               err.Error(),
+		"code":                "evidence_required",
+		"execution_completed": true,
+		"proof":               cabinet.ProofStatus{Persisted: false},
+	}
+	var evErr *cabinet.EvidenceRequiredError
+	if errors.As(err, &evErr) {
+		body["chain_hash"] = evErr.ChainHash
+		body["proof"] = cabinet.ProofStatus{Persisted: false, ErrorCode: evErr.ErrorCode}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	json.NewEncoder(w).Encode(body)
+}
+
 // newMux creates a new HTTP multiplexer and registers all relay API routes.
 func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -349,6 +372,13 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusGatewayTimeout, "timeout", "Workflow execution timed out: "+err.Error())
 			return
 		}
+		if cabinet.IsEvidenceRequired(err) {
+			// The workflow ran, but its proof was not persisted and evidence is required.
+			traceStatus = "error"
+			logEntry.WithField("outcome", "evidence_required").WithError(err).Error("Workflow executed but its proof was not persisted")
+			writeEvidenceRequired(w, err)
+			return
+		}
 		if cabinet.IsInvalid(err) {
 			traceStatus = "rejected"
 			logEntry.WithField("outcome", "invalid_request").WithError(err).Warn("Invalid request")
@@ -455,6 +485,19 @@ func loadSecretsFromVault(logger *logrus.Logger) *VaultSecrets {
 		MountPath:     mountPath,
 		KeyName:       keyName,
 		AuditRepoPath: auditRepoPath,
+	}
+}
+
+// evidenceRequiredFromEnv reads CIC_EVIDENCE_REQUIRED. Unset or empty means false; only
+// "true" and "false" are accepted, so a typo cannot silently switch a required mode off.
+func evidenceRequiredFromEnv() (bool, error) {
+	switch v := strings.TrimSpace(os.Getenv("CIC_EVIDENCE_REQUIRED")); v {
+	case "", "false":
+		return false, nil
+	case "true":
+		return true, nil
+	default:
+		return false, fmt.Errorf("invalid CIC_EVIDENCE_REQUIRED %q (valid: \"true\", \"false\")", v)
 	}
 }
 
@@ -625,6 +668,13 @@ func main() {
 	}
 	secrets := loadSecretsFromVault(logger)
 	recorderOpt := buildRecorderOption(logger, secrets)
+	evidenceRequired, err := evidenceRequiredFromEnv()
+	if err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid evidence configuration")
+	}
+	if evidenceRequired {
+		logger.Info("Evidence required: a workflow whose ProofTrace is not persisted fails with 503 evidence_required")
+	}
 
 	// Build artifact signer for cic.artifact.sign — uses the same Vault key as the recorder.
 	// Nil if Vault is not configured; cic_sign will be "unavailable" in that case (non-fatal).
@@ -678,7 +728,7 @@ func main() {
 	metricSink := obs.NewMultiMetricSink(logrusSink, promSink)
 	gitOps.SetObsSinks(logrusSink, metricSink) // relay.git.op_duration_ms + WARN logok
 	obsOpt := cabinet.WithObsSinks(logrusSink, metricSink)
-	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, obsOpt)
+	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), obsOpt)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
 	}

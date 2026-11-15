@@ -1,9 +1,6 @@
 package main
 
-import (
-	"net/http"
-	"sync"
-)
+import "sync"
 
 // R3a live wiring (feature-011, r3-plan.md). The `cic-flow` host module is a
 // single shared instance on the wazero runtime, but capabilities are per-module:
@@ -30,12 +27,13 @@ type cicFlowRegistry struct {
 // module at load (fail-closed). It is set once at startup before any load.
 var registerModuleCapability func(moduleID string, projectYAML []byte) error
 
-// newCICFlowRegistry builds an empty registry. A nil doer defaults to
-// http.DefaultClient; a nil resolve leaves every module's signer nil (sign inert)
-// until the OCI-key provisioning path wires a real resolver.
+// newCICFlowRegistry builds an empty registry. A nil doer defaults to the egress client
+// (newEgressClient: no redirects, no proxy, timeouts, blocked address ranges); a nil
+// resolve leaves every module's signer nil (sign inert) until the OCI-key provisioning
+// path wires a real resolver.
 func newCICFlowRegistry(resolve keyResolver, doer httpDoer) *cicFlowRegistry {
 	if doer == nil {
-		doer = http.DefaultClient
+		doer = newEgressClient(false)
 	}
 	return &cicFlowRegistry{resolve: resolve, doer: doer, deps: map[string]cicFlowDeps{}}
 }

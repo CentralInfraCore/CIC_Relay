@@ -670,3 +670,108 @@ func TestSetHandler_SourceDigestFromTreeHash(t *testing.T) {
 	server.setHandler(w, req)
 	mockAPI.AssertExpectations(t)
 }
+
+// TestSetHandler_EvidenceRequired: the workflow ran, but its proof was not persisted
+// and evidence is required — an explicit 503, never a plain 200. The body states
+// structurally that the execution completed (so a client does not retry it blindly),
+// that the proof was not persisted, and carries the chain hash.
+func TestSetHandler_EvidenceRequired(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil,
+		&cabinet.EvidenceRequiredError{WorkflowID: "any", ChainHash: "deadbeef", ErrorCode: cabinet.ProofErrRecordFailed})
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{api: mockAPI, config: &config{MaxJSONInputSize: 1024}, logger: logger}
+
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	var body struct {
+		Code               string `json:"code"`
+		Error              string `json:"error"`
+		ExecutionCompleted bool   `json:"execution_completed"`
+		ChainHash          string `json:"chain_hash"`
+		Proof              struct {
+			Persisted bool   `json:"persisted"`
+			ErrorCode string `json:"error_code"`
+		} `json:"proof"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.Equal(t, "evidence_required", body.Code)
+	assert.NotEmpty(t, body.Error)
+	assert.True(t, body.ExecutionCompleted, "the workflow ran: the call must not look like a retry-safe failure")
+	assert.Equal(t, "deadbeef", body.ChainHash)
+	assert.False(t, body.Proof.Persisted)
+	assert.Equal(t, cabinet.ProofErrRecordFailed, body.Proof.ErrorCode)
+}
+
+// A wrapped evidence error without the structured type still maps to the same 503.
+func TestSetHandler_EvidenceRequired_Unstructured(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("%w: no detail", cabinet.ErrEvidenceRequired))
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{api: mockAPI, config: &config{MaxJSONInputSize: 1024}, logger: logger}
+
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
+	w := httptest.NewRecorder()
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Contains(t, w.Body.String(), `"execution_completed":true`)
+	assert.NotContains(t, w.Body.String(), "chain_hash")
+}
+
+// TestSetHandler_ProofInResponse: a successful execution reports the proof outcome.
+func TestSetHandler_ProofInResponse(t *testing.T) {
+	mockAPI := new(mockCabinetService)
+	mockAPI.On("GetWorkflow", mock.Anything).Return(&cabinet.Workflow{}, nil)
+	mockAPI.On("Setx", mock.Anything, mock.Anything).Return(&cabinet.SetResponse{
+		Results: map[string]any{"ok": true},
+		Proof:   &cabinet.ProofStatus{Persisted: false, ErrorCode: cabinet.ProofErrRecordFailed},
+	}, nil)
+
+	logger := logrus.New()
+	logger.SetOutput(new(bytes.Buffer))
+	server := &relayServer{api: mockAPI, config: &config{MaxJSONInputSize: 1024}, logger: logger}
+
+	req := httptest.NewRequest(http.MethodPost, "/set", bytes.NewReader([]byte(`{"workflow_id":"any"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.setHandler(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, "evidence not required: a successful execution keeps HTTP 200")
+	var body struct {
+		Proof struct {
+			Persisted bool   `json:"persisted"`
+			ErrorCode string `json:"error_code"`
+		} `json:"proof"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Proof.Persisted)
+	assert.Equal(t, "record_failed", body.Proof.ErrorCode)
+}
+
+func TestEvidenceRequiredFromEnv(t *testing.T) {
+	for in, want := range map[string]bool{"": false, "false": false, " true ": true, "true": true} {
+		t.Setenv("CIC_EVIDENCE_REQUIRED", in)
+		got, err := evidenceRequiredFromEnv()
+		require.NoError(t, err, "value %q", in)
+		assert.Equal(t, want, got, "value %q", in)
+	}
+	for _, bad := range []string{"1", "yes", "TRUE", "tru"} {
+		t.Setenv("CIC_EVIDENCE_REQUIRED", bad)
+		_, err := evidenceRequiredFromEnv()
+		assert.Error(t, err, "value %q must be rejected, not silently treated as false", bad)
+	}
+}

@@ -11,9 +11,16 @@ import (
 
 func TestNewCICFlowRegistry_DefaultsDoer(t *testing.T) {
 	reg := newCICFlowRegistry(nil, nil)
-	assert.Equal(t, http.DefaultClient, reg.doer)
-	_, ok := reg.lookup("anything")
-	assert.False(t, ok) // empty → deny
+	// The default doer is the egress client, not http.DefaultClient (which follows
+	// redirects, honours the proxy environment and has no timeout).
+	assert.NotSame(t, http.DefaultClient, reg.doer)
+	c, ok := reg.doer.(*http.Client)
+	require.True(t, ok, "the default doer must be the egress *http.Client")
+	assert.Equal(t, egressRequestTimeout, c.Timeout)
+	require.NotNil(t, c.CheckRedirect)
+	assert.ErrorIs(t, c.CheckRedirect(nil, nil), http.ErrUseLastResponse)
+	_, found := reg.lookup("anything")
+	assert.False(t, found) // empty → deny
 }
 
 func TestCICFlowRegistry_RegisterVerified_Binds(t *testing.T) {
