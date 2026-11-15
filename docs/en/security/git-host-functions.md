@@ -80,7 +80,7 @@ Bringing push back is a separate decision and work package.
 
 ## 7. Behaviour changes
 
-- A module that imports a `git.*` function without a matching manifest rule is rejected at load.
+- A module that **declares** a `git.*` import (in `abi.imports`) without a matching manifest rule is rejected at load. An import that exists only in the WASM binary is not seen at load; see "Declared and actual imports" in section 2.
 - No module receives a git capability unless it is verified.
 - `checkout <name>` no longer creates a local tracking branch from a remote-only name.
 - Repositories with configuration outside the allowlist in section 3 are refused until cleaned.

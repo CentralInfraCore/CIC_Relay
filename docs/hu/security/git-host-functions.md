@@ -80,7 +80,7 @@ A push visszavezetése külön döntés és külön munkacsomag.
 
 ## 7. Viselkedésváltozások
 
-- Az a modul, amely egy `git.*` függvényt megfelelő manifest-szabály nélkül importál, betöltéskor elutasított.
+- Az a modul, amely egy `git.*` importot **deklarál** (az `abi.imports`-ban) megfelelő manifest-szabály nélkül, betöltéskor elutasított. A csak a WASM binárisban létező importot a betöltés nem látja; lásd a 2. szakasz „Deklarált és tényleges importok" részét.
 - Git capabilityt csak ellenőrzött modul kap.
 - A `checkout <név>` többé nem hoz létre helyi követő ágat a csak távoli névből.
 - A 3. szakasz allowlistjén kívüli konfigurációjú repositoryk elutasítottak, amíg meg nem tisztítják őket.
