@@ -1,0 +1,291 @@
+---
+module: seeded_defects
+description: 'Seeded defects: does the evidence verifier really turn red when it must?
+  (CI self-test, PR-05) Every case DERIVES a defective bundle from an honest one,
+  runs the REAL verifier (scripts/object_model.py, not a copy) and states which level
+  must fail with which diagnostic code. Every negative case has a POSITIVE CONTROL:
+  the honest bundle must reach the expected honest verdict, otherwise the case proves
+  nothing (a verifier that fails everything would also "catch" every defect). A bundle
+  is the honest record plus everything the verifier needs: the checkout, the input
+  files, the re-derived values, the independent Go/Rust object sets, the required
+  units, the cargo-mutants listing. The cases work on a deep copy; nothing outside
+  the temporary directory is written and the product tree is not touched. Run:  seeded_defects.py
+  --record R --root CHECKOUT --scope S --input NAME=PATH ... --rust-list L --expect-l3
+  PARTIAL|COMPLETE_FOR_SCOPE (the record and the real input files of a real measurement;
+  the tests build the bundle from the PR-04 fixtures) Exit: 0 only if every control
+  is honest AND every defect is caught at the expected level with the expected code.'
+tags:
+- core
+- executor
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: Bundle
+  kind: class
+  decorators:
+  - dataclass
+  description: The honest record and the context a full verification needs.
+  implements: []
+  references: []
+- name: verify
+  kind: method
+  receiver: Bundle
+  decorators: []
+  description: ''
+  references:
+  - object_model.verify_record
+  calls:
+  - kw.update
+  - object_model.verify_record
+- name: reseal
+  kind: function
+  decorators: []
+  description: 'Recompute the summary and the digest: what an attacker who fixes the
+    record does.'
+  references:
+  - object_model.canonical_digest
+  - object_model.summarize
+  calls:
+  - object_model.canonical_digest
+  - object_model.summarize
+  - rec.items
+- name: _first
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _go
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _measured_go
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.MEASURED
+  calls:
+  - _go
+- name: d_delete
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _first
+- name: d_insert
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _first
+- name: d_swap
+  kind: function
+  decorators: []
+  description: 'Replace one object by an invented one: the count of the objects does
+    not change.'
+  references: []
+  calls:
+  - _first
+- name: d_dup_same_id
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _first
+- name: d_dup_other_id
+  kind: function
+  decorators: []
+  description: The same source object under a second id, the count kept equal by dropping
+    another object.
+  references: []
+  calls:
+  - _go
+- name: d_tamper_naive
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _first
+- name: d_tamper_resealed
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _first
+- name: d_other_commit
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: d_forged_input_digest
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: d_missing_field
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _first
+- name: d_missing_unit
+  kind: function
+  decorators: []
+  description: Every object of a unit the scope requires is gone (e.g. no Rust object
+    at all).
+  references: []
+  calls: []
+- name: d_single_run
+  kind: function
+  decorators: []
+  description: A coverage measured once, claimed stable.
+  references:
+  - object_model.MEASURED
+  calls:
+  - _first
+  - _go
+- name: d_forged_stability
+  kind: function
+  decorators: []
+  description: 'A single-run record claims 20 runs and OBSERVED_STABLE, re-sealed:
+    internally consistent (L1), the inputs are untouched, only the re-derivation from
+    the bound profiles (runs counted from them) can see it.'
+  references:
+  - object_model.STABLE_MIN_RUNS
+  - object_model.MEASURED
+  calls:
+  - _first
+  - _go
+- name: _with_tools
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: d_tool_unknown
+  kind: function
+  decorators: []
+  description: The version of a measuring tool is recorded as `unknown`.
+  references: []
+  calls:
+  - _with_tools
+  - t.__setitem__
+- name: d_tool_modified
+  kind: function
+  decorators: []
+  description: A pinned tool was a different (known) version.
+  references: []
+  calls:
+  - _with_tools
+  - t.__setitem__
+- name: d_tool_missing
+  kind: function
+  decorators: []
+  description: A pinned tool is not in the record at all.
+  references: []
+  calls:
+  - _with_tools
+  - t.pop
+- name: d_tool_unpinned
+  kind: function
+  decorators: []
+  description: The record names a tool that is not pinned.
+  references: []
+  calls:
+  - _with_tools
+  - t.__setitem__
+- name: d_nondeterministic
+  kind: function
+  decorators: []
+  description: 'An object whose coverage differs between runs (the real kind of case:
+    see the PR-05 report).'
+  references:
+  - object_model.unverifiable
+  - object_model.MEASURED
+  calls:
+  - _first
+  - _go
+  - object_model.unverifiable
+- name: Case
+  kind: class
+  decorators:
+  - dataclass
+  description: ''
+  implements: []
+  references: []
+- name: CASES
+  kind: const
+  description: ''
+  references: []
+- name: _codes
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - f.index
+  - f.startswith
+- name: run_case
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _codes
+  - b.verify
+  - c.derive
+  - lvl.get
+- name: control
+  kind: function
+  decorators: []
+  description: 'The positive control: the honest bundle reaches the honest verdict.'
+  references: []
+  calls:
+  - b.verify
+  - honest.items
+- name: run_all
+  kind: function
+  decorators: []
+  description: Run the control and every case; (everything as expected, the report
+    lines).
+  references: []
+  calls:
+  - lines.append
+- name: bundle_from_files
+  kind: function
+  decorators: []
+  description: 'The bundle of a REAL record: the record, the checkout and the real
+    input files; everything else is derived from them.'
+  references:
+  - object_model.load_tool_pins
+  - object_model.build_context
+  - object_model.check_scope
+  calls:
+  - Bundle
+  - kv.split
+  - object_model.build_context
+  - object_model.check_scope
+  - object_model.load_tool_pins
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - __doc__.split
+  - ap.add_argument
+  - ap.error
+  - ap.parse_args

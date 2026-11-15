@@ -14,6 +14,7 @@ Commands
   wrap-shard  bind one `cargo mutants` outcomes.json to the plan (a shard report)
   verify      check plan + shard reports + chunk reports against each other
   check-coverprofile  a Go coverage profile must exist, parse and hold at least one block
+  check-tools         every measuring tool a job uses must be the pinned one (fail closed)
 
 Contracts (versioned; a change is a change of the gate logic and is planned as such by
 scripts/mutation_plan.py):
@@ -654,6 +655,96 @@ def cmd_verify(a: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+TOOL_PINS_SCHEMA = "measurement-tools/1"
+
+
+def load_tool_pins(path: str) -> dict:
+    """`.measurement-tools.json`: {"schema", "tools": {name: exact version}, optional "record_tools": [names]}."""
+    try:
+        pins = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise GateError(f"{path}: missing, unreadable or not JSON: {e}") from e
+    tools = pins.get("tools") if isinstance(pins, dict) else None
+    record_tools = pins.get("record_tools", None) if isinstance(pins, dict) else None
+    if (
+        not isinstance(pins, dict)
+        or pins.get("schema") != TOOL_PINS_SCHEMA
+        or not isinstance(tools, dict)
+        or not tools
+        or not all(
+            isinstance(k, str) and isinstance(v, str) and v for k, v in tools.items()
+        )
+        or (
+            record_tools is not None
+            and not (
+                isinstance(record_tools, list) and all(t in tools for t in record_tools)
+            )
+        )
+    ):
+        raise GateError(
+            f"{path}: not a {TOOL_PINS_SCHEMA} file with a non-empty tool map (and record_tools within it)"
+        )
+    return {"tools": dict(tools), "record_tools": record_tools}
+
+
+def tool_pin_findings(
+    pins: dict, declared: dict, required: list | None = None
+) -> tuple[list[str], list[str]]:
+    """(unusable, unverifiable) findings of the declared tool versions against the pins. Fail closed.
+
+    UNUSABLE: the version is known but is not the pinned one. UNVERIFIABLE: the version cannot be established
+    (empty, `unknown`), the tool is not pinned, or a REQUIRED tool is not declared. `required` None = none beyond
+    the declared ones (a job that uses only some tools); a list names the tools that must be declared.
+    """
+    unusable: list[str] = []
+    unverifiable: list[str] = []
+    for name in required or []:
+        if name not in declared:
+            unverifiable.append(
+                f"[TOOL_UNVERIFIABLE] the version of the pinned tool {name!r} cannot be established: it is not declared"
+            )
+    for name, recorded in sorted(declared.items()):
+        want = pins.get(name)
+        if want is None:
+            unverifiable.append(f"[TOOL_NOT_PINNED] the tool {name!r} is not pinned")
+        elif not recorded or str(recorded).strip().lower() in (
+            "unknown",
+            "none",
+            "n/a",
+        ):
+            unverifiable.append(
+                f"[TOOL_UNVERIFIABLE] the version of the pinned tool {name!r} cannot be established from the record"
+            )
+        elif recorded != want:
+            unusable.append(
+                f"[TOOL_UNUSABLE] {name!r} was {recorded!r}, the pinned version is {want!r}"
+            )
+    return unusable, unverifiable
+
+
+def cmd_check_tools(a: argparse.Namespace) -> int:
+    pins = load_tool_pins(a.pins)
+    declared = {}
+    for kv in a.tool or []:
+        name, _, ver = kv.partition("=")
+        if not name or name in declared:
+            raise GateError(f"--tool {kv!r}: needs NAME=VERSION, once per tool")
+        declared[name] = ver.strip()
+    if not declared:
+        raise GateError("check-tools was given no tool: nothing was checked")
+    unusable, unverifiable = tool_pin_findings(pins["tools"], declared)
+    for line in unusable + unverifiable:
+        print(line)
+    if unusable or unverifiable:
+        raise GateError(
+            "a measuring tool is "
+            + ("UNUSABLE" if unusable else "UNVERIFIABLE")
+            + ": the result of this job must not be accepted"
+        )
+    print(f"tools pinned: {', '.join(f'{k}={v}' for k, v in sorted(declared.items()))}")
+    return 0
+
+
 def cmd_check_coverprofile(a: argparse.Namespace) -> int:
     n = check_coverprofile(a.profile)
     print(f"{a.profile}: {n} blocks")
@@ -696,6 +787,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--go-reports", default="")
     p.add_argument("--go-chunks", type=int, default=0)
     p.set_defaults(fn=cmd_verify)
+
+    p = sub.add_parser("check-tools")
+    p.add_argument("--pins", required=True, help=".measurement-tools.json")
+    p.add_argument(
+        "--tool", action="append", help="NAME=VERSION as read from the installed tool"
+    )
+    p.set_defaults(fn=cmd_check_tools)
 
     p = sub.add_parser("check-coverprofile")
     p.add_argument("profile")

@@ -60,6 +60,13 @@ jobs:
         with:
           tool: cargo-mutants
 
+      - name: Check the measuring tools (fail closed)
+        if: steps.plan.outputs.rust == 'true'
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --tool "rustc=$(rustc --version | awk '{print $2}')" \
+            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+
       - name: Count the Rust mutants in the diff
         id: count
         env:
@@ -172,6 +179,12 @@ jobs:
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --tool "go=$(go version | awk '{print $3}')" \
+            --tool "gremlins=$(go version -m "$(command -v gremlins)" | awk '$1=="mod" && $2 ~ /go-gremlins\/gremlins$/ {print $3, $4}')"
+
       # Per-package ratchet (scripts/gremlins_gate.py, .mutation-baseline.json): a package
       # needs efficacy and mutant coverage >= 90, or, if it was below 90 when the baseline
       # was taken, must not get worse than that baseline. All packages are run and judged.
@@ -217,6 +230,12 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-mutants
+
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --tool "rustc=$(rustc --version | awk '{print $2}')" \
+            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
 
       - name: Mutation of the changed Rust lines, or of every mutant when the plan escalated (no surviving mutants)
         env:

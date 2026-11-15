@@ -88,6 +88,11 @@ jobs:
         run: |
           go mod download || true
 
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --tool "go=$(go version | awk '{print $3}')"
+
       # On pull_request, test the full module — this is the merge gate.
       # On push, scope to the packages affected by the changed files (the
       # changed packages plus everything that transitively imports them) so
@@ -289,6 +294,12 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov
+
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --tool "rustc=$(rustc --version | awk '{print $2}')" \
+            --tool "cargo-llvm-cov=$(cargo llvm-cov --version | awk '{print $2}')"
 
       - name: Coverage (fail under 90% lines)
         run: cargo llvm-cov --all --locked --fail-under-lines 90

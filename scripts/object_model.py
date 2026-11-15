@@ -826,64 +826,30 @@ def verify_l1(rec: dict) -> list[str]:
     return bad
 
 
-TOOL_PINS_SCHEMA = "measurement-tools/1"
+def load_tool_pins(path: str) -> dict:
+    """The pinned versions of the measuring tools (`.measurement-tools.json`); see quality_gate.load_tool_pins."""
+    try:
+        return qg.load_tool_pins(path)
+    except qg.GateError as e:
+        raise ModelError(str(e)) from e
 
 
-def load_tool_pins(path: str) -> dict[str, str]:
-    """The pinned versions of the measuring tools (`.measurement-tools.json`)."""
-    pins = _load(path)
-    tools = pins.get("tools") if isinstance(pins, dict) else None
-    if (
-        not isinstance(pins, dict)
-        or pins.get("schema") != TOOL_PINS_SCHEMA
-        or not isinstance(tools, dict)
-        or not tools
-        or not all(
-            isinstance(k, str) and isinstance(v, str) and v for k, v in tools.items()
-        )
-    ):
-        raise ModelError(
-            f"{path}: not a {TOOL_PINS_SCHEMA} file with a non-empty tool map"
-        )
-    return dict(tools)
-
-
-def verify_tools(rec: dict, pins: dict[str, str] | None) -> dict:
-    """Is every tool of the record the pinned one? Fail closed.
+def verify_tools(rec: dict, pins: dict | None) -> dict:
+    """Is every tool of the record the pinned one, and does the record declare every tool it must? Fail closed.
 
     UNUSABLE: the version is known but is not the pinned one. UNVERIFIABLE: the version cannot be established
     (missing, empty, `unknown`) or the tool is not pinned at all (an unknown tool decides nothing). Either verdict
     rejects the measurement. The versions are what the record DECLARES: that the declared tool really ran is
-    provenance, not checked here."""
+    provenance, not checked here. `pins` is the loaded `.measurement-tools.json`; the tools the record must declare
+    are its `record_tools` (all pinned tools when absent)."""
     if pins is None:
         return {"verdict": "NOT_CHECKED", "findings": ["no tool pins were given"]}
-    declared = rec.get("tools") or {}
-    unusable: list[str] = []
-    unverifiable: list[str] = []
-    for name, want in sorted(pins.items()):
-        recorded = declared.get(name)
-        if not recorded or str(recorded).strip().lower() in (
-            "unknown",
-            "none",
-            "n/a",
-        ):
-            unverifiable.append(
-                code(
-                    "TOOL_UNVERIFIABLE",
-                    f"the version of the pinned tool {name!r} cannot be established from the record",
-                )
-            )
-        elif recorded != want:
-            unusable.append(
-                code(
-                    "TOOL_UNUSABLE",
-                    f"{name!r} was {recorded!r}, the pinned version is {want!r}",
-                )
-            )
-    for name in sorted(set(declared) - set(pins)):
-        unverifiable.append(
-            code("TOOL_NOT_PINNED", f"the recorded tool {name!r} is not pinned")
-        )
+    required = pins["record_tools"]
+    if required is None:
+        required = sorted(pins["tools"])
+    unusable, unverifiable = qg.tool_pin_findings(
+        pins["tools"], rec.get("tools") or {}, required
+    )
     verdict = (
         "UNUSABLE" if unusable else "UNVERIFIABLE" if unverifiable else "TOOLS_PINNED"
     )

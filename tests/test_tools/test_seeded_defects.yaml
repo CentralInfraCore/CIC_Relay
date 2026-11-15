@@ -1,0 +1,402 @@
+---
+module: test_tools.test_seeded_defects
+description: 'Seeded defects against the evidence verifier (PR-05): every defect is
+  caught, every negative has a positive control, and the harness itself is shown to
+  have teeth (the verifier''s checks removed on a scratch copy turn it red).'
+tags:
+- executor
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: HERE
+  kind: const
+  description: ''
+  references: []
+- name: ROOT
+  kind: const
+  description: ''
+  references: []
+- name: bundle
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: ''
+  references:
+  - pytest.fixture
+  - seeded_bundle.fixture_bundle
+  calls:
+  - pytest.fixture
+  - seeded_bundle.fixture_bundle
+  - tmp_path_factory.mktemp
+- name: CASE_IDS
+  kind: const
+  description: ''
+  references: []
+- name: test_the_positive_control_the_honest_bundle_reaches_the_honest_verdict
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - seeded_bundle.HONEST
+  - seeded_defects.control
+  calls:
+  - bundle.verify
+  - seeded_defects.control
+- name: test_each_seeded_defect_is_caught_at_the_expected_level_with_its_own_code
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - seeded_defects.CASES
+  - pytest.mark
+  - seeded_defects.run_case
+  calls:
+  - seeded_defects.run_case
+- name: test_the_honest_bundle_has_none_of_the_findings_the_defect_causes
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - seeded_defects.CASES
+  - pytest.mark
+  - seeded_defects._codes
+  calls:
+  - bundle.verify
+  - seeded_defects._codes
+- name: test_all_cases_run_together_and_the_harness_reports_ok
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - seeded_defects.CASES
+  - seeded_bundle.HONEST
+  - seeded_defects.run_all
+  calls:
+  - seeded_defects.run_all
+- name: test_the_harness_does_not_change_the_bundle_or_the_checkout
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - seeded_bundle.HONEST
+  - seeded_defects.run_all
+  calls:
+  - seeded_defects.run_all
+- name: test_the_cases_have_unique_ids_and_name_a_code
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - seeded_defects.CASES
+  calls: []
+- name: test_r_a_swapped_object_is_invisible_to_the_count_only_check_and_caught_by_the_set_check
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.verify_l3
+  - seeded_defects.d_swap
+  calls:
+  - object_model.verify_l3
+  - seeded_defects.d_swap
+- name: test_r_the_set_difference_names_the_missing_and_the_unexpected_ids
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.verify_l3
+  - seeded_defects.d_swap
+  calls:
+  - object_model.verify_l3
+  - seeded_defects.d_swap
+- name: test_l3_is_partial_not_pass_when_the_rust_side_has_no_independent_inventory
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - bundle.verify
+- name: test_l3_is_partial_when_go_was_only_counted
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - bundle.verify
+- name: test_l3_is_never_pass_while_anything_is_unproven
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - bundle.verify
+- name: test_the_independent_rust_enumeration_refuses_what_it_cannot_name
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.independent_rust_free_functions
+  calls:
+  - object_model.independent_rust_free_functions
+- name: test_the_independent_rust_enumeration_skips_test_items_and_nested_fns
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.independent_rust_free_functions
+  calls:
+  - object_model.independent_rust_free_functions
+- name: test_l2_is_only_partial_when_the_values_were_not_re_derived
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - bundle.verify
+- name: test_the_rederivation_agrees_with_the_builder_on_every_real_object
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model._cmp_cov
+  calls:
+  - object_model._cmp_cov
+- name: layouts
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_two_independent_algorithms_agree_on_the_edge_layouts
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  - object_model._cmp_cov
+  - object_model.derive_go_coverage
+  - object_model.go_objects
+  calls:
+  - object_model._cmp_cov
+  - object_model.derive_go_coverage
+  - object_model.go_objects
+- name: test_the_rederivation_sees_a_value_that_the_builder_and_a_forger_agree_on_wrongly
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - seeded_defects.d_tamper_resealed
+  calls:
+  - bundle.verify
+  - seeded_defects.d_tamper_resealed
+- name: test_the_independent_go_enumeration_equals_the_inventory_on_the_real_source
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_independent_go_enumeration_on_a_tricky_source
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.independent_go_ids
+  calls:
+  - object_model.independent_go_ids
+- name: test_a_single_run_is_never_stable_and_twenty_identical_runs_are
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.MEASURED
+  - object_model.STABLE_MIN_RUNS
+  - seeded_defects.reseal
+  - object_model.stability
+  - seeded_bundle.fixture_bundle
+  calls:
+  - object_model.stability
+  - one.verify
+  - seeded_bundle.fixture_bundle
+  - seeded_defects.reseal
+- name: test_nineteen_identical_runs_are_not_enough
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.STABLE_MIN_RUNS
+  - object_model.MEASURED
+  - seeded_bundle.fixture_bundle
+  calls:
+  - seeded_bundle.fixture_bundle
+- name: test_a_stable_claim_from_too_few_runs_is_rejected
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.verify_l1
+  - seeded_defects.d_single_run
+  calls:
+  - object_model.verify_l1
+  - seeded_defects.d_single_run
+- name: test_the_nondeterministic_object_is_not_measured_and_makes_the_evidence_not_stable
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.stability
+  - object_model.UNVERIFIABLE
+  - seeded_defects.d_nondeterministic
+  calls:
+  - object_model.stability
+  - seeded_defects.d_nondeterministic
+- name: SCRATCH_RUNNER
+  kind: const
+  description: ''
+  references: []
+- name: TEETH
+  kind: const
+  description: ''
+  references: []
+- name: scratch
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: run_scratch
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_scratch_copy_is_green_before_any_check_is_removed
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_harness_goes_red_when_a_check_of_the_verifier_is_removed
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls:
+  - p.read_text
+  - p.write_text
+  - src.count
+  - src.replace
+- name: _go_inv_and_blocks
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_r_f1_runs_and_determinism_are_part_of_the_comparison
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model._cmp_cov
+  - object_model.MEASURED
+  calls:
+  - object_model._cmp_cov
+- name: test_r_f1_the_derived_runs_are_counted_from_the_bound_profiles
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.derive_go_coverage
+  - object_model.STABLE_MIN_RUNS
+  calls:
+  - _go_inv_and_blocks
+  - object_model.derive_go_coverage
+- name: test_f1_the_forged_stability_passes_l1_and_is_caught_only_by_l2
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - seeded_defects.d_forged_stability
+  calls:
+  - bundle.verify
+  - seeded_defects.d_forged_stability
+- name: _pins
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_n_a8_the_honest_record_with_the_right_pins_is_accepted
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - bundle.verify
+- name: test_n_a8_without_pins_the_tools_are_not_checked_and_that_is_not_a_pass
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.verify_tools
+  calls:
+  - object_model.verify_tools
+- name: test_n_a8_unusable_and_unverifiable_name_the_tool
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - seeded_defects.d_tool_missing
+  - seeded_defects.d_tool_modified
+  calls:
+  - bundle.verify
+  - seeded_defects.d_tool_missing
+  - seeded_defects.d_tool_modified
+- name: test_n_a8_unusable_wins_over_unverifiable
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.verify_tools
+  calls:
+  - object_model.verify_tools
+- name: test_n_a8_a_bad_pin_file_is_an_error_not_an_empty_pin_set
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  - object_model.load_tool_pins
+  - object_model.ModelError
+  - pytest.raises
+  calls:
+  - f.write_text
+  - object_model.load_tool_pins
+  - pytest.raises
+- name: test_n_a8_the_command_line_exits_non_zero_for_a_modified_tool
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.main
+  - seeded_defects.d_tool_modified
+  calls:
+  - _pins
+  - object_model.main
+  - seeded_defects.d_tool_modified
+- name: test_r_a8_the_real_pin_file_matches_the_tools_the_workflow_records
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - object_model.load_tool_pins
+  calls:
+  - object_model.load_tool_pins

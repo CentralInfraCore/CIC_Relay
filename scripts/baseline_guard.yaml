@@ -1,0 +1,53 @@
+---
+module: baseline_guard
+description: 'Guard the mutation ratchet baseline: it may only get stricter. The baseline
+  (.mutation-baseline.json) lists the packages that were below 90 when it was taken,
+  with what they achieved. Without a guard, a pull request could lower an entry, or
+  add one for a weak new package, and the gate would pass. This compares the baseline
+  of the pull request with the one of its base: * an entry may be removed (that package
+  then has to reach 90: stricter); * an entry may be raised; * an entry must not be
+  lowered, on efficacy or on mutant coverage; * an entry must not be added for a package
+  that has none on the base (a new package starts at 90, the baseline is not a way
+  around that); * the file must exist and be well formed. The workflow runs this script,
+  and scripts/gremlins_gate.py it imports, from the BASE commit, so the pull request
+  cannot weaken the guard it is judged by. usage: baseline_guard.py --base BASE.json
+  --head HEAD.json'
+tags:
+- core
+- loader
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: EPS
+  kind: const
+  description: ''
+  references: []
+- name: load
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - ValueError
+  - e.get
+  - pkgs.items
+- name: check
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.thresholds
+  calls:
+  - gremlins_gate.thresholds
+  - head.items
+  - problems.append
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - ap.add_argument
+  - ap.parse_args

@@ -765,3 +765,149 @@ def test_gremlins_gate_reports_a_failing_and_a_garbled_package(tmp_path):
     assert r.returncode == 1
     rows = {x["pkg"]: x["status"] for x in json.loads(report.read_text())["packages"]}
     assert rows == {"./weak": "fail", "./bad": "unparseable"}
+
+
+# --- PR-06 A.8: every tool that decides a quality verdict is the pinned one (fail closed) -----------------------
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+PIN_FILE = os.path.join(REPO_ROOT, ".measurement-tools.json")
+GREMLINS = "v0.6.0 h1:3G2ROO0I3q4bb5bxElQIUITTuEbl1iOfVYFqunGwrJI="
+
+
+def _check_tools(*tools, pins=PIN_FILE):
+    argv = [sys.executable, GATE, "check-tools", "--pins", pins]
+    for t in tools:
+        argv += ["--tool", t]
+    return subprocess.run(argv, capture_output=True, text=True)
+
+
+def test_check_tools_accepts_the_pinned_versions_and_names_them():
+    r = _check_tools("go=go1.26.11", f"gremlins={GREMLINS}")
+    assert r.returncode == 0, r.stderr
+    assert "tools pinned: go=go1.26.11" in r.stdout
+
+
+@pytest.mark.parametrize(
+    "tool, code, word",
+    [
+        ("go=go1.26.10", "TOOL_UNUSABLE", "UNUSABLE"),
+        ("rustc=1.96.0", "TOOL_UNUSABLE", "UNUSABLE"),
+        ("cargo-mutants=27.1.1", "TOOL_UNUSABLE", "UNUSABLE"),
+        ("cargo-llvm-cov=0.9.2", "TOOL_UNUSABLE", "UNUSABLE"),
+        (f"gremlins=v0.6.0 h1:{'A' * 43}=", "TOOL_UNUSABLE", "UNUSABLE"),
+        ("gremlins=", "TOOL_UNVERIFIABLE", "UNVERIFIABLE"),
+        ("go=unknown", "TOOL_UNVERIFIABLE", "UNVERIFIABLE"),
+        ("mystery=1.0", "TOOL_NOT_PINNED", "UNVERIFIABLE"),
+    ],
+)
+def test_check_tools_rejects_a_modified_missing_unknown_or_unpinned_tool(
+    tool, code, word
+):
+    r = _check_tools(tool)
+    assert r.returncode == 1
+    assert f"[{code}]" in r.stdout and word in r.stderr
+
+
+def test_check_tools_with_no_tool_is_an_error_not_a_pass():
+    r = _check_tools()
+    assert r.returncode == 1 and "nothing was checked" in r.stderr
+
+
+def test_check_tools_one_bad_tool_among_good_ones_still_rejects():
+    r = _check_tools("go=go1.26.11", "rustc=9.9.9")
+    assert r.returncode == 1 and "rustc" in r.stdout
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "{}",
+        "not json",
+        '{"schema": "measurement-tools/1", "tools": {}}',
+        '{"schema": "measurement-tools/9", "tools": {"go": "1"}}',
+        '{"schema": "measurement-tools/1", "tools": {"go": "1"}, "record_tools": ["nope"]}',
+    ],
+)
+def test_check_tools_a_bad_pin_file_is_an_error_not_an_empty_pin_set(tmp_path, content):
+    f = tmp_path / "pins.json"
+    f.write_text(content)
+    r = _check_tools("go=1", pins=str(f))
+    assert r.returncode == 1 and "::error::" in r.stderr
+
+
+def test_the_pins_agree_with_what_the_workflows_install():
+    """A pin that drifts from the version the workflows set up would fail every run (or, worse, pin nothing)."""
+    import glob
+    import re
+
+    pins = qg.load_tool_pins(PIN_FILE)["tools"]
+    assert pins["rustc"] in open(os.path.join(REPO_ROOT, "rust-toolchain.toml")).read()
+    for wf in glob.glob(os.path.join(REPO_ROOT, ".github/workflows/*.yml")):
+        text = open(wf).read()
+        for v in re.findall(r'go-version: "([^"]+)"', text):
+            assert (
+                f"go{v}" == pins["go"]
+            ), f"{os.path.basename(wf)}: Go {v} is not pinned"
+        for v in re.findall(r"gremlins/cmd/gremlins@(\S+)", text):
+            assert pins["gremlins"].startswith(v + " "), os.path.basename(wf)
+
+
+JOBS_WITH_TOOLS = {
+    # workflow: (job, tools its check-tools step must declare)
+    "mutation-pr.yml": [
+        ("plan", {"rustc", "cargo-mutants"}),
+        ("go", {"go", "gremlins"}),
+        ("rust", {"rustc", "cargo-mutants"}),
+    ],
+    "mutation.yml": [
+        ("mutation-go", {"go", "gremlins"}),
+        ("mutation-rust", {"rustc", "cargo-mutants"}),
+    ],
+    "nightly.yml": [
+        ("plan", {"rustc", "cargo-mutants"}),
+        ("go", {"go", "gremlins"}),
+        ("rust", {"rustc", "cargo-mutants"}),
+    ],
+    "verify.yml": [("coverage", {"go"}), ("rust", {"rustc", "cargo-llvm-cov"})],
+}
+
+
+@pytest.mark.parametrize(
+    "wf, job, tools",
+    [(w, j, t) for w, jobs in JOBS_WITH_TOOLS.items() for j, t in jobs],
+)
+def test_every_job_that_measures_checks_its_tools_before_it_measures(wf, job, tools):
+    import re
+
+    text = open(os.path.join(REPO_ROOT, ".github/workflows", wf)).read()
+    body = re.search(
+        rf"\n  {re.escape(job)}:\n(.*?)(?=\n  [a-z][a-z-]*:\n|\Z)", text, re.S
+    )
+    assert body, f"{wf}: no job {job!r}"
+    body = body.group(1)
+    step = re.search(
+        r"- name: Check the measuring tools \(fail closed\)\n(?:        if: [^\n]*\n)?        run: \|\n(.*?)(?=\n      - |\n      #|\Z)",
+        body,
+        re.S,
+    )
+    assert step, f"{wf}/{job}: no fail-closed tool check"
+    declared = set(re.findall(r'--tool "([a-z+-]+)=', step.group(1)))
+    assert declared == tools, f"{wf}/{job}: declares {declared}, must declare {tools}"
+    assert "check-tools --pins .measurement-tools.json" in step.group(1)
+    # the check comes before the first step that measures (the check step itself is left out of the search)
+    rest = body.replace(step.group(0), "")
+    first_measure = min(
+        (
+            rest.find(m)
+            for m in (
+                "gremlins_gate.py",
+                "cargo mutants",
+                "cargo llvm-cov",
+                " go test",
+                "\ngo test",
+            )
+            if rest.find(m) != -1
+        ),
+        default=len(rest),
+    )
+    assert body.find(step.group(0)) <= first_measure or job == "plan"

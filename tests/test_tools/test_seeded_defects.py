@@ -330,6 +330,13 @@ ctl = sd.control(b, sb.HONEST)
 print(json.dumps({'control': ctl['ok'], 'cases': {c.id: sd.run_case(b, c)['caught'] for c in sd.CASES}}))
 """
 
+# the checks that live in quality_gate.py (shared with the CI jobs), the others are in object_model.py
+QG_TEETH = {
+    "the pinned-version comparison",
+    "the unpinned-tool check",
+    "the missing-tool check",
+}
+
 # (check removed on the scratch copy, the cases that must then be seen as NOT caught)
 TEETH = [
     (
@@ -364,14 +371,14 @@ TEETH = [
     ),
     (
         "the unpinned-tool check",
-        "for name in sorted(set(declared) - set(pins)):",
-        "for name in []:",
+        "if want is None:",
+        "if False:",
         {"P8.d"},
     ),
     (
         "the missing-tool check",
-        "if not recorded or str(recorded).strip().lower() in (",
-        "if False and str(recorded).strip().lower() in (",
+        "if name not in declared:",
+        "if False:",
         {"P8.c"},
     ),
     (
@@ -463,11 +470,13 @@ def test_the_harness_goes_red_when_a_check_of_the_verifier_is_removed(
     tmp_path, label, anchor, replacement, expected_missed
 ):
     d = scratch(tmp_path, "weakened")
-    p = d / "scripts/object_model.py"
+    # the check lives in object_model.py, or in quality_gate.py for the shared tool-pin logic
+    target = "quality_gate.py" if label in QG_TEETH else "object_model.py"
+    p = d / "scripts" / target
     src = p.read_text()
     assert (
         src.count(anchor) == 1
-    ), f"the anchor of {label!r} is not in object_model.py exactly once: the teeth test has lost its subject"
+    ), f"the anchor of {label!r} is not in {target} exactly once: the teeth test has lost its subject"
     p.write_text(src.replace(anchor, replacement))
     out = run_scratch(d)
     missed = {k for k, v in out["cases"].items() if not v}
@@ -573,7 +582,7 @@ def test_n_a8_unusable_and_unverifiable_name_the_tool(bundle):
 
 
 def test_n_a8_unusable_wins_over_unverifiable():
-    pins = {"a": "1", "b": "1"}
+    pins = {"tools": {"a": "1", "b": "1"}, "record_tools": None}
     rec = {"tools": {"a": "2"}}  # a: wrong version, b: missing
     r = om.verify_tools(rec, pins)
     assert r["verdict"] == "UNUSABLE" and len(r["findings"]) == 2
@@ -615,7 +624,7 @@ def test_n_a8_the_command_line_exits_non_zero_for_a_modified_tool(tmp_path, bund
 
 
 def test_r_a8_the_real_pin_file_matches_the_tools_the_workflow_records():
-    pins = om.load_tool_pins(os.path.join(ROOT, ".measurement-tools.json"))
+    pins = om.load_tool_pins(os.path.join(ROOT, ".measurement-tools.json"))["tools"]
     wf = open(os.path.join(ROOT, ".github/workflows/object-evidence.yml")).read()
     assert "--tool-pins .measurement-tools.json" in wf
     for tool in ("go", "rustc", "cargo-llvm-cov", "cargo-mutants", "objinventory"):
