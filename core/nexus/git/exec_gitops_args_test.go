@@ -972,3 +972,119 @@ func TestPushDestinationAmbiguousOnTheRemoteIsRefused(t *testing.T) {
 	require.NoError(t, ops.Push(ctx, "r", "origin", "main:release/3"), "updating the exact existing ref is fine")
 	assert.Equal(t, run(work, "rev-parse", "main"), run(bare, "rev-parse", "refs/heads/release/3"))
 }
+
+// F10.5: the object id that is pushed is itself a name git may resolve. A tag called exactly like the 40 hex
+// digits of the authorised commit, pointing at another commit, wins the lookup when "<oid>:<dst>" is
+// pushed (git matches the source against local ref names before it reads it as an object id). The source is
+// handed over as "<oid>^{object}", which is not a ref name. SHA-256 repositories use the same path.
+func TestPushObjectIdIsNotReadAsARefName(t *testing.T) {
+	for _, format := range []string{"sha1", "sha256"} {
+		t.Run(format, func(t *testing.T) {
+			ctx := context.Background()
+			work := filepath.Join(t.TempDir(), "work")
+			bare := filepath.Join(t.TempDir(), "bare.git")
+			run := func(dir string, args ...string) string {
+				out, err := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...).CombinedOutput()
+				require.NoError(t, err, string(out))
+				return strings.TrimSpace(string(out))
+			}
+			run(t.TempDir(), "init", "--bare", "-b", "main", "--object-format="+format, bare)
+			run(t.TempDir(), "init", "-b", "main", "--object-format="+format, work)
+			run(work, "commit", "--allow-empty", "-m", "authorised")
+			authorised := run(work, "rev-parse", "main")
+			run(work, "commit", "--allow-empty", "-m", "the other one")
+			other := run(work, "rev-parse", "HEAD")
+			run(work, "branch", "feature", authorised)              // the exact ref the guest names: its commit is `authorised`
+			run(work, "update-ref", "refs/tags/"+authorised, other) // a TAG named like the authorised commit id, pointing elsewhere
+			run(work, "remote", "add", "origin", bare)
+			require.NotEqual(t, authorised, other)
+
+			// Precondition: this git really does read "<oid>:<dst>" as the tag's name.
+			run(work, "push", "origin", authorised+":refs/heads/probe")
+			require.Equal(t, other, run(bare, "rev-parse", "refs/heads/probe"), "precondition: pushing the bare oid pushes the lookalike tag's commit")
+			run(bare, "update-ref", "-d", "refs/heads/probe")
+
+			reg := NewRepoRegistry()
+			reg.Register("r", work)
+			ops := NewExecGitOps(reg)
+			ops.allowLocalSources = true
+			require.NoError(t, ops.Push(ctx, "r", "origin", "feature:release/5"))
+			assert.Equal(t, authorised, run(bare, "rev-parse", "refs/heads/release/5"), "the authorised commit was pushed, not the tag's")
+		})
+	}
+}
+
+// F10.6: a remote's fetch and push URLs may differ, and a push goes to every push URL. The lookalike check
+// and the push are made against the effective PUSH URL(s) themselves, all checked before any is written.
+func TestPushChecksTheEndpointItWritesTo(t *testing.T) {
+	ctx := context.Background()
+	ops, work, _ := argTestOps(t)
+	run := func(dir string, args ...string) string {
+		out, err := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...).CombinedOutput()
+		require.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	newBare := func() string {
+		b := filepath.Join(t.TempDir(), "b.git")
+		run(t.TempDir(), "init", "--bare", "-b", "main", b)
+		return b
+	}
+	fetchRepo, pushClean, pushClean2, pushTrap := newBare(), newBare(), newBare(), newBare()
+	run(work, "push", pushTrap, "main:refs/heads/refs/heads/release/1") // the trap, only on a PUSH endpoint
+	trap := run(pushTrap, "rev-parse", "refs/heads/refs/heads/release/1")
+	run(work, "commit", "--allow-empty", "-m", "newer")
+
+	// The fetch URL is clean and the push URL is the trap: checking `origin` (the fetch URL) sees nothing.
+	run(work, "remote", "set-url", "origin", fetchRepo)
+	run(work, "remote", "set-url", "--push", "origin", pushTrap)
+	err := ops.Push(ctx, "r", "origin", "main:release/1")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidArgument)
+	assert.Contains(t, err.Error(), "could be taken for")
+	assert.Equal(t, trap, run(pushTrap, "rev-parse", "refs/heads/refs/heads/release/1"), "the lookalike on the push endpoint was not touched")
+	assert.Empty(t, run(fetchRepo, "for-each-ref"), "the fetch endpoint was not written to")
+
+	// Several push URLs: every one is checked before any is written.
+	resetPush := func() { _ = exec.Command("git", "-C", work, "config", "--unset-all", "remote.origin.pushurl").Run() }
+	resetPush()
+	run(work, "remote", "set-url", "--push", "origin", pushClean)
+	run(work, "remote", "set-url", "--push", "--add", "origin", pushTrap)
+	err = ops.Push(ctx, "r", "origin", "main:release/1")
+	require.Error(t, err)
+	assert.Empty(t, run(pushClean, "for-each-ref"), "the clean endpoint was not written either: the check comes first")
+	assert.Equal(t, trap, run(pushTrap, "rev-parse", "refs/heads/refs/heads/release/1"))
+
+	// Two clean push URLs: both are written, as git would.
+	resetPush()
+	run(work, "remote", "set-url", "--push", "origin", pushClean)
+	run(work, "remote", "set-url", "--push", "--add", "origin", pushClean2)
+	require.NoError(t, ops.Push(ctx, "r", "origin", "main:release/1"))
+	head := run(work, "rev-parse", "main")
+	assert.Equal(t, head, run(pushClean, "rev-parse", "refs/heads/release/1"))
+	assert.Equal(t, head, run(pushClean2, "rev-parse", "refs/heads/release/1"))
+}
+
+// A SHA-256 repository writes extensions.objectformat; that key, and only that one under extensions.*, is
+// part of the allowlist.
+func TestSHA256RepositoryPassesTheAuditButOtherExtensionsDoNot(t *testing.T) {
+	ctx := context.Background()
+	dir := filepath.Join(t.TempDir(), "w")
+	out, err := exec.Command("git", "init", "-q", "-b", "main", "--object-format=sha256", dir).CombinedOutput()
+	require.NoError(t, err, string(out))
+	reg := NewRepoRegistry()
+	reg.Register("r", dir)
+	ops := NewExecGitOps(reg)
+	require.NoError(t, ops.auditRepoConfig(ctx, dir))
+	for key, val := range map[string]string{
+		"extensions.worktreeConfig":  "true",
+		"extensions.partialClone":    "origin",
+		"extensions.noop":            "1",
+		"extensions.preciousObjects": "true",
+	} {
+		out, err := exec.Command("git", "-C", dir, "config", "--local", key, val).CombinedOutput()
+		require.NoError(t, err, string(out))
+		assert.ErrorIs(t, ops.auditRepoConfig(ctx, dir), ErrInvalidArgument, key)
+		out, err = exec.Command("git", "-C", dir, "config", "--local", "--unset", key).CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
+}

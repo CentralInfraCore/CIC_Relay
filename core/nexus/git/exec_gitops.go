@@ -143,24 +143,36 @@ func (e *ExecGitOps) Push(ctx context.Context, repoID, remote, refspec string) e
 	if err := e.auditRepoConfig(ctx, localPath); err != nil {
 		return err
 	}
-	if err := e.requireConfiguredRemote(ctx, localPath, remote, "push"); err != nil {
+	targets, err := e.configuredRemoteTargets(ctx, localPath, remote, "push")
+	if err != nil {
 		return err
 	}
 	// A qualified name is still not an exact reference to git: it falls back to other ref names ("refs/heads/x"
 	// is found as the tag "refs/tags/refs/heads/x" when no such branch exists), on both ends of a push. So
 	// neither end is handed to git as a name that git may reinterpret:
 	//   - the source is resolved HERE, to the exact ref (git show-ref --verify takes no fallbacks) and its
-	//     object id; the object id is what is pushed, so what was checked is what is read;
+	//     object id; the object id is pushed as "<oid>^{object}", which can not be mistaken for a ref NAME
+	//     either (a tag called like the 40 hex digits of a commit would otherwise win over the commit);
 	//   - the destination is checked against the remote's own refs: if the remote holds any other ref that
-	//     git could take the destination for, the push is refused.
+	//     git could take the destination for, the push is refused;
+	//   - that check is made against, and the push is made to, the effective PUSH URL(s) themselves, not the
+	//     remote's name: a remote's fetch and push URLs may differ, and the endpoint that is checked must be
+	//     the endpoint that is written to. Every endpoint is checked before any is written.
 	oid, err := e.resolveExactRef(ctx, localPath, src)
 	if err != nil {
 		return err
 	}
-	if err := e.requireUnambiguousRemoteRef(ctx, localPath, remote, dst); err != nil {
-		return err
+	for _, target := range targets {
+		if err := e.requireUnambiguousRemoteRef(ctx, localPath, target, dst); err != nil {
+			return err
+		}
 	}
-	return e.runGit(ctx, localPath, "push", "--", remote, oid+":"+dst)
+	for _, target := range targets {
+		if err := e.runGit(ctx, localPath, "push", "--", target, oid+"^{object}:"+dst); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // resolveExactRef returns the object id of the local ref named exactly refname ("refs/heads/..." or
@@ -244,6 +256,9 @@ func parsePortcelainStatus(output string) []StatusEntry {
 // "git clone" itself writes, plus remote and branch tracking.
 var repoConfigAllowed = []*regexp.Regexp{
 	regexp.MustCompile(`^core\.(repositoryformatversion|filemode|bare|logallrefupdates|ignorecase|precomposeunicode|symlinks)$`),
+	// The hash algorithm of a SHA-256 repository (git init --object-format=sha256 writes it). Nothing else
+	// under extensions.* is accepted: worktreeconfig, partialclone, refstorage and the rest change what git reads or runs.
+	regexp.MustCompile(`^extensions\.objectformat$`),
 	regexp.MustCompile(`^remote\.[A-Za-z0-9][A-Za-z0-9._-]*\.(url|pushurl|fetch)$`),
 	regexp.MustCompile(`^branch\.[^\x00]+\.(remote|merge)$`),
 	regexp.MustCompile(`^user\.(name|email)$`),
@@ -295,15 +310,21 @@ func checkGlobalConfigFile(path string) error {
 // A syntactically valid name is not evidence that the remote is configured (git would read an unknown
 // name as a path or a URL), so the repository is asked.
 func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, name, op string) error {
+	_, err := e.configuredRemoteTargets(ctx, localPath, name, op)
+	return err
+}
+
+// configuredRemoteTargets is requireConfiguredRemote that also returns the validated effective target URLs.
+func (e *ExecGitOps) configuredRemoteTargets(ctx context.Context, localPath, name, op string) ([]string, error) {
 	if err := validateRemoteName(name); err != nil {
-		return err
+		return nil, err
 	}
 	if err := e.auditRepoConfig(ctx, localPath); err != nil {
-		return err
+		return nil, err
 	}
 	out, err := e.runGitOutput(ctx, localPath, "remote")
 	if err != nil {
-		return fmt.Errorf("list remotes: %w", err)
+		return nil, fmt.Errorf("list remotes: %w", err)
 	}
 	configured := false
 	for _, line := range strings.Split(out, "\n") {
@@ -312,9 +333,9 @@ func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, nam
 		}
 	}
 	if !configured {
-		return fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
+		return nil, fmt.Errorf("%w: remote %q is not configured in this repository", ErrInvalidArgument, clip(name))
 	}
-	return e.validateRemoteTargets(ctx, localPath, name, op)
+	return e.remoteTargets(ctx, localPath, name, op)
 }
 
 // validateRemoteTargets checks the targets of a remote for one operation, at two levels that must agree:
@@ -329,6 +350,14 @@ func (e *ExecGitOps) requireConfiguredRemote(ctx context.Context, localPath, nam
 // something else or a value contains a line break, and either way the operation is refused. The URL policy
 // is applied to what git will contact, not only to what was written down.
 func (e *ExecGitOps) validateRemoteTargets(ctx context.Context, localPath, name, op string) error {
+	_, err := e.remoteTargets(ctx, localPath, name, op)
+	return err
+}
+
+// remoteTargets is validateRemoteTargets that also returns the effective target URLs it validated, in the
+// order git lists them. A caller that acts on a target uses THESE strings, not the remote's name, so that
+// the endpoint that was checked is the endpoint that is used.
+func (e *ExecGitOps) remoteTargets(ctx context.Context, localPath, name, op string) ([]string, error) {
 	var stored []string
 	var getArgs []string
 	var err error
@@ -344,35 +373,35 @@ func (e *ExecGitOps) validateRemoteTargets(ctx context.Context, localPath, name,
 		}
 		getArgs = []string{"remote", "get-url", "--push", "--all", "--", name}
 	default:
-		return fmt.Errorf("%w: unknown remote operation %q", ErrInvalidArgument, clip(op))
+		return nil, fmt.Errorf("%w: unknown remote operation %q", ErrInvalidArgument, clip(op))
 	}
 	if err != nil {
-		return fmt.Errorf("read remote %s targets: %w", op, err)
+		return nil, fmt.Errorf("read remote %s targets: %w", op, err)
 	}
 	if len(stored) == 0 {
-		return fmt.Errorf("%w: remote %q has no %s target URL", ErrInvalidArgument, clip(name), op)
+		return nil, fmt.Errorf("%w: remote %q has no %s target URL", ErrInvalidArgument, clip(name), op)
 	}
 	for _, v := range stored {
 		if err := validateCloneURL(v, e.allowLocalSources); err != nil {
-			return fmt.Errorf("remote %q has a stored %s URL that is not allowed: %w", clip(name), op, err)
+			return nil, fmt.Errorf("remote %q has a stored %s URL that is not allowed: %w", clip(name), op, err)
 		}
 	}
 
 	raw, err := e.runGitOutput(ctx, localPath, getArgs...)
 	if err != nil {
-		return fmt.Errorf("read effective %s targets: %w", op, err)
+		return nil, fmt.Errorf("read effective %s targets: %w", op, err)
 	}
 	raw = strings.TrimSuffix(raw, "\n") // exactly the one terminator git prints; nothing else is removed
 	effective := strings.Split(raw, "\n")
 	if len(effective) != len(stored) {
-		return fmt.Errorf("%w: remote %q: the %s targets git will use differ from the stored ones", ErrInvalidArgument, clip(name), op)
+		return nil, fmt.Errorf("%w: remote %q: the %s targets git will use differ from the stored ones", ErrInvalidArgument, clip(name), op)
 	}
 	for _, v := range effective {
 		if err := validateCloneURL(v, e.allowLocalSources); err != nil {
-			return fmt.Errorf("remote %q has an effective %s target that is not allowed: %w", clip(name), op, err)
+			return nil, fmt.Errorf("remote %q has an effective %s target that is not allowed: %w", clip(name), op, err)
 		}
 	}
-	return nil
+	return effective, nil
 }
 
 // remoteConfigValues returns every value of a multi-valued key as NUL-delimited records (git config -z),
