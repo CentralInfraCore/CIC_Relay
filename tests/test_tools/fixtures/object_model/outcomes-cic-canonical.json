@@ -1,0 +1,446 @@
+{
+ "cargo_mutants_version": "27.1.0",
+ "caught": 11,
+ "missed": 0,
+ "outcomes": [
+  {
+   "diff_path": null,
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": "Baseline",
+   "summary": "Success"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_25_col_5.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_number",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 34
+       },
+       "start": {
+        "column": 1,
+        "line": 17
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with None",
+     "package": "cic-canonical",
+     "replacement": "None",
+     "span": {
+      "end": {
+       "column": 29,
+       "line": 33
+      },
+      "start": {
+       "column": 5,
+       "line": 25
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_25_col_5_001.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_number",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 34
+       },
+       "start": {
+        "column": 1,
+        "line": 17
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with Some(String::new())",
+     "package": "cic-canonical",
+     "replacement": "Some(String::new())",
+     "span": {
+      "end": {
+       "column": 29,
+       "line": 33
+      },
+      "start": {
+       "column": 5,
+       "line": 25
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_25_col_5_002.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_number",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 34
+       },
+       "start": {
+        "column": 1,
+        "line": 17
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:25:5: replace canonical_number -> Option<String> with Some(\"xyzzy\".into())",
+     "package": "cic-canonical",
+     "replacement": "Some(\"xyzzy\".into())",
+     "span": {
+      "end": {
+       "column": 29,
+       "line": 33
+      },
+      "start": {
+       "column": 5,
+       "line": 25
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_40_col_5.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_integer",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 56
+       },
+       "start": {
+        "column": 1,
+        "line": 36
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:40:5: replace canonical_integer -> Option<String> with None",
+     "package": "cic-canonical",
+     "replacement": "None",
+     "span": {
+      "end": {
+       "column": 7,
+       "line": 55
+      },
+      "start": {
+       "column": 5,
+       "line": 40
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_40_col_5_001.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_integer",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 56
+       },
+       "start": {
+        "column": 1,
+        "line": 36
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:40:5: replace canonical_integer -> Option<String> with Some(String::new())",
+     "package": "cic-canonical",
+     "replacement": "Some(String::new())",
+     "span": {
+      "end": {
+       "column": 7,
+       "line": 55
+      },
+      "start": {
+       "column": 5,
+       "line": 40
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_40_col_5_002.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_integer",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 56
+       },
+       "start": {
+        "column": 1,
+        "line": 36
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:40:5: replace canonical_integer -> Option<String> with Some(\"xyzzy\".into())",
+     "package": "cic-canonical",
+     "replacement": "Some(\"xyzzy\".into())",
+     "span": {
+      "end": {
+       "column": 7,
+       "line": 55
+      },
+      "start": {
+       "column": 5,
+       "line": 40
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_44_col_26.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_integer",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 56
+       },
+       "start": {
+        "column": 1,
+        "line": 36
+       }
+      }
+     },
+     "genre": "BinaryOperator",
+     "name": "cic-canonical/src/lib.rs:44:26: replace || with && in canonical_integer",
+     "package": "cic-canonical",
+     "replacement": "&&",
+     "span": {
+      "end": {
+       "column": 28,
+       "line": 44
+      },
+      "start": {
+       "column": 26,
+       "line": 44
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_44_col_29.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_integer",
+      "return_type": "-> Option<String>",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 56
+       },
+       "start": {
+        "column": 1,
+        "line": 36
+       }
+      }
+     },
+     "genre": "UnaryOperator",
+     "name": "cic-canonical/src/lib.rs:44:29: delete ! in canonical_integer",
+     "package": "cic-canonical",
+     "replacement": "",
+     "span": {
+      "end": {
+       "column": 30,
+       "line": 44
+      },
+      "start": {
+       "column": 29,
+       "line": 44
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_62_col_5.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_float",
+      "return_type": "-> String",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 68
+       },
+       "start": {
+        "column": 1,
+        "line": 58
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:62:5: replace canonical_float -> String with String::new()",
+     "package": "cic-canonical",
+     "replacement": "String::new()",
+     "span": {
+      "end": {
+       "column": 6,
+       "line": 67
+      },
+      "start": {
+       "column": 5,
+       "line": 62
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_62_col_5_001.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_float",
+      "return_type": "-> String",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 68
+       },
+       "start": {
+        "column": 1,
+        "line": 58
+       }
+      }
+     },
+     "genre": "FnValue",
+     "name": "cic-canonical/src/lib.rs:62:5: replace canonical_float -> String with \"xyzzy\".into()",
+     "package": "cic-canonical",
+     "replacement": "\"xyzzy\".into()",
+     "span": {
+      "end": {
+       "column": 6,
+       "line": 67
+      },
+      "start": {
+       "column": 5,
+       "line": 62
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "diff_path": "diff/cic-canonical__src__lib.rs_line_63_col_10.diff",
+   "log_path": "<elided>",
+   "phase_results": [],
+   "scenario": {
+    "Mutant": {
+     "file": "cic-canonical/src/lib.rs",
+     "function": {
+      "function_name": "canonical_float",
+      "return_type": "-> String",
+      "span": {
+       "end": {
+        "column": 2,
+        "line": 68
+       },
+       "start": {
+        "column": 1,
+        "line": 58
+       }
+      }
+     },
+     "genre": "BinaryOperator",
+     "name": "cic-canonical/src/lib.rs:63:10: replace == with != in canonical_float",
+     "package": "cic-canonical",
+     "replacement": "!=",
+     "span": {
+      "end": {
+       "column": 12,
+       "line": 63
+      },
+      "start": {
+       "column": 10,
+       "line": 63
+      }
+     }
+    }
+   },
+   "summary": "CaughtMutant"
+  }
+ ],
+ "timeout": 0,
+ "total_mutants": 11,
+ "unviable": 0
+}

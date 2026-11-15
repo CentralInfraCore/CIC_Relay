@@ -10,22 +10,69 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestResolveTrustMode_Default(t *testing.T) {
-	t.Setenv("CIC_TRUST_MODE", "")
-	mode := resolveTrustMode(newDiscardLogger())
-	assert.Equal(t, TrustModeDev, mode)
+func TestResolveTrustMode_Empty_Error(t *testing.T) {
+	for _, v := range []string{"", "   ", "\t"} {
+		t.Setenv("CIC_TRUST_MODE", v)
+		mode, err := resolveTrustMode()
+		require.Error(t, err, "value %q must not default to dev", v)
+		assert.Empty(t, mode)
+		assert.Contains(t, err.Error(), "CIC_TRUST_MODE")
+	}
+}
+
+func TestResolveTrustMode_Unset_Error(t *testing.T) {
+	t.Setenv("CIC_TRUST_MODE", "") // registers the restore of the original value
+	require.NoError(t, os.Unsetenv("CIC_TRUST_MODE"))
+	mode, err := resolveTrustMode()
+	require.Error(t, err)
+	assert.Empty(t, mode)
 }
 
 func TestResolveTrustMode_Dev(t *testing.T) {
 	t.Setenv("CIC_TRUST_MODE", "dev")
-	mode := resolveTrustMode(newDiscardLogger())
+	mode, err := resolveTrustMode()
+	require.NoError(t, err)
 	assert.Equal(t, TrustModeDev, mode)
 }
 
 func TestResolveTrustMode_Prod(t *testing.T) {
-	t.Setenv("CIC_TRUST_MODE", "prod")
-	mode := resolveTrustMode(newDiscardLogger())
+	t.Setenv("CIC_TRUST_MODE", " prod ")
+	mode, err := resolveTrustMode()
+	require.NoError(t, err)
 	assert.Equal(t, TrustModeProd, mode)
+}
+
+func TestBootstrapTrust_Unset_Error(t *testing.T) {
+	t.Setenv("CIC_TRUST_MODE", "")
+	mode, assets, err := bootstrapTrust(embeddedFS, newDiscardLogger())
+	require.Error(t, err)
+	assert.Empty(t, mode)
+	assert.Nil(t, assets, "no trust store may be handed out when the mode is unset")
+}
+
+func TestBootstrapTrust_Dev_LoadsTrustStore(t *testing.T) {
+	t.Setenv("CIC_TRUST_MODE", "dev")
+	mode, assets, err := bootstrapTrust(embeddedFS, newDiscardLogger())
+	require.NoError(t, err)
+	assert.Equal(t, TrustModeDev, mode)
+	assert.True(t, assets.TrustStoreLoaded)
+}
+
+func TestBootstrapTrust_Prod_EmptyBundle_Error(t *testing.T) {
+	bundlePath := filepath.Join(t.TempDir(), "empty.pem")
+	require.NoError(t, os.WriteFile(bundlePath, []byte("no certificates here\n"), 0600))
+	t.Setenv("CIC_TRUST_MODE", "prod")
+	t.Setenv("CIC_PLATFORM_CA_BUNDLE", bundlePath)
+	_, assets, err := bootstrapTrust(embeddedFS, newDiscardLogger())
+	require.Error(t, err, "a prod relay with an empty trust store must not start")
+	assert.Nil(t, assets)
+	assert.Contains(t, err.Error(), "no valid certificates")
+}
+
+func TestRequireTrustStore(t *testing.T) {
+	assert.Error(t, requireTrustStore(TrustModeProd, nil))
+	assert.Error(t, requireTrustStore(TrustModeProd, &PKIAssets{TrustStoreLoaded: false}))
+	assert.NoError(t, requireTrustStore(TrustModeProd, &PKIAssets{TrustStoreLoaded: true}))
 }
 
 func TestBootstrapPKI_DevMode_TrustStoreLoaded(t *testing.T) {

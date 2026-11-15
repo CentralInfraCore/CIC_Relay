@@ -186,7 +186,8 @@ services:
   # DEVELOPMENT ONLY. This service is not a production deployment pattern:
   #   - it mounts the host's docker socket, which gives the container the host daemon's reach
   #   - the HTTP API has no authentication and no TLS
-  #   - CIC_TRUST_MODE defaults to `dev`, which trusts the CA certificates embedded in the binary
+  #   - this file passes CIC_TRUST_MODE=dev unless overridden (the binary itself has no default),
+  #     which trusts the CA certificates embedded in the binary
   #   - without VAULT_TOKEN it starts with ProofTrace recording disabled
   # See SECURITY.md and the "Állapot és biztonsági helyzet" section of README.md.
   relay:

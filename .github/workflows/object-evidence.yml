@@ -1,0 +1,110 @@
+name: object-evidence
+
+# REPORT-ONLY. Builds the object-level evidence record (scripts/object_model.py, object-evidence/1):
+# which production function / method got which coverage, which mutation verdicts, and which fields are
+# UNVERIFIABLE and why. It then verifies the record at three separate levels (L1 integrity, L2 binding to
+# the inputs, L3 completeness against an independent enumeration). It is NOT a required check, it gates
+# nothing else, and nothing is skipped because of it. The coverage kind is statement (Go) or region (Rust):
+# there is no branch coverage here (the stable toolchain gives none), and nothing may be named so.
+# The mutation verdicts are not run here (they take a FULL run); the field is UNVERIFIABLE
+# (MEASUREMENT_MISSING) in this record and the PR-03 completeness check owns that evidence.
+on:
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: object-evidence-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  object-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.11"
+
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          rustup show active-toolchain || rustup toolchain install
+          rustup component add llvm-tools-preview
+
+      - name: Install cargo-llvm-cov and cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-mutants
+
+      - name: Measure (real tools, one directory of inputs)
+        env:
+          T: ${{ runner.temp }}/object-evidence
+        run: |
+          set -euo pipefail
+          mkdir -p "$T"
+          (cd tools/objinventory && go build -o "$T/objinventory" .)
+          # Go, root module: the production files of the scope, the cover profile of the whole module
+          python3 scripts/object_model.py scope-list --root . --scope .measurement-scope.json --lang go --class production > "$T/go-files.txt"
+          "$T/objinventory" $(cat "$T/go-files.txt") > "$T/go-inventory.json"
+          go test -count=1 -covermode=set -coverprofile="$T/go-cover.out" ./...
+          # Go, the separate goastdump module: its own inventory and profile
+          (cd tools/goastdump && "$T/objinventory" main.go > "$T/goastdump-inventory.json" \
+            && go test -count=1 -covermode=set -coverprofile="$T/goastdump-cover.out" ./...)
+          # Rust: the function-level export and the mutant listing (the exit status is checked by `set -e`)
+          cargo llvm-cov --all --locked --json --output-path "$T/llvm-cov.json"
+          cargo mutants --workspace --list --json > "$T/rust-list.json"
+          {
+            echo "go=$(go version | awk '{print $3}')"
+            echo "rustc=$(rustc --version | awk '{print $2}')"
+            echo "cargo-llvm-cov=$(cargo llvm-cov --version | awk '{print $2}')"
+            echo "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            echo "objinventory=objinventory/1"
+          } > "$T/tools.txt"
+          cat "$T/tools.txt"
+
+      - name: Build the evidence record
+        env:
+          T: ${{ runner.temp }}/object-evidence
+        run: |
+          set -euo pipefail
+          tools=()
+          while IFS= read -r line; do tools+=(--tool "$line"); done < "$T/tools.txt"
+          python3 scripts/object_model.py build --root . --scope .measurement-scope.json --out "$T/evidence.json" \
+            --go-unit "root,.,$T/go-inventory.json,$T/go-cover.out" \
+            --go-unit "goastdump,tools/goastdump,$T/goastdump-inventory.json,$T/goastdump-cover.out,detail" \
+            --llvm-cov "$T/llvm-cov.json" --rust-list "$T/rust-list.json" --rust-prefix "$PWD/" "${tools[@]}"
+
+      - name: Verify the record (L1 integrity, L2 binding to the inputs, L3 completeness)
+        env:
+          T: ${{ runner.temp }}/object-evidence
+        run: |
+          set -euo pipefail
+          python3 scripts/object_model.py verify --record "$T/evidence.json" --root . --scope .measurement-scope.json \
+            --rust-list "$T/rust-list.json" \
+            --input "go-inventory:root=$T/go-inventory.json" --input "go-coverprofile:root=$T/go-cover.out" \
+            --input "go-inventory:goastdump=$T/goastdump-inventory.json" --input "go-coverprofile:goastdump=$T/goastdump-cover.out" \
+            --input "llvm-cov-json=$T/llvm-cov.json" --input "rust-mutant-list=$T/rust-list.json" \
+            --input "scope=.measurement-scope.json" | tee "$T/verify.txt"
+
+      - name: Keep the record
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: object-evidence
+          path: |
+            ${{ runner.temp }}/object-evidence/evidence.json
+            ${{ runner.temp }}/object-evidence/verify.txt
+            ${{ runner.temp }}/object-evidence/tools.txt
+          if-no-files-found: warn
