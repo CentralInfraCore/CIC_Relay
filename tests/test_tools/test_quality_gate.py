@@ -249,7 +249,7 @@ def test_f2_what_fails_the_gate(tmp_path, summary, fails, capsys):
     text = capsys.readouterr().out
     assert (rc != 0) == fails, text
     assert (
-        "mutation-policy/1" in text and "planned=5" in text
+        "mutation-policy/2" in text and "planned=5" in text
     )  # the accounting is always shown
 
 

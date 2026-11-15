@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"centralrelay/core/nexus/crypto"
@@ -28,6 +29,19 @@ type StateRecorder interface {
 type GitStateRecorder struct {
 	RepoPath      string
 	CryptoService crypto.CryptoService
+
+	// mu serializes signAndCommit. The signed manifest binds the record to the
+	// parent commit read from HEAD, and the four record files have fixed names in
+	// one shared working directory, so two overlapping calls would sign the same
+	// parent, overwrite each other's files, or collide on the git index lock. The
+	// lock is held from the HEAD read until the commit is created.
+	//
+	// Contract: a single recorder instance per repository (single writer). Two
+	// instances, or two processes, on the same repository are NOT serialized by this
+	// lock and would need a file lock. A caller waits for the lock without regard to
+	// its context: the wait is bounded by the preceding record's Vault Sign call and git
+	// commands, and a context-aware wait would be a separate change.
+	mu sync.Mutex
 }
 
 // NewGitStateRecorder creates a new recorder that operates on the given repository path.
@@ -153,6 +167,9 @@ func (r *GitStateRecorder) signAndCommit(ctx context.Context, runID string, expe
 	if r.CryptoService == nil {
 		return "", fmt.Errorf("cryptoservice is not configured")
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	filesToWrite := make(map[string][]byte)
 	var err error
 
@@ -167,11 +184,12 @@ func (r *GitStateRecorder) signAndCommit(ctx context.Context, runID string, expe
 
 	// The parent commit hash binds this record to its predecessor: it is part of
 	// the signed manifest, so the Vault signature covers the chain position — a
-	// tamper-evident signed chain. Empty only if there is no prior commit (never,
-	// since init() makes the .gitignore root).
+	// tamper-evident signed chain. There is always a prior commit (init() makes
+	// the .gitignore root), so a failed HEAD read is an error: signing an empty
+	// parent would put a record with a forged chain position into the audit log.
 	parent, err := r.getHeadHash()
 	if err != nil {
-		parent = ""
+		return "", fmt.Errorf("failed to read the parent commit: %w", err)
 	}
 	meta := map[string]interface{}{
 		"run_id":    runID,
