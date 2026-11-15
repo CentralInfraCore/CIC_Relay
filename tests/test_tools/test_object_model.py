@@ -245,11 +245,14 @@ def test_n11_a_block_inside_one_object_is_attributed():
     cov, st = objs_for(
         [fn("A", (1, 1), (5, 2))], [(2, 2, 3, 10, 2, 1), (3, 10, 4, 3, 1, 0)]
     )
+    # PR-05: a measured coverage says how many runs it comes from; ONE run shows nothing about determinism
     assert cov["A"] == {
         "state": om.MEASURED,
         "kind": "statement",
         "total": 3,
         "covered": 2,
+        "runs": 1,
+        "determinism": "NOT_SHOWN",
     }
     assert st["attributed"] == 2 and st["partial"] == 0 and st["unattributed"] == 0
 
@@ -339,6 +342,7 @@ def test_n9_an_object_whose_coverage_differs_between_runs_is_nondeterministic():
         "reason": "NONDETERMINISTIC",
         "range": [2, 3],
         "total": 3,
+        "runs": 2,
     }
     assert by["Stable"]["state"] == om.MEASURED
 
@@ -846,3 +850,14 @@ def test_a_source_file_under_tests_is_not_production_in_the_scope():
     ):
         cls, rule = om.classify(scope, lang, path)
         assert cls == "test-data" and rule["reason"]
+
+
+def test_r_pr05_an_object_with_only_zero_statement_blocks_is_not_a_measurement():
+    # found by the PR-05 re-derivation on the real Relay (pkg/obs.NoopSink.Record*): the PR-04 builder said
+    # MEASURED 0/0, a ratio of nothing; it is NOT_APPLICABLE (NO_STATEMENTS), like an object without a block
+    cov, _ = objs_for(
+        [fn("Empty", (1, 1), (1, 20)), fn("A", (3, 1), (5, 2))],
+        [(1, 14, 1, 16, 0, 1), (4, 2, 4, 9, 1, 1)],
+    )
+    assert cov["Empty"] == {"state": om.NOT_APPLICABLE, "reason": "NO_STATEMENTS"}
+    assert cov["A"]["state"] == om.MEASURED

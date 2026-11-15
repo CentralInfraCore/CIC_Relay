@@ -98,6 +98,22 @@ jobs:
             --input "llvm-cov-json=$T/llvm-cov.json" --input "rust-mutant-list=$T/rust-list.json" \
             --input "scope=.measurement-scope.json" | tee "$T/verify.txt"
 
+      # The self-test of the verifier: deliberate defects are derived from the REAL record and must each be caught at the
+      # expected level (L1/L2/L3) with their own diagnostic code, and the honest record must get the honest verdict. The
+      # expected L3 of the honest record is STATED here (PARTIAL: the Rust object inventory has no independent enumeration
+      # for impl blocks), never read from the result. Report-only; the harness works on copies and changes nothing.
+      - name: Seeded defects on the real record (the verifier must turn red when it has to)
+        env:
+          T: ${{ runner.temp }}/object-evidence
+        run: |
+          set -euo pipefail
+          python3 scripts/seeded_defects.py --record "$T/evidence.json" --root . --scope .measurement-scope.json \
+            --rust-list "$T/rust-list.json" --expect-l3 PARTIAL \
+            --input "go-inventory:root=$T/go-inventory.json" --input "go-coverprofile:root=$T/go-cover.out" \
+            --input "go-inventory:goastdump=$T/goastdump-inventory.json" --input "go-coverprofile:goastdump=$T/goastdump-cover.out" \
+            --input "llvm-cov-json=$T/llvm-cov.json" --input "rust-mutant-list=$T/rust-list.json" \
+            --input "scope=.measurement-scope.json" | tee "$T/seeded-defects.txt"
+
       - name: Keep the record
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -106,5 +122,6 @@ jobs:
           path: |
             ${{ runner.temp }}/object-evidence/evidence.json
             ${{ runner.temp }}/object-evidence/verify.txt
+            ${{ runner.temp }}/object-evidence/seeded-defects.txt
             ${{ runner.temp }}/object-evidence/tools.txt
           if-no-files-found: warn

@@ -38,6 +38,7 @@ import argparse
 import fnmatch
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -46,7 +47,7 @@ from pathlib import Path
 import quality_gate as qg
 
 ID_CONTRACT = "object-id/1"
-EVIDENCE_SCHEMA = "object-evidence/1"
+EVIDENCE_SCHEMA = "object-evidence/2"
 SCOPE_SCHEMA = "measurement-scope/1"
 
 MEASURED = "MEASURED"
@@ -295,12 +296,18 @@ def go_objects(
                 cov = unverifiable("FILE_NOT_IN_PROFILE")
             elif res["partial"][oid]:
                 cov = unverifiable("PARTIAL_BLOCK", blocks=res["partial"][oid])
-            elif not mine:
+            elif not mine or sum(b[5] for b in mine) == 0:
+                # no block, or only blocks without a statement (an empty function body): 0 of 0 is not a measurement
                 cov = not_applicable("NO_STATEMENTS")
             else:
                 total = sum(b[5] for b in mine)
                 covered = sum(b[5] for b in mine if b[6] > 0)
                 cov = field(MEASURED, kind="statement", total=total, covered=covered)
+                n_runs = 1 + len(repeats or [])
+                cov["runs"] = n_runs
+                cov["determinism"] = (
+                    "OBSERVED_STABLE" if n_runs >= STABLE_MIN_RUNS else "NOT_SHOWN"
+                )
                 if repeats:
                     seen = {covered}
                     for rep in repeats:
@@ -313,6 +320,7 @@ def go_objects(
                             "NONDETERMINISTIC",
                             range=[min(seen), max(seen)],
                             total=total,
+                            runs=n_runs,
                         )
                 if detail and cov["state"] == MEASURED:
                     cov["uncovered"] = [
@@ -551,6 +559,8 @@ def rust_objects(
                 covered=covered,
                 instances=len(inst),
                 aggregation="sum-over-instances/1",
+                runs=1,
+                determinism="NOT_SHOWN",
             )
         objects.append(
             {
@@ -709,6 +719,18 @@ def build_record(
 
 # --------------------------------------------------------------------------- verification
 
+# object-evidence/2 (schema decision, PR-05): `runs` and `determinism` are new, REQUIRED fields of a MEASURED
+# coverage field. They are not additive-optional, because a record that does not say how many runs a value comes
+# from cannot be told apart from one that is stable. /1 records were report-only artifacts nobody consumes, so
+# /2 is a strict replacement: a /1 record is rejected as an unknown schema (SCHEMA), not silently upgraded.
+STABLE_MIN_RUNS = 20  # the least number of identical independent runs that is called OBSERVED_STABLE (see the PR-05 report)
+DETERMINISM = ("NOT_SHOWN", "OBSERVED_STABLE")
+
+
+def code(c: str, msg: str) -> str:
+    """A finding with its own diagnostic code, so that two different faults never share one message."""
+    return f"[{c}] {msg}"
+
 
 def verify_l1(rec: dict) -> list[str]:
     """Record integrity: every problem found (empty = INTEGRITY_OK)."""
@@ -718,55 +740,145 @@ def verify_l1(rec: dict) -> list[str]:
         or rec.get("schema") != EVIDENCE_SCHEMA
         or rec.get("id_contract") != ID_CONTRACT
     ):
-        return [f"schema/contract is not {EVIDENCE_SCHEMA}/{ID_CONTRACT}"]
+        return [
+            code("SCHEMA", f"schema/contract is not {EVIDENCE_SCHEMA}/{ID_CONTRACT}")
+        ]
     if rec.get("digest") != canonical_digest(
         {k: v for k, v in rec.items() if k != "digest"}
     ):
-        bad.append("the digest does not match the content")
+        bad.append(code("DIGEST_MISMATCH", "the digest does not match the content"))
     if rec.get("policy") != qg.POLICY:
         bad.append(
-            f"the record is bound to {rec.get('policy')!r}, the gate to {qg.POLICY!r}"
+            code(
+                "POLICY_MISMATCH",
+                f"the record is bound to {rec.get('policy')!r}, the gate to {qg.POLICY!r}",
+            )
         )
     for name, ver in (rec.get("tools") or {}).items():
         if not ver or str(ver).lower() in ("unknown", "none"):
-            bad.append(f"the version of the tool {name!r} is unknown")
+            bad.append(
+                code("TOOL_UNKNOWN", f"the version of the tool {name!r} is unknown")
+            )
     if not rec.get("tools"):
-        bad.append("no tool versions are recorded")
+        bad.append(code("TOOL_MISSING", "no tool versions are recorded"))
     objs = rec.get("objects")
     if not isinstance(objs, list):
-        return bad + ["no object list"]
+        return bad + [code("NO_OBJECTS", "no object list")]
     ids = [o.get("id") for o in objs]
     if ids != sorted(ids) or len(set(ids)) != len(ids):
-        bad.append("the object ids are not sorted and unique")
+        bad.append(code("DUPLICATE_ID", "the object ids are not sorted and unique"))
     for o in objs:
         for f in FIELDS:
             v = o.get(f)
             if not isinstance(v, dict) or v.get("state") not in STATES:
-                bad.append(f"{o.get('id')}: field {f} is missing or has no valid state")
+                bad.append(
+                    code(
+                        "MISSING_FIELD",
+                        f"{o.get('id')}: field {f} is missing or has no valid state",
+                    )
+                )
                 continue
             if v["state"] != MEASURED and v.get("reason") not in REASONS:
                 bad.append(
-                    f"{o.get('id')}: field {f} is {v['state']} without a valid reason ({v.get('reason')!r})"
+                    code(
+                        "BAD_REASON",
+                        f"{o.get('id')}: field {f} is {v['state']} without a valid reason ({v.get('reason')!r})",
+                    )
                 )
+            if f == "coverage" and v["state"] == MEASURED:
+                if v.get("kind") not in COVERAGE_KINDS:
+                    bad.append(
+                        code(
+                            "BAD_KIND",
+                            f"{o.get('id')}: coverage kind {v.get('kind')!r} is not one of {COVERAGE_KINDS}",
+                        )
+                    )
+                runs, det = v.get("runs"), v.get("determinism")
+                if not isinstance(runs, int) or runs < 1 or det not in DETERMINISM:
+                    bad.append(
+                        code(
+                            "BAD_DETERMINISM",
+                            f"{o.get('id')}: a measured coverage needs runs >= 1 and determinism in {DETERMINISM}",
+                        )
+                    )
+                elif det == "OBSERVED_STABLE" and runs < STABLE_MIN_RUNS:
+                    bad.append(
+                        code(
+                            "BAD_DETERMINISM",
+                            f"{o.get('id')}: OBSERVED_STABLE from {runs} run(s), at least {STABLE_MIN_RUNS} are needed",
+                        )
+                    )
             if (
                 f == "coverage"
-                and v["state"] == MEASURED
-                and v.get("kind") not in COVERAGE_KINDS
+                and v.get("reason") == "NONDETERMINISTIC"
+                and not (isinstance(v.get("runs"), int) and v["runs"] >= 2)
             ):
                 bad.append(
-                    f"{o.get('id')}: coverage kind {v.get('kind')!r} is not one of {COVERAGE_KINDS}"
+                    code(
+                        "BAD_DETERMINISM",
+                        f"{o.get('id')}: NONDETERMINISTIC needs the number of runs (>= 2)",
+                    )
                 )
     if rec.get("summary") != summarize(objs):
-        bad.append("the summary does not match the objects")
+        bad.append(code("SUMMARY_MISMATCH", "the summary does not match the objects"))
     if not rec.get("inputs"):
-        bad.append("no input digests are recorded")
+        bad.append(code("NO_INPUTS", "no input digests are recorded"))
     return bad
 
 
+def stability(rec: dict) -> dict:
+    """Is the evidence STABLE? Only if every measured coverage was seen identical in >= STABLE_MIN_RUNS independent
+    runs and no object is NONDETERMINISTIC. A single run is never stable: it shows nothing about determinism.
+    """
+    cov = [
+        o["coverage"]
+        for o in rec.get("objects", [])
+        if isinstance(o.get("coverage"), dict)
+    ]
+    nondet = sorted(
+        o["id"]
+        for o in rec.get("objects", [])
+        if (o.get("coverage") or {}).get("reason") == "NONDETERMINISTIC"
+    )
+    measured = [c for c in cov if c.get("state") == MEASURED]
+    shown = sum(1 for c in measured if c.get("determinism") == "OBSERVED_STABLE")
+    return {
+        "verdict": (
+            "STABLE"
+            if measured and shown == len(measured) and not nondet
+            else "NOT_STABLE"
+        ),
+        "measured": len(measured),
+        "observed_stable": shown,
+        "not_shown": len(measured) - shown,
+        "nondeterministic_objects": nondet,
+    }
+
+
+def _cmp_cov(want: dict, got: dict) -> bool:
+    """Do two coverage fields say the same? runs and determinism ARE compared (a stability claim must be provable from the
+    bound input profiles, like a value); only the uncovered spans are not."""
+    if want.get("state") != got.get("state") or want.get("reason") != got.get("reason"):
+        return False
+    return (
+        all(
+            want.get(k) == got.get(k)
+            for k in ("kind", "total", "covered", "runs", "determinism")
+        )
+        if want.get("state") == MEASURED
+        else True
+    )
+
+
 def verify_l2(
-    rec: dict, root: str | None, inputs: dict[str, str]
+    rec: dict, root: str | None, inputs: dict[str, str], derived: dict | None = None
 ) -> tuple[str, list[str]]:
-    """Binding to the inputs: PASS | FAIL | NOT_CHECKED, with the findings."""
+    """Binding to the inputs: PASS | FAIL | NOT_CHECKED, with the findings.
+
+    The checkout identity and the input digests are checked as before. With `derived` ({object id: the coverage field
+    re-derived from the INPUT FILES}) the measured values are checked too: a record whose values were forged and
+    re-sealed (digest and summary recomputed) is internally consistent and its inputs are untouched, so only a
+    re-derivation can see it (REDERIVATION_MISMATCH)."""
     if root is None and not inputs:
         return "NOT_CHECKED", ["no checkout and no input files were given"]
     bad: list[str] = []
@@ -786,26 +898,292 @@ def verify_l2(
                 check=True,
             ).stdout.strip()
         except (OSError, subprocess.CalledProcessError) as e:
-            return "FAIL", [f"cannot read the checkout identity: {e}"]
+            return "FAIL", [
+                code("IDENTITY_UNREADABLE", f"cannot read the checkout identity: {e}")
+            ]
         checked += 1
         if tree != rec["identity"]["tree"] or commit != rec["identity"]["commit"]:
-            bad.append("the checkout is not the commit/tree the record names")
+            bad.append(
+                code(
+                    "COMMIT_MISMATCH",
+                    "the checkout is not the commit/tree the record names",
+                )
+            )
     for name, path in inputs.items():
         want = rec["inputs"].get(name)
         if want is None:
-            bad.append(f"input {name!r} is not in the record")
+            bad.append(code("INPUT_UNKNOWN", f"input {name!r} is not in the record"))
             continue
         checked += 1
         try:
             digest, size = sha256_file(path)
         except OSError as e:
-            bad.append(f"input {name!r} cannot be read: {e}")
+            bad.append(code("INPUT_UNREADABLE", f"input {name!r} cannot be read: {e}"))
             continue
         if digest != want["sha256"] or size != want["bytes"]:
-            bad.append(f"input {name!r} does not match the digest in the record")
+            bad.append(
+                code(
+                    "INPUT_DIGEST_MISMATCH",
+                    f"input {name!r} does not match the digest in the record",
+                )
+            )
+    if derived is not None:
+        checked += 1
+        units = {d["unit"] for d in derived.values()}
+        have = {o["id"]: o["coverage"] for o in rec["objects"] if o["unit"] in units}
+        for oid in sorted(set(have) - set(derived)):
+            bad.append(
+                code(
+                    "REDERIVATION_MISMATCH",
+                    f"{oid}: in the record but not derivable from the inputs",
+                )
+            )
+        for oid, want in sorted(derived.items()):
+            got = have.get(oid)
+            if got is None:
+                bad.append(
+                    code(
+                        "REDERIVATION_MISMATCH",
+                        f"{oid}: derivable from the inputs but not in the record",
+                    )
+                )
+            elif not _cmp_cov(want["coverage"], got):
+                bad.append(
+                    code(
+                        "REDERIVATION_MISMATCH",
+                        f"{oid}: the record says {_brief(got)}, the inputs give {_brief(want['coverage'])}",
+                    )
+                )
     if bad:
         return "FAIL", bad
     return ("PASS" if checked else "NOT_CHECKED"), []
+
+
+def _brief(c: dict) -> str:
+    return f"{c.get('state')}" + (
+        f" {c.get('covered')}/{c.get('total')}"
+        if c.get("state") == MEASURED
+        else f" ({c.get('reason')})"
+    )
+
+
+def derive_go_coverage(
+    unit: str,
+    module: str,
+    inventory: dict,
+    blocks: list[tuple],
+    repeats: list[list[tuple]] | None = None,
+) -> dict:
+    """The Go coverage of every object, derived from the inventory and the cover profile by a SECOND, different
+    algorithm than go_objects (a binary search over the sorted function starts instead of a scan of all functions),
+    so that a defect of the first one is not repeated here. Returns {object id: {"unit", "coverage"}}.
+    """
+    import bisect
+
+    by_file: dict[str, list[tuple]] = {}
+    for b in blocks:
+        by_file.setdefault(b[0], []).append(b)
+    out: dict[str, dict] = {}
+    for fdump in inventory["files"]:
+        rel = fdump["file"]
+        funcs = sorted(
+            (
+                (
+                    fn["start"]["line"],
+                    fn["start"]["col"],
+                    fn["end"]["line"],
+                    fn["end"]["col"],
+                    go_object_id(module, rel, fn, fdump.get("build", "")),
+                )
+                for fn in fdump["funcs"]
+            )
+        )
+        starts = [(f[0], f[1]) for f in funcs]
+        key = module + "/" + rel
+        runs = [by_file.get(key, [])] + [
+            [b for b in rep if b[0] == key] for rep in (repeats or [])
+        ]
+        per_run: list[dict[str, list]] = []
+        for blks in runs:
+            acc: dict[str, list] = {
+                f[4]: [0, 0, 0] for f in funcs
+            }  # total, covered, partial
+            for b in blks:
+                bs, be = (b[1], b[2]), (b[3], b[4])
+                i = bisect.bisect_right(starts, bs) - 1
+                if (
+                    i >= 0
+                    and be <= (funcs[i][2], funcs[i][3])
+                    and (i + 1 >= len(funcs) or be <= starts[i + 1])
+                ):
+                    acc[funcs[i][4]][0] += b[5]
+                    acc[funcs[i][4]][1] += b[5] if b[6] > 0 else 0
+                else:
+                    for f in funcs:  # not inside one function: does it cut some?
+                        if not (be <= (f[0], f[1]) or bs >= (f[2], f[3])):
+                            acc[f[4]][2] += 1
+            per_run.append(acc)
+        in_profile = bool(runs[0])
+        for f in funcs:
+            oid = f[4]
+            t, c, p = per_run[0][oid]
+            cov: dict
+            if not in_profile:
+                cov = {"state": UNVERIFIABLE, "reason": "FILE_NOT_IN_PROFILE"}
+            elif p:
+                cov = {"state": UNVERIFIABLE, "reason": "PARTIAL_BLOCK"}
+            elif t == 0:
+                cov = {"state": NOT_APPLICABLE, "reason": "NO_STATEMENTS"}
+            elif len({r[oid][1] for r in per_run}) > 1:
+                cov = {"state": UNVERIFIABLE, "reason": "NONDETERMINISTIC"}
+            else:
+                cov = {
+                    "state": MEASURED,
+                    "kind": "statement",
+                    "total": t,
+                    "covered": c,
+                    "runs": len(per_run),
+                    "determinism": (
+                        "OBSERVED_STABLE"
+                        if len(per_run) >= STABLE_MIN_RUNS
+                        else "NOT_SHOWN"
+                    ),
+                }
+            out[oid] = {"unit": unit, "coverage": cov}
+    return out
+
+
+def derive_rust_coverage(
+    llvm: dict, demangled: dict[str, str], root: str | None, prefix: str = "/w/"
+) -> dict:
+    """The Rust region coverage of every object, re-derived from the llvm-cov export (the id contract and the
+    test-region rule are shared; the aggregation is written again, per file first)."""
+    out: dict[str, dict] = {}
+    per_key: dict[str, list] = {}
+    cfg: dict[str, list] = {}
+    for fn in llvm["data"][0]["functions"]:
+        rel = (
+            fn["filenames"][0][len(prefix) :]
+            if fn["filenames"][0].startswith(prefix)
+            else fn["filenames"][0]
+        )
+        regs = [r for r in fn.get("regions", []) if len(r) >= 8 and r[7] == 0]
+        first = min((r[0] for r in regs), default=0)
+        parts = rel.split("/")
+        test = "tests" in parts[:-1] or "benches" in parts[:-1]
+        if not test and root and rel.endswith(".rs"):
+            if rel not in cfg:
+                p = Path(root) / rel
+                cfg[rel] = (
+                    cfg_test_spans(p.read_text(encoding="utf-8")) if p.is_file() else []
+                )
+            test = any(a <= first <= b for a, b in cfg[rel])
+        if test:
+            continue
+        per_key.setdefault(rust_object_key(demangled[fn["name"]]), []).append(
+            (rel, regs)
+        )
+    for key, insts in per_key.items():
+        files = {i[0] for i in insts}
+        total = sum(len(r) for _, r in insts)
+        covered = sum(1 for _, rs in insts for r in rs if r[4] > 0)
+        cov: dict
+        if len(files) != 1:
+            cov = {"state": UNVERIFIABLE, "reason": "AMBIGUOUS_MAPPING"}
+        elif not total:
+            cov = {"state": NOT_APPLICABLE, "reason": "NO_STATEMENTS"}
+        else:
+            cov = {
+                "state": MEASURED,
+                "kind": "region",
+                "total": total,
+                "covered": covered,
+                "runs": 1,
+                "determinism": "NOT_SHOWN",
+            }
+        out[key] = {"unit": "rust", "coverage": cov}
+    return out
+
+
+_FUNC_RE = re.compile(
+    r"^func\s*(?:\(\s*(?:[A-Za-z_]\w*\s+)?\*?\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*\)\s*)?([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*\("
+)
+_BUILD_RE = re.compile(r"^//go:build\s+(.+?)\s*$")
+
+
+def independent_go_ids(
+    root: str, module: str, module_dir: str, files: list[str]
+) -> set[str]:
+    """The object ids of Go source files, enumerated WITHOUT go/ast (so not by tools/objinventory): the column-0
+    `func` lines of the source, with the same key format (object-id/1). `files` are repo-relative; `module_dir` is the
+    directory of the go.mod ("." or "" for the root module)."""
+    ids: set[str] = set()
+    for f in files:
+        rel = f if module_dir in ("", ".") else f[len(module_dir) + 1 :]
+        build, in_header, inits = "", True, 0
+        for line in (Path(root) / f).read_text(encoding="utf-8").splitlines():
+            if in_header:
+                m = _BUILD_RE.match(line)
+                if m and not build:
+                    build = m.group(1)
+                if line.startswith("package "):
+                    in_header = False
+                continue
+            m = _FUNC_RE.match(line)
+            if not m:
+                continue
+            recv, name = m.group(1), m.group(2)
+            fn: dict = {
+                "name": name,
+                "kind": "method" if recv else "func",
+                "recv": recv or "",
+            }
+            if name == "init" and not recv:
+                inits += 1
+                fn.update(kind="init", ord=inits)
+            ids.add(go_object_id(module, rel, fn, build))
+    return ids
+
+
+def independent_rust_free_functions(text: str, crate: str) -> tuple[set[str], int]:
+    """An independent enumeration of the FREE functions of one Rust source file (no llvm-cov, no cargo-mutants):
+    `fn` items at nesting depth 0 outside the #[cfg(test)] items. Returns (object ids, unmapped).
+
+    `unmapped` counts what this enumeration cannot name: `impl` blocks, `trait` blocks and inline `mod` blocks (their
+    functions carry a type or module path it does not derive) and every nested `fn` (llvm-cov lists it separately). A non-zero `unmapped` means the file is NOT proven
+    complete: the caller must keep the Rust verdict PARTIAL. (The comment/string/char scanner and the test-region rule
+    are shared with the object builder; that sharing is a stated limit of the independence.)
+    """
+    spans = cfg_test_spans(text)
+    code_lines: dict[int, list[str]] = {}
+    for _i, c, ln in _scan(text):
+        code_lines.setdefault(ln, []).append(c)
+    ids: set[str] = set()
+    unmapped = 0
+    depth = 0
+    fn_re = re.compile(
+        r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const\s+)?(?:async\s+)?(?:unsafe\s+)?(?:extern\s+\"[^\"]*\"\s+)?fn\s+([A-Za-z_]\w*)"
+    )
+    blk_re = re.compile(
+        r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:unsafe\s+)?(impl|trait|mod)\b"
+    )
+    for ln in sorted(code_lines):
+        line = "".join(code_lines[ln])
+        in_test = any(a <= ln <= b for a, b in spans)
+        if not in_test:
+            m = fn_re.match(line)
+            n_fn = len(re.findall(r"\bfn\s+[A-Za-z_]", line))
+            if m and depth == 0:
+                ids.add(f"rust:{crate}::{m.group(1)}")
+                unmapped += (
+                    n_fn - 1
+                )  # further `fn` items on the same line are nested: llvm-cov lists them, this scan cannot name them
+            elif n_fn:  # a nested fn (inside a function, an impl, a trait or a mod)
+                unmapped += n_fn
+            elif depth == 0 and blk_re.match(line) and "{" in line:
+                unmapped += 1
+        depth += line.count("{") - line.count("}")
+    return ids, unmapped
 
 
 def go_func_lines(root: str, files: list[str]) -> int:
@@ -818,62 +1196,115 @@ def go_func_lines(root: str, files: list[str]) -> int:
     return n
 
 
+def _diff(have: set[str], want: set[str]) -> str:
+    miss, extra = sorted(want - have), sorted(have - want)
+    return f"{len(miss)} missing {miss[:3]}, {len(extra)} unexpected {extra[:3]}"
+
+
 def verify_l3(
     rec: dict,
     root: str | None,
     go_files: dict[str, list[str]] | None,
     mutants: list[dict] | None,
+    go_independent: dict[str, set[str]] | None = None,
+    rust_independent: set[str] | None = None,
+    required_units: set[str] | None = None,
 ) -> tuple[str, list[str], list[str]]:
-    """Completeness against an independent enumeration: (COMPLETE_FOR_SCOPE | PARTIAL | FAIL,
-    proven parts, unproven parts)."""
+    """Completeness against an independent enumeration: (COMPLETE_FOR_SCOPE | PARTIAL | FAIL, proven, unproven/findings).
+
+    COMPLETE_FOR_SCOPE only if EVERY unit is proven by SET identity (not by a count). Whatever cannot be proven is
+    listed and makes the verdict PARTIAL: PARTIAL is never renamed to a pass."""
     proven: list[str] = []
     unproven: list[str] = []
     bad: list[str] = []
     objs = rec["objects"]
-    if root is not None and go_files:
-        for unit, files in sorted(go_files.items()):
-            have = sum(1 for o in objs if o["lang"] == "go" and o["unit"] == unit)
-            want = go_func_lines(root, files)
+    for unit in sorted(required_units or ()):
+        if not any(o["unit"] == unit for o in objs):
+            bad.append(
+                code(
+                    "MISSING_UNIT",
+                    f"the scope requires unit {unit!r} but the record has no object of it",
+                )
+            )
+    if go_independent:
+        for unit, want in sorted(go_independent.items()):
+            have = {o["id"] for o in objs if o["lang"] == "go" and o["unit"] == unit}
             if have != want:
                 bad.append(
-                    f"go unit {unit!r}: {have} objects but {want} top-level `func` lines in the source"
+                    code("SET_MISMATCH", f"go unit {unit!r}: {_diff(have, want)}")
                 )
             else:
                 proven.append(
-                    f"go unit {unit!r}: {have} objects equal the independent `func` line count"
+                    f"go unit {unit!r}: the {len(have)} object ids are IDENTICAL to the independent enumeration (a set, not a count)"
+                )
+    elif root is not None and go_files:
+        for unit, files in sorted(go_files.items()):
+            have_n = sum(1 for o in objs if o["lang"] == "go" and o["unit"] == unit)
+            want_n = go_func_lines(root, files)
+            if have_n != want_n:
+                bad.append(
+                    code(
+                        "COUNT_MISMATCH",
+                        f"go unit {unit!r}: {have_n} objects but {want_n} top-level `func` lines in the source",
+                    )
+                )
+            else:
+                proven.append(
+                    f"go unit {unit!r}: {have_n} objects equal the independent `func` line count"
+                )
+                unproven.append(
+                    f"go unit {unit!r}: only the COUNT was compared (no independent id set): a swap would not be seen"
                 )
     else:
         unproven.append(
-            "go: no source tree was given, the object list was not compared with an independent count"
+            "go: no source tree was given, the object list was not compared with an independent enumeration"
+        )
+    rust = {o["id"] for o in objs if o["lang"] == "rust"}
+    if rust_independent is not None:
+        if rust != rust_independent:
+            bad.append(code("SET_MISMATCH", f"rust: {_diff(rust, rust_independent)}"))
+        else:
+            proven.append(
+                f"rust: the {len(rust)} object ids are IDENTICAL to the independent enumeration (a set, not a count)"
+            )
+    else:
+        unproven.append(
+            "rust: no independent object inventory was given, so a function with neither a mutant nor a coverage entry cannot be enumerated independently"
         )
     if mutants is not None:
-        rust = {(o["file"], o["name"]) for o in objs if o["lang"] == "rust"}
+        names = {(o["file"], o["name"]) for o in objs if o["lang"] == "rust"}
         miss = sorted(
             {
                 (m["file"], m["function"]["function_name"].split("::")[-1])
                 for m in mutants
                 if m.get("function")
             }
-            - rust
+            - names
         )
         if miss:
             bad.append(
-                f"rust: {len(miss)} function(s) known to cargo-mutants have no object, e.g. {miss[0]}"
+                code(
+                    "MUTANT_FUNCTION_MISSING",
+                    f"rust: {len(miss)} function(s) known to cargo-mutants have no object, e.g. {miss[0]}",
+                )
             )
         else:
             proven.append("rust: every function that cargo-mutants lists has an object")
-    else:
-        unproven.append("rust: no mutant listing was given")
-    unproven.append(
-        "rust: a function that has neither a mutant nor a coverage entry could not be enumerated independently"
-    )
     if bad:
         return "FAIL", proven, bad
     return ("PARTIAL" if unproven else "COMPLETE_FOR_SCOPE"), proven, unproven
 
 
 def verify_record(
-    rec: dict, root=None, inputs=None, go_files=None, mutants=None
+    rec: dict,
+    root=None,
+    inputs=None,
+    go_files=None,
+    mutants=None,
+    derived=None,
+    go_independent=None,
+    rust_independent=None,
+    required_units=None,
 ) -> dict:
     """All three levels, each on its own. There is deliberately no combined verdict."""
     l1 = verify_l1(rec)
@@ -889,14 +1320,27 @@ def verify_record(
             "unproven": ["the record is not intact (L1)"],
         }
         return res
-    v2, f2 = verify_l2(rec, root, inputs or {})
-    res["L2"] = {"verdict": {"PASS": "BOUND_TO_INPUTS"}.get(v2, v2), "findings": f2}
-    v3, proven, other = verify_l3(rec, root, go_files, mutants)
+    v2, f2 = verify_l2(rec, root, inputs or {}, derived)
+    if v2 == "PASS" and derived is None:
+        # the digests are right, but nothing re-derived the VALUES: that is only part of the binding
+        res["L2"] = {
+            "verdict": "PARTIAL",
+            "findings": [],
+            "unproven": [
+                "the measured values were not re-derived from the input files"
+            ],
+        }
+    else:
+        res["L2"] = {"verdict": {"PASS": "BOUND_TO_INPUTS"}.get(v2, v2), "findings": f2}
+    v3, proven, other = verify_l3(
+        rec, root, go_files, mutants, go_independent, rust_independent, required_units
+    )
     res["L3"] = {
         "verdict": v3,
         "proven": proven,
         "unproven" if v3 != "FAIL" else "findings": other,
     }
+    res["stability"] = stability(rec)
     return res
 
 
@@ -980,6 +1424,10 @@ def cmd_build(a: argparse.Namespace) -> int:
         attribution[f"go:{name}"] = st
         note(f"go-inventory:{name}", inv)
         note(f"go-coverprofile:{name}", cover)
+        for i, r in enumerate(
+            (r for r in (a.go_repeat or []) if r.split("=", 1)[0] == name), 1
+        ):
+            note(f"go-coverprofile-repeat:{name}:{i}", r.split("=", 1)[1])
     if a.llvm_cov:
         llvm = _load(a.llvm_cov)
         syms = sorted({f["name"] for f in llvm["data"][0]["functions"]})
@@ -1042,39 +1490,119 @@ def cmd_scope_list(a: argparse.Namespace) -> int:
     return 0
 
 
+def _crate_name(root: str, rel: str) -> str:
+    """The crate a Rust file belongs to: the [package] name of the nearest Cargo.toml above it ('-' becomes '_')."""
+    d = Path(root, rel).parent
+    while True:
+        m = d / "Cargo.toml"
+        if m.is_file():
+            mt = re.search(
+                r'^\s*name\s*=\s*"([^"]+)"', m.read_text(encoding="utf-8"), re.M
+            )
+            if mt and "[package]" in m.read_text(encoding="utf-8"):
+                return mt.group(1).replace("-", "_")
+        if d == Path(root) or d == d.parent:
+            raise ModelError(f"no Cargo.toml above {rel}")
+        d = d.parent
+
+
+def build_context(rec: dict, root: str, scope: dict, inputs: dict[str, str]) -> dict:
+    """Everything the verifier needs besides the record, DERIVED FROM THE CHECKOUT AND THE INPUT FILES:
+    the independent Go object sets, the re-derived coverage values, the independent Rust set (only when it is
+    complete), the units the scope requires. Returns the keyword arguments of verify_record.
+    """
+    tracked = _git(root, "ls-files").splitlines()
+    go_groups = scope_files(scope, "go", tracked)
+    rust_groups = scope_files(scope, "rust", tracked)
+    units: dict[str, tuple[str, list[str]]] = {
+        "root": (".", go_groups.get("production", []))
+    }
+    for u, fs in go_groups.items():
+        if u.startswith("separate:"):
+            units[u.split(":", 1)[1]] = (
+                os.path.commonpath([os.path.dirname(f) for f in fs]) if fs else ".",
+                fs,
+            )
+    go_independent: dict[str, set[str]] = {}
+    derived: dict[str, dict] = {}
+    for unit, (mod_dir, files) in units.items():
+        if not files:
+            continue
+        module = go_module_path(
+            Path(root, mod_dir, "go.mod").read_text(encoding="utf-8")
+        )
+        go_independent[unit] = independent_go_ids(root, module, mod_dir, files)
+        inv, prof = inputs.get(f"go-inventory:{unit}"), inputs.get(
+            f"go-coverprofile:{unit}"
+        )
+        if inv and prof:
+            reps = [
+                parse_coverprofile(Path(path).read_text(encoding="utf-8"))
+                for name, path in sorted(inputs.items())
+                if name.startswith(f"go-coverprofile-repeat:{unit}:")
+            ]
+            derived.update(
+                derive_go_coverage(
+                    unit,
+                    module,
+                    _load(inv),
+                    parse_coverprofile(Path(prof).read_text(encoding="utf-8")),
+                    repeats=reps or None,
+                )
+            )
+    rust_files = rust_groups.get("production", [])
+    rust_independent: set[str] | None = None
+    if inputs.get("llvm-cov-json"):
+        llvm = _load(inputs["llvm-cov-json"])
+        names, _ = demangle(sorted({f["name"] for f in llvm["data"][0]["functions"]}))
+        derived.update(
+            derive_rust_coverage(llvm, names, root, prefix=str(Path(root)) + "/")
+        )
+    if rust_files:
+        ids: set[str] = set()
+        unmapped = 0
+        for f in rust_files:
+            found, cannot_name = independent_rust_free_functions(
+                Path(root, f).read_text(encoding="utf-8"), _crate_name(root, f)
+            )
+            ids |= found
+            unmapped += cannot_name
+        rust_independent = (
+            ids if unmapped == 0 else None
+        )  # an impl/trait/mod/nested fn cannot be named: NOT proven
+    required = {u for u, (_, fs) in units.items() if fs} | (
+        {"rust"} if rust_files else set()
+    )
+    return {
+        "go_independent": go_independent or None,
+        "derived": derived or None,
+        "rust_independent": rust_independent,
+        "required_units": required,
+    }
+
+
 def cmd_verify(a: argparse.Namespace) -> int:
     rec = _load(a.record)
     inputs = dict(kv.split("=", 1) for kv in a.input or [])
     mutants = _load(a.rust_list) if a.rust_list else None
-    go_files = None
+    ctx: dict = {}
     if a.root and a.scope:
         scope = _load(a.scope)
         check_scope(scope)
-        tracked = subprocess.run(
-            ["git", "-C", a.root, "ls-files"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.splitlines()
-        groups = scope_files(scope, "go", tracked)
-        units = {
-            u.split(":", 1)[1]: fs
-            for u, fs in groups.items()
-            if u.startswith("separate:")
-        }
-        units["root"] = groups.get("production", [])
-        go_files = {
-            u: fs
-            for u, fs in units.items()
-            if any(o["unit"] == u for o in rec.get("objects", [])) or fs
-        }
-    res = verify_record(rec, a.root, inputs, go_files, mutants)
+        ctx = build_context(rec, a.root, scope, inputs)
+    res = verify_record(rec, a.root, inputs, None, mutants, **ctx)
     for lvl in ("L1", "L2", "L3"):
         r = res[lvl]
         print(f"{lvl} {r['verdict']}")
         for k in ("findings", "proven", "unproven"):
             for line in r.get(k, []):
                 print(f"   {k}: {line}")
+    st = res.get("stability")
+    if st:
+        print(
+            f"stability {st['verdict']}: {st['observed_stable']}/{st['measured']} measured coverages seen identical in >= "
+            f"{STABLE_MIN_RUNS} runs, {st['not_shown']} not shown, nondeterministic objects: {len(st['nondeterministic_objects'])}"
+        )
     print(
         "(no combined 'verified': a digest does not prove where a measurement came from)"
     )
