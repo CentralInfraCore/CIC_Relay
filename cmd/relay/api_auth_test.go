@@ -130,6 +130,14 @@ func TestAPIRoutes_AreClassified(t *testing.T) {
 		switch rt.access {
 		case accessPublic:
 			assert.NotEmpty(t, strings.TrimSpace(rt.reason), "public route %s needs a stated reason", rt.path)
+		case accessOptional:
+			assert.NotEmpty(t, strings.TrimSpace(rt.reason), "optional route %s needs a stated reason", rt.path)
+			// Optional is not "public": a token that is present must be valid.
+			req := httptest.NewRequest(http.MethodPost, rt.path, strings.NewReader("{}"))
+			req.Header.Set("Authorization", "Bearer not-the-token")
+			w := httptest.NewRecorder()
+			newMux(s).ServeHTTP(w, req)
+			assert.Equal(t, http.StatusUnauthorized, w.Code, "optional route %s accepted a wrong token as anonymous", rt.path)
 		case accessAuthenticated:
 			// Through the real mux, without credentials: must be refused before the handler.
 			req := httptest.NewRequest(http.MethodPost, rt.path, strings.NewReader("{}"))
@@ -187,6 +195,17 @@ func TestAPITokenFromEnv(t *testing.T) {
 	_, err = apiTokenFromEnv()
 	require.Error(t, err, "a weak token must be a start-up error")
 	assert.Contains(t, err.Error(), "too short")
+
+	// Length is not entropy: a long but uniform value is refused too.
+	for _, weak := range []string{strings.Repeat("a", 32), "abababababababababab", "1111222211112222"} {
+		t.Setenv("CIC_API_TOKEN", weak)
+		_, err = apiTokenFromEnv()
+		require.Error(t, err, "%q", weak)
+		assert.Contains(t, err.Error(), "too uniform")
+	}
+	t.Setenv("CIC_API_TOKEN", "9f2c4a7e1b6d8035c9e1a4f7b2d60813")
+	_, err = apiTokenFromEnv()
+	assert.NoError(t, err, "a random-looking token passes the sanity check")
 }
 
 func TestCompileJSONErrorShapeUnchangedForValidRequests(t *testing.T) {

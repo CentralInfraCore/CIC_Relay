@@ -25,6 +25,8 @@ MAKE_TARGET="${MAKE_TARGET:-}"
 ARTIFACT_OUTPUT="${ARTIFACT_OUTPUT:-}"
 BUILD_DIR="${BUILD_DIR:-}"
 BUILDER_CONTAINER="${BUILDER_CONTAINER:-}"
+# The pipeline routes sign artifacts and run builds, so the relay accepts them only with its bearer token.
+API_TOKEN="${CIC_API_TOKEN:-}"
 
 command -v jq >/dev/null || { echo "FATAL: jq is required" >&2; exit 1; }
 
@@ -48,6 +50,10 @@ if [[ ${#missing[@]} -gt 0 ]]; then
     echo "FATAL: missing required variables: ${missing[*]}" >&2
     echo "  generic repo : REPO_URL=… ARTIFACT_OUTPUT=… [MAKE_TARGET=…] [COMMIT=… | BRANCH=…] $0" >&2
     echo "  schema repo  : REPO_URL=… SCHEMA=… VERSION=… [COMMIT=… | BRANCH=…] $0" >&2
+    exit 1
+fi
+if [[ -z "$API_TOKEN" ]]; then
+    echo "FATAL: set CIC_API_TOKEN to the relay's API token (the pipeline routes refuse unauthenticated requests)" >&2
     exit 1
 fi
 if [[ -z "$COMMIT" && -z "$BRANCH" ]]; then
@@ -76,9 +82,11 @@ req=$(jq -n \
   + (if $bc     != "" then {builder_container: $bc} else {} end)')
 
 echo "--- Running $MODE pipeline (${COMMIT:-$BRANCH}) ---"
-resp=$(mktemp); trap 'rm -f "$resp"' EXIT
+resp=$(mktemp); hdr=$(mktemp); chmod 600 "$hdr"; trap 'rm -f "$resp" "$hdr"' EXIT
+# The token goes in through a header file, not the command line, so it does not show in `ps`.
+printf 'Authorization: Bearer %s\n' "$API_TOKEN" > "$hdr"
 code=$(curl -s -o "$resp" -w '%{http_code}' --max-time 3600 \
-  -X POST -H 'Content-Type: application/json' -d "$req" \
+  -X POST -H 'Content-Type: application/json' -H "@$hdr" -d "$req" \
   "$RELAY_URL$ENDPOINT")
 
 if [[ "$code" != "200" ]]; then

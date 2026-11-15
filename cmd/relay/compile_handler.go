@@ -82,6 +82,11 @@ func (s *relayServer) compileHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.api.Setx(r.Context(), sp)
 	if err != nil {
+		if cabinet.IsUnauthorized(err) {
+			logEntry.WithField("outcome", "unauthorized").WithError(err).Warn("Protected operation without an authenticated principal")
+			unauthorized(w, "Authentication is required for the protected operation of this workflow")
+			return
+		}
 		if cabinet.IsTimeout(err) {
 			logEntry.WithField("outcome", "timeout").WithError(err).Warn("Compile workflow timed out")
 			writeError(w, http.StatusGatewayTimeout, "timeout", "Workflow timed out: "+err.Error())

@@ -216,11 +216,7 @@ func writeEvidenceRequired(w http.ResponseWriter, err error) {
 func newMux(s *relayServer) *http.ServeMux {
 	mux := http.NewServeMux()
 	for _, rt := range apiRoutes(s) {
-		h := rt.handler
-		if rt.access == accessAuthenticated {
-			h = s.authenticated(h)
-		}
-		mux.HandleFunc(rt.path, h)
+		mux.HandleFunc(rt.path, s.protectRoute(rt))
 	}
 	return mux
 }
@@ -371,6 +367,12 @@ func (s *relayServer) setHandler(w http.ResponseWriter, r *http.Request) {
 			traceStatus = "timeout"
 			logEntry.WithField("outcome", "timeout").WithError(err).Warn("Workflow execution timed out")
 			writeError(w, http.StatusGatewayTimeout, "timeout", "Workflow execution timed out: "+err.Error())
+			return
+		}
+		if cabinet.IsUnauthorized(err) {
+			traceStatus = "rejected"
+			logEntry.WithField("outcome", "unauthorized").WithError(err).Warn("Protected operation without an authenticated principal")
+			unauthorized(w, "Authentication is required for the protected operation of this workflow")
 			return
 		}
 		if cabinet.IsEvidenceRequired(err) {
@@ -729,7 +731,7 @@ func main() {
 	metricSink := obs.NewMultiMetricSink(logrusSink, promSink)
 	gitOps.SetObsSinks(logrusSink, metricSink) // relay.git.op_duration_ms + WARN logok
 	obsOpt := cabinet.WithObsSinks(logrusSink, metricSink)
-	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), obsOpt)
+	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), cabinet.WithProtectedModules(protectedModuleIDs...), obsOpt)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
 	}

@@ -226,4 +226,7 @@ services:
       - CIC_VAULT_MOUNT=${CIC_VAULT_MOUNT:-transit}
       - CIC_VAULT_KEY=${CIC_VAULT_KEY:-}
       - CIC_TRUST_MODE=${CIC_TRUST_MODE:-dev}
+      # Bearer token of the authenticated routes (compile, pipeline, repo CI) and of the protected
+      # operations on /set. Unset: those refuse every request. Generate with `openssl rand -hex 32`.
+      - CIC_API_TOKEN=${CIC_API_TOKEN:-}
     restart: unless-stopped
