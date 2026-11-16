@@ -132,7 +132,16 @@ def fixture_bundle(
         rust_independent=rust_ids if unmapped == 0 else None,
         required_units={"goastdump", "rust"},
         mutants=mutants,
+        tool_pins={
+            "tools": dict(rec["tools"]),
+            "surfaces": {"object-evidence": sorted(rec["tools"])},
+        },
     )
 
 
-HONEST = {"L1": "INTEGRITY_OK", "L2": "BOUND_TO_INPUTS", "L3": "COMPLETE_FOR_SCOPE"}
+HONEST = {
+    "L1": "INTEGRITY_OK",
+    "L2": "BOUND_TO_INPUTS",
+    "L3": "COMPLETE_FOR_SCOPE",
+    "tools": "TOOLS_PINNED",
+}

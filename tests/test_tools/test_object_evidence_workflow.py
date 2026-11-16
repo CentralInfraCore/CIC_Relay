@@ -110,7 +110,12 @@ def test_scope_list_prints_the_files_of_a_class():
 
 @pytest.mark.parametrize(
     "path",
-    ["scripts/object_model.py", "scripts/seeded_defects.py", ".measurement-scope.json"],
+    [
+        "scripts/object_model.py",
+        "scripts/seeded_defects.py",
+        ".measurement-scope.json",
+        ".measurement-tools.json",
+    ],
 )
 def test_a_change_of_the_object_model_or_the_scope_is_gate_logic(path):
     sys.path.insert(0, os.path.join(ROOT, "scripts"))

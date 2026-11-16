@@ -826,6 +826,45 @@ def verify_l1(rec: dict) -> list[str]:
     return bad
 
 
+def load_tool_pins(path: str) -> dict:
+    """The pinned versions of the measuring tools (`.measurement-tools.json`); see quality_gate.load_tool_pins."""
+    try:
+        return qg.load_tool_pins(path)
+    except qg.GateError as e:
+        raise ModelError(str(e)) from e
+
+
+def verify_tools(rec: dict, pins: dict | None, quality: bool = False) -> dict:
+    """Is every tool of the record the pinned one, and does the record declare every tool it must? Fail closed.
+
+    UNUSABLE: the version is known but is not the pinned one. UNVERIFIABLE: the version cannot be established
+    (missing, empty, `unknown`) or the tool is not pinned at all (an unknown tool decides nothing). Either verdict
+    rejects the measurement. The versions are what the record DECLARES: that the declared tool really ran is
+    provenance, not checked here. `pins` is the loaded `.measurement-tools.json`; the tools the record must declare
+    are its `record_tools` (all pinned tools when absent)."""
+    if pins is None:
+        if quality:
+            # a quality verdict without the pin configuration cannot say which tools measured: fail closed
+            return {
+                "verdict": "UNVERIFIABLE",
+                "findings": [
+                    code(
+                        "TOOL_PINS_MISSING",
+                        "no tool pins were given: the tools cannot be verified (quality mode)",
+                    )
+                ],
+            }
+        return {"verdict": "NOT_CHECKED", "findings": ["no tool pins were given"]}
+    required = pins["surfaces"]["object-evidence"]
+    unusable, unverifiable = qg.tool_pin_findings(
+        pins["tools"], rec.get("tools") or {}, required
+    )
+    verdict = (
+        "UNUSABLE" if unusable else "UNVERIFIABLE" if unverifiable else "TOOLS_PINNED"
+    )
+    return {"verdict": verdict, "findings": unusable + unverifiable}
+
+
 def stability(rec: dict) -> dict:
     """Is the evidence STABLE? Only if every measured coverage was seen identical in >= STABLE_MIN_RUNS independent
     runs and no object is NONDETERMINISTIC. A single run is never stable: it shows nothing about determinism.
@@ -1305,10 +1344,13 @@ def verify_record(
     go_independent=None,
     rust_independent=None,
     required_units=None,
+    tool_pins=None,
+    quality=False,
 ) -> dict:
     """All three levels, each on its own. There is deliberately no combined verdict."""
     l1 = verify_l1(rec)
     res = {"L1": {"verdict": "FAIL" if l1 else "INTEGRITY_OK", "findings": l1}}
+    res["tools"] = verify_tools(rec, tool_pins, quality)
     if l1:  # the later levels read the record: do not trust a record that is not intact
         res["L2"] = {
             "verdict": "NOT_CHECKED",
@@ -1590,7 +1632,17 @@ def cmd_verify(a: argparse.Namespace) -> int:
         scope = _load(a.scope)
         check_scope(scope)
         ctx = build_context(rec, a.root, scope, inputs)
-    res = verify_record(rec, a.root, inputs, None, mutants, **ctx)
+    pins = load_tool_pins(a.tool_pins) if a.tool_pins else None
+    res = verify_record(
+        rec,
+        a.root,
+        inputs,
+        None,
+        mutants,
+        tool_pins=pins,
+        quality=a.mode == "quality",
+        **ctx,
+    )
     for lvl in ("L1", "L2", "L3"):
         r = res[lvl]
         print(f"{lvl} {r['verdict']}")
@@ -1603,10 +1655,17 @@ def cmd_verify(a: argparse.Namespace) -> int:
             f"stability {st['verdict']}: {st['observed_stable']}/{st['measured']} measured coverages seen identical in >= "
             f"{STABLE_MIN_RUNS} runs, {st['not_shown']} not shown, nondeterministic objects: {len(st['nondeterministic_objects'])}"
         )
+    tl = res.get("tools")
+    if tl:
+        print(f"tools {tl['verdict']}")
+        for line in tl["findings"]:
+            print(f"   findings: {line}")
     print(
         "(no combined 'verified': a digest does not prove where a measurement came from)"
     )
-    failed = any(res[lvl]["verdict"] == "FAIL" for lvl in ("L1", "L2", "L3"))
+    failed = any(res[lvl]["verdict"] == "FAIL" for lvl in ("L1", "L2", "L3")) or (
+        tl is not None and tl["verdict"] in ("UNUSABLE", "UNVERIFIABLE")
+    )
     return 1 if failed else 0
 
 
@@ -1668,6 +1727,17 @@ def main(argv: list[str] | None = None) -> int:
         "--input", action="append", help="NAME=PATH of an input file (L2 digest)"
     )
     p.add_argument("--rust-list", help="cargo mutants --list --json output (L3, Rust)")
+    p.add_argument(
+        "--mode",
+        required=True,
+        choices=["quality", "diagnostic"],
+        help="quality: the result decides a quality verdict, so the tool pins are REQUIRED (missing = UNVERIFIABLE, exit 1); "
+        "diagnostic: reading a record, the tool pins are optional (NOT_CHECKED is not a pass)",
+    )
+    p.add_argument(
+        "--tool-pins",
+        help=".measurement-tools.json: the pinned tool versions (fail closed on a different, missing or unpinned tool)",
+    )
     p.set_defaults(fn=cmd_verify)
     a = ap.parse_args(argv)
     try:

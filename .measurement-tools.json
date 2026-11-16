@@ -1,0 +1,47 @@
+{
+  "schema": "measurement-tools/1",
+  "note": "Exact versions of the tools whose output decides a quality verdict. Values observed in the object-evidence CI run 43701788247 (main 7386565); gremlins: the module version and content hash of the v0.6.0 install (`go version -m`: the binary itself only prints `dev`). A different known version is UNUSABLE; a missing, unknown or unpinned one is UNVERIFIABLE; both reject the measurement. surfaces: the tool set each measuring surface MUST declare; a required tool that is not declared is UNVERIFIABLE (check-tools --surface). Changing this file is a gate-logic change (the planner escalates to FULL).",
+  "tools": {
+    "c++filt": "GNU c++filt (GNU Binutils for Ubuntu) 2.46",
+    "cargo-llvm-cov": "0.9.1",
+    "cargo-mutants": "27.1.0",
+    "go": "go1.26.11",
+    "gremlins": "v0.6.0 h1:3G2ROO0I3q4bb5bxElQIUITTuEbl1iOfVYFqunGwrJI=",
+    "objinventory": "objinventory/1",
+    "rustc": "1.96.1"
+  },
+  "surfaces": {
+    "coverage-go": [
+      "go"
+    ],
+    "coverage-rust": [
+      "cargo-llvm-cov",
+      "rustc"
+    ],
+    "gate-selftest-go": [
+      "go",
+      "gremlins"
+    ],
+    "gate-selftest-rust": [
+      "cargo-llvm-cov",
+      "cargo-mutants",
+      "rustc"
+    ],
+    "mutation-go": [
+      "go",
+      "gremlins"
+    ],
+    "mutation-rust": [
+      "cargo-mutants",
+      "rustc"
+    ],
+    "object-evidence": [
+      "c++filt",
+      "cargo-llvm-cov",
+      "cargo-mutants",
+      "go",
+      "objinventory",
+      "rustc"
+    ]
+  }
+}

@@ -1160,4 +1160,93 @@ mod tests {
     fn abi_version_matches_the_constant() {
         assert_eq!(cic_ffi_abi_version(), super::CIC_FFI_ABI_VERSION);
     }
+
+    // ---- PR-06 (#169 FFI boundary): negative tests of the airlock itself. Test code only; the production
+    // ---- code above is untouched.
+
+    #[test]
+    fn a_panic_in_the_core_is_contained_and_reported_as_a_rejection() {
+        // The backstop recovers in unwinding builds (tests always unwind). Release builds use `panic = "abort"`:
+        // there the process aborts before this point, which is stated in the PR-06 report, not tested here.
+        let input = b"x";
+        let mut out_len: usize = 9;
+        // SAFETY: `input` is a valid slice; `out_len` is a valid local.
+        let out = unsafe {
+            super::marshal(input.as_ptr(), input.len(), &raw mut out_len, |_| {
+                panic!("deliberate panic in the core")
+            })
+        };
+        assert!(out.is_null(), "a panic must not produce a buffer");
+        assert_eq!(out_len, 0, "a panic must leave out_len at zero");
+    }
+
+    #[test]
+    fn an_empty_core_result_is_a_rejection_not_an_empty_buffer() {
+        let input = b"x";
+        let mut out_len: usize = 9;
+        // SAFETY: `input` is a valid slice; `out_len` is a valid local.
+        let out = unsafe {
+            super::marshal(input.as_ptr(), input.len(), &raw mut out_len, |_| {
+                Some(Vec::new())
+            })
+        };
+        assert!(out.is_null());
+        assert_eq!(out_len, 0);
+    }
+
+    #[test]
+    fn a_null_pointer_with_a_nonzero_length_is_read_as_empty_and_never_dereferenced() {
+        let mut out_len: usize = 9;
+        // SAFETY: a null `ptr` is never dereferenced (the airlock reads it as empty); `out_len` is a valid local.
+        let out = unsafe { cic_ffi_ping(ptr::null(), 64, &raw mut out_len) };
+        assert!(out.is_null(), "an empty input echoes nothing");
+        assert_eq!(out_len, 0);
+    }
+
+    #[test]
+    fn every_rejection_path_leaves_out_len_at_zero() {
+        // out_len is pre-set to a sentinel: a rejection that forgets to zero it would hand the caller a bogus length.
+        let big = vec![b'x'; super::MAX_INPUT_LEN + 1];
+        let cases: [(&str, &[u8]); 5] = [
+            ("ping, empty", b""),
+            ("ping, oversized", &big),
+            ("connection_request, malformed", b"not json"),
+            (
+                "connection_request, empty subject",
+                br#"{"subject":"","scope":[]}"#,
+            ),
+            ("run_flow, malformed", b"not json"),
+        ];
+        for (name, input) in cases {
+            let mut out_len: usize = 0xDEAD;
+            // SAFETY: `input` is a valid slice; `out_len` is a valid local.
+            let out = unsafe {
+                if name.starts_with("ping") {
+                    cic_ffi_ping(input.as_ptr(), input.len(), &raw mut out_len)
+                } else if name.starts_with("connection_request") {
+                    cic_ffi_connection_request(input.as_ptr(), input.len(), &raw mut out_len)
+                } else {
+                    cic_ffi_run_flow(input.as_ptr(), input.len(), &raw mut out_len)
+                }
+            };
+            assert!(out.is_null(), "{name}: a rejection returns null");
+            assert_eq!(out_len, 0, "{name}: a rejection zeroes out_len");
+        }
+    }
+
+    #[test]
+    fn free_with_a_zero_length_is_a_noop_and_leaves_a_live_buffer_intact() {
+        let input = b"keep-me";
+        let mut out_len: usize = 0;
+        // SAFETY: `input` is a valid slice; `out_len` is a valid local.
+        let out = unsafe { cic_ffi_ping(input.as_ptr(), input.len(), &raw mut out_len) };
+        assert!(!out.is_null());
+        // SAFETY: a zero length is a documented no-op: it must not release `out`.
+        unsafe { cic_ffi_free(out, 0) };
+        // SAFETY: `out`/`out_len` are still the pair returned by the export; nothing released it.
+        let still = unsafe { slice::from_raw_parts(out, out_len) }.to_vec();
+        assert_eq!(still, input);
+        // SAFETY: the one real release of the exact pair.
+        unsafe { cic_ffi_free(out, out_len) };
+    }
 }

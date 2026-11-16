@@ -135,6 +135,14 @@ jobs:
         with:
           tool: cargo-mutants
 
+      - name: Check the measuring tools (fail closed)
+        if: steps.plan.outputs.rust == 'true'
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface mutation-rust \
+            --tool "rustc=$(rustc --version | awk '{print $2}')" \
+            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+
       # The number of Rust shards follows the number of mutants (about 75 per shard, at most
       # 8), so the wall time stays bounded as the code grows. 0 shards = nothing to mutate.
       - name: Count the Rust mutants and choose the shards
@@ -246,6 +254,13 @@ jobs:
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface mutation-go \
+            --tool "go=$(go version | awk '{print $3}')" \
+            --tool "gremlins=$(go version -m "$(command -v gremlins)" | awk '$1=="mod" && $2 ~ /go-gremlins\/gremlins$/ {print $3, $4}')"
+
       - name: Mutation of this chunk of the packages changed since the last nightly (ratchet)
         env:
           GOFLAGS: "-mod=readonly -trimpath"
@@ -287,6 +302,13 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-mutants
+
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface mutation-rust \
+            --tool "rustc=$(rustc --version | awk '{print $2}')" \
+            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
 
       - name: Mutation of one shard of the Rust lines changed since the last nightly (no surviving mutants)
         env:

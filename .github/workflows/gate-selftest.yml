@@ -1,0 +1,121 @@
+name: gate-selftest
+
+# REPORT-ONLY. Does the REAL gate turn red when it has to? (#169 self-testing probes 1 and 2)
+#   P1  a weakened test suite lowers the coverage         -> the Go per-package coverage step of verify.yml and
+#                                                            `cargo llvm-cov --fail-under-lines 90` reject it
+#   P2  a deliberately surviving mutant                   -> scripts/gremlins_gate.py (Go) and
+#                                                            `cargo mutants --in-diff` (Rust) reject it
+# scripts/gate_selftest.py runs the gates unchanged (the Go coverage gate is the `run:` script of the workflow step,
+# extracted from verify.yml; no threshold is set here) in an isolated COPY of the checkout, next to a positive control.
+# It is NOT a required check, it gates nothing else, and it changes no threshold. It runs when a file it exercises
+# changes, or by hand: one run costs a Rust coverage build and two small mutation runs (see the PR-06 report).
+on:
+  pull_request:
+    branches: ["**"]
+    paths:
+      - ".github/workflows/gate-selftest.yml"
+      - ".github/workflows/verify.yml"
+      - "scripts/gate_selftest.py"
+      - "scripts/gremlins_gate.py"
+      - "scripts/quality_gate.py"
+      - ".measurement-tools.json"
+      - ".mutation-baseline.json"
+      - "rust-toolchain.toml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-selftest-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  go:
+    name: go (coverage gate, gremlins ratchet)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.11"
+
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface gate-selftest-go \
+            --tool "go=$(go version | awk '{print $3}')" \
+            --tool "gremlins=$(go version -m "$(command -v gremlins)" | awk '$1=="mod" && $2 ~ /go-gremlins\/gremlins$/ {print $3, $4}')"
+
+      - name: The real Go gates against a weakened suite and a surviving mutant
+        env:
+          GOFLAGS: "-mod=readonly -trimpath"
+        run: |
+          set -euo pipefail
+          python3 -c "import yaml"
+          mkdir -p "$RUNNER_TEMP/selftest"
+          python3 scripts/gate_selftest.py --src . --work "$RUNNER_TEMP/selftest/go" --only go-cov,go-mut | tee "$RUNNER_TEMP/selftest/go.txt"
+
+      - name: Keep the output
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-selftest-go
+          path: ${{ runner.temp }}/selftest/go.txt
+          if-no-files-found: warn
+
+  rust:
+    name: rust (coverage gate, cargo-mutants)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          rustup show active-toolchain || rustup toolchain install
+          rustup component add llvm-tools-preview
+
+      - name: Install cargo-llvm-cov and cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-mutants
+
+      - name: Check the measuring tools (fail closed)
+        run: |
+          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+            --surface gate-selftest-rust \
+            --tool "rustc=$(rustc --version | awk '{print $2}')" \
+            --tool "cargo-llvm-cov=$(cargo llvm-cov --version | awk '{print $2}')" \
+            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+
+      - name: The real Rust gates against a weakened suite and a surviving mutant
+        run: |
+          set -euo pipefail
+          python3 -c "import yaml"
+          mkdir -p "$RUNNER_TEMP/selftest"
+          python3 scripts/gate_selftest.py --src . --work "$RUNNER_TEMP/selftest/rust" --only rust-cov,rust-mut | tee "$RUNNER_TEMP/selftest/rust.txt"
+
+      - name: Keep the output
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-selftest-rust
+          path: ${{ runner.temp }}/selftest/rust.txt
+          if-no-files-found: warn
