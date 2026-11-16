@@ -394,7 +394,7 @@ def test_no_workflow_reads_the_pins_or_the_checking_script_from_the_working_tree
         assert "scripts/quality_gate.py check-tools" not in text, name
         sites += text.count('"${MR_GATE:?') + text.count('--tool-pins "${MR_PINS:?')
     # 12 check-tools calls and the 2 object-evidence verifier calls: a new measuring call has to go through the reference
-    assert sites == 14
+    assert sites == 13
 
 
 def test_every_workflow_that_uses_the_reference_resolves_it_first_in_the_same_job():

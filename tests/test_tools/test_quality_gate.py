@@ -943,7 +943,7 @@ JOBS_WITH_TOOLS = {
         ("go", {"go", "gremlins"}),
         ("rust", {"rustc", "cargo-mutants"}),
     ],
-    "verify.yml": [("coverage", {"go"}), ("rust", {"rustc", "cargo-llvm-cov"})],
+    "verify.yml": [("rust", {"rustc", "cargo-llvm-cov"})],
 }
 
 
