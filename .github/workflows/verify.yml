@@ -13,6 +13,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GOTOOLCHAIN: go1.26.10   # DELIBERATE DEFECT (proof): every Go job of this workflow runs go1.26.10, the pin names go1.26.11
 
 jobs:
   verify:
