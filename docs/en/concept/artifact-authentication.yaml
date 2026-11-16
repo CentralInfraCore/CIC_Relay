@@ -1,0 +1,18 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - signing
+related_nodes:
+  - docs/en/security/module-loading
+  - docs/en/concept/artifact-authentication-test-plan
+  - docs/en/security/git-host-functions
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - validation
+  - design-review
+description: |
+  Concept-status architecture proposal for #162: authenticating a module and its capability manifest with an envelope 3 release record verified at load (record, shipped, crypto, authority layers), tied to the CICSourceCA trust chain, with a capability bound to build hash, digests and signer, no certificate-only fallback in prod, and the owner decisions D1 to D7. Design only, no code.
