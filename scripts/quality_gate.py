@@ -738,7 +738,7 @@ APPROVAL_PREFIX = "APPROVE-MEASUREMENT-TOOLS"
 APPROVAL_RE = re.compile(
     r"^"
     + APPROVAL_PREFIX
-    + r" head=([0-9a-f]{40}) digest=sha256:([0-9a-f]{64})[ \t]*$",
+    + r" head=([0-9a-f]{40}) digest=sha256:([0-9a-f]{64})[ \t\r]*$",  # GitHub's web editor stores CRLF line ends
     re.M,
 )
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")

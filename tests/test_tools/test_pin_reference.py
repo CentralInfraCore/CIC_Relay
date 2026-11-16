@@ -440,3 +440,21 @@ def test_a_head_commit_missing_from_the_checkout_is_not_reported_as_a_deleted_pi
     run_ref(world, world["base"])  # positive control: the commit is there
     with pytest.raises(qg.GateError, match="REFERENCE_INVALID.*not available"):
         run_ref(world, "1" * 40)
+
+
+def test_an_approval_written_in_the_github_web_editor_with_crlf_line_ends_counts(world):
+    # measured on the real comment of a proof PR: the stored body ends with "\r\n\n"
+    branch(world)
+    write_pins(world["work"], pins_doc(go="go1.99.0"))
+    head = commit(world["work"], "toolchain update")
+    d = head_digest(world, head)
+    crlf = {
+        "id": 9,
+        "login": "owner",
+        "body": f"{qg.APPROVAL_PREFIX} head={head} digest={d}\r\n\n",
+    }
+    assert run_ref(world, head, comments=[crlf])["status"] == "APPROVED_UPDATE"
+    # a CR inside the line is still no approval (the digest must be the whole rest of the line)
+    bad = dict(crlf, body=f"{qg.APPROVAL_PREFIX} head={head} digest={d}\rx\n")
+    with pytest.raises(qg.GateError, match="PIN_CHANGED_UNAPPROVED"):
+        run_ref(world, head, comments=[bad])
