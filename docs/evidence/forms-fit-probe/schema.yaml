@@ -1,0 +1,74 @@
+spec:
+  identity:
+    atomic_ref: "cic:core:Identity@v0.2.0"
+    kind: ModuleRelease
+    namespace: "cic:release"
+    version: v0.0.1
+  config_surface:
+    aggregate_ref: "cic:core:ConfigSurface@v0.2.0"
+    nodes:
+      - {name: kind, shape_type: scalar, scalar_type: string, mandatory: true}
+      - {name: name, shape_type: scalar, scalar_type: string, mandatory: true}
+      - {name: version, shape_type: scalar, scalar_type: string, mandatory: true}
+      - {name: timestamp, shape_type: scalar, scalar_type: string, mandatory: true}
+      - name: validity
+        shape_type: composite
+        mandatory: true
+        fields:
+          - {name: from, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: until, shape_type: scalar, scalar_type: string, mandatory: true}
+      - name: createdBy
+        shape_type: composite
+        mandatory: true
+        fields:
+          - {name: name, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: email, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: certificate, shape_type: scalar, scalar_type: string, mandatory: true}
+      - name: provenance
+        shape_type: composite
+        mandatory: true
+        fields:
+          - {name: envelope, shape_type: scalar, scalar_type: integer, mandatory: true}
+          - {name: source_commit, shape_type: scalar, scalar_type: string, mandatory: true}
+      - name: artifacts
+        shape_type: composite
+        mandatory: true
+        fields:
+          - {name: manifest_digest, shape_type: scalar, scalar_type: string, mandatory: true}
+          - name: files
+            shape_type: collection
+            collection_variant: list
+            mandatory: true
+            min_items: 1
+            item_fields:
+              - {name: path, shape_type: scalar, scalar_type: string, role: key}
+              - {name: digest, shape_type: scalar, scalar_type: string, mandatory: true}
+      - name: release
+        shape_type: composite
+        mandatory: true
+        fields:
+          - {name: envelope, shape_type: scalar, scalar_type: integer, mandatory: true}
+          - name: createdBy
+            shape_type: composite
+            mandatory: true
+            fields:
+              - {name: name, shape_type: scalar, scalar_type: string, mandatory: true}
+              - {name: email, shape_type: scalar, scalar_type: string, mandatory: true}
+              - {name: certificate, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: build_hash, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: sign, shape_type: scalar, scalar_type: string, mandatory: true}
+      - name: cic_countersign
+        shape_type: composite
+        mandatory: true
+        fields:
+          - name: authority
+            shape_type: composite
+            mandatory: true
+            fields:
+              - {name: name, shape_type: scalar, scalar_type: string, mandatory: true}
+              - {name: certificate, shape_type: scalar, scalar_type: string, mandatory: true}
+              - {name: root_certificate, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: signed_payload, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: sign, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: workflow, shape_type: scalar, scalar_type: string, mandatory: true}
+          - {name: ts, shape_type: scalar, scalar_type: string, mandatory: true}

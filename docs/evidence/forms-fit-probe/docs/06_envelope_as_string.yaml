@@ -1,0 +1,40 @@
+kind: ModuleRelease
+version: 0.2.1
+timestamp: '2026-11-02T18:57:58.061912+00:00'
+validity:
+  from: '2026-05-25'
+  until: '2027-05-25'
+createdBy:
+  name: Example Developer
+  email: dev@example.invalid
+  certificate: placeholder-certificate
+artifacts:
+  manifest_digest: sha256:97c3301984ee44bcf5b285175f990aa08f16d001c7f4e8caa55f89cd3612cfea
+  files:
+  - path: LICENSE.md
+    digest: sha256:4fffcdac095c0623fefb8515ab80b3e9629c0febc454456cd08b3cdf3c941720
+  - path: dependency.yaml
+    digest: sha256:24d6f801c226ac0606ef481e1b88893782d8eea6492f4e5a8820462f29e13fc3
+  - path: docs/en/RELEASE-RECORD-CONTRACT.md
+    digest: sha256:a8f26e78046e50f573d7e577680ccc3208fab7da6335aed613d6115b17db42b6
+release:
+  envelope: 3
+  createdBy:
+    name: Example Developer
+    email: dev@example.invalid
+    certificate: placeholder-certificate
+  build_hash: HVazYxdg737P2bMy2Enkj5ej1VfF+TQ4pDub86G3p2s=
+  sign: vault:v1:MEUCIQDjxe0LK4LQfbp4V+cAgKXqjUYFWZhNbbFcoTWYnuorsAIgMgQVgq6wZiQXr6QIlBsjQ7yARmVvJ/dP4kX2pRdoYd8=
+cic_countersign:
+  authority:
+    name: CIC Source CA
+    certificate: placeholder-certificate
+    root_certificate: placeholder-root-certificate
+  signed_payload: build_hash
+  sign: vault:v1:MEUCIE1yRly1tw0BEh33TPA9SD+nc9ClMmOiYazAe8SQid7OAiEAwRHfNRtT5jmO3oyEBXKatEyVqiQjFSeZsV92IeZCN3o=
+  workflow: cic-primitives-release@v1
+  ts: '2026-11-02T18:58:57Z'
+name: example-module
+provenance:
+  envelope: '3'
+  source_commit: 106965b8cea7cce2081beb77008753af21e68b46
