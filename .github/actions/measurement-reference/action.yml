@@ -1,0 +1,54 @@
+name: Measurement reference
+description: >
+  Resolve the reference of the measuring-tool check (CIC_Relay #195). On a pull request the reference is the tip of the
+  base branch, not the pull request's own tree: the pins, the surfaces and the approvers are read from there, and the
+  checking script (scripts/quality_gate.py) is taken from there too. A changed pin file needs an approval comment of an
+  approver of the base, bound to the exact head and the exact pin digest. Exports MR_GATE, MR_PINS and MR_RECORD.
+  Limit (measured, see the report): this action and the workflow that calls it come from the pull request itself.
+runs:
+  using: composite
+  steps:
+    - name: Resolve the reference pins
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPOSITORY: ${{ github.repository }}
+        SELF_SHA: ${{ github.sha }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        REF="$RUNNER_TEMP/measurement-reference"
+        rm -rf "$REF"; mkdir -p "$REF"
+        if [ "$EVENT" != "pull_request" ]; then
+          # push / schedule / dispatch: no base to compare with; the reference is the tree itself, and the record says so
+          python3 scripts/quality_gate.py pin-reference --mode push --head-sha "$SELF_SHA" --out "$REF"
+          GATE=scripts/quality_gate.py
+        else
+          # some jobs check out the merge ref shallowly: the head commit of the pull request must be there to read its pin file
+          git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null || git fetch --no-tags --quiet --depth=1 origin "$HEAD_SHA"
+          git fetch --no-tags --quiet origin "$BASE_REF"
+          TIP=$(git rev-parse FETCH_HEAD)
+          if git show "$TIP:scripts/quality_gate.py" > "$REF/quality_gate.py" 2>/dev/null \
+             && grep -q "pin-reference" "$REF/quality_gate.py"; then
+            MODE=pull_request
+            GATE="$REF/quality_gate.py"
+          else
+            # the base has no pin reference yet: the change that adds it (a one-time bootstrap, refused once the base has it)
+            MODE=bootstrap
+            GATE=scripts/quality_gate.py
+          fi
+          # the approval comments are read only if the pin file changed (the script asks for them at that point)
+          gh api --paginate "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
+            --jq '.[] | {id, login: .user.login, body}' > "$REF/comments.ndjson" || : > "$REF/comments.ndjson"
+          python3 "$GATE" pin-reference --mode "$MODE" --head-sha "$HEAD_SHA" --base-ref "$BASE_REF" \
+            --base-sha "$BASE_SHA" --comments "$REF/comments.ndjson" --out "$REF"
+        fi
+        {
+          echo "MR_GATE=$GATE"
+          echo "MR_PINS=$REF/measurement-tools.json"
+          echo "MR_RECORD=$REF/record.json"
+        } >> "$GITHUB_ENV"

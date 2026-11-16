@@ -15,6 +15,7 @@ Commands
   verify      check plan + shard reports + chunk reports against each other
   check-coverprofile  a Go coverage profile must exist, parse and hold at least one block
   check-tools         every measuring tool a job uses must be the pinned one (fail closed)
+  pin-reference       resolve the reference pins of a job: the base branch's, not the pull request's own (#195)
 
 Contracts (versioned; a change is a change of the gate logic and is planned as such by
 scripts/mutation_plan.py):
@@ -725,6 +726,255 @@ def tool_pin_findings(
     return unusable, unverifiable
 
 
+# --- The reference of the tool check (CIC_Relay #195) ---------------------------------------------------------
+# A pull request must not define its own acceptance reference. The pins (and the surfaces, and the approvers) are read
+# from the BASE branch tip, and the checking script itself is run from the base (see
+# .github/actions/measurement-reference). A change of the pin file is a deliberate toolchain update: it is accepted only
+# with an owner approval that is bound to the exact PR head and the exact digest of the new pin file, and that comes from
+# a source the pull request cannot write (a comment of an approver, authenticated by GitHub).
+
+PIN_REFERENCE_SCHEMA = "measurement-reference/1"
+APPROVAL_PREFIX = "APPROVE-MEASUREMENT-TOOLS"
+APPROVAL_RE = re.compile(
+    r"^"
+    + APPROVAL_PREFIX
+    + r" head=([0-9a-f]{40}) digest=sha256:([0-9a-f]{64})[ \t\r]*$",  # GitHub's web editor stores CRLF line ends
+    re.M,
+)
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _digest(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def _git(repo: str, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+    r = subprocess.run(
+        ["git", "-C", repo, *args], capture_output=True, text=False, check=False
+    )
+    if check and r.returncode != 0:
+        raise GateError(
+            f"git {' '.join(args)}: {r.stderr.decode('utf-8', 'replace').strip()}"
+        )
+    return r
+
+
+def _approvers(pin_bytes: bytes, where: str) -> list[str]:
+    try:
+        doc = json.loads(pin_bytes)
+    except ValueError as e:
+        raise GateError(f"{where}: not JSON: {e}") from e
+    a = doc.get("approvers", []) if isinstance(doc, dict) else []
+    if not isinstance(a, list) or not all(isinstance(x, str) and x for x in a):
+        raise GateError(f"{where}: 'approvers' must be a list of GitHub logins")
+    return a
+
+
+def _read_comments(path: str) -> list[dict]:
+    """Comments as a JSON array or as one JSON object per line: {login, body}."""
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except OSError as e:
+        raise GateError(f"{path}: comments unreadable: {e}") from e
+    text = text.strip()
+    if not text:
+        return []
+    try:
+        doc = json.loads(text)
+        return doc if isinstance(doc, list) else [doc]
+    except ValueError:
+        pass
+    try:
+        return [json.loads(line) for line in text.splitlines() if line.strip()]
+    except ValueError as e:
+        raise GateError(f"{path}: comments not JSON: {e}") from e
+
+
+def find_approval(
+    comments: list[dict], approvers: list[str], head_sha: str, digest: str
+) -> dict | None:
+    """The approval of this exact head and this exact pin digest by an approver of the BASE pin file, or None."""
+    for c in comments:
+        if not isinstance(c, dict) or c.get("login") not in approvers:
+            continue
+        for m in APPROVAL_RE.finditer(str(c.get("body", ""))):
+            if m.group(1) == head_sha and "sha256:" + m.group(2) == digest:
+                return c
+    return None
+
+
+def pin_reference(
+    *,
+    mode: str,
+    pins: str,
+    out_dir: str,
+    repo: str = ".",
+    remote: str = "origin",
+    base_ref: str = "",
+    base_sha: str = "",
+    head_sha: str = "",
+    comments: str = "",
+) -> dict:
+    """Resolve the reference pins of a job and write them (and the record) to `out_dir`. Fail closed.
+
+    pull_request: the reference is the tip of the base branch (fetched now); `base_sha` (from the event) must be a
+    commit of that branch, so a forged SHA is refused. The head pin file must exist; if it differs from the base's, an
+    approval bound to `head_sha` and the head pin digest is required, and then the head pin file is the reference
+    (APPROVED_UPDATE), otherwise the job is refused (PIN_CHANGED_UNAPPROVED).
+    push (any non-PR event): the reference is the tree itself (SELF_REFERENCE); said so in the record.
+    bootstrap: only for the change that introduces this mechanism: the base must not have it yet.
+    """
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    if not head_sha:
+        head_sha = (
+            _git(repo, "rev-parse", "HEAD").stdout.decode().strip()
+            if mode != "pull_request"
+            else ""
+        )
+    if not SHA_RE.match(head_sha or ""):
+        raise GateError(
+            f"[REFERENCE_INVALID] the head SHA {head_sha!r} is not a full commit SHA"
+        )
+    if (
+        _git(repo, "cat-file", "-e", f"{head_sha}^{{commit}}", check=False).returncode
+        != 0
+    ):
+        raise GateError(
+            f"[REFERENCE_INVALID] the head commit {head_sha} is not available in this checkout (fetch it first)"
+        )
+    head_pin = _git(repo, "show", f"{head_sha}:{pins}", check=False)
+    if head_pin.returncode != 0:
+        raise GateError(f"[PIN_DELETED] {pins} does not exist at the head {head_sha}")
+    head_digest = _digest(head_pin.stdout)
+    rec: dict = {
+        "schema": PIN_REFERENCE_SCHEMA,
+        "mode": mode,
+        "head": head_sha,
+        "head_digest": head_digest,
+        "path": pins,
+    }
+    ref_pin = head_pin.stdout
+    if mode == "push":
+        rec.update(
+            status="SELF_REFERENCE",
+            reference_commit=head_sha,
+            reference_digest=head_digest,
+        )
+    elif mode in ("pull_request", "bootstrap"):
+        if not base_ref or not SHA_RE.match(base_sha or ""):
+            raise GateError(
+                "[REFERENCE_INVALID] a pull request needs the base branch and a full base SHA from the event"
+            )
+        _git(repo, "fetch", "--no-tags", "--quiet", remote, base_ref)
+        tip = _git(repo, "rev-parse", "FETCH_HEAD").stdout.decode().strip()
+        anc = _git(repo, "merge-base", "--is-ancestor", base_sha, tip, check=False)
+        if anc.returncode != 0:
+            raise GateError(
+                f"[REFERENCE_FORGED] {base_sha} is not a commit of the base branch {base_ref} (tip {tip})"
+            )
+        base_pin = _git(repo, "show", f"{tip}:{pins}", check=False)
+        base_script = _git(repo, "show", f"{tip}:scripts/quality_gate.py", check=False)
+        has_feature = (
+            base_script.returncode == 0 and b"pin-reference" in base_script.stdout
+        )
+        rec.update(base=base_sha, base_ref=base_ref, reference_commit=tip)
+        if mode == "bootstrap":
+            if has_feature:
+                raise GateError(
+                    "[BOOTSTRAP_REFUSED] the base already has the pin reference mechanism: the bootstrap is not available"
+                )
+            rec.update(status="BOOTSTRAP", reference_digest=head_digest)
+            print(
+                "::notice::the base has no pin reference yet (the change that adds it): this change's own pins are used once"
+            )
+        else:
+            if base_pin.returncode != 0:
+                raise GateError(
+                    f"[REFERENCE_MISSING] {pins} does not exist at the base tip {tip}"
+                )
+            base_digest = _digest(base_pin.stdout)
+            rec["reference_digest"] = base_digest
+            if base_digest == head_digest:
+                rec["status"] = "UNCHANGED"
+                ref_pin = base_pin.stdout
+            else:
+                approvers = _approvers(base_pin.stdout, f"{pins} at the base")
+                app = None
+                if approvers and comments:
+                    app = find_approval(
+                        _read_comments(comments), approvers, head_sha, head_digest
+                    )
+                if app is None:
+                    raise GateError(
+                        f"[PIN_CHANGED_UNAPPROVED] {pins} differs from the base ({base_digest} -> {head_digest}) "
+                        f"and there is no approval of this exact head and digest by an approver of the base "
+                        f"({', '.join(approvers) or 'none defined'}). An approver comments on the pull request:\n"
+                        f"{APPROVAL_PREFIX} head={head_sha} digest={head_digest}\n"
+                        "(a new push invalidates it; the pin and the tool setup change together, and every gate runs with the new pins)"
+                    )
+                rec.update(
+                    status="APPROVED_UPDATE",
+                    base_digest=base_digest,
+                    reference_digest=head_digest,
+                    approved_by=app.get("login"),
+                    approval_id=app.get("id"),
+                )
+                ref_pin = head_pin.stdout
+    else:
+        raise GateError(f"unknown mode {mode!r}")
+    (out / "measurement-tools.json").write_bytes(ref_pin)
+    rec["pins_file"] = str(out / "measurement-tools.json")
+    (out / "record.json").write_text(
+        json.dumps(rec, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return rec
+
+
+def cmd_pin_reference(a: argparse.Namespace) -> int:
+    rec = pin_reference(
+        mode=a.mode,
+        pins=a.pins,
+        out_dir=a.out,
+        repo=a.repo,
+        remote=a.remote,
+        base_ref=a.base_ref or "",
+        base_sha=a.base_sha or "",
+        head_sha=a.head_sha or "",
+        comments=a.comments or "",
+    )
+    print(
+        f"pin reference: {rec['status']} reference-commit={rec['reference_commit']} "
+        f"reference-digest={rec['reference_digest']} head-digest={rec['head_digest']}"
+        + (f" approved-by={rec['approved_by']}" if rec.get("approved_by") else "")
+    )
+    return 0
+
+
+def verify_reference_record(record_path: str, pins_path: str) -> dict:
+    """The record of pin-reference, and the pins file it is used with must be the very file the record names."""
+    try:
+        rec = json.loads(Path(record_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise GateError(f"[REFERENCE_MISSING] {record_path}: unreadable: {e}") from e
+    if not isinstance(rec, dict) or rec.get("schema") != PIN_REFERENCE_SCHEMA:
+        raise GateError(
+            f"[REFERENCE_INVALID] {record_path}: not a {PIN_REFERENCE_SCHEMA} record"
+        )
+    for k in ("status", "reference_commit", "reference_digest"):
+        if not isinstance(rec.get(k), str) or not rec[k]:
+            raise GateError(f"[REFERENCE_INVALID] {record_path}: '{k}' missing")
+    try:
+        actual = _digest(Path(pins_path).read_bytes())
+    except OSError as e:
+        raise GateError(f"[REFERENCE_MISSING] {pins_path}: unreadable: {e}") from e
+    if actual != rec["reference_digest"]:
+        raise GateError(
+            f"[REFERENCE_MISMATCH] {pins_path} has digest {actual}, the reference record says {rec['reference_digest']}"
+        )
+    return rec
+
+
 def cmd_check_tools(a: argparse.Namespace) -> int:
     pins = load_tool_pins(a.pins)
     if a.surface not in pins["surfaces"]:
@@ -740,6 +990,12 @@ def cmd_check_tools(a: argparse.Namespace) -> int:
         declared[name] = ver.strip()
     if not declared:
         raise GateError("check-tools was given no tool: nothing was checked")
+    if a.reference:
+        ref = verify_reference_record(a.reference, a.pins)
+        print(
+            f"pin reference: {ref['status']} reference-commit={ref['reference_commit']} "
+            f"reference-digest={ref['reference_digest']}"
+        )
     unusable, unverifiable = tool_pin_findings(pins["tools"], declared, required)
     for line in unusable + unverifiable:
         print(line)
@@ -808,7 +1064,30 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--tool", action="append", help="NAME=VERSION as read from the installed tool"
     )
+    p.add_argument(
+        "--reference",
+        help="record.json of pin-reference: the pins file must be the one it names; its commit and digest are printed",
+    )
     p.set_defaults(fn=cmd_check_tools)
+
+    p = sub.add_parser("pin-reference")
+    p.add_argument(
+        "--mode", required=True, choices=["pull_request", "push", "bootstrap"]
+    )
+    p.add_argument("--pins", default=".measurement-tools.json")
+    p.add_argument(
+        "--out", required=True, help="directory for the reference pins and record.json"
+    )
+    p.add_argument("--repo", default=".")
+    p.add_argument("--remote", default="origin")
+    p.add_argument("--base-ref")
+    p.add_argument("--base-sha")
+    p.add_argument("--head-sha")
+    p.add_argument(
+        "--comments",
+        help="comments of the pull request (JSON), read only if the pin file changed",
+    )
+    p.set_defaults(fn=cmd_pin_reference)
 
     p = sub.add_parser("check-coverprofile")
     p.add_argument("profile")

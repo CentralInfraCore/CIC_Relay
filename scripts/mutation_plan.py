@@ -87,6 +87,7 @@ GATE_LOGIC_PATHS = {
     "scripts/gate_selftest.py",
     ".measurement-scope.json",
     ".measurement-tools.json",
+    ".github/actions/measurement-reference/action.yml",
     ".mutation-baseline.json",
     ".github/workflows/mutation.yml",
     ".github/workflows/mutation-pr.yml",

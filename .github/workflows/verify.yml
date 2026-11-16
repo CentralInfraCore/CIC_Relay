@@ -88,9 +88,13 @@ jobs:
         run: |
           go mod download || true
 
+      - name: Resolve the measurement reference (pins from the base, not the pull request)
+        uses: ./.github/actions/measurement-reference
+
       - name: Check the measuring tools (fail closed)
         run: |
-          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+          python3 "${MR_GATE:?the measurement reference step did not run}" check-tools \
+            --pins "${MR_PINS:?}" --reference "${MR_RECORD:?}" \
             --surface coverage-go \
             --tool "go=$(go version | awk '{print $3}')"
 
@@ -296,9 +300,13 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
+      - name: Resolve the measurement reference (pins from the base, not the pull request)
+        uses: ./.github/actions/measurement-reference
+
       - name: Check the measuring tools (fail closed)
         run: |
-          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+          python3 "${MR_GATE:?the measurement reference step did not run}" check-tools \
+            --pins "${MR_PINS:?}" --reference "${MR_RECORD:?}" \
             --surface coverage-rust \
             --tool "rustc=$(rustc --version | awk '{print $2}')" \
             --tool "cargo-llvm-cov=$(cargo llvm-cov --version | awk '{print $2}')"
