@@ -12,10 +12,21 @@ Minden teszt valódi modult és valódi, teszt-kulcsos release rekordot épít (
 | A2 | A `.wasm` egyetlen bájtja módosítva az aláírás után | elutasítva (`shipped`: digest-eltérés) |
 | A3 | A `capability_manifest` egyetlen jogosultsága módosítva az aláírás után (szélesebb egress, extra secrets bejegyzés, extra git szabály) | elutasítva |
 | A4 | Azonos modulnévvel és verzióval betöltött másik artifact | elutasítva, vagy a korábbi grant nélkül töltődik be; a korábbi modul capabilityjét nem örökli |
-| A5 | Futó példány ugyanazon modulazonosító más manifesttel való újratöltése után | megtartja a létrehozáskor kapott kötést; sem szélesedés, sem szűkülés |
+| A5 | Futó példány (`git` és `cic-flow` egyaránt) ugyanazon modulazonosító más manifesttel vagy más artifacttal való újratöltése, sikertelen újratöltés és a grant visszavonása után | a korábbi példány minden esetben DENY; a változatlan kötésű, aktív grantű példány ALLOW a szabályokon belül |
 | A6 | A rekord a WASM-ot fedi, a leírót nem (vagy fordítva) | elutasítva (4.1) |
 | A7 | `release.sign` érvényes, a `cic_countersign` hiányzik, hibás, vagy nem a CICSourceCA-ig vezető tanúsítványtól van | `prod`-ban elutasítva; `NOT_RUN` / `FAIL`-ként jelentve, soha nem átmenetként |
 | A8 | Envelope 1 vagy 2 rekord | elutasítva, `envelope_too_old`; nem frissítve |
+| A9 | Érvényes aláíró, a policy szerint nem erre a modulra jogosult | DENY |
+| A10 | Érvényes aláíró, a policynál szélesebb capability-készlet | DENY |
+| A11 | Módosított manifest, a lokális digest hozzáigazítva | DENY (az aláírt rekordbeli digest nem egyezik) |
+| A12 | A fájl lemezen kicserélve az ellenőrzés után (a fájlrendszer tesztdublőr, amely az első olvasás után más bájtokat ad) | a végrehajtott artifact és a grant az ellenőrzött bájtokból készül; a kicserélt bájtok sosem futnak; minden fájl egyszer olvasva |
+| A13 | Újratöltés előtt létrehozott `cic-flow` példány, ugyanazon modulazonosítóra adott új grant mellett | DENY (a példány nem az az artifact, amelyhez az új grant tartozik) |
+| A14 | Staged `cic-flow` grant az aktiválás előtt | DENY |
+| A15 | Hibás rekord `dev` opt-in mellett | DENY; az opt-in nem kerüli meg az ellenőrzést, és nem ad hitelesített grantet |
+| A16 | Az artifact tárolása az ellenőrzés után sikertelen | a grant nem aktiválódik |
+| A17 | A -> B -> A életciklus: A betöltése, B betöltése, A újratöltése | a B alatt DENY példányt az A identitásának visszaállítása nem engedélyezi újra; csak az A újratöltése után létrehozott példány engedélyezett |
+| A18 | Olyan rekord, amelynek útvonalai nem pontosan felelnek meg a betöltött fájloknak (csak névegyezés) | elutasítva; fájlnév-alapú fallback nincs |
+| A19 | A valódi compiler-rekord (`primitives/@v0.2.1`, a származás rögzítve) a Go verifieren | `record` és `crypto` PASS, ugyanaz, mint a Python referencia-verifier. A modulszintű valódi compiler-rekord **blokkolt**, amíg a modul release-tooling nem tud envelope 3 rekordot kiadni (terv 3. szakasz); ez producer-munkatétel, nem kihagyott teszt |
 
 ## 2. Fail-closed szabálytáblázat
 
