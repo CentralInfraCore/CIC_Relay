@@ -28,6 +28,8 @@ runs:
           python3 scripts/quality_gate.py pin-reference --mode push --head-sha "$SELF_SHA" --out "$REF"
           GATE=scripts/quality_gate.py
         else
+          # some jobs check out the merge ref shallowly: the head commit of the pull request must be there to read its pin file
+          git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null || git fetch --no-tags --quiet --depth=1 origin "$HEAD_SHA"
           git fetch --no-tags --quiet origin "$BASE_REF"
           TIP=$(git rev-parse FETCH_HEAD)
           if git show "$TIP:scripts/quality_gate.py" > "$REF/quality_gate.py" 2>/dev/null \

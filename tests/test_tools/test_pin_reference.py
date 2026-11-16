@@ -431,3 +431,12 @@ def test_the_pin_file_is_part_of_the_approval_contract():
     assert doc["approvers"] and all(isinstance(a, str) and a for a in doc["approvers"])
     # the approvers are not tools or surfaces: the existing loader is unaffected
     assert set(qg.load_tool_pins(os.path.join(REPO, PINS))) == {"tools", "surfaces"}
+
+
+def test_a_head_commit_missing_from_the_checkout_is_not_reported_as_a_deleted_pin(
+    world,
+):
+    branch(world)
+    run_ref(world, world["base"])  # positive control: the commit is there
+    with pytest.raises(qg.GateError, match="REFERENCE_INVALID.*not available"):
+        run_ref(world, "1" * 40)

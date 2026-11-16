@@ -836,6 +836,13 @@ def pin_reference(
         raise GateError(
             f"[REFERENCE_INVALID] the head SHA {head_sha!r} is not a full commit SHA"
         )
+    if (
+        _git(repo, "cat-file", "-e", f"{head_sha}^{{commit}}", check=False).returncode
+        != 0
+    ):
+        raise GateError(
+            f"[REFERENCE_INVALID] the head commit {head_sha} is not available in this checkout (fetch it first)"
+        )
     head_pin = _git(repo, "show", f"{head_sha}:{pins}", check=False)
     if head_pin.returncode != 0:
         raise GateError(f"[PIN_DELETED] {pins} does not exist at the head {head_sha}")
