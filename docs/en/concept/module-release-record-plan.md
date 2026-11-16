@@ -50,12 +50,24 @@ Location: a new module `tools/release_record/` on a feature branch `wasm/f/relea
 1. `make wasm.build` sets `metadata.buildHash` in `project.yaml`. The WASM and the final `project.yaml` are committed. That commit is the source commit.
 2. `emit` reads the declaration, the blobs and the tree **from that commit only**. It refuses if the shipped working-tree bytes of any declared path differ from the commit's blob (`shipped_differs_from_commit`): the record must bind the bytes that are actually shipped.
 3. It builds the bundle, computes `build_hash`, obtains `release.sign` and then `cic_countersign`, and writes `<name>.release.yaml` (D1). The record is not itself an artifact, so there is no circularity. It is committed afterwards, and the tag follows (release model: devel to main to tag, no merge back).
+4. **Publication check (review F2).** The pre-emit check proves the record against the source commit; it does not prove what is published. After the tag and for every published copy, `verify-published` checks: the tag resolves to a commit whose tree differs from the source commit only by the record file (and no other added or changed path); every declared artifact's blob at the tag equals the digest in the signed record; and every distributed copy of an artifact (a release asset, an OCI or archive payload, a copy the Relay later loads) is byte-compared with the record's digest. Any difference is a refusal with its own reason (`tag_tree_differs`, `published_artifact_mismatch`, `published_artifact_absent`). The record may be correct while other content is published; this step is what rules that out, and it runs in the producer's release job before the release is announced.
 
 **Declaration.** `compiler_settings.release_artifacts.paths` in `project.yaml`, exactly the key and rules of contract section 6 (explicit paths, no glob, same refusal identifiers). `project.schema.yaml` declares `additionalProperties: false` on `compiler_settings`, so the schema gains this key. The emitter adds one producer-side rule **on the declaration, not on the record**: `module/module.wasm` and `project.yaml` must both be declared (`declaration_required_path_missing`). This is how the record binds the WASM and the complete descriptor (`abi`, `capability_manifest`) together, and it changes nothing in the contract or the verifier.
 
-**Record members.** `kind: ModuleRelease`, `name`, `version`, `timestamp`, `validity`, `createdBy`, `provenance{envelope:3, source_commit}`, `artifacts`, `release{envelope:3, createdBy, build_hash, sign}`, `cic_countersign`. `specs` is omitted. The reference verifier's record layer reads `envelope`, `source_commit` and `artifacts`, and `specs` only for a duplicate check, so omission looks permitted. **This is to be proven by a vector (section 5, V1) before it is relied on**, not assumed.
+**Record members.** `kind: ModuleRelease`, `name`, `version`, `timestamp`, `validity`, `createdBy`, `provenance{envelope:3, source_commit}`, `artifacts`, `release{envelope:3, createdBy, build_hash, sign}`, `cic_countersign`. `specs` is omitted.
 
-**Legacy separation.** The emitter never reads `cicSign`, `sign` or `checksum` of `project.yaml`. No consumer may accept them in place of the record, and the record is not a fallback for them. They can coexist in the same tree.
+**Contract boundary (review F3).** The primitives envelope 3 contract and its `release.schema.yaml` are written for `PrimitiveRelease`: the schema requires `kind: PrimitiveRelease` (a `const`) and a non-empty `specs`. A `ModuleRelease` record therefore **fails the current schema**, and a pass of the reference verifier does not show schema conformance (its record layer reads `envelope`, `source_commit` and `artifacts`, and `specs` only for a duplicate check). So the emitter is blocked on a contract step, which this plan makes a precondition and not an assumption:
+
+1. A separate cic-primitives change (owner-merged, not part of this repository) that separates the **common envelope** (`provenance.envelope`, `provenance.source_commit`, `artifacts`, `release`, `cic_countersign`, the hash rule) from the **type-specific members** (`PrimitiveRelease`: `specs`; `ModuleRelease`: none beyond the artifact set), with one schema per `kind` that shares the common part, and with the verifier's behaviour for each `kind` stated.
+2. Until it is merged, no `ModuleRelease` record is emitted for a consumer. The producer work may start against vectors that are marked provisional.
+3. The record is validated against the per-kind schema in addition to the verifier (section 5, V1).
+
+**Legacy separation (review F1).** Two statements, kept apart:
+
+* **Trust.** The content of `cicSign`, `sign` or `checksum` in `project.yaml` is never a trust input. The emitter never reads it for a decision, no consumer may accept it in place of the record, and the record is not a fallback for it.
+* **Binding.** `project.yaml` is bound as raw bytes, so those fields are part of the bound bytes like any other. **Changing them after the record is signed changes the descriptor digest, and the record then fails** (`artifact_digest_mismatch` in the blobs layer; the Relay refuses). An earlier draft of this plan said the opposite; that was wrong.
+
+The sequence follows: every legacy field must be in its final form (a filled value or `TBD`) **before** the source commit. A legacy finalization that rewrites `project.yaml` after the record is signed invalidates the record, so it must not run after the record, and the emitter refuses when the working tree is not the committed bytes.
 
 **Cross-language risk.** Python `json.dumps` over YAML-typed values is the canonicalization the contract inherits. The Go verifier (later) is held to the same bytes by shared vectors; the emitter adds a fixed corpus of tricky values (non-ASCII, nested, timestamps, floats) whose canonical bytes are asserted against the primitives function.
 
@@ -69,7 +81,9 @@ Acceptance is: a record emitted by the emitter passes the primitives reference v
 * **Negative (emitter refuses).** Each declaration reason, `declaration_required_path_missing`, `shipped_differs_from_commit`, a symlink or submodule path, a path absent from the commit, a missing source commit.
 * **Negative (verifier refuses emitted-then-mutated records).** One mutation per reason of contract section 11, each failing with that reason: envelope, `source_commit`, artifact digest, manifest digest, order, a changed WASM byte (blobs layer), a changed `project.yaml` byte or one `capability_manifest` entry, a swapped certificate, `build_hash`, `release.sign`, `cic_countersign`.
 * **Descriptor and WASM binding.** Dropping either from the declaration is refused by the emitter; removing it from a finished record fails `build_hash`.
-* **Separation.** A tree with a valid `cicSign` and no record gets no record-based pass; a record with a mutated `cicSign` still verifies (they are independent).
+* **Separation (F1).** A tree with a valid `cicSign` and no record gets no record-based pass. A record over a `project.yaml` whose `cicSign` (or `sign`, `checksum`) is changed after signing **fails** the blobs layer with an artifact digest reason; a record is not rescued by a valid `cicSign`, and a valid record is not affected by the legacy value being wrong at emit time (it is only bound, never trusted).
+* **Publication (F2).** A tag whose tree differs from the source commit by anything but the record file, a declared artifact changed at the tag, a distributed copy with one changed byte, and an absent copy each fail `verify-published` with the named reason; an unchanged publication passes.
+* **Schema (F3).** The emitted record validates against the per-kind schema once the contract step exists; a record with `kind: ModuleRelease` is expected to fail the current `PrimitiveRelease` schema (a recorded negative that turns into a pass only with the contract change).
 * **Mutation evidence** on the emitter: path sort, digest prefix, hash exclusion set, blob versus working tree, newline filtering, order of signing steps, each as a planted defect that a test must kill.
 
 ## 6. D4 survey: the authorization policy
@@ -90,7 +104,8 @@ Acceptance is: a record emitted by the emitter passes the primitives reference v
 3. The policy is itself a **release record** of the same envelope 3, verified by the same verifier, over a policy file. One authentication mechanism, no second signature format.
 4. A separate **policy-issue right**, expressed as a CertPattern pinned in the Relay's trust configuration and not obtainable from a module signature (no self-grant, A21, A22). The trust root is the CICSourceCA chain; the issuer pattern is the new decision.
 5. A matcher for CertPattern against the verified signer certificate is **new Relay code** and does not exist yet. It belongs to the Relay work package, with the Forms `IsCertPattern` vectors reused for syntax.
-6. The countersign scope gap (above) is a trust gate to close before the policy is meaningful: a countersignature must say which kind of release it covers. Proposed `workflow` identifier for modules: `cic-module-release@v1`; allowlisting it in `cic-countersign` is a separate change in that service.
+6. **The countersigner's authority limit (review F4).** The countersign scope gap (above) is a trust gate to close before the policy is meaningful, and an allowlist of the `workflow` string is not enough, because that string is caller-supplied. The service must itself check, per request: **who** asks (an authenticated requester identity, not a free field); **which record kind** that requester is entitled to have countersigned (a requester-to-kind table held by the service); that the **content really is that kind** (the service parses the record, checks `kind`, the schema and the envelope, and does not countersign an opaque hash); and that **a module publisher cannot extend its own rights**, so the right to have a `ModuleRelease` countersigned is not the right to have a `ReleaseAuthorizationPolicy` countersigned. Policy issuance and module issuance are two trust boundaries with two kinds and two requester sets. This is a change in `cic-countersign` (a separate repository and work item); `cic-module-release@v1` may remain a label, never the authority.
+7. **Policy semantics (review F5, separate work package, does not block the emitter).** To be fixed in the D4 policy specification: the exact capability-ceiling comparison (per capability class, set inclusion or numeric bound, and what "wider" means for each), the handling of overlapping rules (proposal: the most specific module match wins, equal specificity is an error and DENY), and what happens to grants already issued when the policy changes (proposal: a grant records the policy digest, a changed policy invalidates it at the next load, running instances follow the revocation rules of the design).
 
 ## 7. Open points for the reviewer
 
@@ -99,6 +114,8 @@ Acceptance is: a record emitted by the emitter passes the primitives reference v
 * Workflow identifier and the allowlist change in `cic-countersign`.
 * Policy-issuer pattern: where it is pinned and how it is rotated.
 * Whether the signer of a module and the countersigner can be the same person's key path (separation of duty).
+* The per-`kind` contract change in cic-primitives (F3): its owner, its scope, and whether the provisional vectors may start before it merges.
+* Whether `verify-published` also covers copies the Relay itself downloads later (F2), or only the producer's release job.
 
 ## 8. What this survey did not verify
 
@@ -106,4 +123,4 @@ The primitives `release_record_conformance.py` was run only on the published `v0
 
 ## 9. Sequence
 
-Review of this plan, then producer vectors first (each test failing before the emitter exists), then the emitter, then a base-repo PR to `wasm/main`. Relay implementation starts only after the record contract and the D4 policy contract are final.
+Review of this plan; the cic-primitives per-`kind` contract change (F3); then producer vectors first (each test failing before the emitter exists), then the emitter, then a base-repo PR to `wasm/main`. Relay implementation starts only after the record contract and the D4 policy contract are final.
