@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - security
+  - signing
+  - survey
+related_nodes:
+  - docs/hu/concept/module-release-record-plan
+  - docs/hu/concept/artifact-authentication
+  - docs/hu/concept/artifact-authentication-test-plan
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - design-review
+description: |
+  Concept státuszú illeszkedési és hiányossági felmérés a #162-höz: mit fed már a cic-primitives, a cic-schema-registry, a Forms és a primitive engine az envelope 3 release rekordból és az authorization policyból (közös hash-szabály, fajtánkénti sémák, strukturális validáció, nyers bájt admission, listaidentitás, normalizálás, policy-feloldás, trust policy család), a mért parser-határ eltérések, a hiányzó capability_manifest séma és CertPattern-illesztő, a 2026-12-31-i tanúsítvány-lejárat, és a Forms-változtatást nem igénylő javaslatok. Csak felmérés, semmi nincs megvalósítva.

@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - security
+  - signing
+  - survey
+related_nodes:
+  - docs/en/concept/module-release-record-plan
+  - docs/en/concept/artifact-authentication
+  - docs/en/concept/artifact-authentication-test-plan
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - design-review
+description: |
+  Concept-status fit and gap survey for #162: what cic-primitives, cic-schema-registry, Forms and the primitive engine already cover for the envelope 3 release record and the authorization policy (common hash rule, per-kind schemas, structural validation, raw-byte admission, list identity, normalization, policy resolution, trust policy family), the measured parser-boundary differences, the missing capability_manifest schema and CertPattern matcher, the 2026-12-31 certificate expiry, and the proposals that need no Forms change. Survey only, nothing implemented.
