@@ -40,7 +40,7 @@ func loadVia(t *testing.T, path string, files fstest.MapFS, assets *PKIAssets) o
 
 	var bound []string
 	prev := registerModuleCapability
-	registerModuleCapability = func(moduleID string, _ []byte) error {
+	registerModuleCapability = func(moduleID string, _ []byte, _ string) error {
 		bound = append(bound, moduleID)
 		return nil
 	}
@@ -90,7 +90,7 @@ func TestEmbeddedAndInstalled_SameVerdictAndCapability(t *testing.T) {
 		{"valid signer", validCert, true},
 		{"wrong EKU", wrongEKU, false},
 		{"untrusted chain", generateForeignLeafPEM(t), false},
-		{"garbage signature file", []byte("not a pem"), true}, // lenient loading is #155; parity is what is asserted
+		{"garbage signature file", []byte("not a pem"), false}, // a bad signature is refused on both paths (#155)
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -52,8 +52,8 @@ metadata:
   buildHash: x
 abi:
   imports:
-    - module: git
-      functions: [clone]
+    - module: env
+      functions: [abort]
 `
 	reg := newCICFlowRegistry(nil, &stubDoer{})
 	require.NoError(t, reg.registerVerified("plain@1", []byte(noFlow)))

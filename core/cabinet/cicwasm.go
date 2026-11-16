@@ -29,6 +29,9 @@ type WasmManagerConfig struct {
 	// additional host modules (e.g., typed git host functions for WASM modules).
 	// It receives the wazero runtime so it can instantiate host module builders.
 	HostSetupFn func(ctx context.Context, r wazero.Runtime) error `yaml:"-"`
+	// InstanceBinding, if non-nil, is called when an instance is created and its result is carried in the
+	// instance's identity (InstanceIdentity.Binding).
+	InstanceBinding func(moduleID string) string `yaml:"-"`
 }
 
 // --- WasmManager: The Caching Compiler and Instance Factory ---
@@ -42,6 +45,7 @@ type WasmManager struct {
 	compiledModules *lru.Cache[string, wazero.CompiledModule]
 	sf              singleflight.Group
 	closed          atomic.Bool
+	serial          atomic.Uint64 // source of InstanceIdentity.Serial
 	logSink         obs.LogSink
 	metricSink      obs.MetricSink
 }
@@ -113,20 +117,27 @@ func NewWasmManager(ctx context.Context, modules ModuleStore, config WasmManager
 // PreCompileModule compiles a module from the ModuleStore using the module ID and checksum as a cache key,
 // with deduplication via singleflight to avoid redundant compilations.
 func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wazero.CompiledModule, error) {
+	compiled, _, err := m.compile(ctx, moduleID)
+	return compiled, err
+}
+
+// compile is PreCompileModule that also returns the checksum of the descriptor it compiled, read from the
+// same descriptor, so the checksum names exactly the artifact the compiled module came from.
+func (m *WasmManager) compile(ctx context.Context, moduleID string) (wazero.CompiledModule, string, error) {
 	if m.closed.Load() {
-		return nil, errors.New("WasmManager is closed")
+		return nil, "", errors.New("WasmManager is closed")
 	}
 
 	moduleDesc, ok := m.modules.Get(moduleID)
 	if !ok {
-		return nil, fmt.Errorf("module '%s' not found", moduleID)
+		return nil, "", fmt.Errorf("module '%s' not found", moduleID)
 	}
 
 	// Use the module's pre-computed checksum for content-addressable caching.
 	cacheKey := moduleID + ":" + moduleDesc.Checksum()
 
 	if mod, ok := m.compiledModules.Get(cacheKey); ok {
-		return mod, nil
+		return mod, moduleDesc.Checksum(), nil
 	}
 
 	res, err, _ := m.sf.Do(cacheKey, func() (interface{}, error) {
@@ -159,10 +170,10 @@ func (m *WasmManager) PreCompileModule(ctx context.Context, moduleID string) (wa
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return res.(wazero.CompiledModule), nil
+	return res.(wazero.CompiledModule), moduleDesc.Checksum(), nil
 }
 
 // NewHostInstance creates a new, live instance of a compiled module with the configured timeout and observability sinks.
@@ -171,10 +182,18 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 		return nil, errors.New("WasmManager is closed")
 	}
 
-	compiledMod, err := m.PreCompileModule(ctx, moduleID)
+	compiledMod, artifact, err := m.compile(ctx, moduleID)
 	if err != nil {
 		return nil, err
 	}
+
+	// The identity exists before the instance does and is on the context of the instantiation itself, so
+	// anything a start section does is already attributed to this instance and this artifact.
+	identity := InstanceIdentity{Name: moduleID, Artifact: artifact, Serial: m.serial.Add(1)}
+	if m.config.InstanceBinding != nil {
+		identity.Binding = m.config.InstanceBinding(moduleID)
+	}
+	ctx = WithInstanceIdentity(ctx, identity)
 
 	// Don't call the _start function, as these are libraries, not applications.
 	moduleConfig := wazero.NewModuleConfig().WithName(moduleID).WithStartFunctions()
@@ -197,6 +216,9 @@ func (m *WasmManager) NewHostInstance(ctx context.Context, moduleID string) (cic
 
 	timeout := time.Duration(m.config.DefaultTimeoutSeconds) * time.Second
 	h, err := newCicWasmHost(ctx, instance, timeout, m.logSink)
+	if err == nil {
+		h.identity = identity
+	}
 	if err != nil {
 		instance.Close(ctx)
 		return nil, err
@@ -241,6 +263,7 @@ type CicWasmHost struct {
 	deallocateFn api.Function
 	timeout      time.Duration
 	logSink      obs.LogSink
+	identity     InstanceIdentity // carried on every call into the instance; zero for a host built outside the manager
 }
 
 // newCicWasmHost creates a CicWasmHost from a wazero module instance after verifying that required ABI functions
@@ -300,6 +323,11 @@ func (h *CicWasmHost) Notify(ctx context.Context, authContextJson, eventJson str
 func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJson string) (string, string) {
 	callCtx, cancel := context.WithTimeout(ctx, h.timeout)
 	defer cancel()
+	// Whatever the caller put on ctx, host functions called from inside this instance see this instance's
+	// identity, not one the caller chose.
+	if h.identity.Serial != 0 {
+		callCtx = WithInstanceIdentity(callCtx, h.identity)
+	}
 
 	opPtr, opLen, err := h.writeStringToWasm(callCtx, op)
 	if err != nil {

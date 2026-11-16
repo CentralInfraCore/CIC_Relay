@@ -39,6 +39,30 @@ func requireTrustStore(trustMode string, assets *PKIAssets) error {
 	return nil
 }
 
+// allowUnsignedEnv is the explicit operator opt-in for modules without a signature file. It exists in dev mode
+// only; in prod it is ignored. It never admits a module whose signature is present but bad.
+const allowUnsignedEnv = "CIC_ALLOW_UNSIGNED_MODULES"
+
+// allowUnsignedModulesFromEnv decides whether unsigned modules are admitted. Unset, empty or "0" means no;
+// exactly "1" means yes in dev mode and is ignored (with a warning) in prod; any other value is a start-up error,
+// so that a typo can not open an exception.
+func allowUnsignedModulesFromEnv(trustMode string, logger *logrus.Logger) (bool, error) {
+	v := os.Getenv(allowUnsignedEnv)
+	switch v {
+	case "", "0":
+		return false, nil
+	case "1":
+		if trustMode != TrustModeDev {
+			logger.Warnf("%s=1 is ignored in %s mode: unsigned modules are refused", allowUnsignedEnv, trustMode)
+			return false, nil
+		}
+		logger.Warnf("%s=1: modules WITHOUT a signature file are admitted in dev mode (they get no capability); a bad signature is still refused", allowUnsignedEnv)
+		return true, nil
+	default:
+		return false, fmt.Errorf("%s must be unset, 0 or 1 (got %q)", allowUnsignedEnv, v)
+	}
+}
+
 // bootstrapTrust is the single start-up entry for trust: it resolves the mode,
 // loads the trust store and applies the prod guard.
 func bootstrapTrust(embeddedPKI fs.FS, logger *logrus.Logger) (string, *PKIAssets, error) {
@@ -53,6 +77,11 @@ func bootstrapTrust(embeddedPKI fs.FS, logger *logrus.Logger) (string, *PKIAsset
 	if err := requireTrustStore(trustMode, assets); err != nil {
 		return "", nil, err
 	}
+	allow, err := allowUnsignedModulesFromEnv(trustMode, logger)
+	if err != nil {
+		return "", nil, err
+	}
+	assets.AllowUnsignedModules = allow
 	return trustMode, assets, nil
 }
 

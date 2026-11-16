@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus" // Import logrus
+	"github.com/tetratelabs/wazero"
 
 	"centralrelay/core/cabinet"
 	"centralrelay/core/modules/schemacompile"
@@ -718,11 +719,11 @@ func main() {
 	cicFlowReg := newCICFlowRegistry(buildOCIKeyResolver(), nil)
 	// loadModule binds each verified module's cic-flow capability into this
 	// registry via the package-level hook (fail-closed: only verified modules).
-	registerModuleCapability = cicFlowReg.registerVerified
-	wasmConfig.HostSetupFn = combineHostSetups(
-		makeGitHostSetupFn(gitOps),
-		makeCICFlowHostSetupFn(cicFlowReg),
-	)
+	registerModuleCapability = cicFlowReg.stageVerified
+	commitModuleCapability = cicFlowReg.commitGrant
+	wasmConfig.InstanceBinding = cicFlowReg.bindingFor
+	revokeModuleCapability = cicFlowReg.revoke
+	wasmConfig.HostSetupFn = productionHostSetup(gitOps, cicFlowReg)
 
 	logrusSink := obs.NewLogrusSink(logger)
 	// promSink aggregates the same metric points for the /metrics endpoint,
@@ -831,4 +832,14 @@ func main() {
 
 	port := ":8080"
 	logger.Fatal(run(port, logger, server)) // Pass logrus logger to run function
+}
+
+// productionHostSetup is the one place that decides which host modules a guest can import besides WASI:
+// "git" and "cic-flow". main uses it, and the host-function enumeration test runs the very same function,
+// so a host module added here is seen by that test and must be classified there.
+func productionHostSetup(gitOps git.GitOps, reg *cicFlowRegistry) func(context.Context, wazero.Runtime) error {
+	return combineHostSetups(
+		makeGitHostSetupFn(gitOps, reg),
+		makeCICFlowHostSetupFn(reg),
+	)
 }

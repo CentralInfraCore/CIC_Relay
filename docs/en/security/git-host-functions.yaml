@@ -1,0 +1,16 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - git
+related_nodes:
+  - docs/en/security/secret_and_audit_model
+  - docs/en/pipeline/relay-container
+category:
+  - security
+entrypoint: false
+used_in:
+  - validation
+  - operations
+description: |
+  Capability contract of the typed git host module offered to WASM modules: which operations exist, how a module declares its reach in the signed capability manifest, how identity and grants are bound to the verified artifact and manifest, what the relay validates on every call, why push is withdrawn, and the operator assumptions.

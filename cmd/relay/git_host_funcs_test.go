@@ -141,12 +141,12 @@ func TestRegisterGitHostFunctions(t *testing.T) {
 	ctx := context.Background()
 	r := wazero.NewRuntime(ctx)
 	defer r.Close(ctx)
-	require.NoError(t, registerGitHostFunctions(ctx, r, &stubGitOps{}))
+	require.NoError(t, registerGitHostFunctions(ctx, r, &stubGitOps{}, nil))
 }
 
 func TestMakeGitHostSetupFn(t *testing.T) {
 	ctx := context.Background()
-	fn := makeGitHostSetupFn(&stubGitOps{})
+	fn := makeGitHostSetupFn(&stubGitOps{}, nil)
 	r := wazero.NewRuntime(ctx)
 	defer r.Close(ctx)
 	require.NoError(t, fn(ctx, r))
@@ -236,24 +236,6 @@ func TestMakeCommitFn_Error(t *testing.T) {
 	assert.Contains(t, string(out), "error")
 }
 
-func TestMakePushFn_Success(t *testing.T) {
-	fn := makePushFn(&stubGitOps{})
-	mod := newMod(256)
-	l := putJSON(mod, 0, map[string]string{"repo_id": "r", "remote": "origin", "refspec": "main"})
-	n := fn(context.Background(), mod, 0, l, 128, 128)
-	out, _ := mod.mem.Read(128, uint32(n))
-	assert.Contains(t, string(out), "ok")
-}
-
-func TestMakePushFn_Error(t *testing.T) {
-	fn := makePushFn(&stubGitOps{pushErr: errors.New("fail")})
-	mod := newMod(256)
-	l := putJSON(mod, 0, map[string]string{"repo_id": "r", "remote": "origin", "refspec": "main"})
-	n := fn(context.Background(), mod, 0, l, 128, 128)
-	out, _ := mod.mem.Read(128, uint32(n))
-	assert.Contains(t, string(out), "error")
-}
-
 func TestMakeStatusFn_Success(t *testing.T) {
 	fn := makeStatusFn(&stubGitOps{})
 	mod := newMod(256)
@@ -299,14 +281,6 @@ func TestMakeCheckoutFn_BadRequest(t *testing.T) {
 
 func TestMakeCommitFn_BadRequest(t *testing.T) {
 	fn := makeCommitFn(&stubGitOps{})
-	mod := newMod(64)
-	n := fn(context.Background(), mod, 50, 100, 0, 64)
-	out, _ := mod.mem.Read(0, uint32(n))
-	assert.Contains(t, string(out), "bad request JSON")
-}
-
-func TestMakePushFn_BadRequest(t *testing.T) {
-	fn := makePushFn(&stubGitOps{})
 	mod := newMod(64)
 	n := fn(context.Background(), mod, 50, 100, 0, 64)
 	out, _ := mod.mem.Read(0, uint32(n))

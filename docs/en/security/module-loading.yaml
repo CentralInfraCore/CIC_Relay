@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - signing
+related_nodes:
+  - docs/en/security/git-host-functions
+  - docs/en/security/ca-validation
+  - docs/en/pipeline/relay-container
+category:
+  - security
+entrypoint: false
+used_in:
+  - validation
+  - operations
+description: |
+  Certificate rules for loading WASM modules: what is checked at load (certificate chain, WASM digest) and what is not (a cryptographic signature over the module and manifest, open as #162), and what the relay does with a module without a certificate, a valid certificate and each kind of invalid one in prod and dev, the dev-only CIC_ALLOW_UNSIGNED_MODULES opt-in that admits only modules without a signature file (never an invalid signature, and without any capability), and the enumerated host surface a loaded module can reach.

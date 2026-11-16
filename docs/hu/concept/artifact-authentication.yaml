@@ -1,0 +1,18 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - signing
+related_nodes:
+  - docs/hu/security/module-loading
+  - docs/hu/concept/artifact-authentication-test-plan
+  - docs/hu/security/git-host-functions
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - validation
+  - design-review
+description: |
+  A #162 concept státuszú architekturális javaslata: a modul és a capability manifest hitelesítése betöltéskor ellenőrzött envelope 3 release rekorddal (record, shipped, crypto, authority réteg), a CICSourceCA bizalmi lánchoz kötve, a capability a build hash-hez, digestekhez és aláíróhoz kötve, prodban tanúsítvány-only visszaesés nélkül, a tulajdonosi D1–D7 döntésekkel. Csak terv, kód nélkül.

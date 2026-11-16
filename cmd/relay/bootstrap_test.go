@@ -420,8 +420,9 @@ func TestLoadModule(t *testing.T) {
 	logger := newDiscardLogger()
 	modulesFS := getSubFS(t, "modules")
 	pkiFS := getSubFS(t, "pki")
-	pkiAssets, err := loadPKIAssets(pkiFS, ".", logger)
+	strictAssets, err := loadPKIAssets(pkiFS, ".", logger) // the default: unsigned modules are refused
 	require.NoError(t, err)
+	pkiAssets := allowingUnsigned(strictAssets) // fixtures that are unsigned say so explicitly
 
 	expectedWasmCode, err := fs.ReadFile(modulesFS, "test_module.wasm")
 	require.NoError(t, err)
@@ -634,8 +635,12 @@ wasmSize: 8
 		logger := logrus.New() // Directly initialize a new logger
 		logger.SetOutput(&logBuf)
 		logger.SetLevel(logrus.ErrorLevel) // Ensure error level is enabled
-		err = loadModule(context.Background(), svc, failingFS, "signed_module.yaml", yamlContent, pkiAssets, maxWasmSize, logger)
-		assert.NoError(t, err)
+		// An unreadable signature file is a failure, not "unsigned": refused, with or without the opt-in.
+		for _, a := range []*PKIAssets{strictAssets, pkiAssets} {
+			err = loadModule(context.Background(), svc, failingFS, "signed_module.yaml", yamlContent, a, maxWasmSize, logger)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "cannot be read")
+		}
 		assert.Contains(t, logBuf.String(), "Failed to read signature file")
 	})
 
@@ -1034,7 +1039,7 @@ func TestLoadModule_PKIVerification_WrongChain(t *testing.T) {
 	assert.Contains(t, err.Error(), "PKI verification failed")
 }
 
-func TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips(t *testing.T) {
+func TestLoadModule_PKIVerification_TrustStoreNotLoaded_Rejected(t *testing.T) {
 	config := cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1}
 	svc, err := cabinet.NewCabinetService(context.Background(), cabinet.NewMemSchemaStore(), cabinet.NewMemModuleStore(), cabinet.NewMemWorkflowStore(), config)
 	require.NoError(t, err)
@@ -1055,9 +1060,13 @@ func TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(&logBuf)
 
-	err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, emptyPKI, int64(16*1024*1024), logger)
-	require.NoError(t, err, "should load without error when trust store is not loaded")
-	assert.Contains(t, logBuf.String(), "skipped", "should log skipped outcome")
+	// A signature that cannot be verified is refused, with or without the unsigned-module opt-in.
+	for _, a := range []*PKIAssets{emptyPKI, allowingUnsigned(emptyPKI)} {
+		err = loadModule(context.Background(), svc, moduleFS, yamlPath, yamlContent, a, int64(16*1024*1024), logger)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no trust store is loaded to verify it")
+	}
+	assert.Contains(t, logBuf.String(), "rejected", "should log the rejected outcome")
 }
 
 func TestLoadComponentsFromFS_UnknownKind(t *testing.T) {
@@ -1307,7 +1316,19 @@ func TestLoadModule_InvalidPEMSignature(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(&logBuf)
 
-	err = loadModule(context.Background(), svc, os.DirFS(tempDir), "mod.yaml", []byte(yamlContent), emptyPKIAssets(), 1024*1024, logger)
-	assert.NoError(t, err)
+	// A signature file that is not a certificate is a bad signature: refused, and no opt-in admits it.
+	for _, a := range []*PKIAssets{emptyPKIAssets(), allowingUnsigned(emptyPKIAssets())} {
+		err = loadModule(context.Background(), svc, os.DirFS(tempDir), "mod.yaml", []byte(yamlContent), a, 1024*1024, logger)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not a PEM certificate")
+	}
 	assert.Contains(t, logBuf.String(), "Invalid PEM format")
+}
+
+// allowingUnsigned returns a copy of the trust context with the explicit dev-mode opt-in for modules without a
+// signature file. Fixtures that load an unsigned module say so; nothing admits one by default.
+func allowingUnsigned(a *PKIAssets) *PKIAssets {
+	c := *a
+	c.AllowUnsignedModules = true
+	return &c
 }

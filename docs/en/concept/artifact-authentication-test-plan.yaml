@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - signing
+related_nodes:
+  - docs/en/concept/artifact-authentication
+  - docs/en/security/module-loading
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - validation
+  - design-review
+description: |
+  Concept-status test plan for #162: negative acceptance tests A1 to A24 (artifact binding, revocable authority and grant generation, verified-bytes identity, policy trust model, real compiler record), the fail-closed policy table, verifier conformance against the cic-primitives vectors with differential testing, lifecycle and audit tests, and the evidence required for the implementation PR.
