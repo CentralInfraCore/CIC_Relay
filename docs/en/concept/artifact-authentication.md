@@ -2,7 +2,7 @@
 
 Status: **concept. Design only; no code, no behaviour change.** Implementation is on hold until this proposal is reviewed. Companion: [artifact-authentication-test-plan.md](artifact-authentication-test-plan.md).
 
-Revised after the architectural review of #200 (findings F1 to F5: the `cic-flow` binding is weaker than git, instance identity versus authority, authorization as a separate decision, verified bytes versus executed bytes, producer compatibility).
+Revised after the architectural review of #200 (findings F1 to F5: the `cic-flow` binding is weaker than git, instance identity versus authority, authorization as a separate decision, verified bytes versus executed bytes, producer compatibility), and again after the second review (F6 grant generation, F7 trust model of the policy, the three work packages).
 
 Basis: CIC_Relay `main@e58344a`; cic-primitives `devel@01cb30b` (fresh shallow clone, 2026-11-05); cic-module-oracle-cloud `devel@299733c`. Statuses below follow the three-level rule (implemented / scaffold / concept) and are backed by the file named.
 
@@ -57,9 +57,19 @@ What primitives **deliberately does not provide** (contract section 2, "trust ga
 
 A layer that did not run is never taken for a pass.
 
-**4.3 Authority (the owner's direction).** The key that signs must be provably tied to the **CICSourceCA** trust chain. Vault Transit alone is not an authorization model. Concretely: the countersignature certificate must chain to the pinned CICSourceCA root (the relay already loads `SourceRoots`), carry EKU CodeSigning and not be revoked; `release.sign` must chain to the trust store. A valid chain says "CICSource attests this `build_hash`". It does **not** say "this signer may release a module named X with capability Y": **the signed artifact is not itself an authorization; it is one authenticated input to the authorization decision.** The decision is a separate step: verified envelope -> verified artifact and manifest -> signer identity and chain -> a *declared, authenticated authorization rule* -> the set of modules and capabilities this signer may release -> an artifact-bound grant (denied if any step fails). The rule is a declared policy the relay verifies, not a pattern encoded in a certificate subject/SAN (D4). Open inside D4: who signs the policy and where it lives.
+**4.3 Authority (the owner's direction).** The key that signs must be provably tied to the **CICSourceCA** trust chain. Vault Transit alone is not an authorization model. Concretely: the countersignature certificate must chain to the pinned CICSourceCA root (the relay already loads `SourceRoots`), carry EKU CodeSigning and not be revoked; `release.sign` must chain to the trust store. A valid chain says "CICSource attests this `build_hash`". It does **not** say "this signer may release a module named X with capability Y": **the signed artifact is not itself an authorization; it is one authenticated input to the authorization decision.** The decision is a separate step: verified envelope -> verified artifact and manifest -> signer identity and chain -> a *declared, authenticated authorization rule* -> the set of modules and capabilities this signer may release -> an artifact-bound grant (denied if any step fails). The rule is a declared policy the relay verifies, not a pattern encoded in a certificate subject/SAN (D4). The trust model of the policy (resolving the point left open here):
+
+* the policy is a separate, declared, **versioned CIC object**;
+* the signer's right to **issue policy** is checked on its own, apart from the right to release a module;
+* a module's publisher cannot grant itself further authority: a policy is never accepted when it is signed only by the publisher it benefits;
+* a missing, invalid or inapplicable policy is DENY;
+* the digest of the policy is part of the authorization evidence (recorded with the grant and in the audit log).
+
+How the policy object is described is to be decided after looking at the existing cic-primitives and Forms mechanisms first; no new schema mechanism is introduced before that.
 
 **4.4 Binding, one mechanism for git and cic-flow.** The capability is bound to `(module id, build_hash, wasm digest, manifest digest, signer fingerprint)`, not to the module id, and **both** `git` and `cic-flow` use the same artifact-bound, staged-then-committed grant that git has today; `cic-flow` is moved onto it (today it is name-keyed and immediate). There must not be two security levels. A module loaded under a known name with a different digest does not inherit the earlier grant.
+
+**Grant generation.** The five-component artifact identity is not enough for the life cycle of 4.6. Every load is assigned a **unique grant generation**, carried by the grant and by each instance created under it. Loading the *same* artifact again therefore yields a new generation: an instance of an earlier generation, one that was denied after a revocation or a failed reload, is not re-authorized by it. Only instances created under the active generation are.
 
 **4.5 Policy.** In `prod` there is no automatic fallback to the certificate-only model: a module without a verifying record does not receive a capability and is not loaded (scope: D3). Existing modules are re-released; no record is rewritten or upgraded (primitives contract section 9). `dev` keeps the explicit opt-in of #197, and it admits only loading **without artifact authentication**: it never bypasses the verification of a bad record, and it never produces an authenticated capability grant.
 
@@ -77,6 +87,16 @@ An A -> B -> A life cycle is tested apart: restoring the earlier identity does n
 
 **4.7 The verified bytes are the executed bytes.** (a) The instance is built from the WASM bytes the verifier checked; (b) the grant is built from the descriptor the verifier checked; (c) nothing is re-read from the file system after verification; (d) the record's paths map to the loaded files exactly, with no file-name fallback; (e) the grant becomes active only after the whole verification and the successful storing of the artifact. Today the WASM is read once in `loadModule` and the same bytes feed the digest check and the descriptor; the descriptor and the `.pem` are read by their callers. The design keeps one read per file and reuses those bytes.
 
+**4.8 Work packages.** The producer-side gap (section 3) makes #162 three packages, in this order:
+
+| # | Package | Content |
+|---|---|---|
+| 1 | Module producer | general module-release tooling that emits an envelope 3 record (`release_artifacts` declaration, `artifacts`, `source_commit`, countersignature); no Oracle-specific signing mechanism |
+| 2 | Relay | the verifier, the authority policy, one artifact-bound grant for git and cic-flow with the generation and life cycle of 4.4 and 4.6 |
+| 3 | Oracle module | the full integrated end-to-end proof on the real module |
+
+The producer tooling is part of the general module-release tooling, not of the Oracle module.
+
 ## 5. Bridge map
 
 concept (this document) -> code: verifier, binding key, policy and the `cic-flow` artifact binding do not exist, and the module release tooling cannot emit an envelope 3 record (**bridge breaks here, on both the relay and the producer side**) -> runtime: the loader reads the module triple only -> audit: the load log records the certificate subject, not a verified `build_hash`. Existing, reusable links: `verifyCICFlowProvenance` (anchor), `cicFlowRegistry` (grant and instance binding), the primitives vectors and reference verifier.
@@ -90,7 +110,7 @@ Recommendations below are those of the architectural review of #200; each awaits
 | D1 | Where the record lives | a separate `<name>.release.yaml` |
 | D2 | Fate of the `.pem` | the release record is authoritative; a legacy `.pem` that contradicts it is DENY |
 | D3 | Scope of "no fallback" in `prod` | every module, without exception |
-| D4 | What authorizes a signer for a module name and capability set | a declared, authenticated authorization policy (not a certificate subject/SAN pattern). Open inside it: who signs the policy and where it lives |
+| D4 | What authorizes a signer for a module name and capability set | a declared, authenticated, versioned policy object under the trust model of 4.3 (separate policy-issue right, no self-grant, DENY when missing or invalid, policy digest in the evidence). To finalize before implementation: the object's description, taken from the primitives and Forms mechanisms |
 | D5 | Time | load-time validity is acceptable as a first step; the gap is recorded |
 | D6 | Verifier | Go implementation, shared test vectors, Python reference verifier as oracle |
 | D7 | Revoking a single release | a separate issue; the missing guarantee is documented |

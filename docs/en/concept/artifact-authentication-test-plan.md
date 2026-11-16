@@ -27,6 +27,11 @@ Each test builds a real module with a real, test-keyed release record (keys deri
 | A17 | A -> B -> A life cycle: load A, load B, reload A | the instance that was denied while B was loaded is not re-authorized by restoring A's identity; only an instance created after the A reload is |
 | A18 | A record whose paths do not map exactly to the loaded files (a name-only match) | refused; no file-name fallback |
 | A19 | The real compiler-produced record (`primitives/@v0.2.1`, with its provenance recorded) through the Go verifier | `record` and `crypto` PASS, the same as the Python reference verifier. A module-level real-compiler record is **blocked** until the module release tooling can emit an envelope 3 record (design section 3); this is a producer work item, not a skipped test |
+| A20 | The same artifact is loaded again after the earlier instance was denied (revocation or failed reload) | a new grant generation is assigned; the earlier instance stays DENY, only instances created under the new generation are ALLOWed |
+| A21 | A policy signed only by the module's own publisher | DENY (no self-grant) |
+| A22 | A signer with the right to release modules but not to issue policy, signing a policy | DENY |
+| A23 | Policy missing, invalid, or not applicable to the module | DENY |
+| A24 | The policy digest | recorded with the grant and in the audit log; a changed policy changes the digest and requires a new decision |
 
 ## 2. Fail-closed policy table
 

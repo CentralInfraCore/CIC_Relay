@@ -2,7 +2,7 @@
 
 Státusz: **concept. Csak terv; kód és viselkedésváltozás nincs.** A megvalósítás a javaslat review-jáig HOLD. Társdokumentum: [artifact-authentication-test-plan.md](artifact-authentication-test-plan.md).
 
-A #200 architekturális review-ja után átdolgozva (F1–F5 leletek: a `cic-flow` kötés gyengébb a gitnél, példány-identitás és jogosultság, az autorizáció külön döntés, ellenőrzött és végrehajtott bájtok, producer-kompatibilitás).
+A #200 architekturális review-ja után átdolgozva (F1–F5 leletek: a `cic-flow` kötés gyengébb a gitnél, példány-identitás és jogosultság, az autorizáció külön döntés, ellenőrzött és végrehajtott bájtok, producer-kompatibilitás), majd a második review után ismét (F6 grant-generáció, F7 a policy bizalmi modellje, a három munkacsomag).
 
 Alap: CIC_Relay `main@e58344a`; cic-primitives `devel@01cb30b` (friss, sekély klón, 2026-11-05); cic-module-oracle-cloud `devel@299733c`. Az alábbi státuszok a háromszintű szabályt követik (implemented / scaffold / concept), és a megnevezett fájl támasztja alá őket.
 
@@ -57,9 +57,19 @@ Amit a primitives **szándékosan nem ad** (szerződés 2. szakasz, „trust gat
 
 Egy le nem futott réteg soha nem számít átmenetnek.
 
-**4.3 Jogosultság (a tulajdonos iránya).** Az aláíró kulcsnak bizonyíthatóan a **CICSourceCA** bizalmi lánchoz kell kapcsolódnia. A Vault Transit önmagában nem jogosultsági modell. Konkrétan: az ellenjegyző tanúsítvány a rögzített CICSourceCA gyökérig vezessen (a relay a `SourceRoots`-ot már betölti), EKU CodeSigning legyen, és ne legyen visszavonva; a `release.sign` a trust store-ig vezessen. Az érvényes lánc azt mondja: „a CICSource ezt a `build_hash`-t igazolja". Azt **nem** mondja, hogy „ez az aláíró X nevű modult Y capabilityvel kiadhat": **az aláírt artifact önmagában nem jogosultság; az autorizációs döntés egyik hitelesített bemenete.** A döntés külön lépés: ellenőrzött envelope -> ellenőrzött artifact és manifest -> az aláíró identitása és lánca -> egy *deklarált, hitelesített autorizációs szabály* -> a modulok és capabilityk halmaza, amelyeket ez az aláíró kiadhat -> artifacthoz kötött grant (bármely lépés bukásakor DENY). A szabály deklarált policy, amelyet a relay ellenőriz, nem tanúsítvány subject/SAN mezőbe kódolt minta (D4). A D4-en belül nyitott: ki írja alá a policyt, és hol él.
+**4.3 Jogosultság (a tulajdonos iránya).** Az aláíró kulcsnak bizonyíthatóan a **CICSourceCA** bizalmi lánchoz kell kapcsolódnia. A Vault Transit önmagában nem jogosultsági modell. Konkrétan: az ellenjegyző tanúsítvány a rögzített CICSourceCA gyökérig vezessen (a relay a `SourceRoots`-ot már betölti), EKU CodeSigning legyen, és ne legyen visszavonva; a `release.sign` a trust store-ig vezessen. Az érvényes lánc azt mondja: „a CICSource ezt a `build_hash`-t igazolja". Azt **nem** mondja, hogy „ez az aláíró X nevű modult Y capabilityvel kiadhat": **az aláírt artifact önmagában nem jogosultság; az autorizációs döntés egyik hitelesített bemenete.** A döntés külön lépés: ellenőrzött envelope -> ellenőrzött artifact és manifest -> az aláíró identitása és lánca -> egy *deklarált, hitelesített autorizációs szabály* -> a modulok és capabilityk halmaza, amelyeket ez az aláíró kiadhat -> artifacthoz kötött grant (bármely lépés bukásakor DENY). A szabály deklarált policy, amelyet a relay ellenőriz, nem tanúsítvány subject/SAN mezőbe kódolt minta (D4). A policy bizalmi modellje (a itt nyitva hagyott pont feloldása):
+
+* a policy külön, deklarált, **verziózott CIC-objektum**;
+* az aláíró **policy-kiadási** jogosultsága külön ellenőrzött, a modulkiadási jogosultságtól függetlenül;
+* a modul kiadója önmagának nem adhat további jogosultságot: a policy nem fogadható el, ha csak az általa kedvezményezett kiadó írta alá;
+* hiányzó, érvénytelen vagy nem alkalmazható policy DENY;
+* a policy digestje az autorizációs bizonyíték része (a granttel és az audit naplóban rögzítve).
+
+A policy-objektum leírásáról a meglévő cic-primitives és Forms mechanizmusok megvizsgálása után döntünk; addig új séma-mechanizmus nem készül.
 
 **4.4 Kötés, egy mechanizmus a gitnek és a cic-flow-nak.** A capability a `(modulazonosító, build_hash, wasm digest, manifest digest, aláíró ujjlenyomat)` ötöshöz kötődik, nem a modulazonosítóhoz, és **mind** a `git`, **mind** a `cic-flow` ugyanazt az artifacthoz kötött, staged-majd-commitolt grantet használja, amelyet a git ma is: a `cic-flow` erre kerül át (ma névkulcsos és azonnali). Nem lehet két biztonsági szint. Ismert néven, más digesttel betöltött modul nem örökli a korábbi grantet.
+
+**Grant-generáció.** Az ötkomponensű artifact-identitás nem elég a 4.6 életciklusához. Minden betöltéshez **egyedi grant-generáció** tartozik, amelyet a grant és az alatta létrehozott minden példány hordoz. Ugyanazon artifact újbóli betöltése ezért új generációt ad: egy korábbi generáció példányát, amely visszavonás vagy sikertelen újratöltés után DENY lett, ez nem engedélyezi újra. Csak az aktív generáció alatt létrehozott példányok engedélyezettek.
 
 **4.5 Szabály.** `prod`-ban nincs automatikus visszaesés a csak tanúsítványalapú modellre: az ellenőrizhető rekord nélküli modul nem kap capabilityt és nem töltődik be (hatókör: D3). A meglévő modulokat újra ki kell adni; rekordot nem írunk át és nem „frissítünk" (primitives szerződés 9. szakasz). A `dev` megtartja a #197 explicit opt-injét, és az csak az **artifact-hitelesítés nélküli** betöltést engedi: soha nem kerüli meg egy hibás rekord ellenőrzését, és soha nem eredményez hitelesített capability grantet.
 
@@ -77,6 +87,16 @@ Az A -> B -> A életciklus külön tesztelt: a korábbi identitás visszaállít
 
 **4.7 Az ellenőrzött bájtok a végrehajtott bájtok.** (a) A példány a verifier által ellenőrzött WASM-bájtokból készül; (b) a grant a verifier által ellenőrzött leíróból készül; (c) ellenőrzés után nincs fájlrendszerről történő újraolvasás; (d) a rekord útvonalainak megfeleltetése a betöltött fájlokhoz egzakt, fájlnév-alapú fallback nélkül; (e) a grant csak a teljes ellenőrzés és az artifact sikeres tárolása után válik aktívvá. Ma a WASM-ot a `loadModule` egyszer olvassa, és ugyanazok a bájtok adják a digest-ellenőrzést és a leírót; a leírót és a `.pem`-et a hívóik olvassák. A terv fájlonként egy olvasást tart, és azokat a bájtokat használja újra.
 
+**4.8 Munkacsomagok.** A producer-oldali hiány (3. szakasz) a #162-t három csomaggá teszi, ebben a sorrendben:
+
+| # | Csomag | Tartalom |
+|---|---|---|
+| 1 | Modul producer | általános modul-release tooling, amely envelope 3 rekordot ad (`release_artifacts` deklaráció, `artifacts`, `source_commit`, ellenjegyzés); Oracle-specifikus aláírási mechanizmus nincs |
+| 2 | Relay | a verifier, az authority policy, egy artifacthoz kötött grant a gitnek és a cic-flow-nak, a 4.4 és 4.6 generációjával és életciklusával |
+| 3 | Oracle modul | a teljes integrált végponttól végpontig bizonyítás a valódi modulon |
+
+A producer-tooling az általános modul-release tooling része, nem az Oracle moduléé.
+
 ## 5. Hídtérkép
 
 concept (ez a dokumentum) -> kód: a verifier, a kötési kulcs, a policy és a `cic-flow` artifact-kötés nem létezik, és a modul release-tooling nem tud envelope 3 rekordot kiadni (**itt szakad meg a híd, a relay és a producer oldalán is**) -> runtime: a betöltő csak a modulhármast olvassa -> audit: a betöltési napló a tanúsítvány subjectjét rögzíti, nem egy ellenőrzött `build_hash`-t. Meglévő, újrahasznosítható kapcsolatok: `verifyCICFlowProvenance` (horgony), `cicFlowRegistry` (grant- és példánykötés), a primitives vektorok és a referencia-verifier.
@@ -90,7 +110,7 @@ Az alábbi javaslatok a #200 architekturális review-jából származnak; mindeg
 | D1 | A rekord helye | külön `<név>.release.yaml` |
 | D2 | A `.pem` sorsa | a release rekord az autoritatív forrás; a rekorddal ellentmondó legacy `.pem` DENY |
 | D3 | A „nincs visszaesés" hatóköre `prod`-ban | minden modul, kivétel nélkül |
-| D4 | Mi jogosít fel egy aláírót modulnévre és capability-készletre | deklarált, hitelesített autorizációs policy (nem tanúsítvány subject/SAN minta). Nyitott benne: ki írja alá a policyt, és hol él |
+| D4 | Mi jogosít fel egy aláírót modulnévre és capability-készletre | deklarált, hitelesített, verziózott policy-objektum a 4.3 bizalmi modellje szerint (külön policy-kiadási jog, nincs önjogosítás, hiányzó vagy érvénytelen policy DENY, a policy digestje a bizonyítékban). A megvalósítás előtt véglegesítendő: az objektum leírása a primitives és Forms mechanizmusokból |
 | D5 | Idő | a betöltéskori érvényesség első lépésnek elfogadható; a rés rögzítve |
 | D6 | Verifier | Go implementáció, közös tesztvektorok, a Python referencia-verifier mint orákulum |
 | D7 | Egyedi release visszavonás | külön issue; a hiányzó garanciát dokumentálni kell |

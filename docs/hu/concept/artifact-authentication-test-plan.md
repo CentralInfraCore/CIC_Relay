@@ -27,6 +27,11 @@ Minden teszt valódi modult és valódi, teszt-kulcsos release rekordot épít (
 | A17 | A -> B -> A életciklus: A betöltése, B betöltése, A újratöltése | a B alatt DENY példányt az A identitásának visszaállítása nem engedélyezi újra; csak az A újratöltése után létrehozott példány engedélyezett |
 | A18 | Olyan rekord, amelynek útvonalai nem pontosan felelnek meg a betöltött fájloknak (csak névegyezés) | elutasítva; fájlnév-alapú fallback nincs |
 | A19 | A valódi compiler-rekord (`primitives/@v0.2.1`, a származás rögzítve) a Go verifieren | `record` és `crypto` PASS, ugyanaz, mint a Python referencia-verifier. A modulszintű valódi compiler-rekord **blokkolt**, amíg a modul release-tooling nem tud envelope 3 rekordot kiadni (terv 3. szakasz); ez producer-munkatétel, nem kihagyott teszt |
+| A20 | Ugyanazon artifact újratöltése, miután a korábbi példány DENY lett (visszavonás vagy sikertelen újratöltés) | új grant-generáció jön létre; a korábbi példány DENY marad, csak az új generáció alatt létrehozott példányok ALLOW |
+| A21 | Csak a modul saját kiadója által aláírt policy | DENY (nincs önjogosítás) |
+| A22 | Modulkiadási joggal rendelkező, de policy-kiadási joggal nem rendelkező aláíró policyt ír alá | DENY |
+| A23 | A policy hiányzik, érvénytelen, vagy nem alkalmazható a modulra | DENY |
+| A24 | A policy digestje | a granttel és az audit naplóban rögzítve; megváltozott policy megváltoztatja a digestet, és új döntést igényel |
 
 ## 2. Fail-closed szabálytáblázat
 
