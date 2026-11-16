@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - signing
+related_nodes:
+  - docs/en/concept/artifact-authentication
+  - docs/en/concept/artifact-authentication-test-plan
+  - docs/en/security/module-loading
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - design-review
+description: |
+  Concept-status plan for #162 work package 1: a general module release record emitter in base-repo wasm/main implementing the cic-primitives envelope 3 contract (WASM and complete descriptor bound by one record, source commit, artifact and manifest digests, Vault signature, CICSourceCA countersignature, separate record file), the survey of existing base-repo branches, the producer-side proof plan against the primitives reference verifier, and the D4 survey of how an authorization policy can be expressed from CertPattern, with the open points. Plan only, no code.

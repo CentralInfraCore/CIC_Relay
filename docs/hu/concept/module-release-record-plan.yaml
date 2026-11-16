@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - signing
+related_nodes:
+  - docs/hu/concept/artifact-authentication
+  - docs/hu/concept/artifact-authentication-test-plan
+  - docs/hu/security/module-loading
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - design-review
+description: |
+  Concept státuszú terv a #162 1. munkacsomagjához: általános modul-release rekord kibocsátó a base-repo wasm/main ágon, a cic-primitives envelope 3 szerződés megvalósításával (a WASM és a teljes leíró egy rekordban kötve, forrás-commit, artifact- és manifest-digestek, Vault-aláírás, CICSourceCA-ellenjegyzés, külön rekordfájl), a meglévő base-repo ágak felmérése, a producer-oldali bizonyítási terv a primitives referencia-verifier ellen, és a D4 felmérés arról, hogyan fejezhető ki az authorization policy a CertPattern-ből, nyitott pontokkal. Csak terv, kód nincs.
