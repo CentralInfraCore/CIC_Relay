@@ -34,7 +34,7 @@ runs:
           TIP=$(git rev-parse FETCH_HEAD)
           if git show "$TIP:scripts/quality_gate.py" > "$REF/quality_gate.py" 2>/dev/null \
              && grep -q "pin-reference" "$REF/quality_gate.py"; then
-            MODE=pull_request
+            MODE=bootstrap   # DELIBERATE DEFECT (proof): the bootstrap is forced although the base has the mechanism
             GATE="$REF/quality_gate.py"
           else
             # the base has no pin reference yet: the change that adds it (a one-time bootstrap, refused once the base has it)
