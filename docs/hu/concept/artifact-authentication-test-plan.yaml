@@ -14,4 +14,4 @@ used_in:
   - validation
   - design-review
 description: |
-  A #162 concept státuszú tesztterve: A1–A8 negatív elfogadási tesztek, fail-closed szabálytáblázat, verifier-megfelelőség a cic-primitives vektorokkal és differenciális teszteléssel, életciklus- és audit-tesztek, és a megvalósító PR-hoz kötelező bizonyíték.
+  A #162 concept státuszú tesztterve: A1–A24 negatív elfogadási tesztek (artifact-kötés, visszavonható jogosultság és grant-generáció, ellenőrzött bájtok azonossága, policy bizalmi modell, valódi compiler-rekord), fail-closed szabálytáblázat, verifier-megfelelőség a cic-primitives vektorokkal és differenciális teszteléssel, életciklus- és audit-tesztek, és a megvalósító PR-hoz kötelező bizonyíték.

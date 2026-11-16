@@ -14,4 +14,4 @@ used_in:
   - validation
   - design-review
 description: |
-  Concept-status test plan for #162: negative acceptance tests A1 to A8, the fail-closed policy table, verifier conformance against the cic-primitives vectors with differential testing, lifecycle and audit tests, and the evidence required for the implementation PR.
+  Concept-status test plan for #162: negative acceptance tests A1 to A24 (artifact binding, revocable authority and grant generation, verified-bytes identity, policy trust model, real compiler record), the fail-closed policy table, verifier conformance against the cic-primitives vectors with differential testing, lifecycle and audit tests, and the evidence required for the implementation PR.
