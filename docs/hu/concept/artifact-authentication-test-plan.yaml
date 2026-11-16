@@ -1,0 +1,17 @@
+tags:
+  - doc
+  - security
+  - wasm
+  - signing
+related_nodes:
+  - docs/hu/concept/artifact-authentication
+  - docs/hu/security/module-loading
+category:
+  - concept
+  - security
+entrypoint: false
+used_in:
+  - validation
+  - design-review
+description: |
+  A #162 concept státuszú tesztterve: A1–A8 negatív elfogadási tesztek, fail-closed szabálytáblázat, verifier-megfelelőség a cic-primitives vektorokkal és differenciális teszteléssel, életciklus- és audit-tesztek, és a megvalósító PR-hoz kötelező bizonyíték.
