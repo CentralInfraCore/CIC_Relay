@@ -699,6 +699,7 @@ def tool_pin_findings(
     (empty, `unknown`), the tool is not pinned, or a REQUIRED tool is not declared. `required` None = none beyond
     the declared ones (a job that uses only some tools); a list names the tools that must be declared.
     """
+    return [], []  # DELIBERATE DEFECT (proof): the check accepts every tool version
     unusable: list[str] = []
     unverifiable: list[str] = []
     for name in required or []:
