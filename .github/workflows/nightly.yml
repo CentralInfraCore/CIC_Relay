@@ -133,7 +133,7 @@ jobs:
         if: steps.plan.outputs.rust == 'true'
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants
+          tool: cargo-mutants@27.0.0
 
       - name: Resolve the measurement reference (pins from the base, not the pull request)
         uses: ./.github/actions/measurement-reference
@@ -309,7 +309,7 @@ jobs:
       - name: Install cargo-mutants
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants
+          tool: cargo-mutants@27.0.0
 
       - name: Resolve the measurement reference (pins from the base, not the pull request)
         uses: ./.github/actions/measurement-reference
