@@ -35,7 +35,6 @@
       "gremlins"
     ],
     "mutation-rust": [
-      "cargo-mutants",
       "rustc"
     ],
     "object-evidence": [

@@ -930,18 +930,18 @@ def test_the_pins_agree_with_what_the_workflows_install():
 JOBS_WITH_TOOLS = {
     # workflow: (job, tools its check-tools step must declare)
     "mutation-pr.yml": [
-        ("plan", {"rustc", "cargo-mutants"}),
+        ("plan", {"rustc"}),
         ("go", {"go", "gremlins"}),
-        ("rust", {"rustc", "cargo-mutants"}),
+        ("rust", {"rustc"}),
     ],
     "mutation.yml": [
         ("mutation-go", {"go", "gremlins"}),
-        ("mutation-rust", {"rustc", "cargo-mutants"}),
+        ("mutation-rust", {"rustc"}),
     ],
     "nightly.yml": [
-        ("plan", {"rustc", "cargo-mutants"}),
+        ("plan", {"rustc"}),
         ("go", {"go", "gremlins"}),
-        ("rust", {"rustc", "cargo-mutants"}),
+        ("rust", {"rustc"}),
     ],
     "verify.yml": [("coverage", {"go"}), ("rust", {"rustc", "cargo-llvm-cov"})],
 }

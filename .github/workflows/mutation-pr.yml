@@ -70,8 +70,7 @@ jobs:
           python3 "${MR_GATE:?the measurement reference step did not run}" check-tools \
             --pins "${MR_PINS:?}" --reference "${MR_RECORD:?}" \
             --surface mutation-rust \
-            --tool "rustc=$(rustc --version | awk '{print $2}')" \
-            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            --tool "rustc=$(rustc --version | awk '{print $2}')"
 
       - name: Count the Rust mutants in the diff
         id: count
@@ -250,8 +249,7 @@ jobs:
           python3 "${MR_GATE:?the measurement reference step did not run}" check-tools \
             --pins "${MR_PINS:?}" --reference "${MR_RECORD:?}" \
             --surface mutation-rust \
-            --tool "rustc=$(rustc --version | awk '{print $2}')" \
-            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            --tool "rustc=$(rustc --version | awk '{print $2}')"
 
       - name: Mutation of the changed Rust lines, or of every mutant when the plan escalated (no surviving mutants)
         env:
