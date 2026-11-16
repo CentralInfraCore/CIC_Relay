@@ -133,7 +133,7 @@ jobs:
         if: steps.plan.outputs.rust == 'true'
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants
+          tool: cargo-mutants@27.0.0
 
       - name: Check the measuring tools (fail closed)
         if: steps.plan.outputs.rust == 'true'
@@ -301,7 +301,7 @@ jobs:
       - name: Install cargo-mutants
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants
+          tool: cargo-mutants@27.0.0
 
       - name: Check the measuring tools (fail closed)
         run: |

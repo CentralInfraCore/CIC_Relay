@@ -95,7 +95,7 @@ jobs:
       - name: Install cargo-llvm-cov and cargo-mutants
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov,cargo-mutants
+          tool: cargo-llvm-cov,cargo-mutants@27.0.0
 
       - name: Check the measuring tools (fail closed)
         run: |

@@ -4,7 +4,7 @@
   "tools": {
     "c++filt": "GNU c++filt (GNU Binutils for Ubuntu) 2.46",
     "cargo-llvm-cov": "0.9.1",
-    "cargo-mutants": "27.1.0",
+    "cargo-mutants": "27.0.0",
     "go": "go1.26.11",
     "gremlins": "v0.6.0 h1:3G2ROO0I3q4bb5bxElQIUITTuEbl1iOfVYFqunGwrJI=",
     "objinventory": "objinventory/1",
