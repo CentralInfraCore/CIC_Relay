@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read   # the approval comments of a changed measuring-tool pin file (measurement-reference)
 
 concurrency:
   group: object-evidence-${{ github.event.pull_request.number || github.ref }}
@@ -86,6 +87,9 @@ jobs:
             --go-unit "goastdump,tools/goastdump,$T/goastdump-inventory.json,$T/goastdump-cover.out,detail" \
             --llvm-cov "$T/llvm-cov.json" --rust-list "$T/rust-list.json" --rust-prefix "$PWD/" "${tools[@]}"
 
+      - name: Resolve the measurement reference (pins from the base, not the pull request)
+        uses: ./.github/actions/measurement-reference
+
       - name: Verify the record (L1 integrity, L2 binding to the inputs, L3 completeness)
         env:
           T: ${{ runner.temp }}/object-evidence
@@ -97,7 +101,7 @@ jobs:
             --input "go-inventory:goastdump=$T/goastdump-inventory.json" --input "go-coverprofile:goastdump=$T/goastdump-cover.out" \
             --input "llvm-cov-json=$T/llvm-cov.json" --input "rust-mutant-list=$T/rust-list.json" \
             --input "scope=.measurement-scope.json" \
-            --tool-pins .measurement-tools.json | tee "$T/verify.txt"
+            --tool-pins "${MR_PINS:?the measurement reference step did not run}" | tee "$T/verify.txt"
 
       # The self-test of the verifier: deliberate defects are derived from the REAL record and must each be caught at the
       # expected level (L1/L2/L3) with their own diagnostic code, and the honest record must get the honest verdict. The
@@ -114,7 +118,7 @@ jobs:
             --input "go-inventory:goastdump=$T/goastdump-inventory.json" --input "go-coverprofile:goastdump=$T/goastdump-cover.out" \
             --input "llvm-cov-json=$T/llvm-cov.json" --input "rust-mutant-list=$T/rust-list.json" \
             --input "scope=.measurement-scope.json" \
-            --tool-pins .measurement-tools.json | tee "$T/seeded-defects.txt"
+            --tool-pins "${MR_PINS:?the measurement reference step did not run}" | tee "$T/seeded-defects.txt"
 
       - name: Keep the record
         if: ${{ always() }}

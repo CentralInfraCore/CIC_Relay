@@ -1,6 +1,9 @@
 {
   "schema": "measurement-tools/1",
-  "note": "Exact versions of the tools whose output decides a quality verdict. Values observed in the object-evidence CI run 43701788247 (main 7386565); gremlins: the module version and content hash of the v0.6.0 install (`go version -m`: the binary itself only prints `dev`). A different known version is UNUSABLE; a missing, unknown or unpinned one is UNVERIFIABLE; both reject the measurement. surfaces: the tool set each measuring surface MUST declare; a required tool that is not declared is UNVERIFIABLE (check-tools --surface). Changing this file is a gate-logic change (the planner escalates to FULL).",
+  "approvers": [
+    "sinkog"
+  ],
+  "note": "Exact versions of the tools whose output decides a quality verdict. Values observed in the object-evidence CI run 43701788247 (main 7386565); gremlins: the module version and content hash of the v0.6.0 install (`go version -m`: the binary itself only prints `dev`). A different known version is UNUSABLE; a missing, unknown or unpinned one is UNVERIFIABLE; both reject the measurement. surfaces: the tool set each measuring surface MUST declare; a required tool that is not declared is UNVERIFIABLE (check-tools --surface). Changing this file is a gate-logic change (the planner escalates to FULL) and a toolchain update: on a pull request the pins are read from the BASE branch, and a changed file is accepted only with an approval comment of one of `approvers` (read from the BASE file) bound to the exact head and the exact digest of the new file (CIC_Relay #195).",
   "tools": {
     "c++filt": "GNU c++filt (GNU Binutils for Ubuntu) 2.46",
     "cargo-llvm-cov": "0.9.1",

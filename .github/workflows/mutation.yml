@@ -67,9 +67,13 @@ jobs:
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
 
+      - name: Resolve the measurement reference (pins from the base, not the pull request)
+        uses: ./.github/actions/measurement-reference
+
       - name: Check the measuring tools (fail closed)
         run: |
-          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+          python3 "${MR_GATE:?the measurement reference step did not run}" check-tools \
+            --pins "${MR_PINS:?}" --reference "${MR_RECORD:?}" \
             --surface mutation-go \
             --tool "go=$(go version | awk '{print $3}')" \
             --tool "gremlins=$(go version -m "$(command -v gremlins)" | awk '$1=="mod" && $2 ~ /go-gremlins\/gremlins$/ {print $3, $4}')"
@@ -102,9 +106,13 @@ jobs:
         with:
           tool: cargo-mutants
 
+      - name: Resolve the measurement reference (pins from the base, not the pull request)
+        uses: ./.github/actions/measurement-reference
+
       - name: Check the measuring tools (fail closed)
         run: |
-          python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
+          python3 "${MR_GATE:?the measurement reference step did not run}" check-tools \
+            --pins "${MR_PINS:?}" --reference "${MR_RECORD:?}" \
             --surface mutation-rust \
             --tool "rustc=$(rustc --version | awk '{print $2}')" \
             --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"

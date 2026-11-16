@@ -968,7 +968,18 @@ def test_every_job_that_measures_checks_its_tools_before_it_measures(wf, job, to
     assert step, f"{wf}/{job}: no fail-closed tool check"
     declared = set(re.findall(r'--tool "([a-z+-]+)=', step.group(1)))
     assert declared == tools, f"{wf}/{job}: declares {declared}, must declare {tools}"
-    assert "check-tools --pins .measurement-tools.json" in step.group(1)
+    # #195: the check runs the script of the reference and reads the pins of the reference, never the working tree's
+    assert '"${MR_GATE:?' in step.group(1) and "check-tools" in step.group(1)
+    assert '--pins "${MR_PINS:?' in step.group(1)
+    assert '--reference "${MR_RECORD:?' in step.group(1)
+    assert "--pins .measurement-tools.json" not in step.group(1)
+    assert "scripts/quality_gate.py check-tools" not in step.group(1)
+    # and the reference is resolved by the step before it, after the checkout
+    ref_at = body.find("uses: ./.github/actions/measurement-reference")
+    assert ref_at != -1, f"{wf}/{job}: no measurement reference step"
+    assert ref_at < body.find(
+        step.group(0)
+    ), f"{wf}/{job}: the reference comes after the check"
     # review F1: the step names its measuring surface, and declares exactly the tools that surface requires
     surface = re.search(r"--surface ([a-z-]+)", step.group(1))
     assert surface, f"{wf}/{job}: the tool check names no --surface"

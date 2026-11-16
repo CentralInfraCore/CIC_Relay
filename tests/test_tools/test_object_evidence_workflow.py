@@ -23,7 +23,7 @@ def test_the_workflow_runs_on_pull_requests_and_by_hand_only():
 
 def test_it_is_read_only_and_never_hides_a_failure():
     doc = load()
-    assert doc["permissions"] == {"contents": "read"}
+    assert doc["permissions"] == {"contents": "read", "pull-requests": "read"}
     for job in doc["jobs"].values():
         assert not job.get("continue-on-error")
         for st in job["steps"]:

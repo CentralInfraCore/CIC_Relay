@@ -640,7 +640,9 @@ def test_n_a8_the_command_line_exits_non_zero_for_a_modified_tool(tmp_path, bund
 def test_r_a8_the_real_pin_file_matches_the_tools_the_workflow_records():
     pins = om.load_tool_pins(os.path.join(ROOT, ".measurement-tools.json"))["tools"]
     wf = open(os.path.join(ROOT, ".github/workflows/object-evidence.yml")).read()
-    assert "--tool-pins .measurement-tools.json" in wf
+    # the pins come from the measurement reference (the base branch), not from the pull request's own tree (#195)
+    assert '--tool-pins "${MR_PINS:?' in wf
+    assert "--tool-pins .measurement-tools.json" not in wf
     for tool in ("go", "rustc", "cargo-llvm-cov", "cargo-mutants", "objinventory"):
         assert tool in pins
 

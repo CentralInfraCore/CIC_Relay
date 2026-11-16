@@ -86,7 +86,8 @@ def test_the_workflow_is_report_only_and_runs_when_a_gate_it_exercises_changes()
     doc = yaml.safe_load(open(os.path.join(WF, "gate-selftest.yml")))
     on = doc.get("on", doc.get(True))
     assert set(on) == {"pull_request", "workflow_dispatch"}
-    assert doc["permissions"] == {"contents": "read"}
+    # read-only: the contents, and the approval comments of a changed pin file (measurement-reference, #195)
+    assert doc["permissions"] == {"contents": "read", "pull-requests": "read"}
     for path in (
         ".github/workflows/verify.yml",
         "scripts/gate_selftest.py",
