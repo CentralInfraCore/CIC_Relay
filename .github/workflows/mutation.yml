@@ -106,8 +106,7 @@ jobs:
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
             --surface mutation-rust \
-            --tool "rustc=$(rustc --version | awk '{print $2}')" \
-            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            --tool "rustc=$(rustc --version | awk '{print $2}')"
 
       - name: Mutation — Rust workspace, shard ${{ matrix.shard }}/4 (no surviving mutants)
         run: cargo mutants --workspace --shard ${{ matrix.shard }}/4

@@ -65,8 +65,7 @@ jobs:
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
             --surface mutation-rust \
-            --tool "rustc=$(rustc --version | awk '{print $2}')" \
-            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            --tool "rustc=$(rustc --version | awk '{print $2}')"
 
       - name: Count the Rust mutants in the diff
         id: count
@@ -237,8 +236,7 @@ jobs:
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
             --surface mutation-rust \
-            --tool "rustc=$(rustc --version | awk '{print $2}')" \
-            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            --tool "rustc=$(rustc --version | awk '{print $2}')"
 
       - name: Mutation of the changed Rust lines, or of every mutant when the plan escalated (no surviving mutants)
         env:

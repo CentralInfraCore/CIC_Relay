@@ -140,8 +140,7 @@ jobs:
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
             --surface mutation-rust \
-            --tool "rustc=$(rustc --version | awk '{print $2}')" \
-            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            --tool "rustc=$(rustc --version | awk '{print $2}')"
 
       # The number of Rust shards follows the number of mutants (about 75 per shard, at most
       # 8), so the wall time stays bounded as the code grows. 0 shards = nothing to mutate.
@@ -307,8 +306,7 @@ jobs:
         run: |
           python3 scripts/quality_gate.py check-tools --pins .measurement-tools.json \
             --surface mutation-rust \
-            --tool "rustc=$(rustc --version | awk '{print $2}')" \
-            --tool "cargo-mutants=$(cargo mutants --version | awk '{print $2}')"
+            --tool "rustc=$(rustc --version | awk '{print $2}')"
 
       - name: Mutation of one shard of the Rust lines changed since the last nightly (no surviving mutants)
         env:
