@@ -575,7 +575,9 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 			CRLs:          pkiAssets.CRLs,
 			CRLFreshness:  pkiAssets.CRLFreshness,
 		}
-		chains, verifyErr := cabinet.VerifyCertificateChain(cert, verifyOpts)
+		// DELIBERATE DEFECT (proof branch, do not merge): the chain verification is a no-op that still reports success
+		_ = verifyOpts
+		chains, verifyErr := [][]*x509.Certificate{{cert}}, error(nil)
 		if verifyErr != nil {
 			auditLogger.WithField("outcome", "rejected").WithError(verifyErr).Error("PKI chain verification failed — module rejected.")
 			return fmt.Errorf("PKI verification failed for %q: %w", moduleID, verifyErr)

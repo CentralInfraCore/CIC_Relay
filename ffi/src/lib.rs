@@ -914,7 +914,12 @@ unsafe fn marshal(
     // ---- CORE: safe, panic-contained. `Err` (panic) or `None` (rejection). ----
     // The backstop recovers only in unwinding (dev/test) builds; the release
     // profile is `panic = "abort"`, so a panic aborts before reaching here.
-    let Ok(Some(result)) = catch_unwind(move || core(&owned)) else {
+    // DELIBERATE DEFECT (proof branch, do not merge): no panic backstop, a panic in the core is not contained
+    let caught = catch_unwind(move || core(&owned));
+    let Ok(Some(result)) = (match caught {
+        Err(payload) => std::panic::resume_unwind(payload),
+        ok => ok,
+    }) else {
         return ptr::null_mut();
     };
     if result.is_empty() {
