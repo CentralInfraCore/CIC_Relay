@@ -1,0 +1,105 @@
+---
+crate: vault_adapter
+module: crate
+description: 'Exercises the **real** `<VaultClient as TransitBackend>` impl behind
+  [`VaultTransitSigner`] against a `wiremock` HTTP server — no live Vault, no `live-vault`
+  feature. This is the default-build counterpart of the opt-in `transit_sign.rs` live
+  test: it proves the driver wiring (endpoint, request shape, response parsing) and,
+  because it observes concrete sign/verify results, kills the mutation-testing survivors
+  the real delegation would otherwise leave (`Ok(String::new())`, `Ok(true)`, `Ok(false)`).'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MOUNT
+  kind: const
+  visibility: private
+  description: ''
+  references: []
+- name: KEY
+  kind: const
+  visibility: private
+  description: ''
+  references: []
+- name: HEAD
+  kind: const
+  visibility: private
+  description: A stand-in audit-chain head `record_hash` (hex string bytes), the domain
+    the signer signs.
+  references: []
+- name: real_client_sign_returns_the_vault_signature
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::wiremock::MockServer::start
+  - vault_client_rs_test::wiremock::Mock::given
+  - vault_client_rs_test::wiremock::matchers::method
+  - vault_client_rs_test::wiremock::matchers::path
+  - vault_client_rs_test::wiremock::ResponseTemplate::new
+  - serde_json::json
+  - vault_adapter::VaultTransitSigner::new
+  - vault_client_rs_test::test_client
+  calls:
+  - vault_adapter::VaultTransitSigner::new
+  - vault_client_rs_test::test_client
+  - vault_client_rs_test::wiremock::Mock::given
+  - vault_client_rs_test::wiremock::MockServer::start
+  - vault_client_rs_test::wiremock::ResponseTemplate::new
+  - vault_client_rs_test::wiremock::matchers::method
+  - vault_client_rs_test::wiremock::matchers::path
+  test: true
+- name: real_client_verify_reports_a_valid_signature
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::wiremock::MockServer::start
+  - vault_client_rs_test::wiremock::Mock::given
+  - vault_client_rs_test::wiremock::matchers::method
+  - vault_client_rs_test::wiremock::matchers::path
+  - vault_client_rs_test::wiremock::ResponseTemplate::new
+  - serde_json::json
+  - vault_adapter::VaultTransitSigner::new
+  - vault_client_rs_test::test_client
+  - vault_adapter::VaultSignature::from_wire
+  calls:
+  - vault_adapter::VaultSignature::from_wire
+  - vault_adapter::VaultTransitSigner::new
+  - vault_client_rs_test::test_client
+  - vault_client_rs_test::wiremock::Mock::given
+  - vault_client_rs_test::wiremock::MockServer::start
+  - vault_client_rs_test::wiremock::ResponseTemplate::new
+  - vault_client_rs_test::wiremock::matchers::method
+  - vault_client_rs_test::wiremock::matchers::path
+  test: true
+- name: real_client_verify_reports_an_invalid_signature
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::wiremock::MockServer::start
+  - vault_client_rs_test::wiremock::Mock::given
+  - vault_client_rs_test::wiremock::matchers::method
+  - vault_client_rs_test::wiremock::matchers::path
+  - vault_client_rs_test::wiremock::ResponseTemplate::new
+  - serde_json::json
+  - vault_adapter::VaultTransitSigner::new
+  - vault_client_rs_test::test_client
+  - vault_adapter::VaultSignature::from_wire
+  calls:
+  - vault_adapter::VaultSignature::from_wire
+  - vault_adapter::VaultTransitSigner::new
+  - vault_client_rs_test::test_client
+  - vault_client_rs_test::wiremock::Mock::given
+  - vault_client_rs_test::wiremock::MockServer::start
+  - vault_client_rs_test::wiremock::ResponseTemplate::new
+  - vault_client_rs_test::wiremock::matchers::method
+  - vault_client_rs_test::wiremock::matchers::path
+  test: true

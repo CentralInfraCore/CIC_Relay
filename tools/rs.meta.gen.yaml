@@ -1,0 +1,337 @@
+---
+module: tools.rs.meta.gen
+description: 'rs.meta.gen.py — Companion YAML skeleton generator for Rust source files.
+  The Rust counterpart of go.meta.gen.py. Reads Rust through tools/rsastdump (a `syn`
+  front end, workspace member) and writes a .yaml companion next to each .rs file
+  following rs.meta.schema.yaml. Auto-filled fields: - crate, module, entrypoint -
+  description: the file''s inner doc (//!) - objects: name, kind, visibility, receiver,
+  trait, derives, implements, variants, methods, supertraits, references, calls, test
+  - objects[].description: outer doc comments (///) - tags: suggested from file path,
+  dependencies, and naming (review before use) Semantic fields left empty for human
+  completion: - category, used_in, related_nodes References keep only paths into dependency
+  crates (Cargo.toml) and into other modules of the same crate (crate::…); std/core/alloc
+  and same-module paths are dropped. `implements` is recomputed on every run from
+  the `impl Trait for Type` blocks of all companions of the crate, so it is an auto
+  field, not a manual one. Usage: python tools/rs.meta.gen.py <file.rs> [<file.rs>
+  ...] python tools/rs.meta.gen.py --dir <directory> [--recursive] [--merge] Options:
+  --dir         Process all .rs files in directory (default: non-recursive; target/
+  and testdata/ are never entered) --recursive   Recurse into subdirectories (use
+  with --dir) --overwrite   Overwrite existing .yaml files (default: skip) --merge       Refresh
+  auto fields, keep manual ones (see _merge_data) --skip-tests  Leave out #[cfg(test)]
+  / #[test] items and tests/ files --dry-run     Print what would be generated without
+  writing files Environment: RS_META_RSASTDUMP  Command that runs rsastdump (default:
+  build it with `cargo build -p rsastdump --locked` in this workspace).'
+tags:
+- builder
+- core
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: _ALLOWED_TAGS
+  kind: const
+  description: ''
+  references: []
+- name: _STD_ROOTS
+  kind: const
+  description: ''
+  references: []
+- name: _PRELUDE
+  kind: const
+  description: ''
+  references: []
+- name: _SKIP_DIRS
+  kind: const
+  description: ''
+  references: []
+- name: _KIND_RANK
+  kind: const
+  description: ''
+  references: []
+- name: _TAG_DEPS
+  kind: const
+  description: ''
+  references: []
+- name: CrateInfo
+  kind: class
+  decorators: []
+  description: What the generator needs from the owning Cargo.toml.
+  implements: []
+  references: []
+- name: __init__
+  kind: method
+  receiver: CrateInfo
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _dep_names
+  kind: function
+  decorators: []
+  description: Local (in-code) names of every dependency table of a manifest.
+  references: []
+  calls:
+  - manifest.get
+  - n.replace
+  - names.update
+  - t.get
+- name: _find_crate
+  kind: function
+  decorators: []
+  description: The nearest Cargo.toml with a [package] above rs_file.
+  references: []
+  calls:
+  - CrateInfo
+  - _dep_names
+  - data.get
+  - manifest.exists
+  - manifest.read_text
+  - rs_file.resolve
+- name: _module_path
+  kind: function
+  decorators: []
+  description: Module path of a file inside its crate target, `crate` excluded. src/lib.rs,
+    src/main.rs, src/bin/x.rs, tests/x.rs, examples/x.rs, benches/x.rs and build.rs
+    are target roots (`[]`); src/a/b.rs and src/a/b/mod.rs are `["a", "b"]`. `#[path]`
+    attributes are not followed.
+  references: []
+  calls:
+  - rs_file.resolve
+- name: _normalize
+  kind: function
+  decorators: []
+  description: 'Make self::/super:: paths absolute (crate::…); others are unchanged.'
+  references: []
+  calls:
+  - base.pop
+  - path.split
+- name: _is_external
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _local_rest
+  kind: function
+  decorators: []
+  description: 'If path points into this file (its module and the inline modules in
+    it), the file-relative rest ("Foo::new", "tests::helper"); None otherwise. `module`
+    is the file''s module path; `file_mods` are the out-of-line modules the file declares
+    (`mod x;`): a path into one of those is cross-module.'
+  references: []
+  calls:
+  - path.split
+- name: _keep_ref
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _is_external
+  - _local_rest
+  - path.split
+- name: _format_call
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _local_rest
+  - path.split
+- name: _WORKSPACE
+  kind: const
+  description: ''
+  references: []
+- name: _DUMP_CHUNK
+  kind: const
+  description: ''
+  references: []
+- name: _dump_command
+  kind: function
+  decorators: []
+  description: Return the command that runs rsastdump, or None if it cannot be had.
+    RS_META_RSASTDUMP overrides it with a prebuilt binary (or any command). Otherwise
+    the workspace member is built once with the `cargo` on PATH.
+  references: []
+  calls:
+  - target.is_absolute
+- name: _rs_dump
+  kind: function
+  decorators: []
+  description: 'Run rsastdump over files; returns {resolved path: per-file dump}.'
+  references: []
+  calls:
+  - RuntimeError
+  - _dump_command
+  - f.resolve
+- name: _qualified
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - item.get
+- name: _objects_from_dump
+  kind: function
+  decorators: []
+  description: Turn an rsastdump file entry into the companion's objects list.
+  references: []
+  calls:
+  - _KIND_RANK.get
+  - _format_call
+  - _keep_ref
+  - _normalize
+  - _qualified
+  - dump.get
+  - i.get
+  - impls.get
+  - impls.setdefault
+  - it.get
+  - objects.append
+  - objects.sort
+  - refs.append
+- name: _suggest_tags
+  kind: function
+  decorators: []
+  description: Suggest tags from file path, used dependencies and naming conventions.
+    These are suggestions — review and trim before committing the YAML.
+  references: []
+  calls:
+  - _TAG_DEPS.items
+  - name.endswith
+  - name.lower
+  - name.startswith
+  - o.get
+  - path_str.endswith
+  - r.split
+  - tags.add
+  - tags.update
+- name: generate
+  kind: function
+  decorators: []
+  description: Build the companion data for one Rust file from its rsastdump entry.
+  references: []
+  calls:
+  - _find_crate
+  - _module_path
+  - _objects_from_dump
+  - _suggest_tags
+  - dump.get
+- name: _obj_key
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - o.get
+- name: _merge_data
+  kind: function
+  decorators: []
+  description: 'Merge freshly generated data into an existing YAML. Auto fields (always
+    taken from source): crate, module, entrypoint and every structural object field
+    (kind, visibility, receiver, trait, derives, implements, variants, methods, supertraits,
+    references, calls, test). Description fields: the doc comment wins when there
+    is one, otherwise the existing (hand-written) description is kept. Manual fields
+    (never touched): tags, category, used_in, related_nodes. Objects are matched by
+    (kind, receiver, name) — Rust methods share names across types (new, fmt, from)
+    — new ones are added, vanished ones dropped.'
+  references: []
+  calls:
+  - _obj_key
+  - merged.get
+  - new_data.get
+  - obj.get
+  - objects.append
+  - old_by_key.get
+  - old_data.get
+  - old_obj.get
+- name: _companions
+  kind: function
+  decorators: []
+  description: Companion YAMLs of every .rs file of a crate (target/ etc. skipped).
+  references: []
+  calls:
+  - crate_root.rglob
+  - out.append
+  - rs.relative_to
+  - rs.with_suffix
+  - y.exists
+- name: _detect_implements
+  kind: function
+  decorators: []
+  description: '{type name: {trait, ...}} from the impl objects of the given companions.
+    Types are matched by their last path segment: two same-named types in one crate
+    share the result (no name resolution across files).'
+  references: []
+  calls:
+  - data.get
+  - o.get
+  - result.setdefault
+  - yaml.safe_load
+  - yf.read_text
+- name: _apply_implements
+  kind: function
+  decorators: []
+  description: Rewrite `implements` of every type in yaml_files; returns files changed.
+  references: []
+  calls:
+  - _detect_implements
+  - _write_yaml
+  - data.get
+  - impl_map.get
+  - o.get
+  - yaml.safe_load
+  - yf.read_text
+- name: _write_yaml
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - f.write
+  - yaml.dump
+- name: _collect
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - d.glob
+  - d.rglob
+  - f.relative_to
+- name: _is_test_file
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _apply_implements
+  - _collect
+  - _companions
+  - _find_crate
+  - _is_test_file
+  - _merge_data
+  - _rs_dump
+  - _write_yaml
+  - crates_touched.add
+  - dump.get
+  - dumps.get
+  - f.exists
+  - f.with_suffix
+  - o.get
+  - parser.add_argument
+  - parser.parse_args
+  - parser.print_help
+  - rs_file.exists
+  - rs_file.resolve
+  - rs_file.with_suffix
+  - yaml.safe_load
+  - yaml_file.exists
+  - yaml_file.read_text

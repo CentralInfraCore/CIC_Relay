@@ -32,6 +32,15 @@ ignore: |
   /docs/
   /tools/
   /tests/
+  # Rust crates: their companions (rs.meta.schema.yaml, tools/rs.meta.gen.py)
+  # are the only YAML in them.
+  /cic-canonical/
+  /connections/
+  /executor/
+  /ffi/
+  /http-executor/
+  /module/
+  /vault-adapter/
   # Generated schema / data / IaC YAML at the repo root.
   *.schema.yaml
   *.meta.yaml

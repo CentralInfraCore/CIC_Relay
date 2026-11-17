@@ -1,0 +1,336 @@
+---
+crate: executor
+module: crate
+description: 'The **executor** — the actuating ("intervening") half of a `module/host`
+  pair in feature-008''s secret flow. The pair owns two objects: a Vault object (holds
+  pubkey-sealed secrets) and this executor object (performs the real intervention;
+  first round: HTTP). The executor sits at the **tail of the secret-flow pipeline**:
+  the WASM module opens a `SealedSecret` (from `connections`) into plaintext, and
+  that plaintext — carried as a [`secrecy::SecretString`], the same type `module::open`
+  yields — is applied here as the actuation credential, right before the outbound
+  call. This crate owns *meaning* only: the [`ExecRequest`]/[`ExecOutcome`] shapes
+  and the [`Executor`] port, plus an in-memory [`MockExecutor`] and its contract tests.
+  It performs **no network I/O** — a real HTTP transport is a separate adapter crate
+  (`http-executor`), mirroring how `vault-adapter` sits behind `connections`. Contract
+  note: a **reached** endpoint always yields `Ok(`[`ExecOutcome`]`)`, whatever its
+  status — interpreting a `401`/`500` is the caller''s job, not the transport''s.
+  An [`ExecuteError`] means only that the call was *malformed*, *denied by policy*,
+  or *never completed*.'
+tags:
+- executor
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: Method
+  kind: enum
+  visibility: pub
+  description: The request method for an actuation. The first round models HTTP verbs;
+    the set is deliberately closed so policy can reason about it exhaustively.
+  derives:
+  - Debug
+  - Clone
+  - Copy
+  - PartialEq
+  - Eq
+  - PartialOrd
+  - Ord
+  - Hash
+  implements:
+  - std::fmt::Display
+  variants:
+  - Get
+  - Post
+  - Put
+  - Delete
+  references: []
+- name: ExecRequest
+  kind: struct
+  visibility: pub
+  description: 'An actuation request: *what* to do, independent of *how* it is transported.
+    It carries **no secret material** — the actuation credential is supplied separately
+    to [`Executor::execute`], so an `ExecRequest` is safe to clone and log. Headers
+    use a [`BTreeMap`] so the ordering is deterministic (a prerequisite for any hash
+    or `ProofTrace` over the request).'
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: ExecOutcome
+  kind: struct
+  visibility: pub
+  description: The result of an actuation that reached the endpoint, whatever its
+    status.
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: ExecuteError
+  kind: enum
+  visibility: pub
+  description: 'An actuation failure. Carries no secret material, so it is always
+    safe to log. A *reached* endpoint is **not** a failure — it is an [`ExecOutcome`]
+    with a status. These variants cover only the ways an actuation never produces
+    a (complete) outcome: malformed, denied, over a limit, or never completed.'
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements:
+  - std::error::Error
+  - std::fmt::Display
+  variants:
+  - InvalidRequest
+  - Denied
+  - LimitExceeded
+  - Unavailable
+  references: []
+- name: MockExecutor
+  kind: struct
+  visibility: pub
+  description: 'An in-memory [`Executor`] that models an endpoint guarding a credential:
+    it **echoes** the request back (status 200, same headers and body) when the supplied
+    secret matches the one it accepts, and returns a `401` outcome otherwise. This
+    is the executor-side analogue of `connections`'' `InMemoryTokenProvider` (trust-by-value):
+    it proves the opened secret flows all the way through to the actuation and is
+    checked there, while never placing the secret in its output. Note that a credential
+    mismatch is a `401` **outcome**, not an error — exactly how a live HTTP endpoint
+    would answer.'
+  derives: []
+  implements:
+  - Executor
+  - std::fmt::Debug
+  references:
+  - secrecy::SecretString
+- name: Executor
+  kind: trait
+  visibility: pub
+  description: 'The executor port: perform an [`ExecRequest`], applying a secret credential.
+    Contract: the `secret` (the plaintext a module opened from a `SealedSecret`) is
+    applied as the actuation credential and **must never appear** in the returned
+    [`ExecOutcome`] nor in an [`ExecuteError`]. A reached endpoint yields `Ok(ExecOutcome)`
+    for any status. A real implementation is a network transport (`http-executor`);
+    the in-memory [`MockExecutor`] models one without I/O.'
+  methods:
+  - execute
+  supertraits: []
+  references:
+  - secrecy::SecretString
+  calls: []
+- name: fmt::Display for Method
+  kind: impl
+  receiver: Method
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: Method
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: ExecRequest
+  kind: impl
+  receiver: ExecRequest
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: ExecRequest
+  visibility: pub
+  description: Builds a request for `method` against `target`, with empty headers/body
+    and no trace id.
+  references: []
+  calls: []
+- name: with_header
+  kind: method
+  receiver: ExecRequest
+  visibility: pub
+  description: Sets a header, returning `self` for chaining.
+  references: []
+  calls: []
+- name: with_trace_id
+  kind: method
+  receiver: ExecRequest
+  visibility: pub
+  description: Sets the correlation id carried into audit records, returning `self`.
+  references: []
+  calls: []
+- name: with_body
+  kind: method
+  receiver: ExecRequest
+  visibility: pub
+  description: Sets the request body, returning `self` for chaining.
+  references: []
+  calls: []
+- name: ExecOutcome
+  kind: impl
+  receiver: ExecOutcome
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: ExecOutcome
+  visibility: pub
+  description: Wraps a `status` with empty headers and body.
+  references: []
+  calls: []
+- name: fmt::Display for ExecuteError
+  kind: impl
+  receiver: ExecuteError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: ExecuteError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: std::error::Error for ExecuteError
+  kind: impl
+  receiver: ExecuteError
+  trait: std::error::Error
+  description: ''
+  references: []
+- name: MockExecutor
+  kind: impl
+  receiver: MockExecutor
+  description: ''
+  references: []
+- name: accepting
+  kind: method
+  receiver: MockExecutor
+  visibility: pub
+  description: Creates an executor whose endpoint accepts exactly `secret`.
+  references:
+  - secrecy::SecretString
+  calls: []
+- name: fmt::Debug for MockExecutor
+  kind: impl
+  receiver: MockExecutor
+  trait: std::fmt::Debug
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: MockExecutor
+  trait: std::fmt::Debug
+  description: ''
+  references: []
+  calls: []
+- name: Executor for MockExecutor
+  kind: impl
+  receiver: MockExecutor
+  trait: Executor
+  description: ''
+  references: []
+- name: execute
+  kind: method
+  receiver: MockExecutor
+  trait: Executor
+  description: ''
+  references:
+  - secrecy::SecretString
+  calls:
+  - ExecuteError::InvalidRequest
+  - secrecy::SecretString::expose_secret
+- name: tests::secret
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - secrecy::SecretString
+  - secrecy::SecretString::from
+  calls:
+  - secrecy::SecretString::from
+  test: true
+- name: tests::method_displays_as_http_verb
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+  test: true
+- name: tests::exec_request_builds_with_headers_and_body
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ExecRequest::new
+  test: true
+- name: tests::exec_outcome_new_is_empty
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ExecOutcome::new
+  test: true
+- name: tests::mock_echoes_request_when_credential_matches
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ExecRequest::new
+  - MockExecutor::accepting
+  - secret
+  test: true
+- name: tests::mock_returns_401_outcome_when_credential_mismatches
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ExecRequest::new
+  - MockExecutor::accepting
+  - secret
+  test: true
+- name: tests::mock_rejects_empty_target_before_any_call
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ExecRequest::new
+  - ExecuteError::InvalidRequest
+  - MockExecutor::accepting
+  - secret
+  test: true
+- name: tests::mock_debug_redacts_the_accepted_credential
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - MockExecutor::accepting
+  - secret
+  test: true
+- name: tests::errors_display_without_leaking
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ExecuteError::Denied
+  - ExecuteError::InvalidRequest
+  - ExecuteError::LimitExceeded
+  - ExecuteError::Unavailable
+  test: true

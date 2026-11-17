@@ -1,0 +1,388 @@
+---
+crate: vault_adapter
+module: crate::countersign
+description: 'Live Vault-PKI-backed countersigner — the runtime counterpart of the
+  `connections` [`Countersigner`](connections::vault::port::Countersigner) port. This
+  is the Relay''s role at runtime, split into its two orthogonal parts: - **The decision**
+  ([`CountersignPolicy`]) — the Relay''s *content-dependent authorization*: given
+  a [`CertRequest`], decide which CNs to countersign, or refuse. This is where the
+  Relay is "smart"; the signer knows nothing about it. - **The mechanism** ([`PkiBackend`])
+  — a dumb CA-signing seam over Vault''s PKI engine (`pki/sign-verbatim`). The intermediate
+  CA key lives in Vault and never enters the Relay''s process. [`VaultPkiCountersigner`]
+  wires the two: it authorizes via the policy, then — only for what the policy permitted
+  — has Vault countersign the module''s CSR, yielding a [`CounterSignedCert`] chained
+  to the CA root. It never holds the signing key and never sees a secret.'
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: CSR_LABEL
+  kind: const
+  visibility: private
+  description: PEM label for a PKCS#10 certificate-signing request.
+  references: []
+- name: Denied
+  kind: struct
+  visibility: pub
+  description: A refusal to countersign. The `reason` may name the offending CN (public,
+    content-encoding material) but never a secret value.
+  derives:
+  - Debug
+  - Clone
+  implements:
+  - std::fmt::Display
+  references: []
+- name: AllowlistPolicy
+  kind: struct
+  visibility: pub
+  description: 'The trivial policy: permit **iff every requested CN is in a fixed
+    allowlist**, authorizing the full requested scope. The simplest possible decision
+    — a real Relay plugs a richer [`CountersignPolicy`] into the same seam.'
+  derives: []
+  implements:
+  - CountersignPolicy
+  references:
+  - connections::vault::AuthScope
+- name: CountersignError
+  kind: enum
+  visibility: pub
+  description: A countersign failure. Carries no secret material, so it is always
+    safe to log.
+  derives:
+  - Debug
+  implements:
+  - std::error::Error
+  - std::fmt::Display
+  variants:
+  - Denied
+  - Backend
+  - CertEncoding
+  - ScopeNarrowingUnsupported
+  references:
+  - vault_client_rs::VaultError
+- name: VaultPkiCountersigner
+  kind: struct
+  visibility: pub
+  description: 'The Relay''s runtime countersigner: a [`CountersignPolicy`] (decision)
+    plus a [`PkiBackend`] (mechanism), targeting a PKI `mount`/`role`. It authorizes
+    the request, then — only if permitted — has Vault countersign the CSR, returning
+    a [`CounterSignedCert`] carrying the authorized scope. The signing key stays in
+    Vault; this type never holds it.'
+  derives: []
+  implements: []
+  references:
+  - vault_client_rs::VaultClient
+- name: CountersignPolicy
+  kind: trait
+  visibility: pub
+  description: The Relay's content-dependent authorization — the policy decision point.
+    Given a [`CertRequest`] (subject + requested scope + CSR), decide **which CNs
+    to countersign** and return that authorized [`AuthScope`], or [`Denied`] to refuse.
+    Implementations range from a trivial [`AllowlistPolicy`] to richer, content-dependent
+    rules; the countersigner treats them uniformly.
+  methods:
+  - authorize
+  supertraits:
+  - Send
+  - Sync
+  references:
+  - connections::vault::port::CertRequest
+  - connections::vault::AuthScope
+  calls: []
+- name: PkiBackend
+  kind: trait
+  visibility: pub
+  description: The CA-signing mechanism the countersigner needs, as a seam over the
+    driver. The real [`VaultClient`] implements it via the PKI engine's `sign-verbatim`;
+    tests implement it with the driver-level `MockPki`. It signs the CSR as-is (the
+    module chose the subject/CNs); the policy — not this seam — decides whether that
+    request is allowed.
+  methods:
+  - sign_verbatim
+  supertraits:
+  - Send
+  - Sync
+  references:
+  - vault_client_rs::PkiSignedCert
+  - vault_client_rs::VaultError
+  calls: []
+- name: Denied
+  kind: impl
+  receiver: Denied
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: Denied
+  visibility: pub
+  description: Creates a denial with `reason`.
+  references: []
+  calls:
+  - Denied
+- name: reason
+  kind: method
+  receiver: Denied
+  visibility: pub
+  description: The public denial reason.
+  references: []
+  calls: []
+- name: fmt::Display for Denied
+  kind: impl
+  receiver: Denied
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: Denied
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: AllowlistPolicy
+  kind: impl
+  receiver: AllowlistPolicy
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: AllowlistPolicy
+  visibility: pub
+  description: Permits exactly the CNs in `allowed`.
+  references:
+  - connections::vault::AuthScope
+  calls: []
+- name: CountersignPolicy for AllowlistPolicy
+  kind: impl
+  receiver: AllowlistPolicy
+  trait: CountersignPolicy
+  description: ''
+  references: []
+- name: authorize
+  kind: method
+  receiver: AllowlistPolicy
+  trait: CountersignPolicy
+  description: ''
+  references:
+  - connections::vault::port::CertRequest
+  - connections::vault::AuthScope
+  calls:
+  - Denied::new
+- name: PkiBackend for VaultClient
+  kind: impl
+  receiver: VaultClient
+  trait: PkiBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+- name: sign_verbatim
+  kind: method
+  receiver: VaultClient
+  trait: PkiBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::PkiSignedCert
+  - vault_client_rs::VaultError
+  calls:
+  - vault_client_rs::VaultClient::pki
+- name: fmt::Display for CountersignError
+  kind: impl
+  receiver: CountersignError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: CountersignError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: std::error::Error for CountersignError
+  kind: impl
+  receiver: CountersignError
+  trait: std::error::Error
+  description: ''
+  references: []
+- name: source
+  kind: method
+  receiver: CountersignError
+  trait: std::error::Error
+  description: ''
+  references: []
+  calls: []
+- name: VaultPkiCountersigner
+  kind: impl
+  receiver: VaultPkiCountersigner
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+- name: connect
+  kind: method
+  receiver: VaultPkiCountersigner
+  visibility: pub
+  description: 'Connects to Vault at `address` with `token`, countersigning via the
+    PKI engine at `mount` under `role`, authorized by `policy`. # Errors [`VaultError`]
+    if the address or client configuration is invalid.'
+  references:
+  - vault_client_rs::VaultError
+  - vault_client_rs::VaultClient::new
+  calls:
+  - VaultPkiCountersigner::new
+  - vault_client_rs::VaultClient::new
+- name: VaultPkiCountersigner
+  kind: impl
+  receiver: VaultPkiCountersigner
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: VaultPkiCountersigner
+  visibility: pub
+  description: Wires a `policy` and a [`PkiBackend`] targeting `mount`/`role`.
+  references: []
+  calls: []
+- name: countersign
+  kind: method
+  receiver: VaultPkiCountersigner
+  visibility: pub
+  description: 'Countersigns `request` if policy permits, via Vault PKI `sign-verbatim`.
+    # Errors [`CountersignError::Denied`] if the policy refuses; [`CountersignError::ScopeNarrowingUnsupported`]
+    if the policy authorizes a strict subset of the requested scope (see below); [`CountersignError::Backend`]
+    on a Vault failure; [`CountersignError::CertEncoding`] if the returned certificate
+    is not decodable.'
+  references:
+  - connections::vault::port::CertRequest
+  - connections::vault::CounterSignedCert
+  - connections::vault::CounterSignedCert::new
+  calls:
+  - connections::vault::CounterSignedCert::new
+  - der_to_pem
+  - pem_to_der
+- name: der_to_pem
+  kind: fn
+  visibility: private
+  description: Wraps DER bytes in a PEM block with `label`, at 64 base64 chars per
+    line.
+  references:
+  - base64::engine::general_purpose::STANDARD
+  calls: []
+- name: pem_to_der
+  kind: fn
+  visibility: private
+  description: Extracts DER from a PEM block, ignoring the header/footer lines.
+  references:
+  - base64::engine::general_purpose::STANDARD
+  calls: []
+- name: tests::request_for
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::port::CertRequest
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::port::CertRequest::new
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::port::CertRequest::new
+  test: true
+- name: tests::pem_round_trips_der
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - der_to_pem
+  - pem_to_der
+  test: true
+- name: tests::pem_to_der_rejects_empty_body
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - pem_to_der
+  test: true
+- name: tests::pem_wraps_long_lines_at_64_chars
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - der_to_pem
+  - pem_to_der
+  test: true
+- name: tests::backend_error_source_is_the_vault_error
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs::VaultError::EmptyResponse
+  calls:
+  - CountersignError::Backend
+  test: true
+- name: tests::denied_error_has_no_source
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - CountersignError::Denied
+  - Denied::new
+  test: true
+- name: tests::allowlist_permits_subset_of_allowed
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  calls:
+  - AllowlistPolicy::new
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - request_for
+  test: true
+- name: tests::allowlist_denies_unlisted_cn
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  calls:
+  - AllowlistPolicy::new
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - request_for
+  test: true
+- name: tests::denied_display_carries_reason
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - Denied::new
+  test: true
+- name: tests::connect_builds_a_countersigner
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::AuthScope::new
+  calls:
+  - AllowlistPolicy::new
+  - VaultPkiCountersigner::connect
+  - connections::vault::AuthScope::new
+  test: true

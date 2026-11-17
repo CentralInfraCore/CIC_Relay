@@ -1,0 +1,96 @@
+---
+crate: vault_adapter
+module: crate
+description: 'End-to-end: the module generates a real keypair + CSR (private key stays
+  in the module), and the Relay''s `VaultPkiCountersigner` countersigns that request
+  via the PKI backend — closing the trust-flow loop from step 2 to step 4. The signing
+  backend is `MockPki`, so no live Vault is needed. The full-flow test extends this
+  through steps 5–7: seal a token to the module''s key, drive the `Connection` typestate,
+  and open it inside the module.'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SIGNED_PEM
+  kind: const
+  visibility: private
+  description: A PEM whose body base64-decodes to `COUNTERSIGNEDCERT`.
+  references: []
+- name: Backend
+  kind: struct
+  visibility: private
+  description: ''
+  derives: []
+  implements:
+  - vault_adapter::PkiBackend
+  references:
+  - vault_client_rs_test::mock::MockPki
+- name: PkiBackend for Backend
+  kind: impl
+  receiver: Backend
+  trait: vault_adapter::PkiBackend
+  description: ''
+  references:
+  - vault_adapter::PkiBackend
+- name: sign_verbatim
+  kind: method
+  receiver: Backend
+  trait: vault_adapter::PkiBackend
+  description: ''
+  references:
+  - vault_client_rs::PkiSignedCert
+  - vault_client_rs::VaultError
+  calls: []
+- name: module_generates_csr_and_relay_countersigns_it
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - module::ModuleIdentity::generate
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::from_cns
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - module::ModuleIdentity::generate
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  test: true
+- name: full_trust_flow_from_csr_to_opened_token
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - module::ModuleIdentity::generate
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::from_cns
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - module::seal
+  - connections::vault::SecretRef::new
+  - connections::vault::Connection::request
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::Connection::request
+  - connections::vault::SecretRef::new
+  - module::ModuleIdentity::generate
+  - module::seal
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  test: true

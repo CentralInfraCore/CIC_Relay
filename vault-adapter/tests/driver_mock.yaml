@@ -1,0 +1,158 @@
+---
+crate: vault_adapter
+module: crate
+description: Driver-level tests for `VaultSecretSource`, exercising the adapter's
+  translation logic against the `vault-client-rs-test` trait mocks — no HTTP, no `WireMock`,
+  no live Vault. The complementary HTTP-layer coverage lives in `live_mock.rs`.
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: MockBackend
+  kind: struct
+  visibility: private
+  description: Wires the driver-level trait mocks behind the adapter's [`VaultBackend`]
+    seam. The `mount` is ignored — the mocks are programmed by path/role directly.
+  derives: []
+  implements:
+  - vault_adapter::VaultBackend
+  references:
+  - vault_client_rs_test::mock::MockKv2
+  - vault_client_rs_test::mock::MockCertAuth
+- name: VaultBackend for MockBackend
+  kind: impl
+  receiver: MockBackend
+  trait: vault_adapter::VaultBackend
+  description: ''
+  references:
+  - vault_adapter::VaultBackend
+- name: read_field
+  kind: method
+  receiver: MockBackend
+  trait: vault_adapter::VaultBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultError
+  calls: []
+- name: cert_login
+  kind: method
+  receiver: MockBackend
+  trait: vault_adapter::VaultBackend
+  description: ''
+  references:
+  - vault_client_rs::AuthInfo
+  - vault_client_rs::VaultError
+  calls: []
+- name: secret_ref
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::SecretRef
+  - connections::vault::SecretRef::new
+  calls:
+  - connections::vault::SecretRef::new
+- name: source_with
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs_test::mock::MockKv2
+  - vault_client_rs_test::mock::MockCertAuth
+  - vault_adapter::VaultSecretSource
+  - vault_adapter::VaultSecretSource::new
+  calls:
+  - vault_adapter::VaultSecretSource::new
+- name: read_sealed_wraps_the_sealed_field
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockKv2::new
+  - serde_json::json
+  - vault_client_rs_test::mock::MockCertAuth::new
+  calls:
+  - secret_ref
+  - source_with
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::MockKv2::new
+  test: true
+- name: read_sealed_missing_maps_to_not_found
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockKv2::new
+  - vault_client_rs_test::mock::MockError::NotFound
+  - vault_client_rs_test::mock::MockCertAuth::new
+  calls:
+  - secret_ref
+  - source_with
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::MockKv2::new
+  test: true
+- name: read_sealed_denied_maps_to_denied
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockKv2::new
+  - vault_client_rs_test::mock::MockError::Denied
+  - vault_client_rs_test::mock::MockCertAuth::new
+  calls:
+  - secret_ref
+  - source_with
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::MockKv2::new
+  test: true
+- name: read_sealed_invalid_base64_maps_to_decode
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockKv2::new
+  - serde_json::json
+  - vault_client_rs_test::mock::MockCertAuth::new
+  calls:
+  - secret_ref
+  - source_with
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::MockKv2::new
+  test: true
+- name: login_returns_the_issued_token
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::auth_info
+  - vault_client_rs_test::mock::MockKv2::new
+  calls:
+  - source_with
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::MockKv2::new
+  - vault_client_rs_test::mock::auth_info
+  test: true
+- name: login_denied_maps_to_unauthorized
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::MockError::Denied
+  - vault_client_rs_test::mock::MockKv2::new
+  - vault_adapter::AdapterError::Unauthorized
+  calls:
+  - source_with
+  - vault_client_rs_test::mock::MockCertAuth::new
+  - vault_client_rs_test::mock::MockKv2::new
+  test: true

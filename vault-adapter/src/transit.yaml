@@ -1,0 +1,457 @@
+---
+crate: vault_adapter
+module: crate::transit
+description: 'Live Vault-Transit-backed audit-chain signer (feature-009): the runtime
+  counterpart of `http-executor`''s in-process `RecordSigner`, but the ECDSA signing
+  key lives in Vault''s Transit engine and **never leaves it** — exactly the custody
+  model the countersign CA key already uses (`pki/sign-verbatim`). # Why a head anchor,
+  not per-entry sync signing `http-executor`''s `HashChainedAuditSink` signs each
+  entry *synchronously* with a `RecordSigner` (an in-process ECDSA key). A Vault Transit
+  call is *async* network I/O; driving it from that sync `record()` path would mean
+  blocking on a runtime from inside a runtime — a footgun that panics under `tokio`.
+  Because the chain is hash-linked (`record_hash_n` transitively binds every earlier
+  entry), signing the **head** `record_hash` with a Vault-held key anchors the whole
+  prefix in a single call — the standard tamper-evident-log notarization shape. So
+  this signer takes raw `record_hash` bytes (the exact `ChainedEntry.record_hash.as_bytes()`
+  domain the in-process signer signs) and returns a Vault signature over them. The
+  in-process `LocalEcdsaSigner` stays for the pure/embedded path; this is its production
+  key-custody counterpart.'
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: VaultSignature
+  kind: struct
+  visibility: pub
+  description: A Vault Transit signature (`vault:v<version>:<base64>`), as returned
+    by the engine. Public, non-secret material — safe to store alongside the audit
+    chain and safe to log.
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements:
+  - std::fmt::Display
+  references: []
+- name: SignError
+  kind: enum
+  visibility: pub
+  description: A signing/verification failure from the Transit engine. Carries no
+    secret material (the signed input is a public hash, the key never leaves Vault),
+    so it is always safe to log.
+  derives:
+  - Debug
+  implements:
+  - std::error::Error
+  - std::fmt::Display
+  variants:
+  - Denied
+  - Backend
+  references:
+  - vault_client_rs::VaultError
+- name: VaultTransitSigner
+  kind: struct
+  visibility: pub
+  description: A Vault-Transit-backed audit-chain signer. The ECDSA signing key `key`
+    at the Transit `mount` lives in Vault; this type only asks Vault to sign or verify
+    — it never holds private key material. Generic over the [`TransitBackend`] seam
+    so it can be driven by the real driver or an in-memory fake.
+  derives:
+  - Debug
+  implements: []
+  references:
+  - vault_client_rs::VaultClient
+- name: tests::FakeTransit
+  kind: struct
+  visibility: private
+  description: 'An in-memory Transit fake: `sign` returns a deterministic tag over
+    `mount|key|input`, `verify` recomputes and compares. Enough to exercise the signer''s
+    translation, argument wiring, and error mapping without a Vault.'
+  derives:
+  - Default
+  implements:
+  - crate::transit::TransitBackend
+  references:
+  - vault_client_rs::VaultError
+  test: true
+- name: TransitBackend
+  kind: trait
+  visibility: pub
+  description: 'The narrow Transit operations the signer needs, as a seam over the
+    driver. This is the signer''s own port over the `vault-client-rs` driver: it names
+    exactly the two operations [`VaultTransitSigner`] performs — a Transit `sign`
+    and a Transit `verify`, each scoped by an explicit `mount` and key `name`. The
+    real [`VaultClient`] implements it via the driver''s mount-scoped Transit handler;
+    tests implement it with an in-memory fake, so the signer''s translation logic
+    is exercised without a live Vault. Methods return `impl Future + Send` (rather
+    than `async fn`) so the trait imposes an explicit `Send` bound on the returned
+    futures, matching the rest of the adapter''s seams.'
+  methods:
+  - transit_sign
+  - transit_verify
+  supertraits:
+  - Send
+  - Sync
+  references:
+  - vault_client_rs::VaultError
+  calls: []
+- name: VaultSignature
+  kind: impl
+  receiver: VaultSignature
+  description: ''
+  references: []
+- name: from_wire
+  kind: method
+  receiver: VaultSignature
+  visibility: pub
+  description: Reconstructs a signature from its stored wire form (`vault:v1:…`),
+    so a signature persisted alongside the audit chain can later be re-verified via
+    [`VaultTransitSigner::verify`].
+  references: []
+  calls:
+  - VaultSignature
+- name: as_str
+  kind: method
+  receiver: VaultSignature
+  visibility: pub
+  description: The wire form (`vault:v1:…`), for storage or a follow-up `verify`.
+  references: []
+  calls: []
+- name: into_inner
+  kind: method
+  receiver: VaultSignature
+  visibility: pub
+  description: Consumes the wrapper, yielding the owned wire string.
+  references: []
+  calls: []
+- name: fmt::Display for VaultSignature
+  kind: impl
+  receiver: VaultSignature
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: VaultSignature
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: fmt::Display for SignError
+  kind: impl
+  receiver: SignError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: SignError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: std::error::Error for SignError
+  kind: impl
+  receiver: SignError
+  trait: std::error::Error
+  description: ''
+  references: []
+- name: source
+  kind: method
+  receiver: SignError
+  trait: std::error::Error
+  description: ''
+  references: []
+  calls: []
+- name: TransitBackend for VaultClient
+  kind: impl
+  receiver: VaultClient
+  trait: TransitBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+- name: transit_sign
+  kind: method
+  receiver: VaultClient
+  trait: TransitBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::VaultError
+  - vault_client_rs::TransitSignParams::default
+  calls:
+  - vault_client_rs::TransitSignParams::default
+  - vault_client_rs::VaultClient::transit
+- name: transit_verify
+  kind: method
+  receiver: VaultClient
+  trait: TransitBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::VaultError
+  calls:
+  - vault_client_rs::VaultClient::transit
+- name: VaultTransitSigner
+  kind: impl
+  receiver: VaultTransitSigner
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+- name: connect
+  kind: method
+  receiver: VaultTransitSigner
+  visibility: pub
+  description: 'Connects to Vault at `address` with token auth, targeting the Transit
+    key `key` at `mount`. This is the plain-transport constructor (system-trusted
+    TLS or http). A custom-CA or mTLS client is built by the caller and wrapped with
+    [`new`](Self::new) instead — mirroring [`VaultSecretSource`]. [`VaultSecretSource`]:
+    crate::VaultSecretSource # Errors [`VaultError`] if the address or client configuration
+    is invalid.'
+  references:
+  - vault_client_rs::VaultError
+  - vault_client_rs::VaultClient::new
+  calls:
+  - VaultTransitSigner::new
+  - vault_client_rs::VaultClient::new
+- name: VaultTransitSigner
+  kind: impl
+  receiver: VaultTransitSigner
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: VaultTransitSigner
+  visibility: pub
+  description: Wraps an existing [`TransitBackend`] (e.g. a configured [`VaultClient`]),
+    targeting the Transit key `key` at `mount`.
+  references: []
+  calls: []
+- name: sign
+  kind: method
+  receiver: VaultTransitSigner
+  visibility: pub
+  description: 'Signs `message` — an audit-chain head `record_hash`, as bytes — with
+    the Vault-held key. One call anchors the whole hash-linked prefix (see the module
+    docs). `message` is expected to be the hex `record_hash` string''s bytes, the
+    same domain `http-executor`''s in-process `RecordSigner` signs. # Errors [`SignError::Denied`]
+    if Vault policy refuses the operation; [`SignError::Backend`] on any other Transit
+    failure.'
+  references: []
+  calls: []
+- name: verify
+  kind: method
+  receiver: VaultTransitSigner
+  visibility: pub
+  description: 'Verifies a Vault `signature` over `message` against the Vault-held
+    key. Returns `Ok(false)` for a well-formed but non-matching signature, and [`SignError`]
+    only when Vault itself refuses or fails. # Errors [`SignError::Denied`] if Vault
+    policy refuses the operation; [`SignError::Backend`] on any other Transit failure.'
+  references: []
+  calls:
+  - VaultSignature::as_str
+- name: tests::FakeTransit
+  kind: impl
+  receiver: FakeTransit
+  description: ''
+  references: []
+  test: true
+- name: tests::failing
+  kind: method
+  receiver: FakeTransit
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs::VaultError
+  calls: []
+  test: true
+- name: tests::tag
+  kind: method
+  receiver: FakeTransit
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - hex
+  test: true
+- name: tests::TransitBackend for FakeTransit
+  kind: impl
+  receiver: FakeTransit
+  trait: crate::transit::TransitBackend
+  description: ''
+  references: []
+  test: true
+- name: tests::transit_sign
+  kind: method
+  receiver: FakeTransit
+  trait: crate::transit::TransitBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultError
+  calls:
+  - FakeTransit::tag
+  - f
+  - hex
+  test: true
+- name: tests::transit_verify
+  kind: method
+  receiver: FakeTransit
+  trait: crate::transit::TransitBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultError
+  calls:
+  - FakeTransit::tag
+  - f
+  test: true
+- name: tests::VaultTransitSigner
+  kind: impl
+  receiver: VaultTransitSigner
+  description: ''
+  references: []
+  test: true
+- name: tests::backend_seen
+  kind: method
+  receiver: VaultTransitSigner
+  visibility: private
+  description: Test-only peek at what the fake backend recorded for the last sign.
+  references: []
+  calls: []
+  test: true
+- name: map_sign_error
+  kind: fn
+  visibility: private
+  description: Maps a Transit sign/verify error to a [`SignError`].
+  references:
+  - vault_client_rs::VaultError
+  - vault_client_rs::VaultError::PermissionDenied
+  - vault_client_rs::VaultError::AuthRequired
+  calls:
+  - SignError::Backend
+- name: tests::hex
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+  test: true
+- name: tests::signer
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - VaultTransitSigner::new
+  test: true
+- name: tests::sign_then_verify_round_trips
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  calls:
+  - FakeTransit::default
+  - signer
+  test: true
+- name: tests::verify_rejects_a_tampered_message
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  calls:
+  - FakeTransit::default
+  - signer
+  test: true
+- name: tests::sign_passes_the_configured_mount_and_key_through
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  calls:
+  - FakeTransit::default
+  - signer
+  test: true
+- name: tests::policy_denial_maps_to_denied
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs::VaultError::PermissionDenied
+  calls:
+  - FakeTransit::failing
+  - VaultSignature
+  - signer
+  test: true
+- name: tests::auth_required_maps_to_denied
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs::VaultError::AuthRequired
+  calls:
+  - FakeTransit::failing
+  - signer
+  test: true
+- name: tests::other_failures_map_to_backend
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs::VaultError::EmptyResponse
+  calls:
+  - FakeTransit::failing
+  - SignError::Backend
+  - signer
+  test: true
+- name: tests::map_sign_error_classifies_vault_errors
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs::VaultError::PermissionDenied
+  - vault_client_rs::VaultError::AuthRequired
+  - vault_client_rs::VaultError::EmptyResponse
+  calls:
+  - SignError::Backend
+  - map_sign_error
+  test: true
+- name: tests::sign_error_displays_and_chains_without_leaking
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs::VaultError::EmptyResponse
+  calls:
+  - SignError::Backend
+  test: true
+- name: tests::connect_builds_a_signer
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - VaultTransitSigner::connect
+  test: true
+- name: tests::vault_signature_exposes_and_displays_its_wire_form
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - VaultSignature
+  - VaultSignature::from_wire
+  test: true

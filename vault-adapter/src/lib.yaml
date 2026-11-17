@@ -1,0 +1,388 @@
+---
+crate: vault_adapter
+module: crate
+description: 'Live async bridge from the CIC secret-flow core to a `HashiCorp` Vault
+  backend (feature-008). This is the **adapter** layer: it owns *translation* between
+  the `vault-client-rs` driver (which owns *access*) and the `connections` core types
+  (which own *meaning*). It depends on the driver as a pinned git dependency and produces
+  core [`SealedSecret`] values. Crucially, it **never decrypts**: it reads the pubkey-sealed
+  envelope stored in Vault and wraps it opaquely, so only the module holding the matching
+  private key can open it. The `read_sealed` method is the live async counterpart
+  of the deterministic in-memory [`connections::vault::port::SecretBackend`] contract.'
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: countersign
+  kind: mod
+  visibility: pub
+  description: ''
+- name: transit
+  kind: mod
+  visibility: pub
+  description: ''
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: SEALED_FIELD
+  kind: const
+  visibility: private
+  description: The KV v2 field under which a pubkey-sealed secret envelope is stored.
+  references: []
+- name: AdapterError
+  kind: enum
+  visibility: pub
+  description: Error from the Vault-backed adapter. Carries no plaintext secret material,
+    so it is always safe to log.
+  derives:
+  - Debug
+  implements:
+  - std::error::Error
+  - std::fmt::Display
+  variants:
+  - NotFound
+  - Denied
+  - Decode
+  - Unauthorized
+  - Backend
+  references:
+  - connections::vault::SecretRef
+  - vault_client_rs::VaultError
+- name: IssuedToken
+  kind: struct
+  visibility: pub
+  description: A token issued by Vault cert-auth (the live counterpart of the [`connections::vault::port::TokenProvider`]
+    contract's output). The `client_token` stays a redacting, zeroizing [`SecretString`]
+    — never a plain [`String`] — so it cannot leak into logs. Turning it into a pubkey-sealed
+    [`SealedSecret`] for at-rest storage is a separate step (the pubkey-sealing slice),
+    not yet wired.
+  derives:
+  - Debug
+  - Clone
+  implements: []
+  references:
+  - secrecy::SecretString
+- name: VaultSecretSource
+  kind: struct
+  visibility: pub
+  description: A live secret source backed by a `HashiCorp` Vault KV v2 mount, via
+    the `vault-client-rs` driver (the default backend `B`). It reads the pubkey-sealed
+    envelope stored under the `sealed` field and wraps it as a [`SealedSecret`]; it
+    never decrypts. Generic over the [`VaultBackend`] seam so it can be driven by
+    the real driver or a mock.
+  derives:
+  - Debug
+  implements: []
+  references:
+  - vault_client_rs::VaultClient
+- name: VaultBackend
+  kind: trait
+  visibility: pub
+  description: 'The narrow set of Vault driver operations the adapter needs, as a
+    seam. This is the adapter''s own port over the `vault-client-rs` driver: it names
+    exactly the two operations [`VaultSecretSource`] performs — a KV v2 field read
+    and a cert-auth login — each scoped by an explicit `mount`. The real [`VaultClient`]
+    implements it by delegating to the driver''s mount-scoped handlers; tests implement
+    it with the driver-level trait mocks, so the adapter''s translation logic is exercised
+    without `WireMock` or a live Vault. Methods return `impl Future + Send` (rather
+    than `async fn`) so the trait stays object-safe-adjacent and imposes an explicit
+    `Send` bound on the returned futures.'
+  methods:
+  - cert_login
+  - read_field
+  supertraits:
+  - Send
+  - Sync
+  references:
+  - vault_client_rs::VaultError
+  - vault_client_rs::AuthInfo
+  calls: []
+- name: fmt::Display for AdapterError
+  kind: impl
+  receiver: AdapterError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: AdapterError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: std::error::Error for AdapterError
+  kind: impl
+  receiver: AdapterError
+  trait: std::error::Error
+  description: ''
+  references: []
+- name: source
+  kind: method
+  receiver: AdapterError
+  trait: std::error::Error
+  description: ''
+  references: []
+  calls: []
+- name: IssuedToken
+  kind: impl
+  receiver: IssuedToken
+  description: ''
+  references: []
+- name: from_auth
+  kind: method
+  receiver: IssuedToken
+  visibility: private
+  description: Projects Vault's [`AuthInfo`] into the fields we carry, keeping the
+    token in its protected [`SecretString`] form. Takes a reference and clones, since
+    [`AuthInfo`] is `Drop` (zeroizing) and cannot be moved out of.
+  references:
+  - vault_client_rs::AuthInfo
+  calls: []
+- name: client_token
+  kind: method
+  receiver: IssuedToken
+  visibility: pub
+  description: The protected client token, for controlled hand-off to the sealing
+    step. Reading the plaintext requires `secrecy::ExposeSecret` and deliberate intent.
+  references:
+  - secrecy::SecretString
+  calls: []
+- name: VaultBackend for VaultClient
+  kind: impl
+  receiver: VaultClient
+  trait: VaultBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+- name: read_field
+  kind: method
+  receiver: VaultClient
+  trait: VaultBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::VaultError
+  calls:
+  - vault_client_rs::VaultClient::kv2
+- name: cert_login
+  kind: method
+  receiver: VaultClient
+  trait: VaultBackend
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::AuthInfo
+  - vault_client_rs::VaultError
+  calls:
+  - vault_client_rs::VaultClient::auth
+- name: VaultSecretSource
+  kind: impl
+  receiver: VaultSecretSource
+  description: ''
+  references:
+  - vault_client_rs::VaultClient
+- name: connect
+  kind: method
+  receiver: VaultSecretSource
+  visibility: pub
+  description: 'Connects to Vault at `address`, authenticating with `token`. # Errors
+    [`VaultError`] if the address or client configuration is invalid.'
+  references:
+  - vault_client_rs::VaultError
+  - vault_client_rs::VaultClient::new
+  calls:
+  - VaultSecretSource::new
+  - vault_client_rs::VaultClient::new
+- name: connect_mtls
+  kind: method
+  receiver: VaultSecretSource
+  visibility: pub
+  description: 'Connects with an **mTLS client identity** for cert-auth login: the
+    client presents `client_cert_pem` + `client_key_pem` in the TLS handshake and
+    verifies the server against `ca_pem`. It starts tokenless — [`login`](Self::login)
+    performs the cert-auth exchange and the resulting scoped token is what subsequent
+    reads use. Gated behind the `live-vault` feature: it is exercised only by the
+    opt-in live-Vault integration test (`tests/live_chain.rs`), never in the default
+    build''s unit/coverage/mutation runs. # Errors [`VaultError`] if the address,
+    CA certificate, or client identity is invalid.'
+  references:
+  - vault_client_rs::VaultError
+  - vault_client_rs::VaultClient::builder
+  calls:
+  - VaultSecretSource::new
+  - vault_client_rs::VaultClient::builder
+- name: VaultSecretSource
+  kind: impl
+  receiver: VaultSecretSource
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: VaultSecretSource
+  visibility: pub
+  description: Wraps an existing [`VaultBackend`] (e.g. a [`VaultClient`]).
+  references: []
+  calls: []
+- name: read_sealed
+  kind: method
+  receiver: VaultSecretSource
+  visibility: pub
+  description: 'Reads the sealed envelope at `secret_ref` from Vault KV v2. The `mount`
+    and `path` of the reference select the KV v2 secret; the `sealed` field carries
+    the base64 ciphertext. Explicit versions are not yet wired — the latest version
+    is read. # Errors [`AdapterError::NotFound`] if absent; [`AdapterError::Denied`]
+    if access is refused; [`AdapterError::Decode`] if the stored field is not valid
+    base64; [`AdapterError::Backend`] on any other Vault failure.'
+  references:
+  - connections::vault::SecretRef
+  - connections::vault::SealedSecret
+  calls:
+  - decode_sealed
+  - map_read_error
+- name: login
+  kind: method
+  receiver: VaultSecretSource
+  visibility: pub
+  description: 'Authenticates to Vault via the cert-auth backend at `mount`, presenting
+    the (mTLS) client certificate configured on the transport and optionally naming
+    the cert `role`. Returns the issued token with its lease metadata. This is the
+    live async counterpart of the in-memory `TokenProvider` contract: the Relay-countersigned
+    Cert is exchanged for a scoped token. # Errors [`AdapterError::Unauthorized`]
+    if Vault rejects the certificate; [`AdapterError::Backend`] on any other Vault
+    failure.'
+  references: []
+  calls:
+  - IssuedToken::from_auth
+- name: map_read_error
+  kind: fn
+  visibility: private
+  description: Maps a Vault read error to an [`AdapterError`], attributing it to `secret_ref`.
+  references:
+  - vault_client_rs::VaultError
+  - connections::vault::SecretRef
+  - vault_client_rs::VaultError::NotFound
+  - vault_client_rs::VaultError::FieldNotFound
+  - vault_client_rs::VaultError::PermissionDenied
+  - vault_client_rs::VaultError::AuthRequired
+  calls:
+  - AdapterError::Backend
+  - AdapterError::Denied
+  - AdapterError::NotFound
+  - connections::vault::SecretRef::clone
+- name: decode_sealed
+  kind: fn
+  visibility: private
+  description: Decodes a base64 `field` into a [`SealedSecret`] for `secret_ref`.
+    The bytes stay sealed — this never inspects or decrypts them.
+  references:
+  - connections::vault::SecretRef
+  - connections::vault::SealedSecret
+  - base64::engine::general_purpose::STANDARD
+  - connections::vault::SealedSecret::new
+  calls:
+  - AdapterError::Decode
+  - connections::vault::SealedSecret::new
+  - connections::vault::SecretRef::clone
+- name: map_auth_error
+  kind: fn
+  visibility: private
+  description: Maps a cert-auth login error to an [`AdapterError`].
+  references:
+  - vault_client_rs::VaultError
+  - vault_client_rs::VaultError::PermissionDenied
+  - vault_client_rs::VaultError::AuthRequired
+  calls:
+  - AdapterError::Backend
+- name: tests::secret_ref
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::SecretRef
+  - connections::vault::SecretRef::new
+  calls:
+  - connections::vault::SecretRef::new
+  test: true
+- name: tests::decode_sealed_wraps_valid_base64_and_stays_redacted
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - base64::engine::general_purpose::STANDARD
+  calls:
+  - decode_sealed
+  - secret_ref
+  test: true
+- name: tests::decode_sealed_rejects_invalid_base64
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - decode_sealed
+  - secret_ref
+  test: true
+- name: tests::map_read_error_classifies_vault_errors
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs::VaultError::FieldNotFound
+  - vault_client_rs::VaultError::PermissionDenied
+  - vault_client_rs::VaultError::AuthRequired
+  - vault_client_rs::VaultError::EmptyResponse
+  calls:
+  - AdapterError::Backend
+  - AdapterError::Denied
+  - AdapterError::NotFound
+  - map_read_error
+  - secret_ref
+  test: true
+- name: tests::issued_token_protects_the_client_token
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - secrecy::SecretString::from
+  calls:
+  - IssuedToken::client_token
+  - secrecy::SecretString::from
+  test: true
+- name: tests::map_auth_error_classifies_login_failures
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs::VaultError::PermissionDenied
+  - vault_client_rs::VaultError::AuthRequired
+  - vault_client_rs::VaultError::EmptyResponse
+  calls:
+  - AdapterError::Backend
+  - map_auth_error
+  test: true
+- name: tests::adapter_error_displays_and_chains_without_leaking
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs::VaultError::EmptyResponse
+  calls:
+  - AdapterError::Backend
+  - AdapterError::Decode
+  - AdapterError::Denied
+  - AdapterError::NotFound
+  - secret_ref
+  test: true
+- name: tests::connect_builds_a_source
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - VaultSecretSource::connect
+  test: true

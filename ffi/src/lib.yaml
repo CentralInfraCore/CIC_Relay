@@ -1,0 +1,762 @@
+---
+crate: cic_ffi
+module: crate
+description: '# cic-ffi — the unsafe airlock The single crate in the workspace permitted
+  to use `unsafe`. It is the C-ABI seam that links the safe Rust trust-flow crates
+  (`connections`, `module`, `executor`, `http-executor`) into the Go relay. (`http-executor`
+  is linked **without** its TLS feature, so the staticlib stays pure-Rust and the
+  Go cgo build needs no C library.) Every export routes through one shared airlock
+  ([`marshal`]) that fixes the three phases from `features/feature-008/ffi-boundary.md`:
+  1. **INGRESS** (`unsafe`): copy the caller''s bytes into an *owned* Rust value.
+  No borrow into caller memory escapes this phase. 2. **CORE** (safe): a plain `fn(&[u8])
+  -> Option<Vec<u8>>` — no raw pointers, no `unsafe`, panic-contained via [`std::panic::catch_unwind`].
+  `None` means "rejected" (validation failure), never a crash. 3. **EGRESS** (`unsafe`):
+  hand an owned buffer back to the caller as `ptr` + `len`; the caller releases it
+  via [`cic_ffi_free`]. `unsafe` therefore lives only in [`marshal`] and [`cic_ffi_free`],
+  and only for pointer/length handling — never business logic. The trust-flow crates
+  stay `unsafe_code = "forbid"`.'
+tags:
+- executor
+- parser
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: logic
+  kind: mod
+  visibility: private
+  description: The safe core. Contains no `unsafe` and no raw pointers — every function
+    here takes owned/borrowed-owned bytes and returns owned bytes, so it is ordinary,
+    machine-checked safe Rust dispatching into the trust-flow crates.
+- name: flow
+  kind: mod
+  visibility: private
+  description: 'End-to-end trust-flow `PoC`, run entirely inside Rust and driven from
+    Go: mint a module identity + CSR, mock-countersign it, seal a (mock Vault) secret
+    to the module''s public key, open it *inside* the module, and actuate over HTTP
+    with the opened credential. Mock trust backends (no live Vault); a real HTTP call.
+    The point the seam demonstrates: Go hands in the request, Rust runs the whole
+    pipeline, and only the HTTP **outcome** crosses back — the secret is sealed in
+    transit and opened only inside the module, never leaving as data.'
+- name: flow::live
+  kind: mod
+  visibility: private
+  description: 'The live profile: the real Vault chain (countersign → mTLS cert-auth
+    login → `read_sealed` → open) through `vault-adapter`/`module`, then the shared
+    HTTP actuation. Compiled only with the `live-vault` feature (which drags in a
+    TLS stack, so the staticlib is no longer pure-Rust). The secret is sealed to the
+    module key and seeded into KV here — the request-time A-version wrap (M41.2) is
+    a deferred edge.'
+- name: flow::tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: MAX_INPUT_LEN
+  kind: const
+  visibility: private
+  description: Maximum input accepted at the seam (1 MiB). Control-plane requests
+    are tiny; anything larger is rejected on ingress rather than copied (ffi-boundary.md
+    rule 3 — validate/size-cap at the seam).
+  references: []
+- name: CIC_FFI_ABI_VERSION
+  kind: const
+  visibility: private
+  description: C-ABI version of this staticlib. Bump on any breaking change to an
+    export's signature or semantics; the Go side checks it against its own expectation
+    to catch a stale or mismatched library link. v2 adds `cic_ffi_run_flow`.
+  references: []
+- name: flow::FlowInput
+  kind: struct
+  visibility: private
+  description: The parsed, validated request. Bundling the fields keeps `execute_flow`
+    from taking a long argument list (and models the request as one value).
+  derives: []
+  implements: []
+  references:
+  - connections::vault::AuthScope
+  - executor::Method
+- name: flow::Actuated
+  kind: struct
+  visibility: private
+  description: Runs the full pipeline, returning the actuation outcome and the scope
+    the (mock) Relay countersigned. Every failure is a non-secret `String`. One actuation's
+    outcome plus its tamper-evident audit entry (the `record_hash`-chained [`ChainedEntry`]
+    the Go relay folds into its `ProofTrace`).
+  derives: []
+  implements: []
+  references:
+  - executor::ExecOutcome
+  - http_executor::ChainedEntry
+- name: flow::FlowError
+  kind: struct
+  visibility: private
+  description: 'A flow failure: a non-secret message plus, when the failure happened
+    *during the actuation* (a policy deny, SSRF block, limit, transport error), the
+    tamper-evident audit entry the executor still recorded — so a refused actuation
+    is auditable, not silent. Failures *before* the actuation (countersign/seal/open)
+    carry no audit.'
+  derives: []
+  implements:
+  - From
+  references:
+  - http_executor::ChainedEntry
+- name: flow::live::VaultConfig
+  kind: struct
+  visibility: private
+  description: Vault connection + mount coordinates, supplied by the caller in the
+    request's `vault` object.
+  derives: []
+  implements: []
+  references: []
+- name: flow::FlowError
+  kind: impl
+  receiver: FlowError
+  description: ''
+  references: []
+- name: flow::msg
+  kind: method
+  receiver: FlowError
+  visibility: private
+  description: A failure with no associated audit entry (pre-actuation, or a config
+    error). The message is non-secret.
+  references: []
+  calls: []
+- name: flow::From for FlowError
+  kind: impl
+  receiver: FlowError
+  trait: From
+  description: So the many `.map_err(err_string)?` sites (and other `String` errors)
+    propagate into a `FlowError` unchanged, without an audit entry.
+  references: []
+- name: flow::from
+  kind: method
+  receiver: FlowError
+  trait: From
+  description: ''
+  references: []
+  calls: []
+- name: logic::echo
+  kind: fn
+  visibility: pub
+  description: Identity echo — the linkability smoke test for the Rust ↔ Go bridge.
+  references: []
+  calls: []
+- name: logic::connection_request
+  kind: fn
+  visibility: pub
+  description: 'Build a Vault Connection request (trust-flow step 1) from a JSON `{"subject":
+    "...", "scope": ["cn", ...]}` document and return its **canonical** form: the
+    scope is deduplicated and sorted by [`AuthScope`]''s `BTreeSet`, so the output
+    is reproducible (a `ProofTrace` prerequisite). Returns `None` — a clean rejection,
+    never a panic — on malformed JSON, a missing/non-string subject, or an empty subject.'
+  references:
+  - serde_json::Value
+  - serde_json::from_slice
+  - connections::vault::Cn
+  - serde_json::Value::as_array
+  - serde_json::Value::as_str
+  - connections::vault::Cn::new
+  - connections::vault::Connection::request
+  - connections::vault::AuthScope::from_cns
+  - serde_json::json
+  - serde_json::to_vec
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::Connection::request
+  - serde_json::Value::get
+  - serde_json::from_slice
+  - serde_json::to_vec
+- name: flow::b64
+  kind: fn
+  visibility: private
+  description: Standard base64 for the response body carried in the JSON result.
+  references:
+  - base64::engine::general_purpose::GeneralPurpose
+  - base64::engine::general_purpose::STANDARD
+  calls: []
+- name: flow::runtime
+  kind: fn
+  visibility: private
+  description: A shared multi-thread runtime that drives the async actuation to completion
+    from inside the synchronous airlock. Built once; the seam is called from a Go
+    (non-tokio) thread, so `block_on` never nests inside a runtime.
+  references:
+  - tokio::runtime::Runtime
+  - tokio::runtime::Builder::new_multi_thread
+  calls:
+  - tokio::runtime::Builder::new_multi_thread
+- name: flow::parse
+  kind: fn
+  visibility: private
+  description: Parses the request JSON. Returns `None` (a clean rejection) on malformed
+    JSON, a missing/empty required field, or an undecodable `body_base64`.
+  references:
+  - serde_json::Value
+  - serde_json::Value::as_str
+  - serde_json::Value::as_bool
+  calls:
+  - b64
+  - parse_allow_hosts
+  - parse_headers
+  - parse_method
+  - parse_scope
+  - serde_json::Value::get
+- name: flow::parse_scope
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::Value
+  - connections::vault::AuthScope
+  - serde_json::Value::as_array
+  - serde_json::Value::as_str
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::from_cns
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - serde_json::Value::get
+- name: flow::parse_method
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - executor::Method
+  - executor::Method::Post
+  - executor::Method::Put
+  - executor::Method::Delete
+  - executor::Method::Get
+  calls: []
+- name: flow::parse_headers
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::Value
+  - serde_json::Value::as_object
+  calls:
+  - serde_json::Value::get
+- name: flow::parse_allow_hosts
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::Value
+  - serde_json::Value::as_array
+  - serde_json::Value::as_str
+  calls:
+  - serde_json::Value::get
+- name: flow::execute_flow
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - module::ModuleIdentity::generate
+  - connections::vault::port::InMemoryCountersigner::new
+  - module::seal
+  - connections::vault::SecretRef::new
+  - connections::vault::Connection::request
+  calls:
+  - actuate
+  - connections::vault::Cn::new
+  - connections::vault::Connection::request
+  - connections::vault::SecretRef::new
+  - connections::vault::port::InMemoryCountersigner::new
+  - module::ModuleIdentity::generate
+  - module::seal
+- name: flow::actuate
+  kind: fn
+  visibility: private
+  description: Actuates `input` over HTTP with the opened `credential`. Shared by
+    the mock and live profiles — they differ only in *how* the credential is obtained.
+    A [`HashChainedAuditSink`] is attached so the actuation emits a tamper-evident,
+    non-secret audit entry; the head [`ChainedEntry`] is returned alongside the outcome
+    for the Go relay to fold into its `ProofTrace`.
+  references:
+  - secrecy::SecretString
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::EgressPolicy::allowing
+  - http_executor::HashChainedAuditSink::new
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::Limits::default
+  - executor::ExecRequest::new
+  calls:
+  - FlowError::msg
+  - err_string
+  - executor::ExecRequest::new
+  - http_executor::EgressPolicy::allowing
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HashChainedAuditSink::new
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::Limits::default
+  - runtime
+- name: flow::err_string
+  kind: fn
+  visibility: private
+  description: Renders any flow error as its (non-secret) Display string.
+  references: []
+  calls: []
+- name: flow::run_profile
+  kind: fn
+  visibility: private
+  description: Dispatches to the requested execution profile. `mock` (default) runs
+    the in-process mock trust backends; `live` (only when built with the `live-vault`
+    feature) drives the real Vault chain.
+  references:
+  - serde_json::Value
+  calls:
+  - FlowError::msg
+  - execute_flow
+  - run_live
+- name: flow::run_live
+  kind: fn
+  visibility: private
+  description: Live profile — real Vault chain (see the `live` module).
+  references:
+  - serde_json::Value
+  calls:
+  - flow::live::execute_flow
+- name: flow::run_live
+  kind: fn
+  visibility: private
+  description: Live profile is not compiled into this staticlib.
+  references:
+  - serde_json::Value
+  calls:
+  - FlowError::msg
+- name: flow::audit_json
+  kind: fn
+  visibility: private
+  description: 'Projects a [`ChainedEntry`] into the non-secret JSON the Go relay
+    parses: the audit facts, the `seq`, and the tamper-evident `record_hash`. Never
+    the credential, `Authorization`, a token, or any body contents.'
+  references:
+  - http_executor::ChainedEntry
+  - serde_json::Value
+  - http_executor::AuditDecision::Allowed
+  - http_executor::AuditDecision::Denied
+  - serde_json::json
+  calls: []
+- name: flow::run_flow
+  kind: fn
+  visibility: pub
+  description: The airlock core for `cic_ffi_run_flow`. Returns `None` only on malformed
+    input; a flow that runs but fails (policy/HTTP) yields `{"ok":false,...}`.
+  references:
+  - serde_json::Value
+  - serde_json::from_slice
+  - serde_json::Value::as_str
+  - serde_json::json
+  - serde_json::to_vec
+  calls:
+  - parse
+  - run_profile
+  - serde_json::Value::get
+  - serde_json::from_slice
+  - serde_json::to_vec
+- name: flow::live::parse_vault
+  kind: fn
+  visibility: private
+  description: Parses the `vault` object; `None` (→ a clean error) if any field is
+    missing or `cacert_pem_base64` is undecodable.
+  references:
+  - serde_json::Value
+  - serde_json::Value::as_str
+  calls:
+  - flow::b64
+  - s
+  - serde_json::Value::get
+- name: flow::live::der_to_cert_pem
+  kind: fn
+  visibility: private
+  description: Wraps DER in a PEM CERTIFICATE block (for the mTLS client identity).
+  references: []
+  calls:
+  - flow::b64
+- name: flow::live::admin
+  kind: fn
+  visibility: private
+  description: An admin (token-auth) client verifying the server CA.
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::VaultClient::builder
+  calls:
+  - vault_client_rs::VaultClient::builder
+- name: flow::live::execute_flow
+  kind: fn
+  visibility: pub
+  description: Runs the live Vault chain and actuates. The module holds a per-request
+    raw key (its CSR signer, mTLS identity, and sealing recipient).
+  references:
+  - serde_json::Value
+  - p256::ecdsa::SigningKey::random
+  - rand_core::OsRng
+  - p256::pkcs8::LineEnding::LF
+  - module::ModuleIdentity::from_pkcs8_pem
+  - connections::vault::Cn::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_adapter::AllowlistPolicy::new
+  - connections::vault::SecretRef::new
+  - module::seal
+  - serde_json::json
+  - vault_adapter::VaultSecretSource::connect_mtls
+  calls:
+  - admin
+  - connections::vault::Cn::new
+  - connections::vault::SecretRef::new
+  - der_to_cert_pem
+  - flow::actuate
+  - flow::b64
+  - flow::runtime
+  - module::ModuleIdentity::from_pkcs8_pem
+  - module::seal
+  - p256::ecdsa::SigningKey::random
+  - parse_vault
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_adapter::VaultSecretSource::connect_mtls
+- name: flow::tests::spawn_http_once
+  kind: fn
+  visibility: private
+  description: Binds a loopback listener and answers exactly one HTTP request with
+    a fixed raw response. Returns the port. (A tiny real HTTP server, so the happy
+    path exercises the actual reqwest transport.)
+  references: []
+  calls: []
+  test: true
+- name: flow::tests::parse_helpers_extract_request_fields
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  calls:
+  - flow::parse_allow_hosts
+  - flow::parse_headers
+  - flow::parse_scope
+  test: true
+- name: flow::tests::unknown_profile_is_a_structured_error
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  test: true
+- name: flow::tests::live_profile_without_the_feature_is_a_structured_error
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  test: true
+- name: flow::tests::live_profile_without_a_vault_config_is_a_structured_error
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  test: true
+- name: flow::tests::parse_method_maps_verbs_and_defaults_to_get
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - executor::Method::Post
+  - executor::Method::Put
+  - executor::Method::Delete
+  - executor::Method::Get
+  calls:
+  - flow::parse_method
+  test: true
+- name: flow::tests::happy_path_runs_the_whole_chain_and_returns_the_outcome
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  - base64::engine::general_purpose::STANDARD
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  - spawn_http_once
+  test: true
+- name: flow::tests::audit_json_projects_facts_and_renders_a_denied_decision
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - http_executor::ChainedEntry
+  - http_executor::AuditRecord
+  - executor::Method::Post
+  - http_executor::AuditDecision::Denied
+  calls:
+  - flow::audit_json
+  - http_executor::AuditDecision::Denied
+  test: true
+- name: flow::tests::denied_actuation_is_audited_not_silent
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  test: true
+- name: flow::tests::failure_without_actuation_has_no_audit
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  test: true
+- name: flow::tests::malformed_json_is_rejected
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - flow::run_flow
+  test: true
+- name: flow::tests::missing_required_field_is_rejected
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  calls:
+  - flow::run_flow
+  test: true
+- name: flow::tests::bad_body_base64_is_rejected
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  calls:
+  - flow::run_flow
+  test: true
+- name: flow::tests::denied_host_is_a_structured_error_not_a_rejection
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  test: true
+- name: flow::tests::unreachable_target_fails_after_the_crypto_chain_without_leaking
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::json
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - flow::run_flow
+  - serde_json::from_slice
+  test: true
+- name: marshal
+  kind: fn
+  visibility: private
+  description: 'The shared airlock. INGRESS (copy + own) → CORE (safe, panic-contained)
+    → EGRESS (owned buffer to the caller). `core` is a safe function over owned bytes;
+    `None` from it (or a panic, or empty output) yields a null return. # Safety `ptr`
+    must point to `len` valid bytes (or be null with `len == 0`), and `out_len` must
+    be a valid, writable `*mut usize` (or null).'
+  references: []
+  calls: []
+- name: cic_ffi_free
+  kind: fn
+  visibility: pub
+  description: 'Release a buffer previously returned by a `cic_ffi_*` allocating export.
+    A null pointer or a zero length is a no-op, so it is always safe to call even
+    when an export returned "nothing". # Safety `ptr` and `len` must be exactly the
+    pair returned by a `cic_ffi_*` export, and this function must be called at most
+    once for that pair.'
+  references: []
+  calls: []
+- name: cic_ffi_ping
+  kind: fn
+  visibility: pub
+  description: 'Echo `len` bytes from `ptr` back to the caller — the airlock linkability
+    smoke test. Result must be released with [`cic_ffi_free`]. # Safety See [`marshal`].'
+  references: []
+  calls:
+  - marshal
+- name: cic_ffi_connection_request
+  kind: fn
+  visibility: pub
+  description: 'Build a Vault Connection request and return its canonical JSON form
+    — the first real trust-flow function bound through the seam. Input: a JSON `{"subject":
+    "...", "scope": [...]}` document (`ptr`/`len`). Output: canonical JSON with a
+    deduplicated, sorted scope, allocated for the caller to release with [`cic_ffi_free`].
+    Returns null (and `*out_len == 0`) on malformed input, an empty subject, a null
+    `out_len`, or a panic. # Safety See [`marshal`].'
+  references: []
+  calls:
+  - marshal
+- name: cic_ffi_run_flow
+  kind: fn
+  visibility: pub
+  description: 'Run the end-to-end trust-flow `PoC` and return its JSON result. Input:
+    a JSON request (`ptr`/`len`) — `subject`, `scope[]`, `secret`, `target`, `allow_hosts[]`,
+    optional `method`/`headers`/`body_base64`/ `insecure`. Output: JSON `{"ok":true,"status":..,"body_base64":..,"scope":[..]}`
+    on a completed actuation, or `{"ok":false,"error":".."}` if the flow ran but failed
+    (policy/HTTP). Returns null (and `*out_len == 0`) only on malformed input, a null
+    `out_len`, or a panic. Release the result with [`cic_ffi_free`]. # Safety See
+    [`marshal`].'
+  references: []
+  calls:
+  - marshal
+- name: cic_ffi_abi_version
+  kind: fn
+  visibility: pub
+  description: Returns the C-ABI version of this staticlib. The Go side checks it
+    against its own expectation at startup to catch a stale or mismatched link. No
+    pointers cross here, so it needs no airlock.
+  references: []
+  calls: []
+- name: tests::ping_round_trips_bytes
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_free
+  - cic_ffi_ping
+  test: true
+- name: tests::ping_empty_input_returns_null
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_ping
+  test: true
+- name: tests::ping_null_out_len_returns_null
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_ping
+  test: true
+- name: tests::free_null_is_noop
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_free
+  test: true
+- name: tests::connection_request_canonicalizes_scope
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::Value
+  - serde_json::from_slice
+  - serde_json::json
+  calls:
+  - cic_ffi_connection_request
+  - cic_ffi_free
+  - serde_json::from_slice
+  test: true
+- name: tests::connection_request_rejects_empty_subject
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_connection_request
+  test: true
+- name: tests::connection_request_rejects_malformed_json
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_connection_request
+  test: true
+- name: tests::ping_rejects_oversized_input
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_ping
+  test: true
+- name: tests::ping_accepts_input_exactly_at_the_cap
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_free
+  - cic_ffi_ping
+  test: true
+- name: tests::run_flow_export_returns_structured_error_through_the_seam
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - cic_ffi_free
+  - cic_ffi_run_flow
+  - serde_json::from_slice
+  test: true
+- name: tests::run_flow_export_rejects_malformed_input
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_run_flow
+  test: true
+- name: tests::abi_version_matches_the_constant
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - cic_ffi_abi_version
+  test: true
