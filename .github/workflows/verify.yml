@@ -200,6 +200,14 @@ jobs:
         with:
           go-version: "1.26.9"
 
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        # tools/rs.meta.gen.py reads Rust through tools/rsastdump (syn, a
+        # workspace member it builds with cargo); its tests must run, not skip
+        # (RS_META_REQUIRE_CARGO below).
+        run: |
+          set -euo pipefail
+          rustup show active-toolchain || rustup toolchain install
+
       - name: Install dependencies (hash-verified)
         run: |
           python -m pip install --upgrade pip
@@ -228,6 +236,7 @@ jobs:
       - name: Pytest
         env:
           GO_META_REQUIRE_GO: "1"
+          RS_META_REQUIRE_CARGO: "1"
         run: python -m pytest
 
       - name: goastdump (go/ast front end of go.meta.gen.py)

@@ -18,7 +18,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	infra-down infra.help \
 	mutate mutate-all \
 	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust \
-	ffi-staticlib test-ffi demo demo-trustflow demo-oci-sign
+	ffi-staticlib meta-rs test-ffi demo demo-trustflow demo-oci-sign
 
 # Default to showing help
 all: help
@@ -362,6 +362,16 @@ ffi-staticlib: ## Build the cic-ffi staticlib and stage it for the Go cgo link
 	$(call RUST_EXEC, cargo build -p cic-ffi --release --locked)
 	$(call RUST_EXEC, mkdir -p $(FFI_LIB_DIR) && cp /target/release/libcic_ffi.a $(FFI_LIB_DIR)/libcic_ffi.a)
 	@echo "staticlib staged at $(FFI_LIB_DIR)/libcic_ffi.a"
+
+# Rust companion YAMLs (rs.meta.schema.yaml): rsastdump (syn) is built in the
+# rust-builder and staged in /output; the generator runs in the py-builder,
+# which has the writable source mount. --merge keeps the hand-written fields.
+RSASTDUMP_BIN ?= /output/bin/rsastdump
+RS_META_ARGS ?= --dir . --recursive --merge
+
+meta-rs: ## Generate/refresh Rust companion YAMLs (tools/rs.meta.gen.py; RS_META_ARGS to narrow)
+	$(call RUST_EXEC, cargo build -p rsastdump --release --locked && mkdir -p $(dir $(RSASTDUMP_BIN)) && cp /target/release/rsastdump $(RSASTDUMP_BIN))
+	@docker compose exec -T -e RS_META_RSASTDUMP=/app$(RSASTDUMP_BIN) py-builder python tools/rs.meta.gen.py $(RS_META_ARGS)
 
 test-ffi: ffi-staticlib ## Test the live Go→Rust→Go bridge (cgo, ffi_cgo tag)
 	@echo "Testing FFI bridge (cgo)..."

@@ -1,0 +1,23 @@
+---
+crate: rsastdump
+module: crate
+description: 'Command-line entry of rsastdump: `rsastdump <file.rs> [<file.rs> ...]`
+  prints `{"files": [...]}` (see the library docs) on stdout.'
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - rsastdump::dump_all
+  - serde_json::to_writer
+  calls:
+  - rsastdump::dump_all
+  - serde_json::to_writer

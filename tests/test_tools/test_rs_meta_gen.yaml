@@ -1,0 +1,191 @@
+---
+module: test_tools.test_rs_meta_gen
+description: 'Tests for tools/rs.meta.gen.py: the rsastdump (syn) front end and the
+  dump -> companion translation. The tests that run rsastdump skip when there is no
+  cargo, unless RS_META_REQUIRE_CARGO=1 (set in CI) — then a missing toolchain is
+  a failure, so the syn path cannot go unverified without anyone noticing.'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: _ROOT
+  kind: const
+  description: ''
+  references: []
+- name: _TOOLS
+  kind: const
+  description: ''
+  references: []
+- name: _SAMPLE
+  kind: const
+  description: ''
+  references: []
+- name: _spec
+  kind: const
+  description: ''
+  references: []
+- name: gen
+  kind: const
+  description: ''
+  references: []
+- name: HAVE_CARGO
+  kind: const
+  description: ''
+  references: []
+- name: needs_cargo
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: _crate
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _item
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - base.update
+- name: _dump
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_module_path
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _crate
+- name: test_find_crate_and_deps
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _crate
+  - gen._find_crate
+- name: test_find_crate_skips_virtual_workspace
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - gen._find_crate
+- name: test_normalize
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_objects_from_dump_filters_and_formats
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _crate
+  - _dump
+  - _item
+  - gen._find_crate
+  - gen._objects_from_dump
+  - kinds.index
+  - o.get
+- name: test_suggest_tags
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - gen._suggest_tags
+- name: test_generate_fields
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _crate
+  - _dump
+  - _item
+  - gen.generate
+- name: test_merge_keeps_manual_and_matches_by_receiver
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - gen._merge_data
+- name: test_cross_file_implements
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - yaml.safe_load
+  calls:
+  - _crate
+  - a.read_text
+  - gen._apply_implements
+  - gen._companions
+  - gen._write_yaml
+  - yaml.safe_load
+- name: test_dump_command_override
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - pytest.raises
+  calls:
+  - gen._dump_command
+  - gen._rs_dump
+  - monkeypatch.delenv
+  - monkeypatch.setattr
+  - monkeypatch.setenv
+  - pytest.raises
+- name: test_rs_dump_failure
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - pytest.raises
+  calls:
+  - gen._rs_dump
+  - monkeypatch.setattr
+  - pytest.raises
+- name: test_sample_end_to_end
+  kind: function
+  decorators:
+  - needs_cargo
+  description: ''
+  references: []
+  calls:
+  - _crate
+  - gen._rs_dump
+  - gen.generate
+  - rs.resolve
+- name: test_cli_generate_merge_and_skip
+  kind: function
+  decorators:
+  - needs_cargo
+  description: ''
+  references:
+  - yaml.safe_load
+  calls:
+  - _crate
+  - capsys.readouterr
+  - gen._write_yaml
+  - gen.main
+  - lib.write_text
+  - monkeypatch.chdir
+  - monkeypatch.setattr
+  - yaml.safe_load

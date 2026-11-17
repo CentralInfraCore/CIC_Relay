@@ -1,0 +1,480 @@
+---
+crate: rsastdump
+module: crate
+description: 'rsastdump parses Rust source files with `syn` and reports their items
+  as JSON. It is the syntactic front end of `tools/rs.meta.gen.py`, the Rust counterpart
+  of `tools/goastdump`: the Python side decides what counts as an external reference
+  and writes the companion YAML, this crate only reports what the syntax tree says.
+  No name resolution or type checking happens, so it runs offline and without the
+  dependencies of the code it reads. Paths are expanded through the `use` declarations
+  in scope (`use serde::Serialize;` turns `Serialize` into `serde::Serialize`) and
+  a path whose first segment is a module declared in the same scope gets a `self::`
+  prefix; everything else is reported as written. A method call is attributed to a
+  type only where the syntax states it (`self`, a typed parameter, `let x: T`, `let
+  x = T { .. }`); untyped method calls are not reported at all.'
+tags:
+- parser
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: FileDump
+  kind: struct
+  visibility: pub
+  description: The result for one input file.
+  derives:
+  - Debug
+  - Default
+  - serde::Serialize
+  implements: []
+  references:
+  - serde::Serialize
+- name: Item
+  kind: struct
+  visibility: pub
+  description: One item of a Rust file.
+  derives:
+  - Debug
+  - Default
+  - Clone
+  - serde::Serialize
+  implements: []
+  references:
+  - serde::Serialize
+- name: Scope
+  kind: struct
+  visibility: private
+  description: The names one module's item list brings into scope.
+  derives:
+  - Debug
+  - Default
+  implements: []
+  references: []
+- name: Ctx
+  kind: struct
+  visibility: private
+  description: 'Resolution context: the scopes of the enclosing modules (innermost
+    last) and the self type of the enclosing `impl` / `trait`, if any.'
+  derives: []
+  implements: []
+  references: []
+- name: Collector
+  kind: struct
+  visibility: private
+  description: Gathers refs and calls from a subtree.
+  derives: []
+  implements:
+  - syn::visit::Visit
+  references: []
+- name: Dumper
+  kind: struct
+  visibility: private
+  description: Walks the item lists of a file, keeping the module scopes.
+  derives:
+  - Default
+  implements: []
+  references: []
+- name: Output
+  kind: struct
+  visibility: pub
+  description: 'The JSON document printed for a set of files: `{"files": [...]}`.'
+  derives:
+  - Debug
+  - serde::Serialize
+  implements: []
+  references:
+  - serde::Serialize
+- name: Scope
+  kind: impl
+  receiver: Scope
+  description: ''
+  references: []
+- name: collect
+  kind: method
+  receiver: Scope
+  visibility: private
+  description: ''
+  references:
+  - syn::Item
+  - syn::Item::Use
+  - syn::Item::ExternCrate
+  - syn::Item::Mod
+  calls:
+  - Scope::default
+- name: add_use
+  kind: method
+  receiver: Scope
+  visibility: private
+  description: ''
+  references:
+  - syn::UseTree
+  - syn::UseTree::Path
+  - syn::UseTree::Name
+  - syn::UseTree::Rename
+  - syn::UseTree::Group
+  - syn::UseTree::Glob
+  calls:
+  - Scope::add_use
+- name: Ctx
+  kind: impl
+  receiver: Ctx
+  description: ''
+  references: []
+- name: resolve_segs
+  kind: method
+  receiver: Ctx
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+- name: resolve
+  kind: method
+  receiver: Ctx
+  visibility: private
+  description: ''
+  references:
+  - syn::Path
+  calls:
+  - Ctx::resolve_segs
+- name: type_name
+  kind: method
+  receiver: Ctx
+  visibility: private
+  description: Names the type an expression of type `ty` has, if it is a plain path.
+  references:
+  - syn::Type
+  - syn::Type::Path
+  - syn::Type::Reference
+  - syn::Type::Paren
+  - syn::Type::Group
+  calls:
+  - Ctx::resolve
+  - Ctx::type_name
+- name: Collector
+  kind: impl
+  receiver: Collector
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: Collector
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+- name: add_ref
+  kind: method
+  receiver: Collector
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+- name: add_call
+  kind: method
+  receiver: Collector
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+- name: params
+  kind: method
+  receiver: Collector
+  visibility: private
+  description: ''
+  references:
+  - syn::Signature
+  - syn::FnArg::Typed
+  calls:
+  - Collector::bind
+- name: bind
+  kind: method
+  receiver: Collector
+  visibility: private
+  description: ''
+  references:
+  - syn::Pat
+  - syn::Type
+  - syn::Pat::Ident
+  calls: []
+- name: receiver_type
+  kind: method
+  receiver: Collector
+  visibility: private
+  description: ''
+  references:
+  - syn::Expr
+  - syn::Expr::Path
+  - syn::Expr::Paren
+  - syn::Expr::Reference
+  calls:
+  - Collector::receiver_type
+- name: finish
+  kind: method
+  receiver: Collector
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+- name: Visit for Collector
+  kind: impl
+  receiver: Collector
+  trait: syn::visit::Visit
+  description: ''
+  references:
+  - syn::visit::Visit
+- name: visit_visibility
+  kind: method
+  receiver: Collector
+  trait: syn::visit::Visit
+  description: ''
+  references:
+  - syn::Visibility
+  calls: []
+- name: visit_path
+  kind: method
+  receiver: Collector
+  trait: syn::visit::Visit
+  description: ''
+  references:
+  - syn::Path
+  - syn::visit::visit_path
+  calls:
+  - Collector::add_ref
+  - syn::visit::visit_path
+- name: visit_expr_call
+  kind: method
+  receiver: Collector
+  trait: syn::visit::Visit
+  description: ''
+  references:
+  - syn::ExprCall
+  - syn::Expr::Path
+  - syn::visit::visit_expr_call
+  calls:
+  - Collector::add_call
+  - syn::visit::visit_expr_call
+- name: visit_expr_method_call
+  kind: method
+  receiver: Collector
+  trait: syn::visit::Visit
+  description: ''
+  references:
+  - syn::ExprMethodCall
+  - syn::visit::visit_expr_method_call
+  calls:
+  - Collector::add_call
+  - Collector::receiver_type
+  - syn::visit::visit_expr_method_call
+- name: visit_local
+  kind: method
+  receiver: Collector
+  trait: syn::visit::Visit
+  description: ''
+  references:
+  - syn::Local
+  - syn::Pat::Type
+  - syn::Pat::Ident
+  - syn::Expr::Struct
+  - syn::visit::visit_local
+  calls:
+  - Collector::bind
+  - syn::visit::visit_local
+- name: visit_macro
+  kind: method
+  receiver: Collector
+  trait: syn::visit::Visit
+  description: ''
+  references:
+  - syn::Macro
+  - syn::visit::visit_macro
+  - syn::punctuated::Punctuated::parse_terminated
+  - syn::Expr
+  - syn::Token
+  calls:
+  - Collector::visit_expr
+  - syn::Macro::parse_body_with
+  - syn::visit::visit_macro
+- name: Dumper
+  kind: impl
+  receiver: Dumper
+  description: ''
+  references: []
+- name: walk
+  kind: method
+  receiver: Dumper
+  visibility: private
+  description: ''
+  references:
+  - syn::Item
+  calls:
+  - Dumper::item
+  - Scope::collect
+- name: base
+  kind: method
+  receiver: Dumper
+  visibility: private
+  description: ''
+  references:
+  - syn::Attribute
+  calls:
+  - Item::default
+  - doc_text
+  - is_test
+- name: derives
+  kind: method
+  receiver: Dumper
+  visibility: private
+  description: ''
+  references:
+  - syn::Attribute
+  - syn::punctuated::Punctuated::parse_terminated
+  - syn::Path
+  - syn::Token
+  calls:
+  - Ctx::resolve
+- name: item
+  kind: method
+  receiver: Dumper
+  visibility: private
+  description: ''
+  references:
+  - syn::Item
+  - syn::Item::Mod
+  calls:
+  - Dumper::base
+  - Dumper::objects
+  - Dumper::walk
+  - visibility
+- name: objects
+  kind: method
+  receiver: Dumper
+  visibility: private
+  description: ''
+  references:
+  - syn::Item
+  - syn::Item::Fn
+  - syn::Item::Struct
+  - syn::Item::Enum
+  - syn::Item::Union
+  - syn::Item::Trait
+  - syn::TraitItem::Fn
+  - syn::TypeParamBound::Trait
+  - syn::Item::Impl
+  - syn::Item::Type
+  - syn::Item::Const
+  - syn::Item::Static
+  - syn::Item::Macro
+  - syn::Item::ForeignMod
+  - syn::ForeignItem::Fn
+  calls:
+  - Collector::new
+  - Ctx::resolve
+  - Dumper::base
+  - Dumper::derives
+  - Dumper::impl_block
+  - visibility
+- name: impl_block
+  kind: method
+  receiver: Dumper
+  visibility: private
+  description: ''
+  references:
+  - syn::ItemImpl
+  - syn::ImplItem::Fn
+  - syn::ImplItem::Const
+  - syn::ImplItem::Type
+  calls:
+  - Collector::new
+  - Ctx::resolve
+  - Ctx::type_name
+  - Dumper::base
+  - is_test
+  - path_short
+  - type_short
+  - visibility
+- name: doc_text
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - syn::Attribute
+  - syn::AttrStyle::Inner
+  - syn::Meta::NameValue
+  - syn::Expr::Lit
+  - syn::ExprLit
+  - syn::Lit::Str
+  calls:
+  - syn::AttrStyle::Inner
+- name: is_test
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - syn::Attribute
+  calls: []
+- name: visibility
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - syn::Visibility
+  - syn::Visibility::Public
+  - syn::Visibility::Restricted
+  - syn::Visibility::Inherited
+  calls: []
+- name: type_short
+  kind: fn
+  visibility: private
+  description: The self type of an impl as written, generics and references dropped.
+  references:
+  - syn::Type
+  - syn::Type::Path
+  - syn::Type::Reference
+  - syn::Type::Paren
+  - syn::Type::Group
+  calls:
+  - path_short
+  - type_short
+- name: path_short
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - syn::Path
+  calls: []
+- name: dump_source
+  kind: fn
+  visibility: pub
+  description: Parses `source` (read from `file`) and reports its items.
+  references:
+  - syn::parse_file
+  - syn::Item::Mod
+  calls:
+  - Dumper::default
+  - Dumper::walk
+  - FileDump::default
+  - doc_text
+  - is_test
+  - syn::parse_file
+- name: dump_file
+  kind: fn
+  visibility: pub
+  description: Reads and dumps one file; a read error is reported in [`FileDump::error`].
+  references: []
+  calls:
+  - FileDump::default
+  - dump_source
+- name: dump_all
+  kind: fn
+  visibility: pub
+  description: Dumps every path in order.
+  references: []
+  calls:
+  - I::into_iter
+  - dump_file

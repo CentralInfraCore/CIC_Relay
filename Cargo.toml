@@ -11,6 +11,8 @@ members = [
     "executor",
     "http-executor",
     "cic-canonical",
+    # Syntactic front end of tools/rs.meta.gen.py (companion YAML generator).
+    "tools/rsastdump",
 ]
 
 # Shared metadata + lints applied to every workspace crate.

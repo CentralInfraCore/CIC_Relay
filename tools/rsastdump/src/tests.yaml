@@ -1,0 +1,135 @@
+---
+crate: rsastdump
+module: crate::tests
+description: 'Unit tests: the sample fixture plus the edge shapes it does not cover.'
+tags:
+- parser
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SAMPLE
+  kind: const
+  visibility: private
+  description: ''
+  references: []
+- name: sample
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - crate::FileDump
+  - crate::dump_source
+  calls:
+  - crate::dump_source
+- name: find
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - crate::FileDump
+  - crate::Item
+  calls: []
+- name: file_level
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - sample
+  test: true
+- name: kinds_and_order
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - sample
+  test: true
+- name: use_expansion_and_aliases
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - find
+  - sample
+  test: true
+- name: trait_shape
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - find
+  - sample
+  test: true
+- name: impls_and_methods
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - find
+  - sample
+  test: true
+- name: typed_calls_only
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - find
+  - sample
+  test: true
+- name: test_marking
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - find
+  - sample
+  test: true
+- name: macro_visibility
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - crate::dump_source
+  calls:
+  - crate::dump_source
+  test: true
+- name: misc_items
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - crate::dump_source
+  calls:
+  - crate::dump_source
+  - find
+  test: true
+- name: parse_error_has_position
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - crate::dump_source
+  calls:
+  - crate::dump_source
+  test: true
+- name: read_error_and_dump_all
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - crate::dump_all
+  - crate::dump_file
+  - serde_json::to_value
+  calls:
+  - crate::dump_all
+  - crate::dump_file
+  - serde_json::to_value
+  test: true

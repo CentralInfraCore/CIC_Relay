@@ -1,0 +1,18 @@
+[package]
+name = "rsastdump"
+description = "Syntactic front end of tools/rs.meta.gen.py: parses Rust source files with syn and prints their items as JSON."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit"] }
+quote = "1"
+# span-locations: line/column of a parse error.
+proc-macro2 = { version = "1", features = ["span-locations"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

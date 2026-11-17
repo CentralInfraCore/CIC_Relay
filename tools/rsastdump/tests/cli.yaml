@@ -1,0 +1,33 @@
+---
+crate: rsastdump
+module: crate
+description: 'End-to-end: the binary''s argument handling and JSON output.'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: BIN
+  kind: const
+  visibility: private
+  description: ''
+  references: []
+- name: no_args_is_usage_error
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls: []
+  test: true
+- name: dumps_files_as_json
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - serde_json::Value
+  - serde_json::from_slice
+  calls:
+  - serde_json::from_slice
+  test: true
