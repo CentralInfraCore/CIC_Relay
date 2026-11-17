@@ -1,0 +1,179 @@
+---
+crate: vault_adapter
+module: crate
+description: Driver-level tests for `VaultPkiCountersigner`, exercising the policy
+  decision and PKI-signing translation against the `vault-client-rs-test` `MockPki`
+  — no live Vault, no HTTP.
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SIGNED_PEM
+  kind: const
+  visibility: private
+  description: A PEM whose body base64-decodes to `COUNTERSIGNEDCERT`.
+  references: []
+- name: MockPkiBackend
+  kind: struct
+  visibility: private
+  description: Wires `MockPki` behind the adapter's `PkiBackend` seam. `mount` is
+    ignored.
+  derives: []
+  implements:
+  - vault_adapter::PkiBackend
+  references:
+  - vault_client_rs_test::mock::MockPki
+- name: NarrowingPolicy
+  kind: struct
+  visibility: private
+  description: A policy that authorizes a fixed scope regardless of the request —
+    used to drive a strict-subset authorization that the sign-verbatim mechanism cannot
+    honor.
+  derives: []
+  implements:
+  - vault_adapter::CountersignPolicy
+  references:
+  - connections::vault::AuthScope
+- name: PkiBackend for MockPkiBackend
+  kind: impl
+  receiver: MockPkiBackend
+  trait: vault_adapter::PkiBackend
+  description: ''
+  references:
+  - vault_adapter::PkiBackend
+- name: sign_verbatim
+  kind: method
+  receiver: MockPkiBackend
+  trait: vault_adapter::PkiBackend
+  description: ''
+  references:
+  - vault_client_rs::PkiSignedCert
+  - vault_client_rs::VaultError
+  calls: []
+- name: CountersignPolicy for NarrowingPolicy
+  kind: impl
+  receiver: NarrowingPolicy
+  trait: vault_adapter::CountersignPolicy
+  description: ''
+  references:
+  - vault_adapter::CountersignPolicy
+- name: authorize
+  kind: method
+  receiver: NarrowingPolicy
+  trait: vault_adapter::CountersignPolicy
+  description: ''
+  references:
+  - connections::vault::port::CertRequest
+  - connections::vault::AuthScope
+  - vault_adapter::Denied
+  calls: []
+- name: request_for
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::port::CertRequest
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::port::CertRequest::new
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::port::CertRequest::new
+- name: countersigner
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - vault_client_rs_test::mock::MockPki
+  - vault_adapter::VaultPkiCountersigner
+  - vault_adapter::AllowlistPolicy
+  - vault_adapter::AllowlistPolicy::new
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - vault_adapter::VaultPkiCountersigner::new
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+- name: permitted_request_is_countersigned
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  - connections::vault::Cn::new
+  calls:
+  - connections::vault::Cn::new
+  - countersigner
+  - request_for
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  test: true
+- name: denied_cn_is_refused
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockPki::new
+  calls:
+  - countersigner
+  - request_for
+  - vault_client_rs_test::mock::MockPki::new
+  test: true
+- name: scope_narrowing_is_refused_before_signing
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_adapter::CountersignError::ScopeNarrowingUnsupported
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - request_for
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_client_rs_test::mock::MockPki::new
+  test: true
+- name: vault_failure_maps_to_backend
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::MockError::Denied
+  - vault_adapter::CountersignError::Backend
+  calls:
+  - countersigner
+  - request_for
+  - vault_adapter::CountersignError::Backend
+  - vault_client_rs_test::mock::MockPki::new
+  test: true
+- name: undecodable_certificate_maps_to_cert_encoding
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  - vault_adapter::CountersignError::CertEncoding
+  calls:
+  - countersigner
+  - request_for
+  - vault_adapter::CountersignError::CertEncoding
+  - vault_client_rs_test::mock::MockPki::new
+  - vault_client_rs_test::mock::pki_signed
+  test: true

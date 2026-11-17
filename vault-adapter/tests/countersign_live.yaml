@@ -1,0 +1,49 @@
+---
+crate: vault_adapter
+module: crate
+description: Integration test driving the live PKI-signing path of `VaultPkiCountersigner`
+  against a mocked Vault HTTP server (`/v1/{mount}/sign-verbatim/{role}`), covering
+  the real `VaultClient` `PkiBackend` impl end-to-end.
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SIGNED_PEM
+  kind: const
+  visibility: private
+  description: A PEM whose body base64-decodes to `COUNTERSIGNEDCERT`.
+  references: []
+- name: countersign_signs_via_the_pki_engine
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - serde_json::json
+  - vault_client_rs::VaultClient::builder
+  - vault_adapter::AllowlistPolicy::new
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - connections::vault::port::CertRequest::new
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::port::CertRequest::new
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_client_rs::VaultClient::builder
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true

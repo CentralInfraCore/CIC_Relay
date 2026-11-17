@@ -1,0 +1,98 @@
+---
+crate: module
+module: crate::sealing
+description: 'Pubkey-sealing (feature-008 trust-flow step 7): ECIES over P-256. A
+  returned secret is **encrypted to the module''s public key** so that whatever caches
+  or routes it holds only ciphertext it cannot open — only the module holding the
+  matching private key can. This is public-key encryption to the module''s own key
+  (ECIES: ephemeral ECDH → HKDF → AEAD), **not** Vault Transit (which encrypts with
+  its own managed keys, not to an external module key). Blob layout: `ephemeral_public(SEC1
+  uncompressed, 65B) || nonce(12B) || AES-256-GCM ciphertext`.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: HKDF_INFO
+  kind: const
+  visibility: private
+  description: Domain separation for the HKDF step — binds derived keys to this construction.
+  references: []
+- name: EPH_PUB_LEN
+  kind: const
+  visibility: private
+  description: SEC1 uncompressed P-256 public key length.
+  references: []
+- name: NONCE_LEN
+  kind: const
+  visibility: private
+  description: AES-GCM nonce length.
+  references: []
+- name: derive_key
+  kind: fn
+  visibility: private
+  description: Derives the AES-256 key from the ECDH shared secret via HKDF-SHA256.
+  references:
+  - aes_gcm::Key
+  - aes_gcm::Aes256Gcm
+  - crate::ModuleError
+  - hkdf::Hkdf::new
+  - sha2::Sha256
+  - crate::ModuleError::new
+  - aes_gcm::Key::from
+  calls:
+  - aes_gcm::Key::from
+  - crate::ModuleError::new
+  - hkdf::Hkdf::new
+- name: seal
+  kind: fn
+  visibility: pub
+  description: 'Seals `plaintext` to `recipient_der` (the module''s SPKI public key),
+    tagging it with `secret_ref`. The producer (host/Vault side) calls this; it never
+    needs — and never has — the private key. # Errors [`ModuleError`] if the recipient
+    key is invalid or AEAD encryption fails.'
+  references:
+  - connections::vault::SecretRef
+  - connections::vault::SealedSecret
+  - crate::ModuleError
+  - p256::PublicKey::from_public_key_der
+  - crate::ModuleError::new
+  - p256::ecdh::EphemeralSecret::random
+  - rand_core::OsRng
+  - aes_gcm::Aes256Gcm::new
+  - aes_gcm::Aes256Gcm::generate_nonce
+  - connections::vault::SealedSecret::new
+  calls:
+  - aes_gcm::Aes256Gcm::generate_nonce
+  - aes_gcm::Aes256Gcm::new
+  - connections::vault::SealedSecret::new
+  - crate::ModuleError::new
+  - derive_key
+  - p256::PublicKey::from_public_key_der
+  - p256::ecdh::EphemeralSecret::random
+- name: open
+  kind: fn
+  visibility: pub(crate)
+  description: 'Opens a sealed blob with the module''s private `scalar`, recovering
+    the plaintext as a redacting [`SecretString`]. # Errors [`ModuleError`] if the
+    blob is malformed, the key does not match, the ciphertext was tampered with, or
+    the plaintext is not UTF-8.'
+  references:
+  - p256::NonZeroScalar
+  - secrecy::SecretString
+  - crate::ModuleError
+  - crate::ModuleError::new
+  - p256::PublicKey::from_sec1_bytes
+  - p256::ecdh::diffie_hellman
+  - aes_gcm::Nonce::from
+  - aes_gcm::Aes256Gcm::new
+  - secrecy::SecretString::from
+  calls:
+  - aes_gcm::Aes256Gcm::new
+  - aes_gcm::Nonce::from
+  - crate::ModuleError::new
+  - derive_key
+  - p256::PublicKey::from_sec1_bytes
+  - p256::ecdh::diffie_hellman
+  - secrecy::SecretString::from

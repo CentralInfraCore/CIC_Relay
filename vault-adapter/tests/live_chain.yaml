@@ -1,0 +1,84 @@
+---
+crate: vault_adapter
+module: crate
+description: 'Opt-in **live-Vault** end-to-end test of the full feature-008 trust-flow
+  chain against a real (throwaway) OpenBao/Vault dev server. It is a no-op unless
+  `VAULT_LIVE_ADDR` is set, so it never runs in the default unit/coverage/mutation
+  builds. Run it via `make test-vault-live`, which spins a throwaway `-dev-tls` server,
+  provisions the PKI / cert-auth / KV mounts, and points the `VAULT_LIVE_*` env vars
+  at it. Chain exercised against the live server: ```text module CSR ──PKI sign-verbatim──►
+  countersigned cert (Relay''s key stays in Vault) ──mTLS cert-auth login──► scoped
+  token ──read_sealed (KV)──► open inside the module ──► plaintext ``` The KV secret
+  is pre-sealed to the module''s own key here (the request-time A-version Vault-side
+  wrapping is a deferred edge — see feature-008/spec.md).'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Config
+  kind: struct
+  visibility: private
+  description: Connection + mount coordinates the launcher provides via env.
+  derives: []
+  implements: []
+  references: []
+- name: config
+  kind: fn
+  visibility: private
+  description: Reads the `VAULT_LIVE_*` env, or `None` (skip) if the server address
+    is unset.
+  references: []
+  calls:
+  - get
+- name: der_to_cert_pem
+  kind: fn
+  visibility: private
+  description: Wraps DER in a PEM CERTIFICATE block (for the mTLS client identity).
+  references:
+  - base64::engine::general_purpose::STANDARD
+  calls: []
+- name: admin_client
+  kind: fn
+  visibility: private
+  description: Builds an admin (token-auth) client verifying the dev server's CA.
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::VaultClient::builder
+  calls:
+  - vault_client_rs::VaultClient::builder
+- name: full_trust_flow_chain_against_live_vault
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - p256::ecdsa::SigningKey::random
+  - rand_core::OsRng
+  - p256::pkcs8::LineEnding::LF
+  - module::ModuleIdentity::from_pkcs8_pem
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::from_cns
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_adapter::AllowlistPolicy::new
+  - connections::vault::SecretRef::new
+  - module::seal
+  - base64::engine::general_purpose::STANDARD
+  - serde_json::json
+  - vault_adapter::VaultSecretSource::connect_mtls
+  calls:
+  - admin_client
+  - config
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  - connections::vault::SecretRef::new
+  - der_to_cert_pem
+  - module::ModuleIdentity::from_pkcs8_pem
+  - module::seal
+  - p256::ecdsa::SigningKey::random
+  - vault_adapter::AllowlistPolicy::new
+  - vault_adapter::VaultPkiCountersigner::new
+  - vault_adapter::VaultSecretSource::connect_mtls
+  test: true

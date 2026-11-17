@@ -1,0 +1,502 @@
+---
+crate: connections
+module: crate::vault
+description: 'Vault Connection object model — the core "meaning" layer of feature-008''s
+  capability-based secret flow. This module owns the *meaning* of a Vault connection,
+  not its *access*: it carries no cryptography and talks to no Vault. Instead it models
+  the flow as a typestate so the ordering is enforced at compile time — `request →
+  countersign → initialize` — and it keeps secret material in an opaque, redaction-only
+  [`SealedSecret`] that has no plaintext field and can never leak into logs. The layering
+  (feature-008): **core owns meaning** (this module), **Vault lib owns access** (a
+  separate driver), **adapter owns translation**, **runtime owns execution**.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: port
+  kind: mod
+  visibility: pub
+  description: ''
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: Cn
+  kind: struct
+  visibility: pub
+  description: 'A single X.509 Common Name. In feature-008 the set of `Cn`s on a request-Cert
+    is what encodes content-dependent authorization: the Relay countersigns a chosen
+    subset, and Vault maps those to a policy. See [`AuthScope`].'
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  - PartialOrd
+  - Ord
+  - Hash
+  implements:
+  - std::fmt::Display
+  references: []
+- name: AuthScope
+  kind: struct
+  visibility: pub
+  description: The set of [`Cn`]s that encodes content-dependent authorization for
+    a connection request. Backed by a [`BTreeSet`] so iteration order is deterministic
+    and duplicates collapse — a prerequisite for any hash or `ProofTrace` over the
+    request.
+  derives:
+  - Debug
+  - Clone
+  - Default
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: SecretRef
+  kind: struct
+  visibility: pub
+  description: A stable reference to a secret in a Vault backend, independent of its
+    value.
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  - PartialOrd
+  - Ord
+  - Hash
+  implements:
+  - std::fmt::Display
+  references: []
+- name: CounterSignedCert
+  kind: struct
+  visibility: pub
+  description: A request-Cert countersigned by the Relay. This is public material
+    — it carries the requester's public key and the authorized [`AuthScope`], not
+    any secret — so it is safe to clone and print.
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: SealedSecret
+  kind: struct
+  visibility: pub
+  description: 'A secret/token as returned by Vault, **sealed to the request''s public
+    key**. The core invariant of feature-008: this type holds only ciphertext — the
+    plaintext never exists here, and only the module holding the matching private
+    key can open it (elsewhere, in the runtime). [`Debug`] and [`Display`] are redacted,
+    so a sealed secret can never leak into logs or traces. The exposed [`ciphertext`](SealedSecret::ciphertext)
+    is safe precisely because it is encrypted and cannot be opened here.'
+  derives:
+  - Clone
+  - PartialEq
+  - Eq
+  implements:
+  - std::fmt::Debug
+  - std::fmt::Display
+  references: []
+- name: Requested
+  kind: struct
+  visibility: pub
+  description: 'Typestate: the connection has been requested — the module generated
+    a Cert and is awaiting the Relay''s countersignature. The private key stays with
+    the module.'
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: Countersigned
+  kind: struct
+  visibility: pub
+  description: 'Typestate: the Relay has countersigned the request-Cert.'
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: Initialized
+  kind: struct
+  visibility: pub
+  description: 'Typestate: the connection is initialized and holds the sealed Vault
+    token.'
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: Connection
+  kind: struct
+  visibility: pub
+  description: 'A Vault Connection, parameterized by its lifecycle state `S`. The
+    typestate makes the feature-008 flow order a compile-time guarantee: a token can
+    only be reached via `request → countersign → initialize`, and the token is always
+    a [`SealedSecret`].'
+  derives:
+  - Debug
+  - Clone
+  - PartialEq
+  - Eq
+  implements: []
+  references: []
+- name: Cn
+  kind: impl
+  receiver: Cn
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: Cn
+  visibility: pub
+  description: Creates a `Cn` from any string-like value.
+  references: []
+  calls:
+  - Cn
+- name: as_str
+  kind: method
+  receiver: Cn
+  visibility: pub
+  description: Returns the `Cn` as a string slice.
+  references: []
+  calls: []
+- name: fmt::Display for Cn
+  kind: impl
+  receiver: Cn
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: Cn
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: AuthScope
+  kind: impl
+  receiver: AuthScope
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: AuthScope
+  visibility: pub
+  description: Creates an empty scope.
+  references: []
+  calls:
+  - AuthScope::default
+- name: from_cns
+  kind: method
+  receiver: AuthScope
+  visibility: pub
+  description: Builds a scope from an iterator of [`Cn`]s, deduplicating and sorting.
+  references: []
+  calls: []
+- name: insert
+  kind: method
+  receiver: AuthScope
+  visibility: pub
+  description: Adds `cn` to the scope; returns `true` if it was newly inserted.
+  references: []
+  calls: []
+- name: contains
+  kind: method
+  receiver: AuthScope
+  visibility: pub
+  description: Returns `true` if `cn` is part of this scope.
+  references: []
+  calls: []
+- name: len
+  kind: method
+  receiver: AuthScope
+  visibility: pub
+  description: Number of distinct [`Cn`]s in the scope.
+  references: []
+  calls: []
+- name: is_empty
+  kind: method
+  receiver: AuthScope
+  visibility: pub
+  description: Returns `true` if the scope contains no [`Cn`]s.
+  references: []
+  calls: []
+- name: cns
+  kind: method
+  receiver: AuthScope
+  visibility: pub
+  description: Iterates the [`Cn`]s in deterministic (sorted) order.
+  references: []
+  calls: []
+- name: SecretRef
+  kind: impl
+  receiver: SecretRef
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: SecretRef
+  visibility: pub
+  description: Creates a reference to the latest version of `path` under `mount`.
+  references: []
+  calls: []
+- name: with_version
+  kind: method
+  receiver: SecretRef
+  visibility: pub
+  description: Pins this reference to an explicit `version`.
+  references: []
+  calls: []
+- name: fmt::Display for SecretRef
+  kind: impl
+  receiver: SecretRef
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: SecretRef
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: CounterSignedCert
+  kind: impl
+  receiver: CounterSignedCert
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: CounterSignedCert
+  visibility: pub
+  description: Wraps the DER-encoded countersigned certificate together with the [`AuthScope`]
+    the Relay actually authorized.
+  references: []
+  calls: []
+- name: der
+  kind: method
+  receiver: CounterSignedCert
+  visibility: pub
+  description: The DER-encoded certificate bytes.
+  references: []
+  calls: []
+- name: scope
+  kind: method
+  receiver: CounterSignedCert
+  visibility: pub
+  description: The authorization scope the Relay countersigned.
+  references: []
+  calls: []
+- name: SealedSecret
+  kind: impl
+  receiver: SealedSecret
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: SealedSecret
+  visibility: pub
+  description: Wraps `ciphertext` that has already been sealed to the requester's
+    public key, tagged with the [`SecretRef`] it came from.
+  references: []
+  calls: []
+- name: secret_ref
+  kind: method
+  receiver: SealedSecret
+  visibility: pub
+  description: The reference this sealed secret was read from.
+  references: []
+  calls: []
+- name: ciphertext
+  kind: method
+  receiver: SealedSecret
+  visibility: pub
+  description: 'The sealed ciphertext bytes. Safe to expose: it is encrypted to the
+    requester''s public key and cannot be opened here.'
+  references: []
+  calls: []
+- name: fmt::Debug for SealedSecret
+  kind: impl
+  receiver: SealedSecret
+  trait: std::fmt::Debug
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: SealedSecret
+  trait: std::fmt::Debug
+  description: ''
+  references: []
+  calls: []
+- name: fmt::Display for SealedSecret
+  kind: impl
+  receiver: SealedSecret
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: SealedSecret
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: Connection
+  kind: impl
+  receiver: Connection
+  description: ''
+  references: []
+- name: subject
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: The subject [`Cn`] this connection was requested for.
+  references: []
+  calls: []
+- name: scope
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: The [`AuthScope`] requested for this connection.
+  references: []
+  calls: []
+- name: Connection
+  kind: impl
+  receiver: Connection
+  description: ''
+  references: []
+- name: request
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: 'Begins a connection request for `subject`, asking for authorization
+    `scope`. Models step 1–2 of the flow: the module has generated its Cert; the private
+    key never leaves the module.'
+  references: []
+  calls: []
+- name: countersign
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: 'Consumes the Relay''s countersigned Cert, advancing to [`Countersigned`].
+    Models step 3–4: the Relay''s content-dependent authorization.'
+  references: []
+  calls: []
+- name: Connection
+  kind: impl
+  receiver: Connection
+  description: ''
+  references: []
+- name: cert
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: The countersigned Cert presented to Vault for cert-auth.
+  references: []
+  calls: []
+- name: initialize
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: 'Initializes the connection with the sealed token Vault returned, advancing
+    to [`Initialized`]. Models step 6–7: `vault obj init`.'
+  references: []
+  calls: []
+- name: Connection
+  kind: impl
+  receiver: Connection
+  description: ''
+  references: []
+- name: cert
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: The countersigned Cert this connection authenticated with.
+  references: []
+  calls: []
+- name: token
+  kind: method
+  receiver: Connection
+  visibility: pub
+  description: The sealed Vault token. Always sealed — the plaintext is never exposed
+    here; it is opened only inside the module that holds the private key.
+  references: []
+  calls: []
+- name: tests::scope
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - AuthScope::from_cns
+  - Cn::new
+  test: true
+- name: tests::cn_roundtrips_and_displays
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - Cn::new
+  test: true
+- name: tests::authscope_dedups_sorts_and_queries
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - AuthScope::new
+  - Cn::new
+  test: true
+- name: tests::secretref_builds_and_displays
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - SecretRef::new
+  test: true
+- name: tests::countersigned_cert_exposes_der_and_scope
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - Cn::new
+  - CounterSignedCert::new
+  - scope
+  test: true
+- name: tests::sealed_secret_never_reveals_ciphertext_when_formatted
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - SealedSecret::new
+  - SecretRef::new
+  test: true
+- name: tests::connection_typestate_flows_request_to_initialized
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - Cn::new
+  - Connection::request
+  - CounterSignedCert::new
+  - SealedSecret::new
+  - SecretRef::new
+  - scope
+  test: true

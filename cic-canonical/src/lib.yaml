@@ -1,0 +1,75 @@
+---
+crate: cic_canonical
+module: crate
+description: 'CIC Canonical Object Encoding — number normalization (spec #1). The
+  Rust peer of the Go implementation in `core/nexus/iac/number.go`. Both must produce
+  byte-identical canonical forms so a digest computed in Go verifies in Rust and vice
+  versa. The contract is defined over the JSON numeric *literal* (the text a number
+  arrives as), which is the language-neutral surface: - `4`, `4.0`, `4e0` all canonicalize
+  to `"4"`; - `-0`, `-0.0` canonicalize to `"0"`; - `4.50` canonicalizes to `"4.5"`;
+  - integer literals keep full precision (string-based, no float round-trip), so an
+  integer beyond `f64`''s 53-bit mantissa canonicalizes to its exact digits. The test
+  vectors below mirror `TestCanonicalNumber` in `number_test.go`; that Go table is
+  the source of truth.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: canonical_number
+  kind: fn
+  visibility: pub
+  description: Returns the canonical decimal form of a JSON numeric literal, or `None`
+    if `s` is not a number. Integer literals are normalized as exact digit strings
+    (sign, leading zeros and negative zero folded); other numeric literals normalize
+    through `f64`'s shortest plain-decimal form.
+  references: []
+  calls:
+  - canonical_float
+  - canonical_integer
+- name: canonical_integer
+  kind: fn
+  visibility: private
+  description: 'Normalizes an integer literal to exact digits, or `None` if `s` is
+    not an integer literal. Mirrors Go''s `big.Int` path: strips a leading `+`, folds
+    leading zeros, and renders negative zero as `"0"`.'
+  references: []
+  calls: []
+- name: canonical_float
+  kind: fn
+  visibility: private
+  description: Renders a float in plain (non-exponent) shortest form, folding negative
+    zero to `"0"`. Rust's `f64` `Display` is shortest round-trip and never uses an
+    exponent, matching Go's `FormatFloat(f, 'f', -1, 64)`.
+  references: []
+  calls: []
+- name: tests::vectors_mirror_go
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - canonical_number
+  test: true
+- name: tests::non_numeric_is_none
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - canonical_number
+  test: true
+- name: tests::adjacent_large_integers_differ
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - canonical_number
+  test: true

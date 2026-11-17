@@ -1,0 +1,399 @@
+---
+crate: http_executor
+module: crate
+description: 'Live-path integration tests for [`HttpExecutor`] against a mocked HTTP
+  server (`wiremock`), mirroring `vault-adapter/tests/live_mock.rs`. They drive the
+  real `reqwest` transport end to end without a real upstream, and pin the two load-bearing
+  guarantees: the opened credential is delivered as a Bearer `Authorization` header,
+  and a *reached* endpoint is an `Ok` outcome for any status.'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: CapturingSink
+  kind: struct
+  visibility: private
+  description: An audit sink that records everything, for assertions.
+  derives:
+  - Default
+  implements:
+  - http_executor::AuditSink
+  references:
+  - http_executor::AuditRecord
+- name: AuditSink for CapturingSink
+  kind: impl
+  receiver: CapturingSink
+  trait: http_executor::AuditSink
+  description: ''
+  references:
+  - http_executor::AuditSink
+- name: record
+  kind: method
+  receiver: CapturingSink
+  trait: http_executor::AuditSink
+  description: ''
+  references:
+  - http_executor::AuditRecord
+  calls:
+  - http_executor::AuditRecord::clone
+- name: secret
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - secrecy::SecretString
+  - secrecy::SecretString::from
+  calls:
+  - secrecy::SecretString::from
+- name: loopback_executor
+  kind: fn
+  visibility: private
+  description: Builds an executor allowing plain http to the loopback host the mock
+    server listens on (`reqwest` dials the absolute URL, so no base is needed here).
+  references:
+  - http_executor::HttpExecutor
+  - http_executor::HttpExecutor::new
+  - http_executor::EgressPolicy::insecure_allowing
+  calls:
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::new
+- name: delivers_bearer_credential_and_returns_ok_outcome
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::matchers::header
+  - wiremock::ResponseTemplate::new
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  calls:
+  - executor::ExecRequest::new
+  - loopback_executor
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::header
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: reached_endpoint_returning_401_is_an_ok_outcome_not_an_error
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  calls:
+  - executor::ExecRequest::new
+  - loopback_executor
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: redirects_are_returned_not_followed
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  calls:
+  - executor::ExecRequest::new
+  - loopback_executor
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: forwards_method_and_body
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::matchers::body_bytes
+  - wiremock::ResponseTemplate::new
+  - executor::ExecRequest::new
+  - executor::Method::Post
+  calls:
+  - executor::ExecRequest::new
+  - loopback_executor
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::body_bytes
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: unreachable_endpoint_maps_to_unavailable_without_leaking
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - http_executor::HttpExecutor::new
+  - http_executor::EgressPolicy::insecure_allowing
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  - executor::ExecuteError::Unavailable
+  calls:
+  - executor::ExecRequest::new
+  - executor::ExecuteError::Unavailable
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::new
+  - secret
+  test: true
+- name: oversized_response_body_is_refused_with_limit_exceeded
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::Limits
+  - http_executor::Limits::default
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  - executor::ExecuteError::LimitExceeded
+  calls:
+  - executor::ExecRequest::new
+  - executor::ExecuteError::LimitExceeded
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::Limits::default
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: slow_endpoint_times_out_as_unavailable
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::Limits
+  - http_executor::Limits::default
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  - executor::ExecuteError::Unavailable
+  calls:
+  - executor::ExecRequest::new
+  - executor::ExecuteError::Unavailable
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::Limits::default
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: hostname_target_resolves_through_the_guarded_resolver
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - http_executor::HttpExecutor::new
+  - http_executor::EgressPolicy::insecure_allowing
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  calls:
+  - executor::ExecRequest::new
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::new
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: hostname_resolving_to_private_ip_is_blocked_by_resolver
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - http_executor::HttpExecutor::new
+  - http_executor::EgressPolicy::allowing
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  - executor::ExecuteError::Unavailable
+  calls:
+  - executor::ExecRequest::new
+  - executor::ExecuteError::Unavailable
+  - http_executor::EgressPolicy::allowing
+  - http_executor::HttpExecutor::new
+  - secret
+  test: true
+- name: method_outside_the_allowlist_is_denied_before_any_call
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - http_executor::HttpExecutor::new
+  - http_executor::EgressPolicy::insecure_allowing
+  - executor::Method::Get
+  - executor::ExecRequest::new
+  - executor::Method::Delete
+  calls:
+  - executor::ExecRequest::new
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::new
+  - secret
+  test: true
+- name: oversized_request_body_is_refused_before_any_call
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::Limits
+  - http_executor::Limits::default
+  - executor::ExecRequest::new
+  - executor::Method::Post
+  - executor::ExecuteError::LimitExceeded
+  calls:
+  - executor::ExecRequest::new
+  - executor::ExecuteError::LimitExceeded
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::with_limits
+  - http_executor::Limits::default
+  - secret
+  test: true
+- name: mismatched_host_header_is_denied
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  calls:
+  - executor::ExecRequest::new
+  - loopback_executor
+  - secret
+  test: true
+- name: emits_a_non_secret_audit_record_on_success
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  - http_executor::AuditDecision::Allowed
+  calls:
+  - CapturingSink::default
+  - executor::ExecRequest::new
+  - loopback_executor
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: emits_a_denied_audit_record
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - http_executor::HttpExecutor::new
+  - http_executor::EgressPolicy::insecure_allowing
+  - executor::Method::Get
+  - executor::ExecRequest::new
+  - executor::Method::Delete
+  calls:
+  - CapturingSink::default
+  - executor::ExecRequest::new
+  - http_executor::EgressPolicy::insecure_allowing
+  - http_executor::HttpExecutor::new
+  - secret
+  test: true
+- name: strips_hop_by_hop_and_proxy_headers_and_overrides_authorization
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - executor::ExecRequest::new
+  - executor::Method::Get
+  calls:
+  - executor::ExecRequest::new
+  - loopback_executor
+  - secret
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true

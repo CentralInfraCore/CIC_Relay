@@ -1,0 +1,113 @@
+---
+crate: vault_adapter
+module: crate
+description: Integration tests driving the live async paths of `VaultSecretSource`
+  (`read_sealed`, `login`) against a mocked Vault HTTP server, mirroring the driver's
+  own wiremock test setup (`/v1/...` paths, KV v2 and auth envelopes).
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: source
+  kind: fn
+  visibility: private
+  description: Builds a source pointed at the mock server, with retries off so error-status
+    mocks are hit exactly once.
+  references:
+  - wiremock::MockServer
+  - vault_adapter::VaultSecretSource
+  - vault_client_rs::VaultClient::builder
+  - vault_adapter::VaultSecretSource::new
+  calls:
+  - vault_adapter::VaultSecretSource::new
+  - vault_client_rs::VaultClient::builder
+  - wiremock::MockServer::uri
+- name: read_sealed_returns_the_sealed_envelope
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - base64::engine::general_purpose::STANDARD
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - serde_json::json
+  - connections::vault::SecretRef::new
+  calls:
+  - connections::vault::SecretRef::new
+  - source
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: read_sealed_maps_404_to_not_found
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - serde_json::json
+  - connections::vault::SecretRef::new
+  calls:
+  - connections::vault::SecretRef::new
+  - source
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: login_returns_the_issued_token
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - serde_json::json
+  calls:
+  - source
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true
+- name: login_maps_403_to_unauthorized
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - wiremock::MockServer::start
+  - wiremock::Mock::given
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  - wiremock::ResponseTemplate::new
+  - serde_json::json
+  - vault_adapter::AdapterError::Unauthorized
+  calls:
+  - source
+  - wiremock::Mock::given
+  - wiremock::MockServer::start
+  - wiremock::ResponseTemplate::new
+  - wiremock::matchers::method
+  - wiremock::matchers::path
+  test: true

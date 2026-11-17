@@ -1,0 +1,65 @@
+---
+crate: vault_adapter
+module: crate
+description: 'Opt-in **live-Vault** test of the feature-009 audit-chain signer: it
+  signs an audit-chain head `record_hash` with a Vault-Transit-held ECDSA key and
+  verifies it back — proving the signing key never leaves Vault (the production custody
+  model), the tamper-evident-log head-anchor shape, and the stored-signature round-trip.
+  It is a no-op unless `VAULT_LIVE_ADDR` is set, so it never runs in the default unit/coverage/mutation
+  builds. Run it via `make test-vault-live`, which spins a throwaway `-dev-tls` server,
+  enables a Transit mount with an `ecdsa-p256` signing key, and points the `VAULT_LIVE_*`
+  env vars at it.'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: HEAD_HASH
+  kind: const
+  visibility: private
+  description: 'A realistic audit-chain head: a 64-hex-char `record_hash`. The signer
+    signs `record_hash.as_bytes()`, exactly the domain `http-executor`''s in-process
+    `RecordSigner` signs, so a Vault anchor and an in-process signature bind the same
+    value.'
+  references: []
+- name: Config
+  kind: struct
+  visibility: private
+  description: ''
+  derives: []
+  implements: []
+  references: []
+- name: config
+  kind: fn
+  visibility: private
+  description: Reads the `VAULT_LIVE_*` env, or `None` (skip) if the server address
+    is unset.
+  references: []
+  calls:
+  - get
+- name: client
+  kind: fn
+  visibility: private
+  description: Builds a token-auth client verifying the dev server's CA. The Relay's
+    audit signer runs with a token that carries the Transit sign/verify capability.
+  references:
+  - vault_client_rs::VaultClient
+  - vault_client_rs::VaultClient::builder
+  calls:
+  - vault_client_rs::VaultClient::builder
+- name: transit_head_anchor_signs_and_verifies_against_live_vault
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - tokio::test
+  - vault_adapter::VaultTransitSigner::new
+  - vault_adapter::VaultSignature::from_wire
+  calls:
+  - client
+  - config
+  - vault_adapter::VaultSignature::from_wire
+  - vault_adapter::VaultTransitSigner::new
+  test: true

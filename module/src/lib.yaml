@@ -1,0 +1,446 @@
+---
+crate: module
+module: crate
+description: Module-side identity for the CIC secret flow (feature-008), trust-flow
+  step 2. A workload (the "module") generates its own keypair and a PKCS#10 CSR whose
+  subject/SANs encode the task's CNs, and hands the resulting [`CertRequest`] to the
+  Relay for countersignature. **The private key never leaves this boundary** — [`ModuleIdentity`]
+  holds it (zeroizing) and only ever emits public material (the CSR now; the public
+  key for pubkey-sealing later). Pure-Rust crypto (`p256` + `x509-cert`), so the module
+  side carries no C dependency and stays within the workspace's permissive-only supply
+  chain. The key is ECDSA P-256; the intermediate CA that countersigns it is independent.
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: sealing
+  kind: mod
+  visibility: pub
+  description: ''
+- name: tests
+  kind: mod
+  visibility: private
+  description: ''
+  test: true
+- name: ModuleError
+  kind: struct
+  visibility: pub
+  description: A failure while generating the module identity or its CSR. Carries
+    no key material, so it is always safe to log.
+  derives:
+  - Debug
+  implements:
+  - std::error::Error
+  - std::fmt::Display
+  references: []
+- name: ModuleIdentity
+  kind: struct
+  visibility: pub
+  description: 'A module''s **per-request, single-use** cryptographic identity: a
+    fresh P-256 keypair minted for one trust-flow request. Its public key is a *capability*
+    — it both carries the authorization metadata (the CNs encoded in the CSR) **and**
+    is the recipient a returned secret is sealed to. This is the OIS-lib model: *"the
+    response key is always a single-use, session-level ephemeral key"*, so one keypair
+    deliberately serves both the signing identity and the ECDH sealing role. The **private
+    half never leaves this type** and zeroizes on drop. **Lifecycle contract — this
+    is not a persistent identity.** Mint one per request with [`ModuleIdentity::generate`],
+    use it for that request only, and do **not** persist or reuse it across requests:
+    reuse would turn the ephemeral key long-lived and reintroduce cross-algorithm-key-reuse
+    and forward-secrecy concerns that the single-use property is what keeps benign.
+    [`open`](Self::open) **consumes** the identity, so the single-use property is
+    enforced by the type system, not left to convention.'
+  derives: []
+  implements:
+  - std::fmt::Debug
+  references:
+  - p256::ecdsa::SigningKey
+- name: ModuleError
+  kind: impl
+  receiver: ModuleError
+  description: ''
+  references: []
+- name: new
+  kind: method
+  receiver: ModuleError
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ModuleError
+- name: message
+  kind: method
+  receiver: ModuleError
+  visibility: pub
+  description: The public failure message.
+  references: []
+  calls: []
+- name: fmt::Display for ModuleError
+  kind: impl
+  receiver: ModuleError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: ModuleError
+  trait: std::fmt::Display
+  description: ''
+  references: []
+  calls: []
+- name: std::error::Error for ModuleError
+  kind: impl
+  receiver: ModuleError
+  trait: std::error::Error
+  description: ''
+  references: []
+- name: fmt::Debug for ModuleIdentity
+  kind: impl
+  receiver: ModuleIdentity
+  trait: std::fmt::Debug
+  description: ''
+  references: []
+- name: fmt
+  kind: method
+  receiver: ModuleIdentity
+  trait: std::fmt::Debug
+  description: Redacts the signing key — a module identity never leaks its private
+    half, not even in logs or traces.
+  references: []
+  calls: []
+- name: ModuleIdentity
+  kind: impl
+  receiver: ModuleIdentity
+  description: ''
+  references: []
+- name: generate
+  kind: method
+  receiver: ModuleIdentity
+  visibility: pub
+  description: 'Mints a fresh **per-request** identity and the [`CertRequest`] to
+    countersign for `subject`/`scope`: a new P-256 keypair plus a CSR whose subject
+    CN is `subject` and whose DNS SANs carry the `scope` CNs (the task encoding).
+    Call this once per request — see the type-level lifecycle contract. # Errors [`ModuleError`]
+    if the subject/CNs cannot be encoded or the CSR cannot be built and signed.'
+  references:
+  - connections::vault::Cn
+  - connections::vault::AuthScope
+  - connections::vault::port::CertRequest
+  - p256::ecdsa::SigningKey::random
+  - rand_core::OsRng
+  - connections::vault::port::CertRequest::new
+  calls:
+  - build_csr
+  - connections::vault::port::CertRequest::new
+  - p256::ecdsa::SigningKey::random
+- name: from_pkcs8_pem
+  kind: method
+  receiver: ModuleIdentity
+  visibility: pub
+  description: 'Reconstructs an identity from an existing PKCS#8 PEM private key —
+    for a caller that *already* holds the module key (e.g. the module performing its
+    own Vault mTLS cert-auth login, where the same key is the TLS client identity).
+    The key still never leaves this type once constructed. # Errors [`ModuleError`]
+    if `pem` is not a valid PKCS#8 P-256 private key.'
+  references:
+  - p256::ecdsa::SigningKey::from_pkcs8_pem
+  calls:
+  - ModuleError::new
+  - p256::ecdsa::SigningKey::from_pkcs8_pem
+- name: certificate_request
+  kind: method
+  receiver: ModuleIdentity
+  visibility: pub
+  description: 'Builds a [`CertRequest`] (CSR) for `subject`/`scope` from this identity''s
+    key — the public counterpart of [`generate`](Self::generate) for an already-constructed
+    identity. Emits public material only. # Errors [`ModuleError`] if the subject/CNs
+    cannot be encoded or the CSR cannot be built and signed.'
+  references:
+  - connections::vault::Cn
+  - connections::vault::AuthScope
+  - connections::vault::port::CertRequest
+  - connections::vault::port::CertRequest::new
+  calls:
+  - build_csr
+  - connections::vault::port::CertRequest::new
+- name: public_key_der
+  kind: method
+  receiver: ModuleIdentity
+  visibility: pub
+  description: 'The module''s public key as SPKI DER — safe to share; the private
+    half never leaves. This is the key a returned secret is sealed to (see [`seal`]).
+    # Errors [`ModuleError`] if the public key cannot be encoded.'
+  references: []
+  calls:
+  - ModuleError::new
+- name: open
+  kind: method
+  receiver: ModuleIdentity
+  visibility: pub
+  description: 'Opens a [`SealedSecret`] that was sealed to this module''s public
+    key, recovering the plaintext as a redacting [`SecretString`]. This is the module
+    acting as the execution endpoint — the secret is decrypted *inside* the module,
+    never handed out in the open. **Consumes the identity** (`self` by value): the
+    per-request keypair is single-use, so opening ends its life and zeroizes the key
+    on drop. Mint a new [`ModuleIdentity`] for the next request. # Errors [`ModuleError`]
+    if the blob is malformed, was sealed to a different key, or was tampered with.'
+  references:
+  - connections::vault::SealedSecret
+  - secrecy::SecretString
+  - crate::sealing::open
+  calls:
+  - connections::vault::SealedSecret::ciphertext
+  - crate::sealing::open
+- name: build_csr
+  kind: fn
+  visibility: private
+  description: Builds a DER PKCS#10 CSR for `subject`/`scope`, signed by `signing_key`.
+  references:
+  - p256::ecdsa::SigningKey
+  - connections::vault::Cn
+  - connections::vault::AuthScope
+  - x509_cert::name::Name::from_str
+  - x509_cert::builder::RequestBuilder::new
+  - x509_cert::der::asn1::Ia5String::new
+  - x509_cert::ext::pkix::name::GeneralName::DnsName
+  - x509_cert::ext::pkix::SubjectAltName
+  - p256::ecdsa::DerSignature
+  calls:
+  - ModuleError::new
+  - connections::vault::AuthScope::cns
+  - connections::vault::AuthScope::is_empty
+  - connections::vault::Cn::as_str
+  - x509_cert::builder::RequestBuilder::new
+  - x509_cert::der::asn1::Ia5String::new
+  - x509_cert::ext::pkix::SubjectAltName
+  - x509_cert::ext::pkix::name::GeneralName::DnsName
+  - x509_cert::name::Name::from_str
+- name: tests::scope
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::AuthScope
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  calls:
+  - connections::vault::AuthScope::from_cns
+  - connections::vault::Cn::new
+  test: true
+- name: tests::secret_ref
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::SecretRef
+  - connections::vault::SecretRef::new
+  calls:
+  - connections::vault::SecretRef::new
+  test: true
+- name: tests::debug_redacts_the_signing_key
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  test: true
+- name: tests::generate_yields_request_matching_inputs
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::Cn::new
+  - scope
+  test: true
+- name: tests::generate_works_with_empty_scope
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  test: true
+- name: tests::each_identity_has_a_distinct_key
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  test: true
+- name: tests::public_key_der_is_stable_and_nonempty
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  test: true
+- name: tests::from_pkcs8_pem_reconstructs_a_usable_identity
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - p256::ecdsa::SigningKey::random
+  - rand_core::OsRng
+  - connections::vault::Cn::new
+  calls:
+  - ModuleIdentity::from_pkcs8_pem
+  - connections::vault::Cn::new
+  - p256::ecdsa::SigningKey::random
+  - scope
+  - seal
+  - secret_ref
+  test: true
+- name: tests::from_pkcs8_pem_rejects_an_invalid_key
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - ModuleIdentity::from_pkcs8_pem
+  test: true
+- name: tests::non_ascii_cn_in_scope_is_rejected
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::Cn::new
+  - scope
+  test: true
+- name: tests::seal_open_round_trips
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  - seal
+  - secret_ref
+  test: true
+- name: tests::a_different_module_cannot_open
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  - seal
+  - secret_ref
+  test: true
+- name: tests::tampered_ciphertext_fails_to_open
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  - connections::vault::SealedSecret::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  - connections::vault::SealedSecret::new
+  - seal
+  - secret_ref
+  test: true
+- name: tests::open_rejects_a_short_blob
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  - connections::vault::SealedSecret::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  - connections::vault::SealedSecret::new
+  - secret_ref
+  test: true
+- name: tests::open_rejects_a_blob_one_byte_under_the_header_length
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  - connections::vault::SealedSecret::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  - connections::vault::SealedSecret::new
+  - secret_ref
+  test: true
+- name: tests::open_accepts_a_blob_exactly_at_the_header_length
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  - connections::vault::SealedSecret::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  - connections::vault::SealedSecret::new
+  - secret_ref
+  test: true
+- name: tests::seal_rejects_an_invalid_recipient_key
+  kind: fn
+  visibility: private
+  description: ''
+  references: []
+  calls:
+  - seal
+  - secret_ref
+  test: true
+- name: tests::open_rejects_non_utf8_plaintext
+  kind: fn
+  visibility: private
+  description: ''
+  references:
+  - connections::vault::Cn::new
+  - connections::vault::AuthScope::new
+  calls:
+  - ModuleIdentity::generate
+  - connections::vault::AuthScope::new
+  - connections::vault::Cn::new
+  - seal
+  - secret_ref
+  test: true
