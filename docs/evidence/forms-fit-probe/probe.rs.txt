@@ -1,0 +1,87 @@
+use cic_primitive_forms::access::sha256_hex;
+use cic_primitive_forms::error::Error;
+use cic_primitive_forms::listitem::{path_of, Step};
+use cic_primitive_forms::parse::parse;
+use cic_primitive_forms::schema::{compile_schema, SchemaInput};
+use cic_primitive_forms::validate::validate;
+use std::fs;
+
+fn describe(e: &Error) -> String {
+    match e {
+        Error::Contract(vs) => {
+            let parts: Vec<String> = vs
+                .iter()
+                .map(|v| format!("{}@{}", v.code, v.logical_path.clone().unwrap_or_default()))
+                .collect();
+            format!("ERR[{}] {}", e.code(), parts.join(";"))
+        }
+        Error::Schema(ps) => {
+            let parts: Vec<String> = ps.iter().map(|p| format!("{}@{}", p.code, p.path)).collect();
+            format!("ERR[{}] {}", e.code(), parts.join(";"))
+        }
+        _ => format!("ERR[{}] ", e.code()),
+    }
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let schema = fs::read(&args[1]).unwrap();
+    let a: Vec<String> = ["value", "access", "modify", "inherit", "default_injection", "conformance"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let sha = sha256_hex(&schema);
+    let cs = match compile_schema(&SchemaInput {
+        bytes: &schema,
+        sha256: &sha,
+        grammar: "cic-primitives-73ae469-6a188078",
+        surface: "config_surface",
+    }) {
+        Ok(c) => c,
+        Err(e) => {
+            println!("compile|{}", describe(&e));
+            return;
+        }
+    };
+    println!("compile|OK");
+    let mut files: Vec<_> = fs::read_dir(&args[2])
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().map(|x| x == "yaml").unwrap_or(false))
+        .collect();
+    files.sort();
+    for f in files {
+        let id = f.file_stem().unwrap().to_string_lossy().to_string();
+        let text = fs::read_to_string(&f).unwrap();
+        let node = match parse(&text) {
+            Ok(n) => n,
+            Err(e) => {
+                println!("{}|parse|{}", id, describe(&e));
+                continue;
+            }
+        };
+        let val = match validate(Some(&node), &cs.root, &a) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}|validate|{}", id, describe(&e));
+                continue;
+            }
+        };
+        let parts: Vec<String> = val
+            .violations
+            .iter()
+            .map(|v| format!("{}@{}", v.code, v.logical_path.clone().unwrap_or_default()))
+            .collect();
+        let out = if parts.is_empty() { "OK".to_string() } else { parts.join(";") };
+        let at = vec![
+            Step::Field("artifacts".into()),
+            Step::Field("files".into()),
+            Step::Index(1),
+        ];
+        let po = match path_of(&node, &cs.root, &a, &at) {
+            Ok(p) => p,
+            Err(e) => describe(&e),
+        };
+        println!("{}|validate|{}|pathof|{}", id, out, po);
+    }
+}

@@ -1,0 +1,11 @@
+compile|OK
+01_positive|validate|OK|pathof|$.artifacts.files[{path="dependency.yaml"}]
+02_missing_source_commit|validate|MISSING_MANDATORY@$.provenance.source_commit|pathof|$.artifacts.files[{path="dependency.yaml"}]
+03_unknown_nested_field|validate|UNKNOWN_FIELD@$.provenance.grammar_sha256|pathof|$.artifacts.files[{path="dependency.yaml"}]
+04_unknown_top_field_specs|validate|UNKNOWN_FIELD@$.specs|pathof|$.artifacts.files[{path="dependency.yaml"}]
+05_duplicate_file_path|validate|PATH_DUPLICATE_IDENTITY@$.artifacts.files[{path="LICENSE.md"}]|pathof|ERR[PATH_DUPLICATE_IDENTITY] PATH_DUPLICATE_IDENTITY@$.artifacts.files[{path="LICENSE.md"}]
+06_envelope_as_string|validate|ERR[UNSUPPORTED_SYNTAX] 
+07_empty_files|validate|MIN_ITEMS_NOT_MET@$.artifacts.files|pathof|ERR[UNSUPPORTED_SYNTAX] 
+08_float_timestamp|parse|ERR[UNSUPPORTED_SYNTAX] 
+09_yes_timestamp|validate|OK|pathof|$.artifacts.files[{path="dependency.yaml"}]
+10_unquoted_timestamp|validate|OK|pathof|$.artifacts.files[{path="dependency.yaml"}]

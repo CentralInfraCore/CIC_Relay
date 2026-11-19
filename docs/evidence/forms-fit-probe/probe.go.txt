@@ -1,0 +1,68 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	forms "github.com/CentralInfraCore/cic-primitive-forms/go"
+)
+
+func describe(err error) string {
+	var e *forms.Error
+	if errors.As(err, &e) {
+		var parts []string
+		for _, v := range e.Violations {
+			parts = append(parts, v.Code+"@"+v.LogicalPath)
+		}
+		for _, p := range e.Problems {
+			parts = append(parts, p.Code+"@"+p.Path)
+		}
+		return fmt.Sprintf("ERR[%s] %s", e.Code(), strings.Join(parts, ";"))
+	}
+	return "ERR " + err.Error()
+}
+
+func main() {
+	schema, _ := os.ReadFile(os.Args[1])
+	a := []string{"value", "access", "modify", "inherit", "default_injection", "conformance"}
+	cs, err := forms.CompileSchema(forms.SchemaInput{Bytes: schema, SHA256: forms.SHA256Hex(schema), Grammar: "cic-primitives-73ae469-6a188078", Surface: "config_surface"})
+	if err != nil {
+		fmt.Println("compile|" + describe(err))
+		os.Exit(0)
+	}
+	fmt.Println("compile|OK")
+	files, _ := filepath.Glob(filepath.Join(os.Args[2], "*.yaml"))
+	sort.Strings(files)
+	for _, f := range files {
+		id := strings.TrimSuffix(filepath.Base(f), ".yaml")
+		text, _ := os.ReadFile(f)
+		node, err := forms.Parse(string(text))
+		if err != nil {
+			fmt.Println(id + "|parse|" + describe(err))
+			continue
+		}
+		val, err := forms.Validate(node, cs.Root, a)
+		if err != nil {
+			fmt.Println(id + "|validate|" + describe(err))
+			continue
+		}
+		var parts []string
+		for _, v := range val.Violations {
+			parts = append(parts, v.Code+"@"+v.LogicalPath)
+		}
+		out := "OK"
+		if len(parts) > 0 {
+			out = strings.Join(parts, ";")
+		}
+		pa, perr := forms.PathOf(node, cs.Root, a, []forms.Step{{Field: "artifacts"}, {Field: "files"}, {Index: 1, IsIndex: true}})
+		po := pa
+		if perr != nil {
+			po = describe(perr)
+		}
+		fmt.Println(id + "|validate|" + out + "|pathof|" + po)
+	}
+}
