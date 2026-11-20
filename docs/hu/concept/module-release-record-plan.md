@@ -52,14 +52,14 @@ Hely: új `tools/release_record/` modul a `wasm/main`-ből induló `wasm/f/relea
 3. Összeállítja a bundle-t, kiszámítja a `build_hash`-t, beszerzi a `release.sign`-t, majd a `cic_countersign`-t, és kiírja a `<név>.release.yaml`-t (D1). A rekord maga nem artifact, tehát nincs körkörösség. Utólag commitoljuk, majd jön a tag (release-modell: devel → main → tag, visszamerge nincs).
 4. **Publikálás-ellenőrzés (review F2).** A kibocsátás előtti ellenőrzés a rekordot a forrás-commithoz köti; azt nem bizonyítja, mi kerül publikálásra. A tag után és minden publikált másolatra a `verify-published` ellenőrzi: a tag olyan commitra mutat, amelynek fája a forrás-committól csak a rekordfájlban tér el (más hozzáadott vagy módosított útvonal nincs); minden deklarált artifact blobja a tagnél egyezik az aláírt rekord digestjével; és az artifact minden terjesztett másolata (release asset, OCI vagy archívum tartalom, a Relay által később betöltött másolat) bájtra egyezik a rekord digestjével. Bármely eltérés elutasítás saját okkal (`tag_tree_differs`, `published_artifact_mismatch`, `published_artifact_absent`). A rekord lehet helyes úgy is, hogy más tartalom kerül publikálásra; ezt zárja ki ez a lépés, és a producer release-jobjában fut, mielőtt a release meghirdetésre kerül.
 
-**Deklaráció.** A `project.yaml` `compiler_settings.release_artifacts.paths`, pontosan a szerződés 6. szakaszának kulcsa és szabályai (explicit útvonalak, glob nélkül, ugyanazok az elutasítási azonosítók). A `project.schema.yaml` a `compiler_settings`-en `additionalProperties: false`-t ír elő, ezért a séma ezt a kulcsot megkapja. A kibocsátó egy producer-oldali szabályt ad **a deklarációra, nem a rekordra**: a `module/module.wasm` és a `project.yaml` egyaránt deklarált kell legyen (`declaration_required_path_missing`). Így köti a rekord a WASM-ot és a teljes leírót (`abi`, `capability_manifest`) együtt, a szerződésen és a verifieren ez semmit nem változtat.
+**Deklaráció.** A `project.yaml` `compiler_settings.release_artifacts.paths`, pontosan a szerződés 6. szakaszának kulcsa és szabályai (explicit útvonalak, glob nélkül, ugyanazok az elutasítási azonosítók). A `project.schema.yaml` a `compiler_settings`-en `additionalProperties: false`-t deklarál, ezért a séma megkapja ezt a kulcsot. Az emitter egy **producer-oldali** szabályt tesz hozzá **a deklarációra**: a `module/module.wasm` és a `project.yaml` is deklarált kell legyen (`declaration_required_path_missing`; a cic-primitives #38 (merge commit `e364548`) P01 követelménye). Így köti a rekord együtt a WASM-ot és a teljes leírót (`abi`, `capability_manifest`). Ugyanez a tény a kész rekordon **verifier-oldali** kötelezettség is (V09, 10. szakasz): a producer-szabály nem váltja ki, és egyik sem helyettesíti a másikat. A deklarációs szabály önmagában nem változtat a szerződésen; a verifier-oldali szabály a release sémakészlet ModuleRelease részének követelménye (10. szakasz).
 
-**Rekord-tagok.** `kind: ModuleRelease`, `name`, `version`, `timestamp`, `validity`, `createdBy`, `provenance{envelope:3, source_commit}`, `artifacts`, `release{envelope:3, createdBy, build_hash, sign}`, `cic_countersign`. A `specs` elmarad.
+**Rekord-tagok.** `kind: ModuleRelease`, `name`, `version`, `timestamp`, `validity`, `createdBy`, `provenance{envelope:3, source_commit}`, `artifacts`, `release{envelope:3, createdBy, build_hash, sign}`, `cic_countersign`. A `specs` elmarad. **A `name` kötelező, ModuleRelease-specifikus tag** (a cic-primitives #38 (merge commit `e364548`) P5.1 döntése): nincs a közös envelope-ban, a PrimitiveRelease rekord nem hordozza; a release aláírt identitásának része, és a **hitelesített moduldescriptor identitásához kötött** (V08, 10. szakasz), nem puszta artifact-hivatkozás. A descriptorhoz és a WASM-hoz nem kerül további mutató tag az envelope-ba: a kötést az `artifacts.files` adja.
 
 **Szerződéshatár (review F3).** A primitives envelope 3 szerződés és a `release.schema.yaml` a `PrimitiveRelease`-re szól: a séma `kind: PrimitiveRelease` értéket (`const`) és nem üres `specs`-et követel. Egy `ModuleRelease` rekord ezért **elbukik a jelenlegi sémán**, és a referencia-verifier átmenete nem bizonyít sémamegfelelést (a rekord rétege az `envelope`, `source_commit` és `artifacts` mezőt olvassa, a `specs`-et csak duplikáció-ellenőrzésre). A kibocsátót tehát egy szerződéses lépés blokkolja, amelyet a terv előfeltételként rögzít, nem feltevésként:
 
-1. Külön cic-primitives változtatás (tulajdonosi merge, nem ebben a repóban), amely szétválasztja a **közös envelope-ot** (`provenance.envelope`, `provenance.source_commit`, `artifacts`, `release`, `cic_countersign`, a hash-szabály) a **típusspecifikus tagoktól** (`PrimitiveRelease`: `specs`; `ModuleRelease`: az artifact-készleten túl semmi), `kind`-onként egy sémával, amely a közös részt megosztja, és kimondja a verifier viselkedését minden `kind`-ra.
-2. Amíg ez nincs mergelve, fogyasztónak szánt `ModuleRelease` rekord nem készül. A producer-munka ideiglenesnek jelölt vektorokkal indulhat.
+1. Külön cic-primitives változtatás (tulajdonosi merge, nem ebben a repóban), amely szétválasztja a **közös envelope-ot** (`provenance.envelope`, `provenance.source_commit`, `artifacts`, `release`, `cic_countersign`, a hash-szabály) a **típusspecifikus tagoktól** (`PrimitiveRelease`: `specs` és a primitive provenance-digestek; `ModuleRelease`: `name` és az artifact-készlet szabályai), `kind` szerinti sémával, amely osztozik a közös részen, és a verifier `kind` szerinti viselkedésével. **Állapot:** e szétválasztás terve vázlatként mergelve a cic-primitives #38-ban (merge commit `e364548`) (`docs/design/release-schemas/`: `common.yaml`, `primitive-release.yaml`, `module-release.yaml`, az összeállítási szabályok és a megfelelőségi deklaráció). A vázlatok **nem véglegesek** (a véglegesítés a grammatika node-név szabályára vár, cic-primitives #39), származtatott JSON Schema nincs.
+2. Amíg a `kind` szerinti sémák nem véglegesek, fogyasztónak szánt `ModuleRelease` rekord nem készül. A producer-munka ideiglenesnek jelölt vektorokkal indulhat.
 3. A rekordot a verifier mellett a `kind` szerinti séma ellen is validáljuk (5. szakasz, V1).
 
 **Legacy elválasztás (review F1).** Két állítás, egymástól elválasztva:
@@ -75,7 +75,7 @@ A sorrend ebből következik: minden legacy mezőnek végleges alakban (kitöltv
 
 Elfogadás: a kibocsátó rekordja átmegy a primitives referencia-verifieren, a `tools/release_record_conformance.py`-n mind a három rétegen, **a blobokat is beleértve**, ideiglenes git repóban, valódi commit mellett. A Relay nem szükséges.
 
-* **V1 (tagkészlet).** A `specs` nélküli, `kind: ModuleRelease` modul-rekord átmegy a `record`, `blobs` és `crypto` rétegen.
+* **V1 (tagkészlet).** A `specs` nélküli, `kind: ModuleRelease`, `name`-et hordozó modul-rekord átmegy a `record`, `blobs` és `crypto` rétegen. A `name` nélküli rekord, és a `name`-et hordozó PrimitiveRelease rekord elutasított (szerkezeti, a módosítatlan Formon megfigyelve a cic-primitives #38-ban (merge commit `e364548`)).
 * **Pozitív.** A teszt-kulcsok rögzített címkékből levezetve (mint a primitives vektoroknál); teszt-tanúsítványlánc helyettesíti a Vaultot és a CICSourceCA-t; valódi `git` commitok.
 * **Differenciális.** A kibocsátó `build_hash`-e és `artifacts`-a a primitives `_release_hash_payload` és `_build_release_artifacts` ellen generált bemeneteken; bármilyen eltérés bukik.
 * **Negatív (a kibocsátó elutasít).** Minden deklarációs ok, `declaration_required_path_missing`, `shipped_differs_from_commit`, symlink vagy submodule útvonal, a commitban hiányzó útvonal, hiányzó forrás-commit.
@@ -83,7 +83,7 @@ Elfogadás: a kibocsátó rekordja átmegy a primitives referencia-verifieren, a
 * **Leíró és WASM kötés.** Bármelyik kivétele a deklarációból: a kibocsátó elutasítja; a kész rekordból kivéve: a `build_hash` bukik.
 * **Elválasztás (F1).** Érvényes `cicSign`-os, rekord nélküli fa nem kap rekord-alapú átmenetet. Az a rekord, amelynek `project.yaml`-jában a `cicSign` (vagy `sign`, `checksum`) az aláírás után változik, **elbukik** a blobs rétegen artifact-digest okkal; a rekordot nem menti meg egy érvényes `cicSign`, és az érvényes rekordot nem érinti, ha a legacy érték a kibocsátáskor hibás (csak kötött, soha nem bizalmi).
 * **Publikálás (F2).** Az a tag, amelynek fája a rekordfájlon kívül mással tér el a forrás-committól, a tagnél módosult deklarált artifact, egy bájtban eltérő terjesztett másolat és egy hiányzó másolat egyaránt elbukik a `verify-published`-en a megnevezett okkal; a változatlan publikáció átmegy.
-* **Séma (F3).** A kibocsátott rekord átmegy a `kind` szerinti sémán, amint a szerződéses lépés létezik; a `kind: ModuleRelease` rekord a jelenlegi `PrimitiveRelease` sémán várhatóan elbukik (rögzített negatív, amely csak a szerződésváltozással fordul átmenetre).
+* **Séma (F3).** A kibocsátott rekord átmegy a `kind` szerinti sémán, amint az végleges; addig a cic-primitives #38 (merge commit `e364548`) vázlatai a referencia, a vektorok ideiglenesek maradnak. A `kind: ModuleRelease` rekord a jelenlegi `PrimitiveRelease` sémán várhatóan elbukik (rögzített negatív).
 * **Mutációs bizonyíték** a kibocsátóra: útvonal-rendezés, digest-előtag, hash-kizárási készlet, blob kontra munkafa, újsor-szűrés, aláírási lépések sorrendje, mind beültetett hiba, amelyet egy tesztnek meg kell ölnie.
 
 ## 6. D4 felmérés: az authorization policy
@@ -109,12 +109,12 @@ Elfogadás: a kibocsátó rekordja átmegy a primitives referencia-verifieren, a
 
 ## 7. Nyitott pontok a reviewernek
 
-* Elfogadható-e a `kind: ModuleRelease` `specs` nélkül, vagy a szerződés kapjon állítást a nem-spec rekordokról (szerződésváltozás, itt nem döntött)?
-* A producer-oldali szabály, hogy a `module/module.wasm` és a `project.yaml` deklarált kell legyen: elfogadható-e szerződésen kívüli deklarációs szabályként?
+* ~~Elfogadható-e a `kind: ModuleRelease` `specs` nélkül~~ **Eldöntve** (cic-primitives #38 (merge commit `e364548`)): a ModuleRelease rész nem hordoz `specs`-et; saját kötelező `name`-je van; a közös/kind szétválasztás a release sémakészlet vázlataiban.
+* ~~A producer-oldali szabály, hogy a `module/module.wasm` és a `project.yaml` deklarált kell legyen~~ **Eldöntve** (P5.2): producer-oldali (P01) **és** verifier-oldali (V09), mindegyik pontosan egyszer, további artifactok megengedettek (10. szakasz).
 * A workflow azonosító és az allowlist-változtatás a `cic-countersign`-ban.
 * A policy-kiadói minta: hol rögzített és hogyan rotálható.
 * Lehet-e a modul aláírója és az ellenjegyző ugyanazon személy kulcsútvonala (feladatelválasztás).
-* A cic-primitives `kind` szerinti szerződésváltozása (F3): gazdája, hatóköre, és indulhatnak-e az ideiglenes vektorok a merge előtt.
+* A cic-primitives `kind` szerinti szerződésváltozása (F3): a terv vázlatként mergelve (cic-primitives #38 (merge commit `e364548`)); nyitott: a véglegesítés (a cic-primitives #39-re vár), a származtatott JSON Schema, és hogy indulhatnak-e az ideiglenes vektorok (indulhatnak, ideiglenesnek jelölve).
 * A `verify-published` lefedi-e a Relay által később letöltött másolatokat is (F2), vagy csak a producer release-jobját.
 
 ## 8. Amit ez a felmérés nem igazolt
@@ -124,3 +124,17 @@ A primitives `release_record_conformance.py`-t csak a publikált `v0.2.1` rekord
 ## 9. Sorrend
 
 A terv review-ja; a cic-primitives `kind` szerinti szerződésváltozása (F3); utána először a producer-vektorok (mindegyik elbukik, mielőtt a kibocsátó létezik), majd a kibocsátó, majd egy base-repo PR a `wasm/main`-re. A Relay implementáció csak azután indul, hogy a rekord-szerződés és a D4 policy-szerződés végleges.
+
+## 10. Szinkron a release sémakészlettel (cic-primitives #38)
+
+Forrás: cic-primitives #38 (merge commit `e364548`), `docs/design/release-schemas/contract-conformance.yaml` (V08, V09, P01 követelmények) és `docs/en/RELEASE-SCHEMA-SET-DESIGN.md` 7. szakasz (P5). Csak dokumentáció: semmi nem változtat kódot, sémát, szerződést vagy verifiert. A producer- és verifier-oldali kötelezettségek elkülönítve:
+
+| Azonosító | Végrehajtó | Állapot ott | Kötelezettség ModuleRelease rekordra |
+|---|---|---|---|
+| P01 | producer (az emitter) | planned | elutasítja azt a deklarációt, amelyből hiányzik a `module/module.wasm` vagy a `project.yaml` (`declaration_required_path_missing`), még rekord kibocsátása előtt |
+| V08 | verifier | planned | a top-level `name` egyezzen a **hitelesített moduldescriptor** (`project.yaml`, az `artifacts.files`-on át kötve) identitásával; a `module_identity_mismatch` reason-azonosító a vázlat javaslata, a szerződésnek még nem része |
+| V09 | verifier | planned | a `module/module.wasm` és a `project.yaml` **pontosan egyszer** szerepeljen a hitelesített artifactlistában; a hiányzó vagy ismétlődő elutasított (`kind_schema_violation`) **kriptográfiailag hibátlan rekord esetén is**: az aláírás a tartalom hitelességét bizonyítja, nem a modul-release szemantikai teljességét; további artifactok megengedettek |
+
+Amit a módosítatlan Form a vázlatokkal tett (ugyanaz a PR, `docs/evidence/release-schema-draft-probe/`, Rust és Go bájtazonos): a hiányzó `name` elutasított, a `name` PrimitiveRelease rekordban elutasított; a descriptor identitásától eltérő név, a rossz `kind` és a hiányzó modul-artifact **átmegy** (a Form nem értékel ki contractot), ezért a V08 és a V09 a verifiernél marad, a felületi `must` bejegyzéseket a Form nem is jelenti (cic-primitive-forms #167).
+
+Itt nem ellenőriztem: hogy a V08, V09, P01 bármelyike implementált-e (mind `planned`); a pontos descriptor-mező, amelyből az identitás olvasódik (a V08 implementációs specifikálásakor rögzítendő); a `module_identity_mismatch` azonosítót; a származtatott JSON Schema-t (nincs). A Relay és a base-repo implementáció HOLD marad.

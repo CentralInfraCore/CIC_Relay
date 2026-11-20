@@ -52,14 +52,14 @@ Location: a new module `tools/release_record/` on a feature branch `wasm/f/relea
 3. It builds the bundle, computes `build_hash`, obtains `release.sign` and then `cic_countersign`, and writes `<name>.release.yaml` (D1). The record is not itself an artifact, so there is no circularity. It is committed afterwards, and the tag follows (release model: devel to main to tag, no merge back).
 4. **Publication check (review F2).** The pre-emit check proves the record against the source commit; it does not prove what is published. After the tag and for every published copy, `verify-published` checks: the tag resolves to a commit whose tree differs from the source commit only by the record file (and no other added or changed path); every declared artifact's blob at the tag equals the digest in the signed record; and every distributed copy of an artifact (a release asset, an OCI or archive payload, a copy the Relay later loads) is byte-compared with the record's digest. Any difference is a refusal with its own reason (`tag_tree_differs`, `published_artifact_mismatch`, `published_artifact_absent`). The record may be correct while other content is published; this step is what rules that out, and it runs in the producer's release job before the release is announced.
 
-**Declaration.** `compiler_settings.release_artifacts.paths` in `project.yaml`, exactly the key and rules of contract section 6 (explicit paths, no glob, same refusal identifiers). `project.schema.yaml` declares `additionalProperties: false` on `compiler_settings`, so the schema gains this key. The emitter adds one producer-side rule **on the declaration, not on the record**: `module/module.wasm` and `project.yaml` must both be declared (`declaration_required_path_missing`). This is how the record binds the WASM and the complete descriptor (`abi`, `capability_manifest`) together, and it changes nothing in the contract or the verifier.
+**Declaration.** `compiler_settings.release_artifacts.paths` in `project.yaml`, exactly the key and rules of contract section 6 (explicit paths, no glob, same refusal identifiers). `project.schema.yaml` declares `additionalProperties: false` on `compiler_settings`, so the schema gains this key. The emitter adds one **producer-side** rule **on the declaration**: `module/module.wasm` and `project.yaml` must both be declared (`declaration_required_path_missing`; requirement P01 of cic-primitives #38 (merge commit `e364548`)). This is how the record binds the WASM and the complete descriptor (`abi`, `capability_manifest`) together. The same fact is also a **verifier-side** obligation on the finished record (V09, section 10): the producer rule does not replace it, and neither replaces the other. The declaration rule alone changes nothing in the contract; the verifier-side rule is a requirement of the ModuleRelease part of the release schema set (section 10).
 
-**Record members.** `kind: ModuleRelease`, `name`, `version`, `timestamp`, `validity`, `createdBy`, `provenance{envelope:3, source_commit}`, `artifacts`, `release{envelope:3, createdBy, build_hash, sign}`, `cic_countersign`. `specs` is omitted.
+**Record members.** `kind: ModuleRelease`, `name`, `version`, `timestamp`, `validity`, `createdBy`, `provenance{envelope:3, source_commit}`, `artifacts`, `release{envelope:3, createdBy, build_hash, sign}`, `cic_countersign`. `specs` is omitted. **`name` is a mandatory ModuleRelease-specific member** (decided in cic-primitives #38 (merge commit `e364548`), P5.1): it is not in the common envelope and a PrimitiveRelease record does not carry it; it is part of the signed identity of the release and is **bound to the identity of the authenticated module descriptor** (V08, section 10), not a mere artifact reference. No further pointer members for the descriptor or the WASM are added to the envelope: `artifacts.files` is the binding.
 
 **Contract boundary (review F3).** The primitives envelope 3 contract and its `release.schema.yaml` are written for `PrimitiveRelease`: the schema requires `kind: PrimitiveRelease` (a `const`) and a non-empty `specs`. A `ModuleRelease` record therefore **fails the current schema**, and a pass of the reference verifier does not show schema conformance (its record layer reads `envelope`, `source_commit` and `artifacts`, and `specs` only for a duplicate check). So the emitter is blocked on a contract step, which this plan makes a precondition and not an assumption:
 
-1. A separate cic-primitives change (owner-merged, not part of this repository) that separates the **common envelope** (`provenance.envelope`, `provenance.source_commit`, `artifacts`, `release`, `cic_countersign`, the hash rule) from the **type-specific members** (`PrimitiveRelease`: `specs`; `ModuleRelease`: none beyond the artifact set), with one schema per `kind` that shares the common part, and with the verifier's behaviour for each `kind` stated.
-2. Until it is merged, no `ModuleRelease` record is emitted for a consumer. The producer work may start against vectors that are marked provisional.
+1. A separate cic-primitives change (owner-merged, not part of this repository) that separates the **common envelope** (`provenance.envelope`, `provenance.source_commit`, `artifacts`, `release`, `cic_countersign`, the hash rule) from the **type-specific members** (`PrimitiveRelease`: `specs` and the primitive provenance digests; `ModuleRelease`: `name` and the artifact-set rules), with one schema per `kind` that shares the common part, and with the verifier's behaviour for each `kind` stated. **Status:** the design of this separation is merged as drafts in cic-primitives #38 (merge commit `e364548`) (`docs/design/release-schemas/`: `common.yaml`, `primitive-release.yaml`, `module-release.yaml`, the composition rules and the conformance declaration). The drafts are **not final** (finalization waits for the node-name rule of the grammar, cic-primitives #39) and no derived JSON Schema exists.
+2. Until the per-kind schemas are final, no `ModuleRelease` record is emitted for a consumer. The producer work may start against vectors that are marked provisional.
 3. The record is validated against the per-kind schema in addition to the verifier (section 5, V1).
 
 **Legacy separation (review F1).** Two statements, kept apart:
@@ -75,7 +75,7 @@ The sequence follows: every legacy field must be in its final form (a filled val
 
 Acceptance is: a record emitted by the emitter passes the primitives reference verifier `tools/release_record_conformance.py` on all three layers, **blobs included**, in a temporary git repository with a real commit. The Relay is not needed.
 
-* **V1 (member set).** A module record without `specs` and with `kind: ModuleRelease` passes `record`, `blobs` and `crypto`.
+* **V1 (member set).** A module record without `specs`, with `kind: ModuleRelease` and a `name` passes `record`, `blobs` and `crypto`. A record without `name`, and a PrimitiveRelease record that carries a `name`, are refused (structural, observed on the unchanged Form in cic-primitives #38 (merge commit `e364548`)).
 * **Positive.** Test keys are derived from fixed labels (as in the primitives vectors); a test certificate chain stands in for Vault and CICSourceCA; real `git` commits.
 * **Differential.** Emitter `build_hash` and `artifacts` against the primitives `_release_hash_payload` and `_build_release_artifacts` over generated inputs; any difference fails.
 * **Negative (emitter refuses).** Each declaration reason, `declaration_required_path_missing`, `shipped_differs_from_commit`, a symlink or submodule path, a path absent from the commit, a missing source commit.
@@ -83,7 +83,7 @@ Acceptance is: a record emitted by the emitter passes the primitives reference v
 * **Descriptor and WASM binding.** Dropping either from the declaration is refused by the emitter; removing it from a finished record fails `build_hash`.
 * **Separation (F1).** A tree with a valid `cicSign` and no record gets no record-based pass. A record over a `project.yaml` whose `cicSign` (or `sign`, `checksum`) is changed after signing **fails** the blobs layer with an artifact digest reason; a record is not rescued by a valid `cicSign`, and a valid record is not affected by the legacy value being wrong at emit time (it is only bound, never trusted).
 * **Publication (F2).** A tag whose tree differs from the source commit by anything but the record file, a declared artifact changed at the tag, a distributed copy with one changed byte, and an absent copy each fail `verify-published` with the named reason; an unchanged publication passes.
-* **Schema (F3).** The emitted record validates against the per-kind schema once the contract step exists; a record with `kind: ModuleRelease` is expected to fail the current `PrimitiveRelease` schema (a recorded negative that turns into a pass only with the contract change).
+* **Schema (F3).** The emitted record validates against the per-kind schema once it is final; until then the drafts of cic-primitives #38 (merge commit `e364548`) are the reference and the vectors stay provisional. A record with `kind: ModuleRelease` is expected to fail the current `PrimitiveRelease` schema (a recorded negative).
 * **Mutation evidence** on the emitter: path sort, digest prefix, hash exclusion set, blob versus working tree, newline filtering, order of signing steps, each as a planted defect that a test must kill.
 
 ## 6. D4 survey: the authorization policy
@@ -109,12 +109,12 @@ Acceptance is: a record emitted by the emitter passes the primitives reference v
 
 ## 7. Open points for the reviewer
 
-* Is `kind: ModuleRelease` without `specs` acceptable, or should the contract gain a statement about non-spec records (a contract change, not decided here)?
-* The producer-side rule that `module/module.wasm` and `project.yaml` must be declared: acceptable as a declaration rule outside the contract?
+* ~~Is `kind: ModuleRelease` without `specs` acceptable~~ **Decided** (cic-primitives #38 (merge commit `e364548`)): the ModuleRelease part carries no `specs`; it has its own mandatory `name`; the common/kind separation is in the release schema set drafts.
+* ~~The producer-side rule that `module/module.wasm` and `project.yaml` must be declared~~ **Decided** (P5.2): producer-side (P01) **and** verifier-side (V09), each exactly once, further artifacts allowed (section 10).
 * Workflow identifier and the allowlist change in `cic-countersign`.
 * Policy-issuer pattern: where it is pinned and how it is rotated.
 * Whether the signer of a module and the countersigner can be the same person's key path (separation of duty).
-* The per-`kind` contract change in cic-primitives (F3): its owner, its scope, and whether the provisional vectors may start before it merges.
+* The per-`kind` contract change in cic-primitives (F3): the design is merged as drafts (cic-primitives #38 (merge commit `e364548`)); open: finalization (waits for cic-primitives #39), the derived JSON Schema, and whether the provisional vectors may start (they may, marked provisional).
 * Whether `verify-published` also covers copies the Relay itself downloads later (F2), or only the producer's release job.
 
 ## 8. What this survey did not verify
@@ -124,3 +124,17 @@ The primitives `release_record_conformance.py` was run only on the published `v0
 ## 9. Sequence
 
 Review of this plan; the cic-primitives per-`kind` contract change (F3); then producer vectors first (each test failing before the emitter exists), then the emitter, then a base-repo PR to `wasm/main`. Relay implementation starts only after the record contract and the D4 policy contract are final.
+
+## 10. Synchronization with the release schema set (cic-primitives #38)
+
+Source: cic-primitives #38 (merge commit `e364548`), `docs/design/release-schemas/contract-conformance.yaml` (requirements V08, V09, P01) and `docs/en/RELEASE-SCHEMA-SET-DESIGN.md` section 7 (P5). Documentation only: nothing here changes code, a schema, a contract or a verifier. The producer and verifier obligations are kept apart:
+
+| Id | Executor | Status there | Obligation for a ModuleRelease record |
+|---|---|---|---|
+| P01 | producer (the emitter) | planned | refuse a declaration that lacks `module/module.wasm` or `project.yaml` (`declaration_required_path_missing`) before any record is emitted |
+| V08 | verifier | planned | the top-level `name` must equal the identity of the **authenticated module descriptor** (`project.yaml`, bound through `artifacts.files`); reason identifier `module_identity_mismatch` is a proposal of that draft, not yet part of the contract |
+| V09 | verifier | planned | `module/module.wasm` and `project.yaml` must each appear **exactly once** in the authenticated artifact list; a missing or repeated one is refused (`kind_schema_violation`) **even when the record is cryptographically valid**: the signature proves the content, not the semantic completeness of the module release; further artifacts are allowed |
+
+What the unchanged Form was observed to do with the drafts (same PR, `docs/evidence/release-schema-draft-probe/`, Rust and Go byte-identical): a missing `name` is refused, a `name` in a PrimitiveRelease record is refused; a name that differs from the descriptor identity, a wrong `kind` and a missing module artifact are **accepted** (the Form evaluates no contract), so V08 and V09 stay with the verifier, and the surface-level `must` entries are not even reported by the Form (cic-primitive-forms #167).
+
+Not verified here: that any of V08, V09, P01 is implemented (all three are `planned`); the exact descriptor field the identity is read from (to be fixed when V08 is specified for implementation); the reason identifier `module_identity_mismatch`; the derived JSON Schema (does not exist). The Relay and base-repo implementation stay on hold.
