@@ -1,0 +1,73 @@
+---
+package: main
+description: 'objinventory lists the top-level functions and methods of Go source
+  files with their exact source spans, as JSON. It is the Go side of the object inventory
+  of scripts/object_model.py (object-id/1): the Python side decides what an object
+  is called and how coverage blocks are attributed, this tool only reports what the
+  syntax tree says. Usage: objinventory <file.go> [<file.go> ...] Only the standard
+  library is used and nothing is type checked. A function literal is not an object
+  of its own: it belongs to the top-level declaration whose span contains it (the
+  documented attribution rule), so only FuncDecl spans are listed.'
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: Pos
+  kind: struct
+  description: Pos is a source position. Line and column are 1-based, as in a Go cover
+    profile.
+  implements: []
+  references: []
+- name: Func
+  kind: struct
+  description: Func is one top-level function or method.
+  implements: []
+  references: []
+- name: File
+  kind: struct
+  description: File is the result for one input file.
+  implements: []
+  references: []
+- name: Dump
+  kind: struct
+  description: Dump is the whole output.
+  implements: []
+  references: []
+- name: recvName
+  kind: func
+  description: 'recvName returns the base type name of a receiver expression: T, *T,
+    T[K], *T[K].'
+  references: []
+  calls: []
+- name: buildConstraint
+  kind: func
+  description: buildConstraint returns the //go:build line that precedes the package
+    clause.
+  references: []
+  calls:
+  - Pos
+- name: dumpFile
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - End
+  - Error
+  - Pos
+  - Position
+- name: run
+  kind: func
+  description: 'run is main without the process: it returns the exit status.'
+  references: []
+  calls:
+  - Encode
+  - SetIndent
+- name: main
+  kind: func
+  description: ''
+  references: []
+  calls: []

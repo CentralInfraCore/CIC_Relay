@@ -1,0 +1,131 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: recordingRuntime
+  kind: struct
+  description: recordingRuntime records how host modules are registered during the
+    host setup.
+  implements: []
+  references:
+  - wazero.Runtime
+- name: wasiClasses
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: NewHostModuleBuilder
+  kind: method
+  receiver: recordingRuntime
+  description: ''
+  references:
+  - wazero.HostModuleBuilder
+  calls:
+  - NewHostModuleBuilder
+- name: InstantiateWithConfig
+  kind: method
+  receiver: recordingRuntime
+  description: ''
+  references:
+  - wazero.ModuleConfig
+  - api.Module
+  calls:
+  - InstantiateWithConfig
+- name: InstantiateModule
+  kind: method
+  receiver: recordingRuntime
+  description: ''
+  references:
+  - wazero.CompiledModule
+  - wazero.ModuleConfig
+  - api.Module
+  calls:
+  - InstantiateModule
+- name: CompileModule
+  kind: method
+  receiver: recordingRuntime
+  description: ''
+  references:
+  - wazero.CompiledModule
+  calls:
+  - CompileModule
+- name: enumerateHostSurface
+  kind: func
+  description: enumerateHostSurface builds the production WasmManager with the production
+    host setup and returns module -> sorted exported function names, for every module
+    the setup registered plus WASI.
+  references:
+  - cabinet.WasmManagerConfig
+  - wazero.Runtime
+  - cabinet.NewWasmManager
+  - require.NoError
+  - wazero.Runtime.Module
+  calls:
+  - Close
+  - ExportedFunctionDefinitions
+  - cabinet.NewWasmManager
+  - require.NoError
+  - wazero.Runtime.Module
+- name: TestHostSurface_MatchesThePolicyTable
+  kind: func
+  description: ''
+  references:
+  - assert.Empty
+  - assert.True
+  calls:
+  - assert.Empty
+  - assert.True
+- name: TestHostSurface_ComparisonDetectsAdditionAndDisappearance
+  kind: func
+  description: 'The comparison above must be able to fail: the table is checked against
+    deliberately wrong surfaces.'
+  references:
+  - require.Empty
+  - assert.Equal
+  - assert.Len
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - assert.Len
+  - require.Empty
+- name: expectedHostSurface
+  kind: var
+  description: ''
+  references: []
+- name: classGitCapability
+  kind: const
+  description: ''
+  references: []
+- name: classCICFlowCapability
+  kind: const
+  description: ''
+  references: []
+- name: classWASIProcess
+  kind: const
+  description: The guest module config (core/cabinet/cicwasm.go) mounts no filesystem,
+    passes no arguments or environment and opens no sockets, so these WASI calls act
+    on nothing the relay owns.
+  references: []
+- name: classWASIArgsEnv
+  kind: const
+  description: ''
+  references: []
+- name: classWASIFD
+  kind: const
+  description: ''
+  references: []
+- name: classWASIPath
+  kind: const
+  description: ''
+  references: []
+- name: classWASISocket
+  kind: const
+  description: ''
+  references: []

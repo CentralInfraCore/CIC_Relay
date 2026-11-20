@@ -454,6 +454,57 @@ objects:
   - assert.NotNil
   - require.NoError
   - schemacompile.BuildSchema
+- name: TestValidateSchemaRef
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - schemacompile.ValidateSchemaRef
+  - assert.Error
+  calls:
+  - assert.Error
+  - assert.NoError
+  - schemacompile.ValidateSchemaRef
+- name: TestBuildSchema_RejectsYAMLInjection
+  kind: func
+  description: 'The sink must refuse an injected value itself: the /set endpoint runs
+    the same workflow with an arbitrary payload, so the HTTP handler''s check alone
+    is not enough.'
+  references:
+  - schemacompile.BuildSchema
+  - require.Error
+  - assert.Nil
+  calls:
+  - assert.Nil
+  - require.Error
+  - schemacompile.BuildSchema
+- name: TestRenderStubArtifact_OrdinaryValuesKeepTheFormerBytes
+  kind: func
+  description: 'The stub artifact is typed YAML: ordinary values keep the exact bytes
+    of the former template, and values that would parse as another type stay strings.'
+  references:
+  - schemacompile.BuildSchema
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.NoError
+  - schemacompile.BuildSchema
+- name: TestRenderStubArtifact_AmbiguousValuesStayStrings
+  kind: func
+  description: ''
+  references:
+  - schemacompile.BuildSchema
+  - require.NoError
+  - yaml.Unmarshal
+  - assert.True
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - assert.True
+  - require.NoError
+  - schemacompile.BuildSchema
+  - yaml.Unmarshal
 - name: emptySpecChecksum
   kind: var
   description: emptySpecChecksum = sha256(canonical_json({}))

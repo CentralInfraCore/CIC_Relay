@@ -1,0 +1,84 @@
+---
+package: main
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: crlPolicy
+  kind: struct
+  description: 'crlPolicy decides what a bad CRL means. Strict (prod): a CRL that
+    cannot be parsed, whose signature does not verify against a trusted issuer, or
+    that is stale, is a start-up error. Lenient (dev): such a CRL is logged and not
+    used. Either way a CRL with a bad signature is never used.'
+  implements: []
+  references:
+  - cabinet.CRLFreshness
+- name: crlIssuerPolicy
+  kind: struct
+  description: 'crlIssuerPolicy is the operator''s explicit declaration of which issuers
+    must have a CRL. Trust is declared, not assumed: in prod the declaration is mandatory,
+    and "no issuer requires a CRL" has to be written down as such (none).'
+  implements: []
+  references: []
+- name: acceptCRLs
+  kind: func
+  description: acceptCRLs returns the CRLs that may be used. Each one needs a valid
+    signature from one of the issuers. Freshness is enforced in strict mode; lenient
+    mode only warns.
+  references:
+  - logrus.Logger
+  - cabinet.VerifyCRLSignature
+  - cabinet.CRLFreshness
+  - cabinet.CheckCRLFresh
+  - logrus.Logger.WithError
+  calls:
+  - Warn
+  - cabinet.CheckCRLFresh
+  - cabinet.VerifyCRLSignature
+  - logrus.Logger.WithError
+- name: parseBundleCRLs
+  kind: func
+  description: parseBundleCRLs reads the certificates and CRLs of a PEM bundle. In
+    strict mode a CRL block that does not parse is an error; in lenient mode it is
+    skipped with a warning. Certificates that do not parse are ignored (the trust
+    pool ignores them as well).
+  references:
+  - logrus.Logger
+  - logrus.Logger.WithError
+  calls:
+  - Warn
+  - logrus.Logger.WithError
+- name: crlToleranceFromEnv
+  kind: func
+  description: crlToleranceFromEnv reads CIC_CRL_MAX_STALENESS, the grace after a
+    CRL's NextUpdate. Unset or empty means no grace; a value that is not a non-negative
+    duration is an error.
+  references: []
+  calls: []
+- name: crlIssuerPolicyFromEnv
+  kind: func
+  description: 'crlIssuerPolicyFromEnv reads CIC_CRL_REQUIRED_ISSUERS: "none", "all",
+    or a comma-separated list of CA certificate SHA-256 fingerprints (hex, an optional
+    "sha256:" prefix, colons allowed). Unset or empty is an error in prod: the policy
+    must be declared.'
+  references: []
+  calls: []
+- name: certFingerprint
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: enforceCRLIssuerPolicy
+  kind: func
+  description: 'enforceCRLIssuerPolicy checks the declared requirement against the
+    CRLs that were accepted (authenticated and fresh): every required issuer needs
+    one CRL issued by that very certificate. A required issuer without one (missing)
+    is an error, and so is a declared fingerprint that matches no CA of the bundle
+    (a typo must not silently drop a requirement). An empty but valid, fresh CRL satisfies
+    the requirement.'
+  references: []
+  calls:
+  - CheckSignatureFrom

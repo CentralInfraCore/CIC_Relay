@@ -1,0 +1,51 @@
+---
+package: main
+description: ''
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: isBlockedIP
+  kind: func
+  description: isBlockedIP reports whether ip is in a private, loopback, link-local,
+    unspecified or broadcast range (SSRF defense). IPv4-mapped IPv6 addresses are
+    judged as IPv4. The ranges are exactly those of the Rust http-executor's is_blocked_ip.
+  references: []
+  calls:
+  - Equal
+  - IsLinkLocalUnicast
+  - IsLoopback
+  - IsPrivate
+  - IsUnspecified
+- name: newEgressClient
+  kind: func
+  description: 'newEgressClient builds the HTTP client of the `actuate` host function:
+    - a redirect is never followed (the 3xx is returned to the caller), so the egress
+    allow-list, which only sees the first URL, cannot be bypassed by a redirect; -
+    ambient proxy environment is ignored; - connect and end-to-end timeouts are set;
+    - every connection is checked at dial time, after DNS resolution, against the
+    blocked address ranges (this also covers a DNS answer that points at a private
+    address). allowPrivate lifts the address check; it exists only for tests against
+    a local server.'
+  references: []
+  calls: []
+- name: errEgressBlockedAddr
+  kind: var
+  description: errEgressBlockedAddr is returned when a connection would reach an address
+    an actuation must never reach.
+  references: []
+- name: egressRequestTimeout
+  kind: const
+  description: ''
+  references: []
+- name: egressConnectTimeout
+  kind: const
+  description: ''
+  references: []
+- name: egressMaxResponseBytes
+  kind: const
+  description: ''
+  references: []

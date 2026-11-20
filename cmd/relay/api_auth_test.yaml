@@ -1,0 +1,119 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- schema
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: newAuthTestServer
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - cabinet.SetResponse
+  - logrus.New
+  calls:
+  - Return
+  - SetOutput
+  - logrus.New
+  - mockCabinetService.On
+- name: postCompile
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ServeHTTP
+  - Set
+- name: TestCompile_Authentication
+  kind: func
+  description: 'Acceptance 1: a request without credentials -> 401, and nothing runs.'
+  references:
+  - assert.Equal
+  - mock.Anything
+  calls:
+  - AssertCalled
+  - AssertNotCalled
+  - Get
+  - Header
+  - assert.Equal
+- name: TestCompile_RejectsMalformedSchemaAndVersion
+  kind: func
+  description: 'Acceptance 2: control characters and anything outside the format ->
+    400.'
+  references:
+  - assert.Equal
+  - mock.Anything
+  calls:
+  - AssertNotCalled
+  - assert.Equal
+- name: TestAPIRoutes_AreClassified
+  kind: func
+  description: 'Acceptance 3: every route is authenticated or on an explicit, reasoned
+    public allow-list, and routes cannot be registered any other way.'
+  references:
+  - require.False
+  - require.NotNil
+  - assert.NotEmpty
+  - assert.Equal
+  - assert.True
+  calls:
+  - ServeHTTP
+  - Set
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.True
+  - require.False
+  - require.NotNil
+- name: TestNewMux_RegistersOnlyThroughTheRouteTable
+  kind: func
+  description: 'newMux must register routes only through the classified table: a direct
+    mux.Handle/HandleFunc elsewhere in it would bypass the classification.'
+  references:
+  - require.NoError
+  - require.True
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.NoError
+  - require.True
+- name: TestAPITokenFromEnv
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+  - assert.Equal
+  - require.Error
+  - assert.Contains
+  - assert.NoError
+  calls:
+  - Error
+  - assert.Contains
+  - assert.Empty
+  - assert.Equal
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestCompileJSONErrorShapeUnchangedForValidRequests
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+  calls:
+  - Bytes
+  - assert.Contains
+  - require.NoError
+- name: testAPIToken
+  kind: const
+  description: ''
+  references: []
+- name: validCompileBody
+  kind: const
+  description: ''
+  references: []

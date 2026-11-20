@@ -11,16 +11,39 @@ related_nodes: []
 objects:
 - name: resolveTrustMode
   kind: func
-  description: resolveTrustMode reads the CIC_TRUST_MODE environment variable and
-    returns the trust mode (dev or prod). Missing or empty values default to "dev"
-    with a warning log.
+  description: 'resolveTrustMode reads the CIC_TRUST_MODE environment variable and
+    returns the trust mode. There is no default: a missing, empty or whitespace-only
+    value is an error, so the operator always chooses the trust anchor explicitly
+    instead of inheriting the development CAs embedded in the binary. Unknown values
+    are rejected by bootstrapPKI.'
+  references: []
+  calls: []
+- name: requireTrustStore
+  kind: func
+  description: requireTrustStore refuses a prod relay without a loaded trust store.
+    bootstrapPKI already fails in that case today; this is the guard that keeps a
+    later change from reintroducing the silent "trust ecosystem not bootstrapped"
+    skip in loadModule.
+  references: []
+  calls: []
+- name: allowUnsignedModulesFromEnv
+  kind: func
+  description: allowUnsignedModulesFromEnv decides whether unsigned modules are admitted.
+    Unset, empty or "0" means no; exactly "1" means yes in dev mode and is ignored
+    (with a warning) in prod; any other value is a start-up error, so that a typo
+    can not open an exception.
   references:
   - logrus.Logger
-  - logrus.Fields
-  - logrus.Logger.WithFields
+  - logrus.Logger.Warnf
   calls:
-  - Warn
-  - logrus.Logger.WithFields
+  - logrus.Logger.Warnf
+- name: bootstrapTrust
+  kind: func
+  description: 'bootstrapTrust is the single start-up entry for trust: it resolves
+    the mode, loads the trust store and applies the prod guard.'
+  references:
+  - logrus.Logger
+  calls: []
 - name: bootstrapPKI
   kind: func
   description: 'bootstrapPKI loads the CA trust store based on trustMode. dev → loads
@@ -30,10 +53,16 @@ objects:
   references:
   - logrus.Logger
   - logrus.Fields
+  - cabinet.CRLFreshness
   - logrus.Logger.WithFields
+  - logrus.Logger.Warn
+  - logrus.Logger.WithField
   calls:
   - AppendCertsFromPEM
   - Info
+  - Warn
+  - logrus.Logger.Warn
+  - logrus.Logger.WithField
   - logrus.Logger.WithFields
 - name: TrustModeDev
   kind: const
@@ -42,4 +71,10 @@ objects:
 - name: TrustModeProd
   kind: const
   description: ''
+  references: []
+- name: allowUnsignedEnv
+  kind: const
+  description: allowUnsignedEnv is the explicit operator opt-in for modules without
+    a signature file. It exists in dev mode only; in prod it is ignored. It never
+    admits a module whose signature is present but bad.
   references: []

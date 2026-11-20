@@ -1,0 +1,43 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Principal
+  kind: struct
+  description: Principal identifies the authenticated caller of a workflow execution.
+    Whoever authenticates the caller (the HTTP layer, an operator, a test) puts it
+    into the context with WithPrincipal; Setx only checks that one is present.
+  implements: []
+  references: []
+- name: principalKey
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: IsUnauthorized
+  kind: func
+  description: IsUnauthorized checks if an error is an ErrUnauthorized.
+  references: []
+  calls: []
+- name: WithPrincipal
+  kind: func
+  description: WithPrincipal returns a context that carries p as the authenticated
+    principal.
+  references: []
+  calls: []
+- name: PrincipalFrom
+  kind: func
+  description: PrincipalFrom returns the authenticated principal of ctx, if there
+    is one.
+  references: []
+  calls: []
+- name: ErrUnauthorized
+  kind: var
+  description: 'ErrUnauthorized: the call reached a protected operation without an
+    authenticated principal in its context.'
+  references: []

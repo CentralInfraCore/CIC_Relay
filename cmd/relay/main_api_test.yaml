@@ -412,3 +412,90 @@ objects:
   - mock.MatchedBy
   - mockCabinetService.AssertExpectations
   - mockCabinetService.On
+- name: TestSetHandler_EvidenceRequired
+  kind: func
+  description: 'TestSetHandler_EvidenceRequired: the workflow ran, but its proof was
+    not persisted and evidence is required — an explicit 503, never a plain 200. The
+    body states structurally that the execution completed (so a client does not retry
+    it blindly), that the proof was not persisted, and carries the chain hash.'
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.EvidenceRequiredError
+  - cabinet.ProofErrRecordFailed
+  - logrus.New
+  - assert.Equal
+  - require.NoError
+  - assert.NotEmpty
+  - assert.True
+  - assert.False
+  calls:
+  - Bytes
+  - Get
+  - Header
+  - Return
+  - Set
+  - SetOutput
+  - assert.Equal
+  - assert.False
+  - assert.NotEmpty
+  - assert.True
+  - logrus.New
+  - mockCabinetService.On
+  - require.NoError
+- name: TestSetHandler_EvidenceRequired_Unstructured
+  kind: func
+  description: A wrapped evidence error without the structured type still maps to
+    the same 503.
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.ErrEvidenceRequired
+  - logrus.New
+  - assert.Equal
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - Return
+  - SetOutput
+  - String
+  - assert.Contains
+  - assert.Equal
+  - assert.NotContains
+  - logrus.New
+  - mockCabinetService.On
+- name: TestSetHandler_ProofInResponse
+  kind: func
+  description: 'TestSetHandler_ProofInResponse: a successful execution reports the
+    proof outcome.'
+  references:
+  - mock.Anything
+  - cabinet.Workflow
+  - cabinet.SetResponse
+  - cabinet.ProofStatus
+  - cabinet.ProofErrRecordFailed
+  - logrus.New
+  - assert.Equal
+  - require.NoError
+  - assert.False
+  calls:
+  - Bytes
+  - Return
+  - Set
+  - SetOutput
+  - assert.Equal
+  - assert.False
+  - logrus.New
+  - mockCabinetService.On
+  - require.NoError
+- name: TestEvidenceRequiredFromEnv
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Error
+  calls:
+  - assert.Equal
+  - assert.Error
+  - require.NoError

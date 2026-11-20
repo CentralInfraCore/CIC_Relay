@@ -1,0 +1,29 @@
+---
+package: git
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestGitChildEnvironment_IsAllowlisted
+  kind: func
+  description: The git child gets the allowlisted variables and the fixed hardening
+    values, nothing else. The test puts a fake "git" first on PATH that records its
+    environment, so it observes the real child process.
+  references:
+  - require.NoError
+  - assert.NotContains
+  - assert.Contains
+  - assert.True
+  calls:
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - Status
+  - assert.Contains
+  - assert.NotContains
+  - assert.True
+  - require.NoError

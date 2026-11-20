@@ -1,0 +1,79 @@
+---
+package: recorder
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: commitCount
+  kind: func
+  description: commitCount returns the number of commits reachable from HEAD.
+  references:
+  - require.NoError
+  calls:
+  - Output
+  - require.NoError
+- name: gitOutput
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Output
+  - require.NoError
+- name: gitLines
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: slowSigningMock
+  kind: func
+  description: slowSigningMock is signingMock with a delay inside Sign. The delay
+    widens the window between the HEAD read and the commit, so overlapping calls are
+    certain to interleave unless signAndCommit is serialized.
+  references: []
+  calls: []
+- name: TestSignAndCommit_ConcurrentRecordsKeepChainVerifiable
+  kind: func
+  description: 'Concurrent workflows share one recorder: every record must land as
+    its own commit and the signed chain must still verify (no lost records, no false
+    "chain broken").'
+  references:
+  - require.NoError
+  - types.ExpectedState
+  - assert.NoError
+  - assert.Equal
+  - assert.Len
+  calls:
+  - NewGitStateRecorder
+  - RecordDrift
+  - RecordState
+  - VerifyChain
+  - assert.Equal
+  - assert.Len
+  - assert.NoError
+  - require.NoError
+- name: TestSignAndCommit_HeadReadFailureIsAnError
+  kind: func
+  description: A failed HEAD read must fail the record. Signing an empty parent would
+    put a record with a forged chain position into the audit log.
+  references:
+  - require.NoError
+  - types.ExpectedState
+  - require.Error
+  - assert.Contains
+  - assert.Empty
+  - assert.Error
+  calls:
+  - CombinedOutput
+  - Error
+  - GitStateRecorder.RecordState
+  - Run
+  - assert.Contains
+  - assert.Empty
+  - assert.Error
+  - require.Error
+  - require.NoError

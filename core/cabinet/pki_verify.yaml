@@ -15,14 +15,46 @@ objects:
     SPKI pins.
   implements: []
   references: []
+- name: CRLFreshness
+  kind: struct
+  description: CRLFreshness is the freshness rule for CRLs. A CRL without a NextUpdate
+    cannot prove it is current and counts as stale.
+  implements: []
+  references: []
+- name: CheckCRLFresh
+  kind: func
+  description: 'CheckCRLFresh returns an error unless crl is currently valid: it must
+    state a sensible interval (a ThisUpdate, and a NextUpdate after it), must not
+    start in the future, and must not be past NextUpdate. Tolerance is the one explicit
+    allowance, applied symmetrically: a grace after NextUpdate and the clock skew
+    accepted before ThisUpdate. Zero means none.'
+  references: []
+  calls:
+  - Add
+  - After
+  - Before
+  - Format
+  - IsZero
+  - UTC
+- name: VerifyCRLSignature
+  kind: func
+  description: 'VerifyCRLSignature checks that crl is signed by one of the given issuer
+    certificates (matched by the CRL''s issuer name). A CRL whose issuer is not among
+    them, or whose signature does not verify against the issuer''s key, must not be
+    used: its entries are unauthenticated, and a forged one could both revoke and
+    hide revocations.'
+  references: []
+  calls: []
 - name: checkRevocation
   kind: func
   description: checkRevocation checks if any certificate in the provided chains is
-    in the revocation list.
+    in the revocation list. With a freshness rule, a CRL that applies to a certificate
+    of the chain and is stale is an error.
   references: []
   calls:
+  - CheckCRLFresh
+  - CheckSignatureFrom
   - Cmp
-  - String
 - name: checkSPKIPinning
   kind: func
   description: checkSPKIPinning checks if any certificate in the chains matches the

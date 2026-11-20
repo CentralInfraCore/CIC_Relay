@@ -1,0 +1,49 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: realGitRepo
+  kind: func
+  description: realGitRepo makes a repository with one commit, a configured remote
+    "origin", and registers it as "r" in a real (production-constructed) ExecGitOps,
+    so the host functions are exercised end to end.
+  references:
+  - nexusgit.GitOps
+  - require.NoError
+  - nexusgit.NewRepoRegistry
+  - nexusgit.NewExecGitOps
+  calls:
+  - CombinedOutput
+  - Register
+  - nexusgit.NewExecGitOps
+  - nexusgit.NewRepoRegistry
+  - require.NoError
+- name: TestGitHostFunctions_GuestOptionsNeverRun
+  kind: func
+  description: 'Every host function the "git" module exports, with a payload that
+    smuggles an option or a transport helper into a guest-controlled field. None may
+    run a guest-chosen program, and each must answer with an error. The export list
+    is asserted too: a new git.* function fails this test until it is covered.'
+  references:
+  - require.NoError
+  - wazero.NewRuntime
+  - assert.NotEmpty
+  - assert.True
+  - require.NotNil
+  - assert.Len
+  calls:
+  - Close
+  - ExportedFunctionDefinitions
+  - Module
+  - assert.Len
+  - assert.NotEmpty
+  - assert.True
+  - require.NoError
+  - require.NotNil
+  - wazero.NewRuntime

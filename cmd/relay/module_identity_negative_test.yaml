@@ -1,0 +1,106 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: testCA
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: newTestCA
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - require.NoError
+- name: issue
+  kind: method
+  receiver: testCA
+  description: issue returns a code-signing leaf (PEM and parsed) valid in [notBefore,
+    notAfter].
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: crl
+  kind: method
+  receiver: testCA
+  description: crl returns a CRL signed by the CA that revokes the given serial numbers.
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - require.NoError
+- name: assets
+  kind: method
+  receiver: testCA
+  description: ''
+  references:
+  - cabinet.CRLFreshness
+  calls:
+  - AddCert
+- name: loadWithSigner
+  kind: func
+  description: ''
+  references:
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - require.NoError
+  - logrus.New
+  calls:
+  - SetOutput
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - logrus.New
+  - require.NoError
+- name: TestLoadModule_SignerCertificate_Acceptable_And_Unacceptable
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+  - require.Error
+  - assert.NotContains
+  calls:
+  - Add
+  - Error
+  - assert.Contains
+  - assert.NotContains
+  - require.Error
+  - require.NoError
+- name: TestLoadModule_RejectedSigner_LeavesNoModuleRegistered
+  kind: func
+  description: 'A rejected signer must also leave the module unregistered: failing
+    the check and still loading is not a rejection.'
+  references:
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - require.NoError
+  - require.Error
+  - assert.Error
+  calls:
+  - Add
+  - GetModule
+  - assert.Error
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.Error
+  - require.NoError

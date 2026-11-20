@@ -1,0 +1,59 @@
+---
+package: recorder
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: commitStateRecorder
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: RecordState
+  kind: method
+  receiver: commitStateRecorder
+  description: ''
+  references:
+  - types.ExpectedState
+  calls: []
+- name: TestWorkflowRecorder_RecordCommit_ReturnsCommit
+  kind: func
+  description: RecordCommit must hand the persisted record's commit hash to the caller.
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - NewWorkflowRecorder
+  - RecordCommit
+  - assert.Equal
+  - require.NoError
+- name: TestWorkflowRecorder_RecordCommit_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Empty
+  calls:
+  - NewWorkflowRecorder
+  - RecordCommit
+  - assert.Empty
+  - require.Error
+- name: TestWorkflowRecorder_RecordCommit_RealGitRecorder_ReturnsHead
+  kind: func
+  description: With the real git recorder the returned commit is the actual new HEAD.
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Len
+  calls:
+  - NewGitStateRecorder
+  - NewWorkflowRecorder
+  - Output
+  - RecordCommit
+  - assert.Equal
+  - assert.Len
+  - require.NoError

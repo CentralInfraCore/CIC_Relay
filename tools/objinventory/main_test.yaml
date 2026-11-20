@@ -1,0 +1,54 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: write
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestDumpFile
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestSpansAreExact
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestNoBuildConstraint
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestParseErrorIsReported
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestMissingFileIsReported
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestRecvName
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestRunExitStatusAndOutput
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: sample
+  kind: const
+  description: ''
+  references: []

@@ -83,8 +83,10 @@ objects:
   references: []
   calls:
   - Format
+  - Lock
   - Sign
   - UTC
+  - Unlock
 - name: createManifest
   kind: method
   receiver: GitStateRecorder

@@ -15,11 +15,20 @@ objects:
   kind: func
   description: ''
   references:
+  - assert.NotSame
+  - require.True
   - assert.Equal
+  - require.NotNil
+  - assert.ErrorIs
   - assert.False
   calls:
+  - CheckRedirect
   - assert.Equal
+  - assert.ErrorIs
   - assert.False
+  - assert.NotSame
+  - require.NotNil
+  - require.True
 - name: TestCICFlowRegistry_RegisterVerified_Binds
   kind: func
   description: ''

@@ -1,0 +1,176 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: fakeRecorder
+  kind: struct
+  description: fakeRecorder is a plain ExecutionRecorder (no commit hash).
+  implements: []
+  references: []
+- name: fakeCommitRecorder
+  kind: struct
+  description: fakeCommitRecorder is an ExecutionRecorder that also names the persisted
+    record.
+  implements: []
+  references: []
+- name: Record
+  kind: method
+  receiver: fakeRecorder
+  description: ''
+  references: []
+  calls: []
+- name: Record
+  kind: method
+  receiver: fakeCommitRecorder
+  description: ''
+  references: []
+  calls:
+  - fakeCommitRecorder.RecordCommit
+- name: RecordCommit
+  kind: method
+  receiver: fakeCommitRecorder
+  description: ''
+  references: []
+  calls: []
+- name: newProofTestService
+  kind: func
+  description: newProofTestService builds a service with one native "echo" workflow.
+  references:
+  - require.NoError
+  calls:
+  - ID
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - Put
+  - require.NoError
+- name: TestSetx_Proof_RecorderHealthy_PersistedWithCommit
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.True
+  - assert.Equal
+  - assert.Empty
+  calls:
+  - Setx
+  - assert.Empty
+  - assert.Equal
+  - assert.True
+  - require.NoError
+  - require.NotNil
+- name: TestSetx_Proof_PlainRecorderHealthy_PersistedWithoutCommit
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.True
+  - assert.Empty
+  calls:
+  - Setx
+  - assert.Empty
+  - assert.True
+  - require.NoError
+  - require.NotNil
+- name: TestSetx_Proof_RecorderOutage_NotRequired_ReportsNotPersisted
+  kind: func
+  description: 'Recorder outage, evidence not required: the call succeeds, but the
+    response says the proof was not persisted, with an error code, and keeps the trace
+    (chain hash).'
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.False
+  - assert.Equal
+  - assert.Empty
+  - assert.NotEmpty
+  - assert.NotContains
+  - assert.Contains
+  calls:
+  - Setx
+  - assert.Contains
+  - assert.Empty
+  - assert.Equal
+  - assert.False
+  - assert.NotContains
+  - assert.NotEmpty
+  - require.NoError
+  - require.NotNil
+- name: TestSetx_Proof_RecorderOutage_Required_Fails
+  kind: func
+  description: 'Recorder outage, evidence required: an explicit failure, never a plain
+    success.'
+  references:
+  - require.Error
+  - assert.Nil
+  - assert.True
+  - require.True
+  - assert.NotEmpty
+  - assert.Equal
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - Error
+  - IsEvidenceRequired
+  - Setx
+  - assert.Contains
+  - assert.Equal
+  - assert.Nil
+  - assert.NotContains
+  - assert.NotEmpty
+  - assert.True
+  - require.Error
+  - require.True
+- name: TestSetx_Proof_NoRecorder
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.False
+  - assert.Equal
+  - require.Error
+  - assert.True
+  - assert.Contains
+  calls:
+  - Error
+  - IsEvidenceRequired
+  - Setx
+  - assert.Contains
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - require.Error
+  - require.NoError
+  - require.NotNil
+- name: TestSetx_Proof_Required_HealthyRecorder_Succeeds
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True
+  - assert.Equal
+  calls:
+  - Setx
+  - assert.Equal
+  - assert.True
+  - require.NoError
+- name: TestWithEvidenceRequired_SetsTheField
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.False
+  calls:
+  - WithEvidenceRequired
+  - assert.False
+  - assert.True
