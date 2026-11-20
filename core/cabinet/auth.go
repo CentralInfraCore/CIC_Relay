@@ -20,6 +20,7 @@ type Principal struct {
 	Method string // how it was established, for example "bearer"
 }
 
+// principalKey is the unexported context key under which WithPrincipal stores the Principal.
 type principalKey struct{}
 
 // WithPrincipal returns a context that carries p as the authenticated principal.
