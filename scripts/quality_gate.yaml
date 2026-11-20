@@ -1,0 +1,453 @@
+---
+module: quality_gate
+description: 'Completeness validation of the mutation gates (fail-closed). What a
+  green `cargo mutants --shard` or `gremlins` job proves is that the tool exited 0
+  on the part it was given. It does not prove that every PLANNED mutant (or package)
+  got exactly one interpretable verdict. This script closes that gap: the plan is
+  recorded as a verifiable record, every shard/chunk hands in a report bound to that
+  plan, and `verify` accepts the result only if the planned set and the measured set
+  are the same. Commands plan-rust   list the Rust mutants (`cargo mutants --list
+  --json ...`) and write the plan record; the listing exit status is part of the record
+  plan-go     write the Go plan record from the planner''s package list wrap-shard  bind
+  one `cargo mutants` outcomes.json to the plan (a shard report) verify      check
+  plan + shard reports + chunk reports against each other check-coverprofile  a Go
+  coverage profile must exist, parse and hold at least one block check-tools         every
+  measuring tool a job uses must be the pinned one (fail closed) pin-reference       resolve
+  the reference pins of a job: the base branch''s, not the pull request''s own (#195)
+  Contracts (versioned; a change is a change of the gate logic and is planned as such
+  by scripts/mutation_plan.py): mutation-plan/1      the plan record (this file, build_rust_plan
+  / build_go_plan) mutant-id/1          the id of a Rust mutant is the `name` cargo-mutants
+  prints for it ("file:line:col: replace f -> T with X"). The plan holds the ids sorted
+  and duplicate-free, so the order of the listing and the shard layout do not matter;
+  two different mutants never share an id (a listing with a duplicate id is an invalid
+  plan, not a merged one). mutation-shard-report/1, gremlins-report/1   the reports
+  of a shard / a chunk mutation-policy/2    how the verdicts are accounted and the
+  primary score (see POLICY) Plan states (named in the output): PLAN_VALID_NONEMPTY  a
+  valid plan with at least one mutant/package PLAN_VALID_EMPTY     PROVABLY valid
+  and empty: the listing exited 0 and printed nothing (measured: cargo-mutants 27.1.0
+  prints 0 bytes, not "[]", for a diff with no mutable code), or the planner reported
+  nothing to do. The exit status and the digest of the output are in the same record.
+  PLAN_INVALID         anything else: missing, unreadable, not matching its digest,
+  wrong schema or contract, a failed listing. Always a failure.'
+tags:
+- core
+- loader
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: PLAN_SCHEMA
+  kind: const
+  description: ''
+  references: []
+- name: ID_CONTRACT
+  kind: const
+  description: ''
+  references: []
+- name: SHARD_SCHEMA
+  kind: const
+  description: ''
+  references: []
+- name: GO_SCHEMA
+  kind: const
+  description: ''
+  references: []
+- name: NONEMPTY
+  kind: const
+  description: ''
+  references: []
+- name: EMPTY
+  kind: const
+  description: ''
+  references: []
+- name: INVALID
+  kind: const
+  description: ''
+  references: []
+- name: POLICY
+  kind: const
+  description: ''
+  references: []
+- name: SUMMARY_TO_VERDICT
+  kind: const
+  description: ''
+  references: []
+- name: VERDICTS
+  kind: const
+  description: ''
+  references: []
+- name: FAILING
+  kind: const
+  description: ''
+  references: []
+- name: GateError
+  kind: class
+  decorators: []
+  description: 'The input cannot be trusted: the gate fails.'
+  implements:
+  - Exception
+  references: []
+- name: primary_score
+  kind: function
+  decorators: []
+  description: 'The primary mutation score, caught / (caught + missed), as a state,
+    never a bare number. {"state": "MEASURED", "value": 0..100, "caught": c, "evaluable":
+    c + m} {"state": "NOT_APPLICABLE", "reason": ...}        nothing evaluable, for
+    a stated reason {"state": "UNVERIFIABLE", "reason": "MEASUREMENT_MISSING"}   no
+    accounting at all A zero denominator is neither 100% nor 0%: with no mutant planned
+    the score does not apply (NO_MUTANTS_PLANNED); with every mutant unviable (ALL_UNVIABLE)
+    or only unviable and timed-out ones (NO_EVALUABLE_MUTANT) nothing could be evaluated.'
+  references: []
+  calls:
+  - acct.get
+- name: unviable_ratio
+  kind: function
+  decorators: []
+  description: 'The unviable share of the plan: a mandatory metric of its own (report-only).'
+  references: []
+  calls: []
+- name: sha256_hex
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: canonical_digest
+  kind: function
+  decorators: []
+  description: sha256 of the canonical JSON (sorted keys, no whitespace) of obj.
+  references: []
+  calls:
+  - text.encode
+- name: plan_body
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: seal
+  kind: function
+  decorators: []
+  description: Add the state and the digest (over everything but the digest itself).
+  references: []
+  calls:
+  - body.items
+- name: rust_ids
+  kind: function
+  decorators: []
+  description: The sorted, duplicate-free mutant ids of a `cargo mutants --list --json`
+    output.
+  references: []
+  calls:
+  - GateError
+  - entry.get
+  - ids.append
+  - ids.count
+- name: build_rust_plan
+  kind: function
+  decorators: []
+  description: The plan record of a finished listing. Raises GateError for anything
+    but a success.
+  references: []
+  calls:
+  - GateError
+  - raw.decode
+  - text.strip
+- name: build_go_plan
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: load_plan
+  kind: function
+  decorators: []
+  description: 'Read and verify a plan record: PLAN_INVALID (GateError) unless it
+    is intact.'
+  references: []
+  calls:
+  - GateError
+  - doc.get
+  - doc.items
+  - lst.get
+- name: rust_verdicts
+  kind: function
+  decorators: []
+  description: '{mutant id: verdict} of one outcomes.json; rejects an inconsistent
+    or unknown report.'
+  references: []
+  calls:
+  - GateError
+  - SUMMARY_TO_VERDICT.get
+  - mutant.get
+  - outcomes.get
+  - row.get
+  - scenario.get
+  - verdicts.values
+- name: wrap_shard
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+  - outcomes.get
+- name: read_reports
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+  - out.append
+  - p.read_text
+- name: verify_rust
+  kind: function
+  decorators: []
+  description: Planned mutants == measured mutants, one verdict each. Returns the
+    accounting.
+  references: []
+  calls:
+  - GateError
+  - plan.get
+  - rep.get
+  - verdicts.values
+- name: GO_STATUS
+  kind: const
+  description: ''
+  references: []
+- name: verify_go
+  kind: function
+  decorators: []
+  description: Planned packages == measured packages, one verdict each.
+  references: []
+  calls:
+  - GateError
+  - pkgs.values
+  - rep.get
+  - row.get
+- name: _BLOCK
+  kind: const
+  description: ''
+  references: []
+- name: check_coverprofile
+  kind: function
+  decorators: []
+  description: The number of blocks of a Go coverage profile; a missing/empty/garbled
+    one is an error. A profile that cannot be read is NOT a measurement of zero and
+    not a success.
+  references: []
+  calls:
+  - GateError
+  - _BLOCK.match
+  - ln.strip
+- name: _run_listing
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+- name: _tool_version
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+  - m.group
+- name: _write
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: cmd_plan_rust
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+  - _run_listing
+  - _tool_version
+  - _write
+- name: cmd_plan_go
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _write
+- name: cmd_wrap_shard
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _write
+- name: cmd_verify
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+  - acct.items
+- name: TOOL_PINS_SCHEMA
+  kind: const
+  description: ''
+  references: []
+- name: load_tool_pins
+  kind: function
+  decorators: []
+  description: '`.measurement-tools.json`: {"schema", "tools": {name: exact version},
+    "surfaces": {surface: [tools it must declare]}}.'
+  references: []
+  calls:
+  - GateError
+  - pins.get
+  - surfaces.items
+  - tools.items
+- name: tool_pin_findings
+  kind: function
+  decorators: []
+  description: '(unusable, unverifiable) findings of the declared tool versions against
+    the pins. Fail closed. UNUSABLE: the version is known but is not the pinned one.
+    UNVERIFIABLE: the version cannot be established (empty, `unknown`), the tool is
+    not pinned, or a REQUIRED tool is not declared. `required` None = none beyond
+    the declared ones (a job that uses only some tools); a list names the tools that
+    must be declared.'
+  references: []
+  calls:
+  - declared.items
+  - pins.get
+  - unusable.append
+  - unverifiable.append
+- name: PIN_REFERENCE_SCHEMA
+  kind: const
+  description: ''
+  references: []
+- name: APPROVAL_PREFIX
+  kind: const
+  description: ''
+  references: []
+- name: APPROVAL_RE
+  kind: const
+  description: ''
+  references: []
+- name: SHA_RE
+  kind: const
+  description: ''
+  references: []
+- name: _digest
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _git
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+- name: _approvers
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+  - doc.get
+- name: _read_comments
+  kind: function
+  decorators: []
+  description: 'Comments as a JSON array or as one JSON object per line: {login, body}.'
+  references: []
+  calls:
+  - GateError
+  - line.strip
+  - text.splitlines
+  - text.strip
+- name: find_approval
+  kind: function
+  decorators: []
+  description: The approval of this exact head and this exact pin digest by an approver
+    of the BASE pin file, or None.
+  references: []
+  calls:
+  - APPROVAL_RE.finditer
+  - c.get
+  - m.group
+- name: pin_reference
+  kind: function
+  decorators: []
+  description: 'Resolve the reference pins of a job and write them (and the record)
+    to `out_dir`. Fail closed. pull_request: the reference is the tip of the base
+    branch (fetched now); `base_sha` (from the event) must be a commit of that branch,
+    so a forged SHA is refused. The head pin file must exist; if it differs from the
+    base''s, an approval bound to `head_sha` and the head pin digest is required,
+    and then the head pin file is the reference (APPROVED_UPDATE), otherwise the job
+    is refused (PIN_CHANGED_UNAPPROVED). push (any non-PR event): the reference is
+    the tree itself (SELF_REFERENCE); said so in the record. bootstrap: only for the
+    change that introduces this mechanism: the base must not have it yet.'
+  references: []
+  calls:
+  - GateError
+  - SHA_RE.match
+  - _approvers
+  - _digest
+  - _git
+  - _read_comments
+  - app.get
+  - out.mkdir
+  - rec.update
+- name: cmd_pin_reference
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - rec.get
+- name: verify_reference_record
+  kind: function
+  decorators: []
+  description: The record of pin-reference, and the pins file it is used with must
+    be the very file the record names.
+  references: []
+  calls:
+  - GateError
+  - _digest
+  - rec.get
+- name: cmd_check_tools
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - GateError
+  - declared.items
+  - kv.partition
+  - ver.strip
+- name: cmd_check_coverprofile
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - __doc__.split
+  - a.fn
+  - ap.add_subparsers
+  - ap.parse_args
+  - p.add_argument
+  - p.set_defaults
+  - sub.add_parser

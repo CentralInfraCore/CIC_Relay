@@ -1,0 +1,226 @@
+---
+module: test_tools.test_quality_gate_workflows
+description: 'The completeness check is wired into the mutation workflows and cannot
+  be bypassed (PR-03). The steps are run for real: the `run:` text is taken from the
+  workflow YAML and executed under `bash -e` (the default shell of an Actions step)
+  with a fake `cargo` / a stub report script. The counter-test of the old defect is
+  `test_gate_is_red_when_the_completeness_check_is_not_` `successful`: before this
+  change the `gate` job looked at the result of each job only, so a run in which every
+  job was `success` was green even if the planned and the measured mutants differed.
+  On the previous workflow that test fails with `assert 0 != 0` (the gate step exits
+  0).'
+tags:
+- executor
+- loader
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ROOT
+  kind: const
+  description: ''
+  references: []
+- name: WORKFLOWS
+  kind: const
+  description: ''
+  references: []
+- name: FIX
+  kind: const
+  description: ''
+  references: []
+- name: load
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - yaml.safe_load
+  calls:
+  - yaml.safe_load
+- name: step
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - AssertionError
+  - s.get
+- name: run_script
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: GATE_OK
+  kind: const
+  description: ''
+  references: []
+- name: gate_script
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: gate
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_gate_is_green_when_everything_passed
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_gate_is_red_when_the_completeness_check_is_not_successful
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_gate_still_fails_on_every_other_failure
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_a_skipped_mutation_job_is_accepted_only_through_the_completeness_check
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_nightly_report_is_a_failure_when_the_completeness_check_is_not_successful
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - scripts.mkdir
+- name: FAKE_CARGO
+  kind: const
+  description: ''
+  references: []
+- name: workdir
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: A scratch git repo whose `scripts/` is the repo's, with a fake cargo
+    on the PATH.
+  references:
+  - pytest.fixture
+  calls:
+  - bindir.mkdir
+  - cargo.chmod
+  - cargo.stat
+  - cargo.write_text
+  - pytest.fixture
+- name: PLAN_STEPS
+  kind: const
+  description: ''
+  references: []
+- name: rust_plan_step
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - line.split
+  - out.read_text
+  - out.write_text
+- name: test_the_rust_plan_record_of_a_real_listing
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_a_failed_listing_fails_the_plan_record_and_leaves_no_plan
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_a_valid_empty_listing_is_a_valid_empty_plan
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_the_plan_record_must_agree_with_the_count_step
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_no_rust_change_is_an_empty_plan_with_a_reason
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_the_diff_mode_lists_with_the_diff
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_the_go_plan_record
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls:
+  - line.split
+  - out.read_text
+  - out.write_text
+- name: test_the_reports_are_handed_in_and_collected_under_matching_names
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls:
+  - d.get
+  - s.get
+- name: test_the_completeness_job_waits_for_the_mutation_jobs_and_always_runs
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls:
+  - c.get
+- name: test_the_gate_depends_on_the_completeness_job
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_every_shard_and_chunk_is_bound_to_the_plan_digest
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []

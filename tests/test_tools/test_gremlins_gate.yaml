@@ -1,9 +1,82 @@
-module: test_gremlins_gate
-description: ''
+---
+module: test_tools.test_gremlins_gate
+description: How a gremlins result is judged (scripts/gremlins_gate.py).
 tags:
 - test
 category: []
 used_in: []
 entrypoint: false
 related_nodes: []
-objects: []
+objects:
+- name: test_timed_out_mutants_count_as_detected
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.evaluate
+  calls:
+  - gremlins_gate.evaluate
+- name: test_the_split_between_killed_and_timed_out_does_not_matter
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.evaluate
+  calls:
+  - gremlins_gate.evaluate
+- name: test_lived_mutants_still_fail
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.evaluate
+  calls:
+  - gremlins_gate.evaluate
+- name: test_mostly_timeouts_is_rejected_even_if_it_reads_as_100_percent
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.evaluate
+  calls:
+  - gremlins_gate.evaluate
+- name: test_a_few_timeouts_in_a_big_package_are_fine
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.evaluate
+  calls:
+  - gremlins_gate.evaluate
+- name: test_low_mutant_coverage_fails
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.evaluate
+  calls:
+  - gremlins_gate.evaluate
+- name: test_measured_reads_the_summary_and_the_timeouts
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.measured
+  calls:
+  - gremlins_gate.measured
+- name: test_thresholds_default_and_baseline
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.thresholds
+  calls:
+  - gremlins_gate.thresholds
+- name: test_timeouts_dominate_only_when_they_are_many
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gremlins_gate.timeouts_dominate
+  calls:
+  - gremlins_gate.timeouts_dominate

@@ -1,0 +1,190 @@
+---
+module: gate_selftest
+description: 'Self-test of the REAL quality gates (report-only): does the gate that
+  guards the repository turn red when it must? PR-06 probes 1 and 2 of the #169 self-testing
+  list: P1  a deliberately weakened test suite lowers the coverage and the coverage
+  gate turns red (Go: the per-package threshold step of verify.yml; Rust: `cargo llvm-cov
+  --fail-under-lines`) P2  a deliberately surviving mutant turns the mutation gate
+  red (Go: scripts/gremlins_gate.py, the per-package ratchet; Rust: `cargo mutants
+  --in-diff`, as the PR gate runs it) What makes this more than a seeded exit code:
+  - the gate is the REAL one. The Go coverage gate is the `run:` script of the workflow
+  step, extracted from the workflow file and executed unchanged (its thresholds are
+  the ones in the file; nothing here sets a threshold); the other three are the very
+  commands of the workflows, run with the same tools. - every defect runs in an ISOLATED
+  COPY of the checkout; the checkout itself is never written (its `git status` is
+  recorded before and after). - every defect has a POSITIVE CONTROL next to it: the
+  same gate on the unmodified copy (P1) or on the same planted code WITH an asserting
+  test (P2) must be green, so a gate that is red for another reason is not counted.
+  - the expected failure must be the right one (a marker in the gate''s own output),
+  not just a non-zero exit. Not covered here: the plan/completeness aggregation of
+  the PR workflow (mutation-pr.yml `gate`): the P2 Rust case runs the same `cargo
+  mutants --in-diff` command as the shard job, not the whole pipeline. Said in the
+  report. Usage: gate_selftest.py --src CHECKOUT [--work DIR] [--only go-cov,rust-cov,go-mut,rust-mut]'
+tags:
+- core
+- executor
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: IGNORE
+  kind: const
+  description: ''
+  references: []
+- name: SelfTestError
+  kind: class
+  decorators: []
+  description: ''
+  implements:
+  - Exception
+  references: []
+- name: extract_step
+  kind: function
+  decorators: []
+  description: 'The `run:` script of one step of a workflow, byte for byte, with the
+    `${{ ... }}` expressions of `expr` filled in. Any other expression is an error:
+    a script the harness cannot run unchanged is not run.'
+  references:
+  - yaml.safe_load
+  calls:
+  - SelfTestError
+  - doc.get
+  - m.group
+  - s.get
+  - workflow.read_text
+  - yaml.safe_load
+- name: copy_tree
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: run
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - e.update
+- name: status
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: Result
+  kind: class
+  decorators:
+  - dataclass
+  description: ''
+  implements: []
+  references: []
+- name: ok
+  kind: method
+  receiver: Result
+  decorators:
+  - property
+  description: ''
+  references: []
+  calls: []
+- name: lines
+  kind: method
+  receiver: Result
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: GO_PLANTED
+  kind: const
+  description: ''
+  references: []
+- name: GO_PLANTED_TEST_BLIND
+  kind: const
+  description: ''
+  references: []
+- name: GO_PLANTED_TEST_ASSERTING
+  kind: const
+  description: ''
+  references: []
+- name: GO_EMPTY_TEST
+  kind: const
+  description: ''
+  references: []
+- name: RUST_PLANTED
+  kind: const
+  description: ''
+  references: []
+- name: RUST_TEST_BLIND
+  kind: const
+  description: ''
+  references: []
+- name: RUST_TEST_ASSERTING
+  kind: const
+  description: ''
+  references: []
+- name: case_go_cov
+  kind: function
+  decorators: []
+  description: 'P1, Go: the per-package coverage threshold step of verify.yml, run
+    unchanged.'
+  references: []
+  calls:
+  - Result
+  - pc.group
+  - t.unlink
+  - wc.group
+- name: case_rust_cov
+  kind: function
+  decorators: []
+  description: 'P1, Rust: `cargo llvm-cov --fail-under-lines 90` as verify.yml runs
+    it.'
+  references: []
+  calls:
+  - Result
+  - f.read_text
+  - f.write_text
+  - m.group
+  - text.replace
+  - weak.glob
+  - weak.rglob
+- name: case_go_mut
+  kind: function
+  decorators: []
+  description: 'P2, Go: scripts/gremlins_gate.py (the per-package ratchet), planted
+    code without / with an asserting test.'
+  references: []
+  calls:
+  - Result
+  - killed.group
+  - lived.group
+- name: case_rust_mut
+  kind: function
+  decorators: []
+  description: 'P2, Rust: `cargo mutants --workspace --in-diff` as the PR gate runs
+    it, planted code without / with assertions.'
+  references: []
+  calls:
+  - Result
+  - SelfTestError
+  - caught.group
+  - lib.read_text
+  - lib.write_text
+  - missed.group
+  - planted.write_text
+- name: CASES
+  kind: const
+  description: ''
+  references: []
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - __doc__.split
+  - ap.add_argument
+  - ap.error
+  - ap.parse_args
+  - r.lines
+  - work.mkdir

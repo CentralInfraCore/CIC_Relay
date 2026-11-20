@@ -1,0 +1,297 @@
+---
+module: test_tools.test_pin_reference
+description: 'The reference of the measuring-tool check is not the pull request''s
+  own (CIC_Relay #195). Every case runs real git against a bare "origin" and a clone:
+  the base branch tip is the reference, a forged SHA is refused because it is not
+  a commit of the base branch, a changed pin file needs an approval bound to the exact
+  head and the exact digest and written by an approver of the BASE pin file. Each
+  denial has a positive control next to it.'
+tags:
+- executor
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SCRIPTS
+  kind: const
+  description: ''
+  references: []
+- name: GATE
+  kind: const
+  description: ''
+  references: []
+- name: PINS
+  kind: const
+  description: ''
+  references: []
+- name: git
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: pins_doc
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: write_pins
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - fh.write
+- name: commit
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: world
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: origin (bare) with main holding the pins and a script that already
+    has the mechanism; a clone of it.
+  references:
+  - pytest.fixture
+  calls: []
+- name: branch
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: run_ref
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.pin_reference
+  calls:
+  - quality_gate.pin_reference
+- name: approval
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.APPROVAL_PREFIX
+  calls: []
+- name: head_digest
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate._digest
+  calls:
+  - quality_gate._digest
+- name: test_unchanged_pin_uses_the_base_reference
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_a_pin_change_without_approval_is_refused
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_a_removed_tool_or_a_narrowed_surface_is_refused
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_an_approval_of_this_head_and_digest_makes_the_head_pins_the_reference
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_an_approval_does_not_survive_a_new_push
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_an_approval_of_another_digest_is_refused
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_only_an_approver_of_the_base_can_approve
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_the_pr_cannot_add_itself_to_the_approvers
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_a_base_without_approvers_cannot_approve_anything
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_a_forged_reference_sha_is_refused
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_a_deleted_pin_file_is_refused_even_with_an_approval
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_an_unreadable_comments_source_is_fail_closed
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.pin_reference
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+  - quality_gate.pin_reference
+- name: test_push_events_use_the_tree_itself_and_say_so
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_a_pull_request_without_a_full_base_is_invalid
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.pin_reference
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+  - quality_gate.pin_reference
+- name: test_bootstrap_is_only_for_the_change_that_adds_the_mechanism
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_check_tools_prints_the_reference_and_pins_must_be_the_referenced_file
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - tampered.write_text
+- name: test_check_tools_without_a_valid_reference_record_is_refused
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: REPO
+  kind: const
+  description: ''
+  references: []
+- name: WORKFLOWS
+  kind: const
+  description: ''
+  references: []
+- name: _workflow_texts
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - name.endswith
+- name: test_no_workflow_reads_the_pins_or_the_checking_script_from_the_working_tree
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _workflow_texts
+  - text.count
+- name: test_every_workflow_that_uses_the_reference_resolves_it_first_in_the_same_job
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _workflow_texts
+- name: test_the_action_takes_the_reference_from_the_base_and_the_script_from_the_base
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_pin_file_is_part_of_the_approval_contract
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.load_tool_pins
+  calls:
+  - quality_gate.load_tool_pins
+- name: test_a_head_commit_missing_from_the_checkout_is_not_reported_as_a_deleted_pin
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  calls:
+  - pytest.raises
+- name: test_an_approval_written_in_the_github_web_editor_with_crlf_line_ends_counts
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  - pytest.raises
+  - quality_gate.APPROVAL_PREFIX
+  calls:
+  - pytest.raises

@@ -32,6 +32,7 @@ ignore: |
   /docs/
   /tools/
   /tests/
+  /scripts/
   # Generated schema / data / IaC YAML at the repo root.
   *.schema.yaml
   *.meta.yaml

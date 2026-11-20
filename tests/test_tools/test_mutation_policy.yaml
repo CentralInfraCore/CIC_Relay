@@ -1,0 +1,130 @@
+---
+module: test_tools.test_mutation_policy
+description: 'mutation-policy/2 (owner decisions of 2026-11-14): the primary score
+  and the unviable metric. R1 is a regression test of a CHANGED behaviour: it runs
+  `quality_gate.py verify` on real cargo-mutants outcomes and reads the printed primary
+  score. On the previous tree (policy/1, primary = caught/planned) the output has
+  no policy/2 primary score at all and R1 fails there.'
+tags:
+- executor
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SCRIPTS
+  kind: const
+  description: ''
+  references: []
+- name: FIX
+  kind: const
+  description: ''
+  references: []
+- name: GATE
+  kind: const
+  description: ''
+  references: []
+- name: real
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: with_summaries
+  kind: function
+  decorators: []
+  description: 'Real outcomes where mutant #i has summaries[i]; the tool''s own counters
+    kept consistent.'
+  references:
+  - quality_gate.SUMMARY_TO_VERDICT
+  calls: []
+- name: run_verify
+  kind: function
+  decorators: []
+  description: '`quality_gate.py verify` on a plan of the 5 real mutants and these
+    verdicts; (rc, stdout).'
+  references:
+  - quality_gate.SHARD_SCHEMA
+  - quality_gate.build_rust_plan
+  calls:
+  - quality_gate.build_rust_plan
+  - rdir.mkdir
+- name: primary_line
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - text.splitlines
+- name: test_r1_an_unviable_mutant_does_not_change_the_primary_score
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_unviable_ratio_is_always_printed_even_when_zero
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_legacy_primary_of_policy_1_stays_visible
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_primary_score_states_and_gate_result
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_a_survivor_is_still_red_whatever_the_score_is
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_zero_denominator_is_neither_100_nor_0
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.primary_score
+  calls:
+  - cases.items
+  - quality_gate.primary_score
+- name: test_a_missing_accounting_is_unverifiable_not_a_score
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  - quality_gate.unviable_ratio
+  - quality_gate.primary_score
+  calls:
+  - quality_gate.primary_score
+  - quality_gate.unviable_ratio
+- name: test_primary_score_measures_only_evaluable_mutants
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.primary_score
+  calls:
+  - quality_gate.primary_score
+- name: test_unviable_ratio
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.unviable_ratio
+  - pytest.approx
+  calls:
+  - pytest.approx
+  - quality_gate.unviable_ratio
