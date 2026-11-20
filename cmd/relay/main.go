@@ -1,3 +1,12 @@
+// Command relay is the CIC relay (cic-relay): the HTTP control-plane server that hosts the Cabinet
+// (schema, module and workflow stores plus the wazero WASM runtime) and runs workflows through it.
+//
+// At start-up it loads its configuration from the environment, bootstraps PKI trust
+// (CIC_TRUST_MODE), registers the native modules, loads the embedded components and those installed
+// under /etc/cic-relay/components.d, wires the "git" and "cic-flow" host modules with per-module
+// capability grants taken from each verified module manifest, optionally starts the IaC operator,
+// and serves the API on :8080 (routes and their protection: apiRoutes). Started with
+// --mode=module-worker it instead runs the subprocess isolation worker loop on stdin/stdout.
 package main
 
 import (
@@ -36,10 +45,18 @@ import (
 //	-X main.SourceTreeHash=$(shell go run ./tools/sourcehash .)  [release/build targets]
 //	-X main.BuilderImageDigest=sha256:<digest>                   [release/build targets]
 var (
-	BuildID            = "dev"
-	CommitHash         = "unknown"
-	Timestamp          = "unknown"
-	SourceTreeHash     = "unknown"
+	// BuildID identifies the build ("<version>-<commit>"); "dev" when not injected.
+	BuildID = "dev"
+	// CommitHash is the source commit; it is the SourceRef of the Merkle build context.
+	CommitHash = "unknown"
+	// Timestamp is the build time (UTC, RFC 3339); dev/debug builds only, not release builds.
+	Timestamp = "unknown"
+	// SourceTreeHash is the digest of all tracked source files (tools/sourcehash, pkg/sourcedigest).
+	// It is the Merkle build context's SourceTreeDigest and the default SourceDigest of a /set request
+	// that names none; builds without it fall back to CommitHash there.
+	SourceTreeHash = "unknown"
+	// BuilderImageDigest is the digest of the pinned builder image; it becomes the
+	// DockerImageChecksum of the Merkle build context.
 	BuilderImageDigest = "unknown" // pinned builder docker image digest (docker-compose.yaml)
 )
 
@@ -52,6 +69,9 @@ var listenAndServe = func(srv *http.Server) error {
 var newVaultCryptoSvc = func(mount, key string) (crypto.CryptoService, error) {
 	return crypto.NewVaultCryptoService(mount, key)
 }
+
+// newGitStateRecorder opens the git-backed audit recorder (recorder.NewGitStateRecorder) at path;
+// tests replace it.
 var newGitStateRecorder = func(path string, svc crypto.CryptoService) (*recorder.GitStateRecorder, error) {
 	return recorder.NewGitStateRecorder(path, svc)
 }
@@ -621,6 +641,8 @@ func run(port string, logger *logrus.Logger, s *relayServer) error {
 	return listenAndServe(srv)
 }
 
+// main starts the relay as described in the package documentation. Every start-up failure
+// (configuration, trust bootstrap, component loading, an invalid CIC_API_TOKEN) is fatal.
 func main() {
 	// Worker mode: subprocess IPC loop (CIC_ISOLATION_MODE=subprocess).
 	// When the relay is spawned as a worker by SubprocessWorker it receives

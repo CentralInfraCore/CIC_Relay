@@ -57,6 +57,8 @@ type gitRule struct {
 	Sources []string `yaml:"sources"` // exact clone URLs, for clone
 }
 
+// gitOpSet is every git operation name a manifest rule or a module import may mention. "push" is in it so
+// that it is recognised and refused with gitPushDisabled rather than reported as unknown.
 var gitOpSet = map[string]bool{"clone": true, "fetch": true, "checkout": true, "commit": true, "push": true, "status": true}
 
 // gitPushDisabled is why git.push can not be granted. Pushing from a guest needs the exact source object,
@@ -177,6 +179,8 @@ func hostGlobMatch(pattern, host string) bool {
 	return host == pattern
 }
 
+// methodAllowed reports whether an egress rule permits method; an empty list permits any method
+// (compared case-insensitively).
 func methodAllowed(methods []string, method string) bool {
 	if len(methods) == 0 {
 		return true
@@ -184,6 +188,7 @@ func methodAllowed(methods []string, method string) bool {
 	return containsFold(methods, method)
 }
 
+// portAllowed reports whether an egress rule permits port; an empty list permits only 443.
 func portAllowed(ports []int, port int) bool {
 	if len(ports) == 0 {
 		return port == 443
@@ -196,6 +201,8 @@ func portAllowed(ports []int, port int) bool {
 	return false
 }
 
+// pathAllowed reports whether an egress rule permits path: an empty list permits any path, otherwise
+// path must start with one of the listed prefixes.
 func pathAllowed(paths []string, path string) bool {
 	if len(paths) == 0 {
 		return true
@@ -320,6 +327,7 @@ func (p *moduleProject) verifyBuildHash(wasm []byte) error {
 	return nil
 }
 
+// containsFold reports whether ss contains target, ignoring case.
 func containsFold(ss []string, target string) bool {
 	for _, s := range ss {
 		if strings.EqualFold(s, target) {

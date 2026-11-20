@@ -13,8 +13,12 @@ import (
 // fixture testdata/egress-parity/policy.txt is asserted on both sides, so changing one
 // without the other fails a test.
 const (
-	egressRequestTimeout   = 30 * time.Second
-	egressConnectTimeout   = 10 * time.Second
+	// egressRequestTimeout bounds one whole egress request, response body included.
+	egressRequestTimeout = 30 * time.Second
+	// egressConnectTimeout bounds the TCP connect and the TLS handshake.
+	egressConnectTimeout = 10 * time.Second
+	// egressMaxResponseBytes caps the response body returned to the module; a larger response is
+	// refused (egressTooLargeMsg), never truncated.
 	egressMaxResponseBytes = 1 << 20 // 1 MiB
 )
 

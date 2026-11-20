@@ -19,6 +19,8 @@ import (
 // base64) to the cic-flow signer interface. The OCI API key never leaves Vault.
 type ociVaultSigner struct{ svc *crypto.VaultCryptoService }
 
+// Sign returns the raw base64 OCI request signature of data, computed by Vault (see
+// VaultCryptoService.SignOCI).
 func (s ociVaultSigner) Sign(ctx context.Context, data []byte) (string, error) {
 	return s.svc.SignOCI(ctx, data)
 }

@@ -133,6 +133,10 @@ func (r *cicFlowRegistry) bindingFor(moduleID string) string {
 	return ""
 }
 
+// publish is the shared body of publishVerified and stageVerified. It parses the module's project.yaml and
+// returns nil without binding anything when the module neither imports cic-flow nor touches git. Otherwise
+// it rejects imports the manifest does not declare, binds the cic-flow dependencies (egress, signer) and
+// records the git grant — its rules, the manifest digest and artifact, active or staged — under the lock.
 func (r *cicFlowRegistry) publish(moduleID string, projectYAML []byte, artifact string, active bool) error {
 	p, err := parseModuleProject(projectYAML)
 	if err != nil {
@@ -230,6 +234,9 @@ func (r *cicFlowRegistry) authorizeGit(instance cabinet.InstanceIdentity, op str
 	return fmt.Errorf("git: %s on %q is not permitted for this module", op, clipForError(req.RepoID))
 }
 
+// gitRuleCovers reports whether rule, already matched on repository and op, also covers the names the
+// request carries: status and commit need nothing more, fetch needs a listed remote, checkout a permitted
+// ref, clone a listed source URL and a permitted branch. Any other op is not covered.
 func gitRuleCovers(rule gitRule, op string, req gitAuthRequest) bool {
 	switch op {
 	case "status", "commit":
@@ -244,6 +251,7 @@ func gitRuleCovers(rule gitRule, op string, req gitAuthRequest) bool {
 	return false
 }
 
+// containsExact reports whether list contains v, compared case-sensitively.
 func containsExact(list []string, v string) bool {
 	for _, x := range list {
 		if x == v {
@@ -272,6 +280,8 @@ func refAllowed(patterns []string, ref string) bool {
 	return false
 }
 
+// clipForError truncates a guest-supplied value to 48 bytes for an error message, so a module cannot
+// flood the logs through it.
 func clipForError(s string) string {
 	if len(s) > 48 {
 		return s[:48] + "…"

@@ -72,6 +72,7 @@ func (s *relayServer) optionallyAuthenticated(h http.HandlerFunc) http.HandlerFu
 	}
 }
 
+// unauthorized answers 401 with a `WWW-Authenticate: Bearer` challenge and the JSON error body msg.
 func unauthorized(w http.ResponseWriter, msg string) {
 	w.Header().Set("WWW-Authenticate", "Bearer")
 	writeError(w, http.StatusUnauthorized, "unauthorized", msg)
@@ -95,6 +96,9 @@ func (s *relayServer) protectRoute(rt apiRoute) http.HandlerFunc {
 	}
 }
 
+// tokenAuthorized reports whether r carries `Authorization: Bearer <CIC_API_TOKEN>`. It is false when no
+// token is configured (fail closed) or the header is missing or empty; the comparison is constant-time over
+// SHA-256 digests of both values, so neither the token nor its length leaks.
 func (s *relayServer) tokenAuthorized(r *http.Request) bool {
 	if s.apiToken == "" {
 		return false // not configured: fail closed
