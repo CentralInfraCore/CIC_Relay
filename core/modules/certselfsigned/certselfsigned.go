@@ -35,11 +35,15 @@ type Output struct {
 
 // Test-injectable function hooks for crypto operations.
 var (
-	generateKey       = func() (*ecdsa.PrivateKey, error) { return ecdsa.GenerateKey(elliptic.P256(), rand.Reader) }
-	generateSerial    = func() (*big.Int, error) { return rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128)) }
+	// generateKey creates the P-256 key pair of the certificate.
+	generateKey = func() (*ecdsa.PrivateKey, error) { return ecdsa.GenerateKey(elliptic.P256(), rand.Reader) }
+	// generateSerial draws a random 128-bit serial number.
+	generateSerial = func() (*big.Int, error) { return rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128)) }
+	// createCertificate signs the certificate template (x509.CreateCertificate).
 	createCertificate = func(template, parent *x509.Certificate, pub, priv interface{}) ([]byte, error) {
 		return x509.CreateCertificate(rand.Reader, template, parent, pub, priv)
 	}
+	// marshalECPrivateKey encodes the private key as SEC 1 DER.
 	marshalECPrivateKey = x509.MarshalECPrivateKey
 )
 
@@ -104,6 +108,7 @@ func Generate(ctx context.Context, input interface{}) (interface{}, error) {
 	}, nil
 }
 
+// parseInput converts the untyped module input to Input via a JSON round trip; cn is required.
 func parseInput(raw interface{}) (*Input, error) {
 	data, err := json.Marshal(raw)
 	if err != nil {
