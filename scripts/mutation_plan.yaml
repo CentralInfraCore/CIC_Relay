@@ -95,7 +95,7 @@ objects:
 - name: git_show
   kind: function
   decorators: []
-  description: ''
+  description: The content of path at rev, or None when it does not exist there.
   references: []
   calls: []
 - name: touches
@@ -179,7 +179,8 @@ objects:
 - name: rust_changed
   kind: function
   decorators: []
-  description: ''
+  description: Whether any changed file is Rust source or a file that forces a full
+    Rust mutation run.
   references: []
   calls:
   - f.endswith
@@ -188,7 +189,9 @@ objects:
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Plan the gate for --base..--head (or everything at --head with --all)
+    and write the plan as key=value lines to $GITHUB_OUTPUT, or to stdout outside
+    GitHub Actions; the reasoning goes to stderr.
   references: []
   calls:
   - ap.add_argument

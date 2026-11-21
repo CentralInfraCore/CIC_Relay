@@ -84,25 +84,26 @@ objects:
 - name: field
   kind: function
   decorators: []
-  description: ''
+  description: A per-object field value - its state plus any detail.
   references: []
   calls: []
 - name: unverifiable
   kind: function
   decorators: []
-  description: ''
+  description: A field in state UNVERIFIABLE, with the reason it could not be established.
   references: []
   calls: []
 - name: not_applicable
   kind: function
   decorators: []
-  description: ''
+  description: A field in state NOT_APPLICABLE, with the reason it does not apply
+    to the object.
   references: []
   calls: []
 - name: sha256_file
   kind: function
   decorators: []
-  description: ''
+  description: The hex SHA-256 and the size in bytes of a file.
   references: []
   calls: []
 - name: classify
@@ -136,7 +137,8 @@ objects:
 - name: go_module_path
   kind: function
   decorators: []
-  description: ''
+  description: The module path declared in a go.mod text; ModelError if it has no
+    module line.
   references: []
   calls:
   - ModelError
@@ -174,7 +176,7 @@ objects:
 - name: _pos
   kind: function
   decorators: []
-  description: ''
+  description: A source position as a comparable (line, column) pair.
   references: []
   calls: []
 - name: _attribute
@@ -311,7 +313,7 @@ objects:
 - name: canonical_digest
   kind: function
   decorators: []
-  description: ''
+  description: The sha256 of the canonical JSON of obj - the same function as quality_gate's.
   references:
   - quality_gate.canonical_digest
   calls:
@@ -332,7 +334,11 @@ objects:
 - name: build_record
   kind: function
   decorators: []
-  description: ''
+  description: Assemble and seal the evidence record of one measurement. Refuses (ModelError)
+    an unknown tool version and duplicate object ids. The objects are sorted by id;
+    the record binds the commit and tree, the scope digest, the tool versions, the
+    input file digests and the attribution statistics, and carries its summary and
+    its digest.
   references:
   - quality_gate.POLICY
   calls:
@@ -436,7 +442,8 @@ objects:
 - name: _brief
   kind: function
   decorators: []
-  description: ''
+  description: A short text form of a coverage field for messages ("MEASURED 3/5"
+    or "STATE (reason)").
   references: []
   calls:
   - c.get
@@ -524,7 +531,8 @@ objects:
 - name: _diff
   kind: function
   decorators: []
-  description: ''
+  description: Describe how two id sets differ - the count and first few missing and
+    unexpected ids.
   references: []
   calls: []
 - name: verify_l3
@@ -553,7 +561,7 @@ objects:
 - name: _load
   kind: function
   decorators: []
-  description: ''
+  description: Read a JSON file; ModelError if it is missing, unreadable or not JSON.
   references: []
   calls:
   - ModelError
@@ -569,7 +577,7 @@ objects:
 - name: _git
   kind: function
   decorators: []
-  description: ''
+  description: Run git in root and return its stripped stdout; ModelError if it fails.
   references: []
   calls:
   - ModelError
@@ -633,7 +641,8 @@ objects:
 - name: cmd_verify
   kind: function
   decorators: []
-  description: ''
+  description: 'verify: check an evidence record at every level (L1 to L3, plus the
+    tool pins when given) and print the verdicts; returns 1 if any level fails.'
   references: []
   calls:
   - _load
@@ -643,7 +652,7 @@ objects:
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Run the build or verify subcommand; return its exit status.
   references:
   - quality_gate.GateError
   calls:

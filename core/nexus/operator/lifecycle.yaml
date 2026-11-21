@@ -34,7 +34,7 @@ objects:
 - name: get
   kind: method
   receiver: HostRegistry
-  description: ''
+  description: get returns the state registered for hostID and whether there is one.
   references: []
   calls:
   - Lock
@@ -42,7 +42,8 @@ objects:
 - name: set
   kind: method
   receiver: HostRegistry
-  description: ''
+  description: set stores h under its HostID, replacing any previous state for that
+    host.
   references: []
   calls:
   - Lock

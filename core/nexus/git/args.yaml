@@ -9,13 +9,18 @@ related_nodes: []
 objects:
 - name: validateRemoteName
   kind: func
-  description: ''
+  description: validateRemoteName accepts only the name of a configured remote (letters,
+    digits, '.', '_', '-', not starting with a symbol), never a URL or a path; anything
+    else is refused with ErrInvalidArgument.
   references: []
   calls:
   - MatchString
 - name: validateRef
   kind: func
-  description: ''
+  description: 'validateRef accepts a branch, tag or ref name and refuses, with ErrInvalidArgument,
+    anything git could read as an option or as revision syntax: a leading symbol,
+    whitespace, "..", "@{", a lone "@", a trailing dot, and any path component that
+    is empty, starts with a dot or ends in ".lock" (the git check-ref-format rules).'
   references: []
   calls:
   - MatchString
@@ -89,12 +94,14 @@ objects:
   calls: []
 - name: hasControl
   kind: func
-  description: ''
+  description: hasControl reports whether s contains an ASCII control character (below
+    0x20, or DEL).
   references: []
   calls: []
 - name: clip
   kind: func
-  description: ''
+  description: clip shortens s to its first 64 bytes for an error message, so a hostile
+    oversized value is not echoed back in full.
   references: []
   calls: []
 - name: ErrInvalidArgument
@@ -119,5 +126,6 @@ objects:
   references: []
 - name: maxArgLen
   kind: const
-  description: ''
+  description: maxArgLen bounds the length of every guest-supplied remote name and
+    ref.
   references: []

@@ -87,17 +87,20 @@ objects:
   calls: []
 - name: methodAllowed
   kind: func
-  description: ''
+  description: methodAllowed reports whether an egress rule permits method; an empty
+    list permits any method (compared case-insensitively).
   references: []
   calls: []
 - name: portAllowed
   kind: func
-  description: ''
+  description: portAllowed reports whether an egress rule permits port; an empty list
+    permits only 443.
   references: []
   calls: []
 - name: pathAllowed
   kind: func
-  description: ''
+  description: 'pathAllowed reports whether an egress rule permits path: an empty
+    list permits any path, otherwise path must start with one of the listed prefixes.'
   references: []
   calls: []
 - name: grantsSign
@@ -152,12 +155,14 @@ objects:
   calls: []
 - name: containsFold
   kind: func
-  description: ''
+  description: containsFold reports whether ss contains target, ignoring case.
   references: []
   calls: []
 - name: gitOpSet
   kind: var
-  description: ''
+  description: gitOpSet is every git operation name a manifest rule or a module import
+    may mention. "push" is in it so that it is recognised and refused with gitPushDisabled
+    rather than reported as unknown.
   references: []
 - name: gitPushDisabled
   kind: const

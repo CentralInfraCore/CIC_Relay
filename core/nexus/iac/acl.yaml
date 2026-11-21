@@ -78,7 +78,7 @@ objects:
   - Resolve
 - name: contains
   kind: func
-  description: ''
+  description: contains reports whether v is an element of xs.
   references: []
   calls: []
 - name: PermRead

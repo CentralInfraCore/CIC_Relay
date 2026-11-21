@@ -52,7 +52,9 @@ objects:
   - Pos
 - name: dumpFile
   kind: func
-  description: ''
+  description: dumpFile parses one Go file and lists its function and method declarations
+    with their spans; init functions are numbered in source order. A file that does
+    not parse is reported with its error and no functions.
   references: []
   calls:
   - End
@@ -68,6 +70,7 @@ objects:
   - SetIndent
 - name: main
   kind: func
-  description: ''
+  description: main runs the tool on the command-line arguments and exits with run's
+    status.
   references: []
   calls: []

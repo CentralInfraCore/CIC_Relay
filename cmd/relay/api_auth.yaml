@@ -48,7 +48,8 @@ objects:
   - Get
 - name: unauthorized
   kind: func
-  description: ''
+  description: 'unauthorized answers 401 with a `WWW-Authenticate: Bearer` challenge
+    and the JSON error body msg.'
   references: []
   calls:
   - Set
@@ -72,7 +73,10 @@ objects:
 - name: tokenAuthorized
   kind: method
   receiver: relayServer
-  description: ''
+  description: 'tokenAuthorized reports whether r carries `Authorization: Bearer <CIC_API_TOKEN>`.
+    It is false when no token is configured (fail closed) or the header is missing
+    or empty; the comparison is constant-time over SHA-256 digests of both values,
+    so neither the token nor its length leaks.'
   references: []
   calls:
   - Get

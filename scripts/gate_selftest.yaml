@@ -35,7 +35,8 @@ objects:
 - name: SelfTestError
   kind: class
   decorators: []
-  description: ''
+  description: The self-test cannot run as specified (e.g. a workflow step it must
+    extract is not there).
   implements:
   - Exception
   references: []
@@ -57,27 +58,30 @@ objects:
 - name: copy_tree
   kind: function
   decorators: []
-  description: ''
+  description: Copy the checkout into an isolated work directory, without VCS, build
+    and cache directories.
   references: []
   calls: []
 - name: run
   kind: function
   decorators: []
-  description: ''
+  description: Run cmd in cwd with env added to the environment; return its exit status
+    and combined output.
   references: []
   calls:
   - e.update
 - name: status
   kind: function
   decorators: []
-  description: ''
+  description: The porcelain status of the tracked files of src (used to prove the
+    checkout was not written).
   references: []
   calls: []
 - name: Result
   kind: class
   decorators:
   - dataclass
-  description: ''
+  description: The outcome of one case - its positive control and its planted defect.
   implements: []
   references: []
 - name: ok
@@ -85,14 +89,15 @@ objects:
   receiver: Result
   decorators:
   - property
-  description: ''
+  description: The case passes only if both the control and the defect behaved as
+    expected.
   references: []
   calls: []
 - name: lines
   kind: method
   receiver: Result
   decorators: []
-  description: ''
+  description: The two report lines of the case, control first.
   references: []
   calls: []
 - name: GO_PLANTED
@@ -179,7 +184,8 @@ objects:
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Run the selected cases on isolated copies of --src; return 0 only if
+    every case passes.
   references: []
   calls:
   - __doc__.split

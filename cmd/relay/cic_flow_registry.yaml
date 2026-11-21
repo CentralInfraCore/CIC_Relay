@@ -110,7 +110,12 @@ objects:
 - name: publish
   kind: method
   receiver: cicFlowRegistry
-  description: ''
+  description: publish is the shared body of publishVerified and stageVerified. It
+    parses the module's project.yaml and returns nil without binding anything when
+    the module neither imports cic-flow nor touches git. Otherwise it rejects imports
+    the manifest does not declare, binds the cic-flow dependencies (egress, signer)
+    and records the git grant — its rules, the manifest digest and artifact, active
+    or staged — under the lock.
   references: []
   calls:
   - Lock
@@ -139,12 +144,15 @@ objects:
   - RUnlock
 - name: gitRuleCovers
   kind: func
-  description: ''
+  description: 'gitRuleCovers reports whether rule, already matched on repository
+    and op, also covers the names the request carries: status and commit need nothing
+    more, fetch needs a listed remote, checkout a permitted ref, clone a listed source
+    URL and a permitted branch. Any other op is not covered.'
   references: []
   calls: []
 - name: containsExact
   kind: func
-  description: ''
+  description: containsExact reports whether list contains v, compared case-sensitively.
   references: []
   calls: []
 - name: refAllowed
@@ -155,7 +163,8 @@ objects:
   calls: []
 - name: clipForError
   kind: func
-  description: ''
+  description: clipForError truncates a guest-supplied value to 48 bytes for an error
+    message, so a module cannot flood the logs through it.
   references: []
   calls: []
 - name: registerModuleCapability

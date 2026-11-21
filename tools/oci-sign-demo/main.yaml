@@ -25,12 +25,14 @@ related_nodes: []
 objects:
 - name: main
   kind: func
-  description: ''
+  description: main runs the demo and exits with status 1 when any step fails.
   references: []
   calls: []
 - name: run
   kind: func
-  description: ''
+  description: run generates a per-run RSA key, starts the fake OCI endpoint, sends
+    a correctly signed request that must be accepted and a tampered one that must
+    be rejected, and returns an error when either outcome is not the expected one.
   references: []
   calls:
   - Close
@@ -78,7 +80,8 @@ objects:
   - RequestURI
 - name: b64sha
   kind: func
-  description: ''
+  description: b64sha returns the base64-encoded SHA-256 of b, the form of OCI's x-content-sha256
+    header.
   references: []
   calls:
   - EncodeToString
@@ -88,13 +91,16 @@ objects:
   references: []
 - name: sigParamRE
   kind: var
-  description: ''
+  description: 'sigParamRE extracts the base64 signature parameter from an Authorization:
+    Signature header.'
   references: []
 - name: keyID
   kind: const
-  description: ''
+  description: keyID is the fake OCI key identifier (tenancy/user/fingerprint) put
+    into the Authorization header.
   references: []
 - name: host
   kind: const
-  description: ''
+  description: host is the OCI endpoint host named in the signed request (only the
+    signature covers it; the request goes to the local fake endpoint).
   references: []

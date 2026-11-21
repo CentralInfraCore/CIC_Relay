@@ -58,19 +58,23 @@ objects:
   references: []
 - name: VerdictConformant
   kind: const
-  description: ''
+  description: VerdictConformant means the field was observed and its value equals
+    the intent.
   references: []
 - name: VerdictDrift
   kind: const
-  description: ''
+  description: VerdictDrift means the observed value differs from the intent, or the
+    intent declares a field that was observed to be absent.
   references: []
 - name: VerdictObservedAbsent
   kind: const
-  description: ''
+  description: VerdictObservedAbsent means the field was observed to be absent and
+    the intent does not declare it either.
   references: []
 - name: VerdictUnobserved
   kind: const
-  description: ''
+  description: VerdictUnobserved means the observation did not cover the field, so
+    conformance cannot be claimed for it either way.
   references: []
 - name: VerdictNotComparable
   kind: const

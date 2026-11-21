@@ -200,7 +200,10 @@ objects:
 - name: Watch
   kind: method
   receiver: PollingWatcher
-  description: ''
+  description: Watch scans RootPath every Interval and sends the difference to the
+    previous scan as events on the returned channel (the first scan reports every
+    file as CREATE). A failed scan is logged and skipped. The channel is closed when
+    ctx is cancelled.
   references:
   - logrus.WithField
   calls:
@@ -210,13 +213,16 @@ objects:
   - logrus.WithField
 - name: EventCreate
   kind: const
-  description: ''
+  description: EventCreate reports a file that appeared since the previous scan (every
+    file on the first scan).
   references: []
 - name: EventUpdate
   kind: const
-  description: ''
+  description: EventUpdate reports a file whose content changed since the previous
+    scan.
   references: []
 - name: EventDelete
   kind: const
-  description: ''
+  description: EventDelete reports a file that disappeared since the previous scan;
+    its Content is nil.
   references: []

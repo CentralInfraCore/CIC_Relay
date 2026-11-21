@@ -44,7 +44,7 @@ objects:
 - name: Process
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: Process returns the stubbed (result, error) strings.
   references: []
   calls:
   - MockCicWasmHost.Called
@@ -52,7 +52,7 @@ objects:
 - name: Get
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: Get returns the stubbed (result, error) strings.
   references: []
   calls:
   - MockCicWasmHost.Called
@@ -60,7 +60,7 @@ objects:
 - name: Init
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: Init returns the stubbed (result, error) strings.
   references: []
   calls:
   - MockCicWasmHost.Called
@@ -68,7 +68,7 @@ objects:
 - name: Notify
   kind: method
   receiver: MockCicWasmHost
-  description: ''
+  description: Notify returns the stubbed (result, error) strings.
   references: []
   calls:
   - MockCicWasmHost.Called
@@ -76,7 +76,7 @@ objects:
 - name: Close
   kind: method
   receiver: MockCicWasmHost
-  description: Close mocks the closing of the WasmManager.
+  description: Close records the call and returns the stubbed error.
   references: []
   calls:
   - Error

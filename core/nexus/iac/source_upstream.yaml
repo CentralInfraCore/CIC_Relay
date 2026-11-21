@@ -70,13 +70,16 @@ objects:
   - yaml.Unmarshal
 - name: retryBackoff
   kind: var
-  description: ''
+  description: 'retryBackoff holds the delay before each retry: entry i is waited
+    before attempt i+2. With maxRetries = 3 only the first two entries are used.'
   references: []
 - name: defaultUpstreamTimeout
   kind: const
-  description: ''
+  description: defaultUpstreamTimeout is the HTTP client timeout when the caller does
+    not configure one.
   references: []
 - name: maxRetries
   kind: const
-  description: ''
+  description: maxRetries is the number of fetch attempts FetchConfig makes before
+    it gives up.
   references: []

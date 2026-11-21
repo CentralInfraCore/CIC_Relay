@@ -1,6 +1,9 @@
 ---
 package: operator
-description: ''
+description: 'Package operator manages the lifecycle of the hosts a relay serves:
+  it issues bootstrap tokens (HMAC-signed, a pre-PKI scaffold), onboards and offboards
+  hosts in a HostRegistry, and watches a directory of infrastructure definitions for
+  created, updated and deleted files.'
 tags:
 - core
 - validator
@@ -77,5 +80,6 @@ objects:
   - WithError
 - name: bootstrapTokenTTL
   kind: const
-  description: ''
+  description: bootstrapTokenTTL is how long a newly issued bootstrap token stays
+    valid.
   references: []

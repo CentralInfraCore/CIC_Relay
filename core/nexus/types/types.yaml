@@ -1,6 +1,8 @@
 ---
 package: types
-description: ''
+description: Package types holds the definitions of the relay's infrastructure graph
+  — Relay, Host and Service nodes with their specs and the common metadata block —
+  as read from YAML or JSON.
 tags:
 - core
 - schema
@@ -44,7 +46,7 @@ objects:
   references: []
 - name: RelaySpec
   kind: struct
-  description: ''
+  description: 'RelaySpec is the desired state of a Relay node: the hosts it serves.'
   implements: []
   references: []
 - name: Host
@@ -54,7 +56,8 @@ objects:
   references: []
 - name: HostSpec
   kind: struct
-  description: ''
+  description: 'HostSpec is the desired state of a Host node: its operating system
+    and the services it runs.'
   implements: []
   references: []
 - name: Service
@@ -64,7 +67,8 @@ objects:
   references: []
 - name: ServiceSpec
   kind: struct
-  description: ''
+  description: 'ServiceSpec is the desired state of a Service node: the schema/module
+    that implements it, plus either a legacy free-form Config or schema-driven Resources.'
   implements: []
   references: []
 - name: ResourceSpec

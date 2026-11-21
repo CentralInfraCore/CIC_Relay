@@ -56,8 +56,8 @@ objects:
 - name: Error
   kind: method
   receiver: EvidenceRequiredError
-  description: Error implements the error interface, returning a JSON-encoded list
-    of field-level validation errors or a generic message if empty.
+  description: Error starts with the text of ErrEvidenceRequired and names the workflow,
+    the proof error code and the chain hash.
   references: []
   calls: []
 - name: Is
@@ -102,19 +102,20 @@ objects:
   references: []
 - name: ErrInvalid
   kind: var
-  description: ''
+  description: 'ErrInvalid: a validation or integrity failure (missing fields, checksum
+    mismatch, oversized module).'
   references: []
 - name: ErrConflict
   kind: var
-  description: ''
+  description: 'ErrConflict: the request conflicts with the existing resource state.'
   references: []
 - name: ErrNotFound
   kind: var
-  description: ''
+  description: 'ErrNotFound: the referenced resource does not exist.'
   references: []
 - name: ErrTimeout
   kind: var
-  description: ''
+  description: 'ErrTimeout: an execution exceeded its time budget.'
   references: []
 - name: ErrEvidenceRequired
   kind: var

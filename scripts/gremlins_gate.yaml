@@ -86,14 +86,19 @@ objects:
 - name: run_one
   kind: function
   decorators: []
-  description: ''
+  description: Run gremlins on one package against its thresholds (the baseline entry,
+    or the defaults) and return (passed, report row). When timed-out mutants dominate
+    and more than one worker was used, the run is repeated with one worker. A package
+    without mutants passes; output that cannot be parsed fails.
   references: []
   calls:
   - problems.append
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Gate every given package, optionally write the per-package verdicts
+    as a gremlins-report/1 file bound to the plan, and return 0 only if every package
+    passed.
   references: []
   calls:
   - ap.add_argument

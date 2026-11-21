@@ -46,10 +46,12 @@ objects:
   calls: []
 - name: bootstrapPKI
   kind: func
-  description: 'bootstrapPKI loads the CA trust store based on trustMode. dev → loads
-    CICDeveloperCA + rootCA from embeddedPKI; TrustStoreLoaded=true prod → scaffold:
-    CICPlatformCA not embedded; returns empty pool with WARN Any other value returns
-    an error.'
+  description: bootstrapPKI loads the CA trust store based on trustMode. dev → loads
+    CICDeveloperCA + rootCA from embeddedPKI; TrustStoreLoaded=true prod → loads the
+    CA bundle (certificates and CRLs) named by CIC_PLATFORM_CA_BUNDLE; TrustStoreLoaded=true
+    In prod a missing or unreadable bundle, a bundle without certificates, a bad or
+    stale CRL, or an unmet CIC_CRL_REQUIRED_ISSUERS policy is an error. Any other
+    value returns an error.
   references:
   - logrus.Logger
   - logrus.Fields
@@ -66,11 +68,13 @@ objects:
   - logrus.Logger.WithFields
 - name: TrustModeDev
   kind: const
-  description: ''
+  description: TrustModeDev trusts the development CAs embedded in the binary (embedded/pki)
+    and is the only mode in which CIC_ALLOW_UNSIGNED_MODULES=1 is honoured.
   references: []
 - name: TrustModeProd
   kind: const
-  description: ''
+  description: TrustModeProd trusts only the CA bundle provisioned out-of-band at
+    CIC_PLATFORM_CA_BUNDLE (the CICPlatformCA is not embedded), with strict CRL handling.
   references: []
 - name: allowUnsignedEnv
   kind: const

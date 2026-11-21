@@ -42,9 +42,10 @@ objects:
   - Setx
 - name: ProofErrRecorderNotConfigured
   kind: const
-  description: ''
+  description: 'ProofErrRecorderNotConfigured: the service has no recorder, so the
+    trace could not be persisted.'
   references: []
 - name: ProofErrRecordFailed
   kind: const
-  description: ''
+  description: 'ProofErrRecordFailed: the recorder was called and failed.'
   references: []

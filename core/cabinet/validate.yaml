@@ -64,15 +64,17 @@ objects:
   references: []
 - name: KindSpec
   kind: const
-  description: ''
+  description: KindSpec prefixes the checksum input of a schema.
   references: []
 - name: KindWf
   kind: const
-  description: ''
+  description: KindWf prefixes the checksum input of a workflow.
   references: []
 - name: KindModule
   kind: const
-  description: ''
+  description: KindModule prefixes the checksum input of a module; validateAndChecksum
+    also size-checks and strips the custom sections of a raw []byte WASM payload of
+    this kind before hashing it.
   references: []
 - name: MaxWASMModuleSize
   kind: const

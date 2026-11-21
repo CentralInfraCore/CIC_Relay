@@ -110,7 +110,7 @@ objects:
 - name: sha256_hex
   kind: function
   decorators: []
-  description: ''
+  description: Return the lowercase hex SHA-256 of data.
   references: []
   calls: []
 - name: canonical_digest
@@ -123,7 +123,8 @@ objects:
 - name: plan_body
   kind: function
   decorators: []
-  description: ''
+  description: Build the unsealed body of a plan record (mutation-plan/1) for the
+    given ids.
   references: []
   calls: []
 - name: seal
@@ -157,7 +158,8 @@ objects:
 - name: build_go_plan
   kind: function
   decorators: []
-  description: ''
+  description: 'Seal the Go plan record: the planned packages, sorted and de-duplicated,
+    measured by gremlins; source says which planner produced the list.'
   references: []
   calls: []
 - name: load_plan
@@ -188,7 +190,10 @@ objects:
 - name: wrap_shard
   kind: function
   decorators: []
-  description: ''
+  description: Bind one cargo-mutants shard's outcomes.json to the plan, as a shard
+    report. The outcomes are checked for consistency first (a file whose verdicts
+    do not add up is refused, GateError); the report records the plan digest, the
+    shard position and the tool version.
   references: []
   calls:
   - GateError
@@ -196,7 +201,8 @@ objects:
 - name: read_reports
   kind: function
   decorators: []
-  description: ''
+  description: Load every report matching pattern under directory, sorted by path.
+    A missing directory yields no reports; an unreadable or corrupt report is a GateError.
   references: []
   calls:
   - GateError
@@ -245,14 +251,16 @@ objects:
 - name: _run_listing
   kind: function
   decorators: []
-  description: ''
+  description: Run the mutant listing command; return its stdout and exit status (the
+    status is recorded, not judged here).
   references: []
   calls:
   - GateError
 - name: _tool_version
   kind: function
   decorators: []
-  description: ''
+  description: Return the x.y.z version the tool prints for --version; GateError when
+    it cannot be read.
   references: []
   calls:
   - GateError
@@ -260,13 +268,16 @@ objects:
 - name: _write
   kind: function
   decorators: []
-  description: ''
+  description: Write doc as sorted, indented JSON to path, creating the parent directory.
   references: []
   calls: []
 - name: cmd_plan_rust
   kind: function
   decorators: []
-  description: ''
+  description: 'plan-rust: write the Rust plan record. Any previous record at --out
+    is removed first, so a failed run cannot leave a stale one behind. With --skipped
+    the plan is the empty plan with the planner''s reason; otherwise the listing command
+    after -- is run and its output becomes the plan.'
   references: []
   calls:
   - GateError
@@ -276,21 +287,25 @@ objects:
 - name: cmd_plan_go
   kind: function
   decorators: []
-  description: ''
+  description: plan-go - write the Go plan record from the planner's package list
+    (a stale record is removed first).
   references: []
   calls:
   - _write
 - name: cmd_wrap_shard
   kind: function
   decorators: []
-  description: ''
+  description: wrap-shard - bind one cargo-mutants outcomes.json to the plan and write
+    the shard report.
   references: []
   calls:
   - _write
 - name: cmd_verify
   kind: function
   decorators: []
-  description: ''
+  description: 'verify: check the Rust and/or Go plan against its shard / chunk reports.
+    Prints the accounting and the scores per language; returns 1 when any planned
+    set and measured set differ (or a record is invalid), 0 otherwise.'
   references: []
   calls:
   - GateError
@@ -344,20 +359,22 @@ objects:
 - name: _digest
   kind: function
   decorators: []
-  description: ''
+  description: Return the "sha256:<hex>" digest of data.
   references: []
   calls: []
 - name: _git
   kind: function
   decorators: []
-  description: ''
+  description: Run git in repo (bytes output); with check, a non-zero exit is a GateError
+    carrying git's stderr.
   references: []
   calls:
   - GateError
 - name: _approvers
   kind: function
   decorators: []
-  description: ''
+  description: Return the approvers (GitHub logins) listed in a tool-pins file; GateError
+    when the file is not JSON or the list is malformed.
   references: []
   calls:
   - GateError
@@ -408,7 +425,9 @@ objects:
 - name: cmd_pin_reference
   kind: function
   decorators: []
-  description: ''
+  description: 'pin-reference: resolve and record the reference pins of a job (the
+    base branch''s, not the pull request''s own - #195) and print the reference commit
+    and digest.'
   references: []
   calls:
   - rec.get
@@ -425,7 +444,11 @@ objects:
 - name: cmd_check_tools
   kind: function
   decorators: []
-  description: ''
+  description: 'check-tools: fail closed unless every measuring tool a surface needs
+    is declared with its pinned version. The declared NAME=VERSION pairs are compared
+    with the pins of the surface (optionally after verifying a pin reference record);
+    an unusable or unverifiable tool is a GateError, because the job''s result must
+    then not be accepted.'
   references: []
   calls:
   - GateError
@@ -435,13 +458,15 @@ objects:
 - name: cmd_check_coverprofile
   kind: function
   decorators: []
-  description: ''
+  description: check-coverprofile - require a Go coverage profile that exists, parses
+    and holds at least one block.
   references: []
   calls: []
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Run the subcommand; return its exit status (1 on a GateError, shown
+    as ::error::).
   references: []
   calls:
   - __doc__.split

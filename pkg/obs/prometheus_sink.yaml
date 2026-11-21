@@ -20,7 +20,7 @@ objects:
   references: []
 - name: label
   kind: struct
-  description: ''
+  description: label is one Prometheus label of a series.
   implements: []
   references: []
 - name: series
@@ -31,17 +31,18 @@ objects:
   references: []
 - name: counterEntry
   kind: struct
-  description: ''
+  description: counterEntry is the running total of one counter series.
   implements: []
   references: []
 - name: gaugeEntry
   kind: struct
-  description: ''
+  description: gaugeEntry is the last value set for one gauge series.
   implements: []
   references: []
 - name: histogramEntry
   kind: struct
-  description: ''
+  description: histogramEntry accumulates the sum and count of one histogram series
+    (no buckets).
   implements: []
   references: []
 - name: errWriter
@@ -63,12 +64,15 @@ objects:
   calls: []
 - name: seriesKey
   kind: func
-  description: ''
+  description: seriesKey builds the map key of a series from its name and its labels
+    in order, separated by NUL bytes so that no name or label text can make two different
+    series collide.
   references: []
   calls: []
 - name: newSeries
   kind: func
-  description: ''
+  description: newSeries returns the series for a metric name with the labels derived
+    from res and attrs, its key precomputed.
   references: []
   calls: []
 - name: RecordCounter
@@ -118,7 +122,8 @@ objects:
 - name: printf
   kind: method
   receiver: errWriter
-  description: ''
+  description: printf writes the formatted text unless an earlier write already failed;
+    the first error is kept in e.err.
   references: []
   calls: []
 - name: WritePrometheus

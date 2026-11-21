@@ -53,13 +53,14 @@ objects:
   references: []
 - name: leafPrefix
   kind: const
-  description: ''
+  description: leafPrefix is the first byte hashed for a leaf, so a leaf hash can
+    never equal an inner-node hash (domain separation).
   references: []
 - name: nodePrefix
   kind: const
-  description: ''
+  description: nodePrefix is the first byte hashed for an inner node.
   references: []
 - name: fieldSep
   kind: const
-  description: ''
+  description: fieldSep separates a leaf's name from its value in the hash input.
   references: []
