@@ -18,7 +18,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 	infra-down infra.help \
 	mutate mutate-all \
 	fmt-rust fmt-rust-check lint-rust test-rust coverage-rust deny-rust release-rust rust mutate-rust \
-	ffi-staticlib test-ffi demo demo-trustflow demo-oci-sign
+	ffi-staticlib meta-go test-ffi demo demo-trustflow demo-oci-sign
 
 # Default to showing help
 all: help
@@ -362,6 +362,20 @@ ffi-staticlib: ## Build the cic-ffi staticlib and stage it for the Go cgo link
 	$(call RUST_EXEC, cargo build -p cic-ffi --release --locked)
 	$(call RUST_EXEC, mkdir -p $(FFI_LIB_DIR) && cp /target/release/libcic_ffi.a $(FFI_LIB_DIR)/libcic_ffi.a)
 	@echo "staticlib staged at $(FFI_LIB_DIR)/libcic_ffi.a"
+
+# Go companion YAMLs (go.meta.schema.yaml): goastdump (go/ast) is built static in
+# the go-builder and staged in /output; the generator runs in the py-builder,
+# which has the writable source mount. --parser ast is fixed: without the go/ast
+# front end the run fails instead of falling back to the regex reader, which
+# misses declarations and misattributes doc comments. --merge keeps the
+# hand-written fields. The file list is the tracked Go files minus goastdump's
+# own test fixture (GO_META_ARGS to narrow, e.g. GO_META_ARGS="--merge cmd/relay/main.go").
+GOASTDUMP_BIN ?= /output/bin/goastdump
+GO_META_ARGS ?= --merge $(shell git ls-files '*.go' ':(exclude)tools/goastdump/testdata/*')
+
+meta-go: ## Generate/refresh Go companion YAMLs with go/ast (tools/go.meta.gen.py; GO_META_ARGS to narrow)
+	$(call GO_EXEC, cd tools/goastdump && mkdir -p $(dir $(GOASTDUMP_BIN)) && CGO_ENABLED=0 go build -trimpath -o $(GOASTDUMP_BIN) .)
+	@docker compose exec -T -e GO_META_GOASTDUMP=/app$(GOASTDUMP_BIN) py-builder python tools/go.meta.gen.py --parser ast $(GO_META_ARGS)
 
 test-ffi: ffi-staticlib ## Test the live Go→Rust→Go bridge (cgo, ffi_cgo tag)
 	@echo "Testing FFI bridge (cgo)..."

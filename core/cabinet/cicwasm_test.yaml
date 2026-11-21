@@ -456,3 +456,101 @@ objects:
   - NewWasmManager
   - assert.Contains
   - require.Error
+- name: TestWasmManager_InstanceIdentity
+  kind: func
+  description: 'Every instance gets its own identity, created before it exists: the
+    module ID, the checksum of the artifact compiled for it, and a serial no other
+    instance shares. An instance that is live when its module is replaced keeps the
+    identity of the artifact it runs; the next instance gets the new one.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotZero
+  - require.NotEqual
+  - assert.NotEqual
+  calls:
+  - Checksum
+  - Close
+  - ID
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Put
+  - assert.Equal
+  - assert.NotEqual
+  - assert.NotZero
+  - require.NoError
+  - require.NotEqual
+- name: TestInstanceIdentityFrom
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.True
+  - assert.Equal
+  calls:
+  - InstanceIdentityFrom
+  - WithInstanceIdentity
+  - assert.Equal
+  - assert.False
+  - assert.True
+- name: wLEB
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: wSection
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: wVec
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: wName
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: probeGuest
+  kind: func
+  description: 'probeGuest assembles a module that satisfies the CIC guest ABI (allocate,
+    deallocate, Call) and whose Call invokes the imported host function probe.ping.
+    No toolchain: the bytes are the module.'
+  references: []
+  calls: []
+- name: TestCicWasmHost_HostFunctionsSeeTheInstanceIdentityNotTheCallers
+  kind: func
+  description: The identity a host function sees, for a call into the instance, is
+    the instance's own, whatever the caller put on the context. Real manager, real
+    guest, a host function that records what it is given.
+  references:
+  - wazero.Runtime
+  - api.Module
+  - require.NoError
+  - require.Equal
+  - assert.Equal
+  - require.Len
+  - wazero.Runtime.NewHostModuleBuilder
+  calls:
+  - Checksum
+  - Close
+  - Export
+  - ID
+  - InstanceIdentityFrom
+  - Instantiate
+  - NewFunctionBuilder
+  - NewHostInstance
+  - NewModuleDescriptor
+  - NewWasmManager
+  - Process
+  - Put
+  - WithFunc
+  - WithInstanceIdentity
+  - assert.Equal
+  - require.Equal
+  - require.Len
+  - require.NoError
+  - wazero.Runtime.NewHostModuleBuilder

@@ -29,7 +29,9 @@ objects:
   references:
   - uuid.New
   - logrus.Fields
+  - schemacompile.ValidateSchemaRef
   - cabinet.SetPayload
+  - cabinet.IsUnauthorized
   - cabinet.IsTimeout
   calls:
   - Close
@@ -44,4 +46,6 @@ objects:
   - WithField
   - WithFields
   - cabinet.IsTimeout
+  - cabinet.IsUnauthorized
+  - schemacompile.ValidateSchemaRef
   - uuid.New

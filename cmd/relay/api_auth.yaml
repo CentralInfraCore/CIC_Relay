@@ -1,0 +1,124 @@
+---
+package: main
+description: ''
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: apiRoute
+  kind: struct
+  description: apiRoute is one route of the relay API and how it is protected.
+  implements: []
+  references: []
+- name: routeAccess
+  kind: type
+  description: routeAccess classifies an API route.
+  references: []
+- name: apiTokenFromEnv
+  kind: func
+  description: 'apiTokenFromEnv reads CIC_API_TOKEN. Unset or empty means "not configured":
+    the authenticated routes then refuse every request (fail closed). A value shorter
+    than minAPITokenLength is a start-up error, so a weak token is never silently
+    accepted.'
+  references: []
+  calls: []
+- name: authenticated
+  kind: method
+  receiver: relayServer
+  description: 'authenticated wraps h so it runs only for a request carrying `Authorization:
+    Bearer <CIC_API_TOKEN>`. With no token configured every request is refused. The
+    comparison is constant-time over fixed-length digests, so neither the token nor
+    its length leaks.'
+  references: []
+  calls: []
+- name: optionallyAuthenticated
+  kind: method
+  receiver: relayServer
+  description: 'optionallyAuthenticated is for a route that serves callers without
+    credentials but must let a credentialed caller through to the protected operations:
+    no Authorization header passes as anonymous; a header that is present must be
+    valid (a wrong token is refused, never downgraded to anonymous); a valid token
+    puts the principal into the request context. What an anonymous caller may do is
+    decided at the execution boundary (cabinet.WithProtectedModules), not here.'
+  references: []
+  calls:
+  - Get
+- name: unauthorized
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Set
+- name: withAPIPrincipal
+  kind: func
+  description: withAPIPrincipal returns r with the authenticated API principal in
+    its context.
+  references:
+  - cabinet.WithPrincipal
+  - cabinet.Principal
+  calls:
+  - cabinet.WithPrincipal
+- name: protectRoute
+  kind: method
+  receiver: relayServer
+  description: 'protectRoute wraps a route''s handler by its access class. Any class
+    that is not explicitly public or optional is treated as authenticated: an unknown
+    value must never yield a public route.'
+  references: []
+  calls: []
+- name: tokenAuthorized
+  kind: method
+  receiver: relayServer
+  description: ''
+  references: []
+  calls:
+  - Get
+- name: apiRoutes
+  kind: func
+  description: apiRoutes is the single place routes are declared. newMux registers
+    exactly this list, and TestAPIRoutes_AreClassified fails if a route is added another
+    way or a public route has no stated reason.
+  references: []
+  calls: []
+- name: protectedModuleIDs
+  kind: var
+  description: 'protectedModuleIDs are the components only an authenticated principal
+    may run, enforced by cabinet.Setx for every entry path, whichever route started
+    the workflow. They are the operations behind the authenticated endpoints: signing
+    (the operation that uses the signing key), and the components that clone a caller-supplied
+    repository or run its make targets. Authenticating the endpoints alone would let
+    /set chain the same components and walk around that. TestProtectedModules_ClassifyEveryNativeModule
+    fails when a native module is registered that is neither listed here nor on the
+    explicit unprotected list.'
+  references: []
+- name: minAPITokenLength
+  kind: const
+  description: minAPITokenLength is the shortest accepted CIC_API_TOKEN. A short secret
+    on an endpoint that signs artifacts is not a credential.
+  references: []
+- name: minAPITokenDistinct
+  kind: const
+  description: 'minAPITokenDistinct is the fewest distinct characters a token may
+    have. A length alone does not make a secret: "aaaaaaaaaaaaaaaa" is long and worthless.
+    This is a cheap sanity check, not a proof of entropy; generate the token randomly
+    (for example `openssl rand -hex 32`).'
+  references: []
+- name: accessPublic
+  kind: const
+  description: 'accessPublic: no credentials required. Every public route is listed
+    explicitly, with the reason, so a new route cannot become unauthenticated by accident.'
+  references: []
+- name: accessAuthenticated
+  kind: const
+  description: 'accessAuthenticated: requires the bearer token (authenticated).'
+  references: []
+- name: accessOptional
+  kind: const
+  description: 'accessOptional: serves anonymous callers, and a valid bearer token
+    authorizes the protected operations (optionallyAuthenticated). The protected operations
+    themselves are enforced at the execution boundary, so an anonymous caller still
+    cannot reach them.'
+  references: []

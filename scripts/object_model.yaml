@@ -1,0 +1,656 @@
+---
+module: object_model
+description: 'Object-level measurement model (report-only): what check did each production
+  object get? Global percentages say how much of a package ran. They do not say, per
+  function or method, which coverage and which mutation verdicts it has, or that for
+  some objects nothing can be said. This module builds that model and a canonical,
+  digested evidence record of it, and a verifier that states what it proves and what
+  it does not. Contracts (versioned; a change is a change of the gate logic, planned
+  as such by mutation_plan.py) object-id/1         the key of an object (see go_object_id
+  / rust_object_key) object-evidence/1   the record (build_record) and its three verification
+  levels (verify_record) measurement-scope/1 which files are production, test, generated,
+  experimental, measured apart Every evidence field of every object is exactly one
+  of MEASURED         a measured value NOT_APPLICABLE   nothing to measure, for a
+  stated reason UNVERIFIABLE     it cannot be established, with a coded reason: never
+  a hidden success The coverage KIND is part of the data and is one of statement |
+  line | region. There is no "branch": the stable toolchain gives none (measured:
+  `cargo llvm-cov --branch` needs nightly), so nothing here may be called branch coverage.
+  Attribution is never estimated. A Go cover block belongs to an object only if it
+  lies completely inside that object''s span; a block that cuts an object, spans several,
+  or lies in none is counted and makes the affected fields UNVERIFIABLE. No value
+  is ever split proportionally. Verification levels (never merged into one "verified"):
+  L1 INTEGRITY_OK       schema, digest, totals recount, enums: the record is internally
+  consistent L2 BOUND_TO_INPUTS    the commit/tree and the input files are the ones
+  the record names (NOT_CHECKED without them) L3 COMPLETE_FOR_SCOPE the object list
+  is complete against an independent enumeration (PARTIAL where only a part can be
+  shown) A digest does not prove where a measurement came from: that the tools really
+  ran on that tree is not shown by any of the three levels.'
+tags:
+- core
+- loader
+- parser
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: ID_CONTRACT
+  kind: const
+  description: ''
+  references: []
+- name: EVIDENCE_SCHEMA
+  kind: const
+  description: ''
+  references: []
+- name: SCOPE_SCHEMA
+  kind: const
+  description: ''
+  references: []
+- name: MEASURED
+  kind: const
+  description: ''
+  references: []
+- name: NOT_APPLICABLE
+  kind: const
+  description: ''
+  references: []
+- name: UNVERIFIABLE
+  kind: const
+  description: ''
+  references: []
+- name: STATES
+  kind: const
+  description: ''
+  references: []
+- name: COVERAGE_KINDS
+  kind: const
+  description: ''
+  references: []
+- name: REASONS
+  kind: const
+  description: ''
+  references: []
+- name: FIELDS
+  kind: const
+  description: ''
+  references: []
+- name: ModelError
+  kind: class
+  decorators: []
+  description: 'The input cannot be trusted: no record is built / the record is rejected.'
+  implements:
+  - Exception
+  references: []
+- name: field
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: unverifiable
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: not_applicable
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: sha256_file
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: classify
+  kind: function
+  decorators: []
+  description: 'The first matching rule of the scope decides: (class, rule). No match
+    is an error: a file the scope does not classify is neither measured nor silently
+    left out.'
+  references: []
+  calls:
+  - ModelError
+- name: check_scope
+  kind: function
+  decorators: []
+  description: 'The scope file itself: schema, versioned, every exclusion has a reason.'
+  references: []
+  calls:
+  - ModelError
+  - rule.get
+  - scope.get
+- name: scope_files
+  kind: function
+  decorators: []
+  description: Group the tracked files of a language by scope class; an unclassified
+    file is an error.
+  references: []
+  calls:
+  - f.endswith
+  - out.setdefault
+  - rule.get
+- name: go_module_path
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - ModelError
+  - m.group
+- name: _BLOCK
+  kind: const
+  description: ''
+  references: []
+- name: parse_coverprofile
+  kind: function
+  decorators: []
+  description: The blocks (file, sl, sc, el, ec, nstmt, count) of a Go cover profile,
+    merged with `set` semantics (a block that appears more than once is covered if
+    any occurrence is).
+  references: []
+  calls:
+  - ModelError
+  - _BLOCK.match
+  - ln.strip
+  - m.group
+  - m.groups
+  - merged.items
+  - merged.setdefault
+  - text.splitlines
+- name: go_object_id
+  kind: function
+  decorators: []
+  description: 'object-id/1 for Go: go:<import path>.<Name> | .<Recv>.<Name> | .init#<file>#<ord>,
+    plus @build(<constraint>) when the file carries one. The position is NOT part
+    of the key (an edit above the function does not rename it).'
+  references: []
+  calls:
+  - build.split
+  - file.rsplit
+- name: _pos
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _attribute
+  kind: function
+  decorators: []
+  description: 'Attribute the blocks of ONE file to its functions. funcs: [(key, start(line,col),
+    end(line,col))]. Returns ({key: [blocks]}, stats) where stats counts the blocks
+    that could not be attributed: partial (cuts an object or spans several) and unattributed
+    (inside no object). A block belongs to an object only if it lies completely inside.'
+  references: []
+  calls:
+  - _pos
+- name: go_objects
+  kind: function
+  decorators: []
+  description: 'The Go objects of one measurement unit (a module) and the attribution
+    statistics. prefix: the profile path of a file is module + "/" + relative path;
+    for a nested module the inventory paths are relative to it. repeats: further profiles
+    of the same tree; an object whose covered count differs between them is NONDETERMINISTIC.
+    detail: keep the uncovered spans.'
+  references: []
+  calls:
+  - ModelError
+  - _attribute
+  - _pos
+  - by_file.get
+  - by_file.setdefault
+  - fdump.get
+  - funcs.append
+  - inv_files.add
+  - objects.append
+  - r_by.get
+  - seen.add
+- name: _CRATE_DISAMBIGUATOR
+  kind: const
+  description: ''
+  references: []
+- name: _CLOSURE_TAIL
+  kind: const
+  description: ''
+  references: []
+- name: _strip_generic_suffix
+  kind: function
+  decorators: []
+  description: '`a::f::<T, U>` -> `a::f`: an instantiation belongs to its generic
+    function.'
+  references: []
+  calls:
+  - name.endswith
+- name: rust_object_key
+  kind: function
+  decorators: []
+  description: 'object-id/1 for Rust: rust:<demangled path>, with the per-binary crate
+    disambiguators ([0], [1] ...) removed, a closure folded into the function that
+    contains it, and a generic instantiation folded into its generic function. The
+    file and the span are attributes, not the key.'
+  references: []
+  calls:
+  - _CLOSURE_TAIL.sub
+  - _CRATE_DISAMBIGUATOR.sub
+  - _strip_generic_suffix
+- name: rust_name
+  kind: function
+  decorators: []
+  description: 'The last path segment of a key: the function name the mutation tool
+    also reports.'
+  references: []
+  calls: []
+- name: _scan
+  kind: function
+  decorators: []
+  description: 'Yield (index, char, line) for the characters of a Rust source that
+    are CODE: comments, string literals (incl. raw strings) and char literals are
+    skipped, a lifetime is not a char literal.'
+  references: []
+  calls:
+  - m.end
+  - m.group
+  - text.count
+  - text.find
+- name: cfg_test_spans
+  kind: function
+  decorators: []
+  description: 'The (first line, last line) of every item that carries #[cfg(test)]:
+    a `mod tests { .. }`, a single test-only function, or a `use`/`mod x;` ending
+    at its `;`. Production code that merely FOLLOWS such an item is not test code
+    (a first-#[cfg(test)]-to-the-end rule would drop it: measured on ffi/src/lib.rs,
+    where a production function follows a #[cfg(test)] item in the middle of the file).'
+  references: []
+  calls:
+  - ModelError
+  - _scan
+  - attr.finditer
+  - m.end
+  - m.start
+  - spans.append
+  - text.count
+- name: _regions
+  kind: function
+  decorators: []
+  description: The code regions of an llvm-cov function entry (kind 0).
+  references: []
+  calls:
+  - fn.get
+- name: rust_objects
+  kind: function
+  decorators: []
+  description: 'The Rust objects from a real `cargo llvm-cov --json` export, the demangled
+    names of its symbols, the cargo-mutants listing and the verdicts of the run. Test
+    code is not a production object: a file under a tests/ or benches/ directory,
+    or a function inside an item that carries #[cfg(test)] (see cfg_test_spans), is
+    counted as excluded (never silently dropped).'
+  references:
+  - quality_gate.primary_score
+  - quality_gate.VERDICTS
+  calls:
+  - ModelError
+  - _regions
+  - by_file.get
+  - by_file.setdefault
+  - c.values
+  - dict.fromkeys
+  - file.startswith
+  - fn.get
+  - groups.setdefault
+  - m.get
+  - objects.append
+  - p.is_file
+  - p.read_text
+  - quality_gate.primary_score
+  - rel.endswith
+  - rel.split
+  - verdicts.get
+- name: canonical_digest
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.canonical_digest
+  calls:
+  - quality_gate.canonical_digest
+- name: summarize
+  kind: function
+  decorators: []
+  description: 'Totals by state, per field and per unit. Tolerant of a broken object
+    (a missing field is counted under the state `MISSING`, it does not crash): the
+    verifier must report it, not die on it.'
+  references: []
+  calls:
+  - cell.get
+  - o.get
+  - reasons.get
+  - reasons.items
+  - tgt.setdefault
+- name: build_record
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.POLICY
+  calls:
+  - ModelError
+  - body.items
+  - inputs.items
+  - tools.items
+- name: STABLE_MIN_RUNS
+  kind: const
+  description: ''
+  references: []
+- name: DETERMINISM
+  kind: const
+  description: ''
+  references: []
+- name: code
+  kind: function
+  decorators: []
+  description: A finding with its own diagnostic code, so that two different faults
+    never share one message.
+  references: []
+  calls: []
+- name: verify_l1
+  kind: function
+  decorators: []
+  description: 'Record integrity: every problem found (empty = INTEGRITY_OK).'
+  references:
+  - quality_gate.POLICY
+  calls:
+  - bad.append
+  - o.get
+  - rec.get
+  - rec.items
+  - v.get
+- name: load_tool_pins
+  kind: function
+  decorators: []
+  description: The pinned versions of the measuring tools (`.measurement-tools.json`);
+    see quality_gate.load_tool_pins.
+  references:
+  - quality_gate.GateError
+  - quality_gate.load_tool_pins
+  calls:
+  - ModelError
+  - quality_gate.load_tool_pins
+- name: verify_tools
+  kind: function
+  decorators: []
+  description: 'Is every tool of the record the pinned one, and does the record declare
+    every tool it must? Fail closed. UNUSABLE: the version is known but is not the
+    pinned one. UNVERIFIABLE: the version cannot be established (missing, empty, `unknown`)
+    or the tool is not pinned at all (an unknown tool decides nothing). Either verdict
+    rejects the measurement. The versions are what the record DECLARES: that the declared
+    tool really ran is provenance, not checked here. `pins` is the loaded `.measurement-tools.json`;
+    the tools the record must declare are its `record_tools` (all pinned tools when
+    absent).'
+  references:
+  - quality_gate.tool_pin_findings
+  calls:
+  - quality_gate.tool_pin_findings
+  - rec.get
+- name: stability
+  kind: function
+  decorators: []
+  description: 'Is the evidence STABLE? Only if every measured coverage was seen identical
+    in >= STABLE_MIN_RUNS independent runs and no object is NONDETERMINISTIC. A single
+    run is never stable: it shows nothing about determinism.'
+  references: []
+  calls:
+  - c.get
+  - o.get
+  - rec.get
+- name: _cmp_cov
+  kind: function
+  decorators: []
+  description: Do two coverage fields say the same? runs and determinism ARE compared
+    (a stability claim must be provable from the bound input profiles, like a value);
+    only the uncovered spans are not.
+  references: []
+  calls:
+  - got.get
+  - want.get
+- name: verify_l2
+  kind: function
+  decorators: []
+  description: 'Binding to the inputs: PASS | FAIL | NOT_CHECKED, with the findings.
+    The checkout identity and the input digests are checked as before. With `derived`
+    ({object id: the coverage field re-derived from the INPUT FILES}) the measured
+    values are checked too: a record whose values were forged and re-sealed (digest
+    and summary recomputed) is internally consistent and its inputs are untouched,
+    so only a re-derivation can see it (REDERIVATION_MISMATCH).'
+  references: []
+  calls:
+  - _brief
+  - _cmp_cov
+  - bad.append
+  - derived.items
+  - derived.values
+  - have.get
+  - inputs.items
+- name: _brief
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - c.get
+- name: derive_go_coverage
+  kind: function
+  decorators: []
+  description: 'The Go coverage of every object, derived from the inventory and the
+    cover profile by a SECOND, different algorithm than go_objects (a binary search
+    over the sorted function starts instead of a scan of all functions), so that a
+    defect of the first one is not repeated here. Returns {object id: {"unit", "coverage"}}.'
+  references: []
+  calls:
+  - bisect.bisect_right
+  - by_file.get
+  - by_file.setdefault
+  - fdump.get
+  - per_run.append
+- name: derive_rust_coverage
+  kind: function
+  decorators: []
+  description: The Rust region coverage of every object, re-derived from the llvm-cov
+    export (the id contract and the test-region rule are shared; the aggregation is
+    written again, per file first).
+  references: []
+  calls:
+  - fn.get
+  - p.is_file
+  - p.read_text
+  - per_key.items
+  - per_key.setdefault
+  - rel.endswith
+  - rel.split
+- name: _FUNC_RE
+  kind: const
+  description: ''
+  references: []
+- name: _BUILD_RE
+  kind: const
+  description: ''
+  references: []
+- name: independent_go_ids
+  kind: function
+  decorators: []
+  description: 'The object ids of Go source files, enumerated WITHOUT go/ast (so not
+    by tools/objinventory): the column-0 `func` lines of the source, with the same
+    key format (object-id/1). `files` are repo-relative; `module_dir` is the directory
+    of the go.mod ("." or "" for the root module).'
+  references: []
+  calls:
+  - _BUILD_RE.match
+  - _FUNC_RE.match
+  - fn.update
+  - ids.add
+  - line.startswith
+  - m.group
+- name: independent_rust_free_functions
+  kind: function
+  decorators: []
+  description: 'An independent enumeration of the FREE functions of one Rust source
+    file (no llvm-cov, no cargo-mutants): `fn` items at nesting depth 0 outside the
+    #[cfg(test)] items. Returns (object ids, unmapped). `unmapped` counts what this
+    enumeration cannot name: `impl` blocks, `trait` blocks and inline `mod` blocks
+    (their functions carry a type or module path it does not derive) and every nested
+    `fn` (llvm-cov lists it separately). A non-zero `unmapped` means the file is NOT
+    proven complete: the caller must keep the Rust verdict PARTIAL. (The comment/string/char
+    scanner and the test-region rule are shared with the object builder; that sharing
+    is a stated limit of the independence.)'
+  references: []
+  calls:
+  - _scan
+  - blk_re.match
+  - code_lines.setdefault
+  - fn_re.match
+  - ids.add
+  - line.count
+  - m.group
+- name: go_func_lines
+  kind: function
+  decorators: []
+  description: 'An independent count of top-level Go declarations: lines that start
+    with `func ` in column 0.'
+  references: []
+  calls:
+  - line.startswith
+- name: _diff
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: verify_l3
+  kind: function
+  decorators: []
+  description: 'Completeness against an independent enumeration: (COMPLETE_FOR_SCOPE
+    | PARTIAL | FAIL, proven, unproven/findings). COMPLETE_FOR_SCOPE only if EVERY
+    unit is proven by SET identity (not by a count). Whatever cannot be proven is
+    listed and makes the verdict PARTIAL: PARTIAL is never renamed to a pass.'
+  references: []
+  calls:
+  - _diff
+  - bad.append
+  - go_files.items
+  - go_independent.items
+  - m.get
+  - proven.append
+  - unproven.append
+- name: verify_record
+  kind: function
+  decorators: []
+  description: All three levels, each on its own. There is deliberately no combined
+    verdict.
+  references: []
+  calls: []
+- name: _load
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - ModelError
+- name: demangle
+  kind: function
+  decorators: []
+  description: Demangle Rust v0 symbols with binutils c++filt (in the pinned image);
+    returns (map, version).
+  references: []
+  calls:
+  - ModelError
+  - out.splitlines
+- name: _git
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - ModelError
+- name: cmd_build
+  kind: function
+  decorators: []
+  description: Build the evidence record from the real tool outputs (report-only).
+  references:
+  - quality_gate.rust_verdicts
+  calls:
+  - ModelError
+  - _git
+  - _load
+  - kv.split
+  - quality_gate.rust_verdicts
+  - r.split
+  - rec.items
+  - spec.split
+- name: cmd_scope_list
+  kind: function
+  decorators: []
+  description: The tracked files of one scope class, one per line (what the inventory
+    tool is run on).
+  references: []
+  calls:
+  - _git
+  - _load
+- name: _crate_name
+  kind: function
+  decorators: []
+  description: 'The crate a Rust file belongs to: the [package] name of the nearest
+    Cargo.toml above it (''-'' becomes ''_'').'
+  references: []
+  calls:
+  - ModelError
+  - m.is_file
+  - m.read_text
+  - mt.group
+- name: build_context
+  kind: function
+  decorators: []
+  description: 'Everything the verifier needs besides the record, DERIVED FROM THE
+    CHECKOUT AND THE INPUT FILES: the independent Go object sets, the re-derived coverage
+    values, the independent Rust set (only when it is complete), the units the scope
+    requires. Returns the keyword arguments of verify_record.'
+  references: []
+  calls:
+  - _crate_name
+  - _git
+  - _load
+  - derived.update
+  - go_groups.get
+  - go_groups.items
+  - inputs.get
+  - inputs.items
+  - name.startswith
+  - rust_groups.get
+  - u.split
+  - u.startswith
+  - units.items
+- name: cmd_verify
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _load
+  - kv.split
+  - r.get
+  - res.get
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - quality_gate.GateError
+  calls:
+  - __doc__.split
+  - a.fn
+  - ap.add_subparsers
+  - ap.parse_args
+  - p.add_argument
+  - p.set_defaults
+  - sub.add_parser

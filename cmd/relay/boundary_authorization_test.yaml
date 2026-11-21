@@ -1,0 +1,147 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: boundaryEnv
+  kind: struct
+  description: boundaryEnv is a real cabinet service with the production protected-module
+    list, counting native stand-ins for the protected components, and the workflows
+    an attacker would try.
+  implements: []
+  references: []
+- name: newBoundaryEnv
+  kind: func
+  description: ''
+  references:
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - cabinet.WithProtectedModules
+  - require.NoError
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - cabinet.NativeFunctions
+  - cabinet.NewWorkflow
+  - cabinet.WorkflowIdentity
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowSigning
+  - logrus.New
+  calls:
+  - ID
+  - PutModule
+  - PutWorkflow
+  - SetOutput
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWorkflow
+  - cabinet.WithProtectedModules
+  - logrus.New
+  - require.NoError
+- name: post
+  kind: method
+  receiver: boundaryEnv
+  description: ''
+  references: []
+  calls:
+  - ServeHTTP
+  - Set
+- name: setBody
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: totalProtectedRuns
+  kind: method
+  receiver: boundaryEnv
+  description: ''
+  references: []
+  calls: []
+- name: TestBoundary_SetCannotRunProtectedOperationsAnonymously
+  kind: func
+  description: 'The core of the review finding: /set must not be a way around the
+    protection. Anonymous callers, and callers with a wrong token, cannot run a protected
+    operation by naming a workflow.'
+  references:
+  - assert.Equal
+  - assert.Positive
+  calls:
+  - String
+  - assert.Equal
+  - assert.Positive
+- name: TestBoundary_SetStillServesUnprotectedWorkflowsAnonymously
+  kind: func
+  description: /set stays usable for workflows with no protected step.
+  references:
+  - assert.Equal
+  calls:
+  - String
+  - assert.Equal
+- name: TestBoundary_EveryEntryPathRefusesAnonymousProtectedWork
+  kind: func
+  description: 'The same decision on every entry path: whichever route starts the
+    work, an anonymous caller never reaches a protected operation.'
+  references:
+  - assert.Equal
+  calls:
+  - String
+  - assert.Equal
+- name: TestBoundary_HandlerWithoutRouteAuth_StillRefusedAtTheBoundary
+  kind: func
+  description: 'Defence in depth, the point of the boundary: even if a route''s own
+    authentication were removed or a handler were mounted without it, the execution
+    boundary still refuses.'
+  references:
+  - assert.Equal
+  calls:
+  - String
+  - assert.Equal
+- name: TestProtectRoute_UnknownAccessClassFailsClosed
+  kind: func
+  description: An unknown access class must never yield a public route.
+  references:
+  - assert.Equal
+  - assert.False
+  - assert.True
+  calls:
+  - Set
+  - assert.Equal
+  - assert.False
+  - assert.True
+- name: TestProtectedModules_ClassifyEveryNativeModule
+  kind: func
+  description: Every native module is classified. A new module cannot be registered
+    without a decision, and a protected ID that matches no registered module (a typo)
+    would protect nothing.
+  references:
+  - mock.Anything
+  - mock.Arguments
+  - cabinet.ModuleDescriptor
+  - cabinet.ErrNotFound
+  - require.NoError
+  - merkle.BuildContext
+  - require.NotEmpty
+  - assert.True
+  - assert.False
+  - mock.Arguments.Get
+  calls:
+  - ID
+  - Return
+  - Run
+  - assert.False
+  - assert.True
+  - mock.Arguments.Get
+  - mockCabinetService.On
+  - require.NoError
+  - require.NotEmpty

@@ -1,0 +1,190 @@
+---
+module: test_tools.test_mutation_plan_probes
+description: 'The planner probes P1-P9 of the CI inventory (PR-01), as regression
+  tests (PR-02). Each test runs scripts/mutation_plan.py on a scratch git repository
+  and states the plan the CI must get. P1-P6 and P8 reproduce the blind spots measured
+  on bc2c4e0 (see jobs/relay-ci-parity-01-inventory/output/inventory-and-gap-analysis.md,
+  section 4.2): on the old planner they fail. P7 and P9 were working checks and must
+  stay so.'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: PLAN
+  kind: const
+  description: ''
+  references: []
+- name: GIT_ENV
+  kind: const
+  description: ''
+  references: []
+- name: LIB_RS
+  kind: const
+  description: ''
+  references: []
+- name: BASE_FILES
+  kind: const
+  description: ''
+  references: []
+- name: git
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: repo
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: ''
+  references:
+  - pytest.fixture
+  calls:
+  - BASE_FILES.items
+  - f.write_text
+  - pytest.fixture
+- name: change
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - f.write_text
+- name: plan
+  kind: function
+  decorators: []
+  description: Run the planner; return its key=value output as a dict.
+  references: []
+  calls:
+  - GIT_ENV.items
+  - line.split
+- name: pkgs
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p1_test_only_change_plans_the_package
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p2_deleted_source_file_is_not_silent
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p2_deleted_test_file_is_not_silent
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p3_dependency_or_mutation_config_escalates_go_to_full
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  calls: []
+- name: test_p4_gate_logic_escalates_everything
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p5_cargo_manifest_escalates_rust_to_every_mutant
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_rust_test_file_escalates_rust
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_rust_source_change_stays_narrow
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - LIB_RS.replace
+- name: test_p6_testdata_change_plans_the_owning_package
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p7_new_package_is_planned
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p8_nested_module_is_still_ignored
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_package_with_only_tests_is_not_planned
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_unrelated_change_plans_nothing
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_p9_unknown_base_is_fail_closed
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_cfg_test_edit_inside_the_test_module_escalates_rust
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - LIB_RS.replace
+- name: test_cfg_test_removed_assertion_escalates_rust
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - LIB_RS.replace
+- name: test_cfg_test_insertion_right_after_the_attribute_escalates_rust
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - LIB_RS.replace
+- name: test_cfg_test_production_edit_before_the_test_module_stays_narrow
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - LIB_RS.replace
+- name: test_cfg_test_a_new_rust_file_with_a_test_module_stays_narrow
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []

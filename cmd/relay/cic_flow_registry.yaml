@@ -23,11 +23,28 @@ objects:
     it with CICSourceCA provenance + CICLicenseCA entitlement — see r3-plan.md.)'
   implements: []
   references: []
+- name: gitGrant
+  kind: struct
+  description: 'gitGrant is a module''s verified git reach, bound to the exact artifact
+    it was derived from: the wasm digest loadModule verified against the loaded bytes,
+    and the digest of the manifest document it read. A grant is dropped whenever the
+    module ID is loaded again (revokeModuleCapability), so it can never outlive the
+    artifact it was granted for.'
+  implements: []
+  references: []
+- name: gitAuthRequest
+  kind: struct
+  description: 'gitAuthRequest is the part of a git request the policy looks at. The
+    module identity is NOT here: it comes from the runtime (the instance name), never
+    from anything the guest sends.'
+  implements: []
+  references: []
 - name: newCICFlowRegistry
   kind: func
-  description: newCICFlowRegistry builds an empty registry. A nil doer defaults to
-    http.DefaultClient; a nil resolve leaves every module's signer nil (sign inert)
-    until the OCI-key provisioning path wires a real resolver.
+  description: 'newCICFlowRegistry builds an empty registry. A nil doer defaults to
+    the egress client (newEgressClient: no redirects, no proxy, timeouts, blocked
+    address ranges); a nil resolve leaves every module''s signer nil (sign inert)
+    until the OCI-key provisioning path wires a real resolver.'
   references: []
   calls: []
 - name: lookup
@@ -50,9 +67,97 @@ objects:
     its manifest is rejected (error) — the load path surfaces this as a module-load
     failure.
   references: []
+  calls: []
+- name: publishVerified
+  kind: method
+  receiver: cicFlowRegistry
+  description: publishVerified is registerVerified with the checksum of the artifact
+    the cabinet is about to store for this module. The grant and the artifact it belongs
+    to are published in ONE step under the registry lock, so there is no moment at
+    which a grant exists without its artifact, or with an artifact that came from
+    another load. A git grant published without an artifact ("") is never usable.
+  references: []
+  calls: []
+- name: stageVerified
+  kind: method
+  receiver: cicFlowRegistry
+  description: 'stageVerified is publishVerified for the loader: the grant is recorded
+    with its artifact but is NOT yet active; commitGrant activates it once the module
+    has been stored. Between the two nothing is authorised by it, and an instance
+    created in that window carries no binding, so it stays unauthorised for good.'
+  references: []
+  calls: []
+- name: commitGrant
+  kind: method
+  receiver: cicFlowRegistry
+  description: commitGrant activates the staged grant of moduleID if, and only if,
+    it is still the one staged for artifact. A stale or foreign commit does nothing.
+  references: []
   calls:
   - Lock
   - Unlock
+- name: bindingFor
+  kind: method
+  receiver: cicFlowRegistry
+  description: 'bindingFor is WasmManagerConfig.InstanceBinding: the digest of the
+    manifest of the active grant for moduleID, or "" if there is none. An instance
+    carries it from the moment it is created, so a later reload with a different manifest
+    does not widen (or narrow) what that already-running instance may do.'
+  references: []
+  calls:
+  - RLock
+  - RUnlock
+- name: publish
+  kind: method
+  receiver: cicFlowRegistry
+  description: ''
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: revoke
+  kind: method
+  receiver: cicFlowRegistry
+  description: revoke drops every capability bound to moduleID. loadModule calls it
+    before it examines a module, so a reload of the same ID (a different artifact,
+    an unsigned one, one whose verification fails) never keeps the previous artifact's
+    grants.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: authorizeGit
+  kind: method
+  receiver: cicFlowRegistry
+  description: 'authorizeGit decides whether the module (identified by the runtime-assigned
+    instance name) may perform op on this request. No grant, an unlisted repository,
+    operation, remote, ref or source: denied.'
+  references:
+  - cabinet.InstanceIdentity
+  calls:
+  - RLock
+  - RUnlock
+- name: gitRuleCovers
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: containsExact
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: refAllowed
+  kind: func
+  description: 'refAllowed: exact name, or "prefix/*" matching one or more path segments
+    below prefix.'
+  references: []
+  calls: []
+- name: clipForError
+  kind: func
+  description: ''
+  references: []
+  calls: []
 - name: registerModuleCapability
   kind: var
   description: registerModuleCapability, if set, is called by the module-load path
@@ -60,4 +165,18 @@ objects:
     `main` wires it to a registry's registerVerified; it stays nil in tests that do
     not exercise capability binding. A non-nil error rejects the module at load (fail-closed).
     It is set once at startup before any load.
+  references: []
+- name: commitModuleCapability
+  kind: var
+  description: commitModuleCapability, if set, is called by loadModule once the module's
+    artifact is stored in the cabinet, to activate the grant staged for it. Set once
+    at startup.
+  references: []
+- name: revokeModuleCapability
+  kind: var
+  description: revokeModuleCapability, if set, is called by loadModule as soon as
+    a module's ID is known, before the module is examined, to drop whatever an earlier
+    load of the same ID was granted. A grant belongs to the artifact it was verified
+    for, not to the name; a reload starts from nothing and is re-granted only if it
+    verifies. Set once at startup, like registerModuleCapability.
   references: []

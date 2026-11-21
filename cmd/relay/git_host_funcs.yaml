@@ -9,6 +9,26 @@ used_in: []
 entrypoint: true
 related_nodes: []
 objects:
+- name: gitAuthorizer
+  kind: interface
+  description: gitAuthorizer decides whether the calling module may perform op. A
+    nil authorizer denies everything.
+  references:
+  - cabinet.InstanceIdentity
+  methods: []
+- name: gitHostFn
+  kind: type
+  description: 'authorized wraps a git host function so that it runs only if the *calling
+    instance* is permitted. The caller''s identity is the one the WasmManager attached
+    to the call context when it created the instance (module ID, the artifact compiled
+    for it, a per-instance serial). It is never read from the request, and a context
+    without it is refused, so a call that does not come from a managed instance (a
+    start section included: it runs under the same identity) can not borrow one. The
+    instance name the runtime reports for the module must agree with the identity;
+    a disagreement is refused as well. gitHostFn is the uniform host-function ABI
+    of the git module.'
+  references:
+  - api.Module
 - name: makeGitHostSetupFn
   kind: func
   description: makeGitHostSetupFn returns a WasmManagerConfig.HostSetupFn that registers
@@ -19,6 +39,17 @@ objects:
   - nexusgit.GitOps
   - wazero.Runtime
   calls: []
+- name: authorized
+  kind: func
+  description: ''
+  references:
+  - api.Module
+  - cabinet.InstanceIdentityFrom
+  - api.Module.Name
+  calls:
+  - Error
+  - api.Module.Name
+  - cabinet.InstanceIdentityFrom
 - name: registerGitHostFunctions
   kind: func
   description: 'registerGitHostFunctions instantiates the "git" host module on the
@@ -80,17 +111,15 @@ objects:
   calls:
   - Error
   - nexusgit.GitOps.Commit
-- name: makePushFn
+- name: pushDisabledFn
   kind: func
-  description: makePushFn creates a WASM host function that pushes commits to a git
-    remote.
+  description: 'pushDisabledFn is the git.push host function: it exists so that a
+    module that imports it still links, and it refuses every call. It does not read
+    the request, does not consult the authorizer and never reaches GitOps.Push (gitPushDisabled
+    says why).'
   references:
-  - nexusgit.GitOps
   - api.Module
-  - nexusgit.GitOps.Push
-  calls:
-  - Error
-  - nexusgit.GitOps.Push
+  calls: []
 - name: makeStatusFn
   kind: func
   description: makeStatusFn creates a WASM host function that queries the status of

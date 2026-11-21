@@ -1,0 +1,84 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: pushCounter
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: allowAll
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: TestGitPush_NoManifestCanGrantItAndNoModuleCanImportIt
+  kind: func
+  description: 1. No manifest can grant it, and no module can import it.
+  references:
+  - require.Error
+  - assert.Contains
+  - assert.NotContains
+  - assert.False
+  - assert.Error
+  calls:
+  - Error
+  - GetModule
+  - assert.Contains
+  - assert.Error
+  - assert.False
+  - assert.NotContains
+  - require.Error
+- name: TestGitPush_NeverAuthorisedEvenByAForgedGrant
+  kind: func
+  description: '2. Whatever a registry entry says, push is not authorised: a grant
+    that somehow got past validation (it is built here by hand) still authorises nothing
+    for push, and still works for what it legitimately covers.'
+  references:
+  - require.Error
+  - assert.Contains
+  - assert.NoError
+  calls:
+  - Error
+  - assert.Contains
+  - assert.NoError
+  - require.Error
+- name: Push
+  kind: method
+  receiver: pushCounter
+  description: ''
+  references: []
+  calls: []
+- name: authorizeGit
+  kind: method
+  receiver: allowAll
+  description: ''
+  references:
+  - cabinet.InstanceIdentity
+  calls: []
+- name: TestGitPush_HostFunctionNeverReachesTheOperation
+  kind: func
+  description: '3. The host function never reaches GitOps.Push: even with an authorizer
+    that allows everything, with a real guest that calls git.push, with a well-formed
+    request. The module still LINKS (the export exists).'
+  references:
+  - wazero.NewRuntime
+  - require.NoError
+  - assert.NotNil
+  - assert.Contains
+  - assert.Zero
+  calls:
+  - Close
+  - ExportedFunctionDefinitions
+  - Module
+  - assert.Contains
+  - assert.NotNil
+  - assert.Zero
+  - require.NoError
+  - wazero.NewRuntime

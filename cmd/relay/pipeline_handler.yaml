@@ -30,6 +30,7 @@ objects:
   - uuid.New
   - logrus.Fields
   - cabinet.SetPayload
+  - cabinet.IsUnauthorized
   - cabinet.IsTimeout
   calls:
   - Close
@@ -44,4 +45,5 @@ objects:
   - WithField
   - WithFields
   - cabinet.IsTimeout
+  - cabinet.IsUnauthorized
   - uuid.New

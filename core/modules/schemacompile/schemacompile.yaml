@@ -71,7 +71,8 @@ objects:
     input contains a parsed artifact (from AssertSource), it returns it as the artifact
     to be signed. Otherwise it generates a stub artifact for testing.
   references: []
-  calls: []
+  calls:
+  - ValidateSchemaRef
 - name: SignArtifact
   kind: func
   description: SignArtifact is the legacy no-signer entry point (stub mode, no Vault

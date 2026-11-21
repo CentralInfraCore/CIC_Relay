@@ -1,0 +1,221 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: hiCrypto
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: hiEnv
+  kind: struct
+  description: ''
+  implements: []
+  references:
+  - recorder.GitStateRecorder
+- name: hiProof
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: TestHardeningIntegration_ProdStartupDeclarationsAndCRL
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotNil
+  - require.Error
+  - assert.Contains
+  - assert.Nil
+  calls:
+  - Add
+  - Error
+  - assert.Contains
+  - assert.Equal
+  - assert.Nil
+  - assert.NotNil
+  - require.Error
+  - require.NoError
+- name: TestHardeningIntegration_ProdComponentsOnBothLoadPaths
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Empty
+  calls:
+  - Add
+  - assert.Empty
+  - assert.Equal
+  - require.NoError
+- name: Sign
+  kind: method
+  receiver: hiCrypto
+  description: ''
+  references: []
+  calls:
+  - Load
+- name: Verify
+  kind: method
+  receiver: hiCrypto
+  description: ''
+  references: []
+  calls: []
+- name: Decrypt
+  kind: method
+  receiver: hiCrypto
+  description: ''
+  references: []
+  calls: []
+- name: HealthCheck
+  kind: method
+  receiver: hiCrypto
+  description: ''
+  references: []
+  calls: []
+- name: newHiEnv
+  kind: func
+  description: 'newHiEnv wires what main wires: the cabinet service with a real git
+    audit recorder, required evidence, the production protected-module list, and the
+    relay server with the API token behind the production route table. Only the signing
+    module''s body and Vault''s Sign are stand-ins.'
+  references:
+  - recorder.NewGitStateRecorder
+  - require.NoError
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - cabinet.WithRecorder
+  - recorder.NewWorkflowRecorder
+  - cabinet.WithEvidenceRequired
+  - cabinet.WithProtectedModules
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - cabinet.NativeFunctions
+  - cabinet.CoreEcho
+  - cabinet.NewWorkflow
+  - cabinet.WorkflowIdentity
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowSigning
+  - logrus.New
+  calls:
+  - Add
+  - ID
+  - PutModule
+  - PutWorkflow
+  - SetOutput
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWorkflow
+  - cabinet.WithEvidenceRequired
+  - cabinet.WithProtectedModules
+  - cabinet.WithRecorder
+  - logrus.New
+  - recorder.NewGitStateRecorder
+  - recorder.NewWorkflowRecorder
+  - require.NoError
+- name: post
+  kind: method
+  receiver: hiEnv
+  description: ''
+  references: []
+  calls:
+  - ServeHTTP
+  - Set
+- name: git
+  kind: method
+  receiver: hiEnv
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Output
+  - require.NoError
+- name: commits
+  kind: method
+  receiver: hiEnv
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: hiSetBody
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: decodeHi
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Bytes
+  - String
+  - require.NoError
+- name: TestHardeningIntegration_AuthorizationProofAndConcurrency
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.EqualValues
+  - require.Equal
+  - assert.True
+  - assert.NoError
+  - assert.False
+  - assert.NotEmpty
+  - assert.NotContains
+  calls:
+  - Load
+  - Store
+  - String
+  - VerifyChain
+  - assert.Equal
+  - assert.EqualValues
+  - assert.False
+  - assert.NoError
+  - assert.NotContains
+  - assert.NotEmpty
+  - assert.True
+  - require.Equal
+- name: TestHardeningIntegration_Egress
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Zero
+  - assert.EqualValues
+  - require.True
+  calls:
+  - Close
+  - Set
+  - assert.Equal
+  - assert.EqualValues
+  - assert.Zero
+  - require.True
+- name: issueIntegrationLeaf
+  kind: func
+  description: issueIntegrationLeaf issues a second code-signing leaf (not revoked)
+    from the test root.
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - require.NoError
+- name: hiConcurrent
+  kind: const
+  description: ''
+  references: []

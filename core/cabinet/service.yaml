@@ -96,6 +96,23 @@ objects:
     nil, ProofTrace recording is skipped silently.
   references: []
   calls: []
+- name: WithProtectedModules
+  kind: func
+  description: WithProtectedModules marks components that only an authenticated principal
+    (WithPrincipal) may run. Setx checks every step of a workflow against this set
+    before it executes anything, so a workflow that contains a protected step is refused
+    with ErrUnauthorized no matter which entry path started it, and no earlier step
+    has run.
+  references: []
+  calls: []
+- name: WithEvidenceRequired
+  kind: func
+  description: 'WithEvidenceRequired makes persisted evidence mandatory: when the
+    ProofTrace of an execution is not persisted, Setx returns ErrEvidenceRequired
+    (the message carries the chain hash) instead of a success. Off by default: a recording
+    outage is then reported in SetResponse.Proof only.'
+  references: []
+  calls: []
 - name: WithObsSinks
   kind: func
   description: 'WithObsSinks wires observability sinks into the underlying WasmManager.
@@ -120,9 +137,7 @@ objects:
   description: Setx executes a workflow based on the function-oriented model, resolving
     components, validating input schemas, dispatching to native or WASM implementations,
     and recording ProofTrace steps with input/output hashing.
-  references:
-  - logrus.WithFields
-  - logrus.Fields
+  references: []
   calls:
   - Call
   - Close
@@ -143,14 +158,27 @@ objects:
   - NumOut
   - Out
   - ParseExecutionGraph
+  - PrincipalFrom
   - Process
-  - Record
   - Set
   - Type
   - UTC
-  - Warn
   - cabinetService.GetModule
   - cabinetService.GetWorkflow
+- name: recordProof
+  kind: method
+  receiver: cabinetService
+  description: recordProof persists the trace through the configured recorder and
+    reports the outcome.
+  references:
+  - logrus.WithField
+  - logrus.WithFields
+  - logrus.Fields
+  calls:
+  - Record
+  - RecordCommit
+  - Warn
+  - logrus.WithField
   - logrus.WithFields
 - name: Close
   kind: method

@@ -1,0 +1,150 @@
+---
+package: main
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestEgressParity_Fixture
+  kind: func
+  description: TestEgressParity_Fixture asserts the shared policy fixture, which the
+    Rust http-executor asserts too (http-executor/src/lib.rs, egress_parity_fixture_matches_policy).
+  references:
+  - require.NoError
+  - require.True
+  - assert.Equal
+  - require.NotNil
+  - assert.True
+  - assert.Greater
+  calls:
+  - Close
+  - Err
+  - Scan
+  - Seconds
+  - Text
+  - assert.Equal
+  - assert.Greater
+  - assert.True
+  - require.NoError
+  - require.NotNil
+  - require.True
+- name: isolatedEgressClient
+  kind: func
+  description: 'isolatedEgressClient is newEgressClient(true) whose dialer refuses,
+    and counts, every destination that is not a loopback IP literal. A test that puts
+    an external host in a redirect (a cloud metadata address, a public name) then
+    cannot touch real infrastructure if a regression starts following redirects: the
+    dial is refused before any name is resolved or any packet is sent, and the returned
+    counter, which must stay zero, shows that the follow-up request was attempted.'
+  references:
+  - require.True
+  calls:
+  - IsLoopback
+  - require.True
+- name: callActuate
+  kind: func
+  description: callActuate runs makeActuateFn against policy/doer and returns the
+    decoded output.
+  references: []
+  calls: []
+- name: allowLocal
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Hostname
+  - Port
+  - require.NoError
+- name: TestActuate_RedirectToNonAllowedHost_NotFollowed
+  kind: func
+  description: 'Acceptance 1: an allowed URL that answers 302 to a non-allowed host
+    (loopback and link-local included) must not be followed.'
+  references:
+  - assert.EqualValues
+  - require.Equal
+  - require.True
+  - assert.Equal
+  calls:
+  - Close
+  - Load
+  - assert.Equal
+  - assert.EqualValues
+  - require.Equal
+  - require.True
+- name: TestActuate_ResponseOverCap_TypedError
+  kind: func
+  description: 'Acceptance 2: a response over the cap is a typed error and is never
+    held in memory.'
+  references:
+  - assert.Equal
+  - assert.Contains
+  - assert.Less
+  calls:
+  - Close
+  - Flush
+  - Set
+  - assert.Contains
+  - assert.Equal
+  - assert.Less
+- name: TestActuate_ResponseAtCap_NotRefused
+  kind: func
+  description: 'A body exactly at the cap is accepted: the limit is on bytes over,
+    not at.'
+  references:
+  - require.Positive
+  - require.NoError
+  - require.Nil
+  - require.True
+  - assert.Len
+  calls:
+  - DecodeString
+  - assert.Len
+  - require.Nil
+  - require.NoError
+  - require.Positive
+  - require.True
+- name: TestEgressClient_DialGuard_BlocksLoopback
+  kind: func
+  description: The default client must refuse to dial blocked addresses (SSRF guard,
+    as in the Rust executor).
+  references:
+  - require.Error
+  - assert.True
+  - assert.Equal
+  calls:
+  - Close
+  - Get
+  - assert.Equal
+  - assert.True
+  - require.Error
+- name: TestEgressClient_IgnoresProxyEnvironment
+  kind: func
+  description: Ambient proxy environment must be ignored. (Go never proxies loopback
+    destinations, so a request-level check against a local server could not fail;
+    the Transport itself is asserted.)
+  references:
+  - require.True
+  - assert.Nil
+  - assert.NotNil
+  calls:
+  - assert.Nil
+  - assert.NotNil
+  - require.True
+- name: TestEgressClient_DialGuard_MalformedAddressNotDialed
+  kind: func
+  description: The dial guard refuses an address it cannot parse instead of letting
+    it through.
+  references:
+  - require.True
+  - require.Error
+  - assert.NotContains
+  calls:
+  - DialContext
+  - assert.NotContains
+  - require.Error
+  - require.True

@@ -1,0 +1,75 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: signingTrust
+  kind: func
+  description: signingTrust runs the real start-up trust bootstrap for a mode and
+    an opt-in value, and returns the test trust store carrying the AllowUnsignedModules
+    decision that bootstrap made. The roots are the test PKI's so that a validly signed
+    module can be verified; the decision under test is the one bootstrapTrust took.
+  references:
+  - require.NoError
+  - require.Equal
+  calls:
+  - ReadFile
+  - require.Equal
+  - require.NoError
+- name: TestModuleSigning_DecisionTable
+  kind: func
+  description: 'The decision table of #155, through the real bootstrap and both module-loading
+    paths: environment unsigned module bad signature or certificate PROD DENY DENY
+    PROD + opt-in DENY DENY DEV (default) DENY DENY DEV + explicit opt-in ALLOW DENY'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.NoError
+- name: TestModuleSigning_AdmittedUnsignedModuleGetsNoCapability
+  kind: func
+  description: ''
+  references:
+  - require.True
+  - assert.Empty
+  calls:
+  - assert.Empty
+  - require.True
+- name: TestAllowUnsignedModulesFromEnv
+  kind: func
+  description: ''
+  references:
+  - logrus.Logger
+  - logrus.New
+  - require.Error
+  - assert.False
+  - assert.Contains
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Error
+  - SetOutput
+  - String
+  - assert.Contains
+  - assert.Equal
+  - assert.False
+  - logrus.New
+  - require.Error
+  - require.NoError
+- name: TestBootstrapTrust_RejectsABadUnsignedOptIn
+  kind: func
+  description: A bad opt-in value stops the relay at start-up, before any module is
+    read.
+  references:
+  - require.Error
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - require.Error

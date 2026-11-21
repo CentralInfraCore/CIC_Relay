@@ -1,0 +1,323 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: statusCounter
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: lifecycleEnv
+  kind: struct
+  description: ''
+  implements: []
+  references:
+  - cabinet.Cabinet
+  - cabinet.WasmManager
+- name: sleb
+  kind: func
+  description: sleb encodes v as a signed LEB128 (wasm i32.const immediates and section
+    sizes use LEB128).
+  references: []
+  calls: []
+- name: uleb
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: section
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: vec
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: name
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: guestCalling
+  kind: func
+  description: 'guestCalling assembles a real wasm module that imports git.<op>, holds
+    request JSON in its memory at 0, and exports run(): it calls the import with (0,
+    len, 2048, 1024) and returns the byte count. The response is left in the guest''s
+    memory at 2048. No toolchain is involved: the bytes are the module.'
+  references: []
+  calls: []
+- name: runGuest
+  kind: func
+  description: runGuest instantiates the assembled guest under instanceName in rt,
+    calls run(), and returns the decoded response the host function wrote into the
+    guest's memory.
+  references:
+  - wazero.Runtime
+  - cabinet.InstanceIdentity
+  - cabinet.WithInstanceIdentity
+  - require.NoError
+  - wazero.NewModuleConfig
+  - require.True
+  - wazero.Runtime.CompileModule
+  - wazero.Runtime.InstantiateModule
+  calls:
+  - Call
+  - Close
+  - ExportedFunction
+  - Memory
+  - Read
+  - WithName
+  - WithStartFunctions
+  - cabinet.WithInstanceIdentity
+  - require.NoError
+  - require.True
+  - wazero.NewModuleConfig
+  - wazero.Runtime.CompileModule
+  - wazero.Runtime.InstantiateModule
+- name: TestGitFromARealGuest
+  kind: func
+  description: 'The whole path, in a real wazero runtime with a real guest module:
+    guest -> host import -> per-module authorization (identity from the runtime) ->
+    argument validation -> git. Each case names the layer that must stop it and checks
+    the reason, not just that something failed.'
+  references:
+  - require.NoError
+  - wazero.NewRuntime
+  - assert.Empty
+  - assert.Contains
+  - assert.True
+  calls:
+  - Close
+  - assert.Contains
+  - assert.Empty
+  - assert.True
+  - require.NoError
+  - wazero.NewRuntime
+- name: guestWithStartSection
+  kind: func
+  description: 'guestWithStartSection assembles a module whose WebAssembly START SECTION
+    calls git.status once, while it is being instantiated: guest code that runs before
+    any exported function does.'
+  references: []
+  calls: []
+- name: Status
+  kind: method
+  receiver: statusCounter
+  description: ''
+  references:
+  - nexusgit.StatusEntry
+  calls: []
+- name: TestGitFromAStartSection_RunsUnderTheNewInstancesOwnIdentity
+  kind: func
+  description: 'F9: the start section runs inside InstantiateModule, before the host
+    has a handle on the instance. It runs under the identity the manager created for
+    THIS instance and THIS artifact: it can use a grant bound to that artifact, and
+    can not use one bound to another, nor one left over from an earlier instance of
+    the same name. Real WasmManager, real start-section guest, no simulation of the
+    identity.'
+  references:
+  - cabinet.NewMemModuleStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - require.NoError
+  - cabinet.NewWasmManager
+  - cabinet.WasmManagerConfig
+  - assert.Equal
+  - require.NotEqual
+  calls:
+  - Checksum
+  - Close
+  - NewHostInstance
+  - Put
+  - assert.Equal
+  - cabinet.NewMemModuleStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWasmManager
+  - require.NoError
+  - require.NotEqual
+- name: TestGitGrant_PublishPairsTheManifestWithItsOwnArtifact
+  kind: func
+  description: 'Two manifests that differ in the repository they name, published concurrently
+    each with its own artifact. An observer reads the registry the whole time: every
+    state it ever sees pairs a manifest with the artifact that was published WITH
+    it (or has no artifact at all, which is never usable), never the manifest of one
+    call and the artifact of another.'
+  references:
+  - require.NoError
+  - assert.Positive
+  - assert.Zero
+  calls:
+  - RLock
+  - RUnlock
+  - assert.Positive
+  - assert.Zero
+  - require.NoError
+- name: TestLoadModule_ConcurrentLoadsOfOneIDLeaveGrantAndArtifactTogether
+  kind: func
+  description: 'Concurrent loads of the same module ID with two different, verified
+    artifacts: when they are done, the cabinet holds one artifact and the registry
+    holds the grant that was published for THAT artifact. (Run with -race.) Loads
+    are serialised, so there is no interleaving to get wrong.'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Checksum
+  - GetModule
+  - assert.Equal
+  - require.NoError
+- name: TestLoadModule_LoadsOfOneIDDoNotInterleave
+  kind: func
+  description: 'Loads of one module ID are serialised: while one load sits between
+    publishing its grant and storing its artifact, another load of the same ID can
+    not start. Deterministic: the first load is held at exactly that point and the
+    second is given time to run; it must not.'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Checksum
+  - GetModule
+  - assert.Equal
+  - require.NoError
+- name: TestLoadModule_NoArtifactNoGrant
+  kind: func
+  description: A module whose artifact can not be built gets no grant, and loses the
+    one it had.
+  references:
+  - require.NoError
+  - require.NotEmpty
+  - require.Error
+  - assert.False
+  calls:
+  - assert.False
+  - require.Error
+  - require.NoError
+  - require.NotEmpty
+- name: TestGitCapabilityLifecycle_LoadThenInstantiate
+  kind: func
+  description: The real loader publishes the grant; the real manager creates the instance;
+    the guest's start section asks git for something. Across reloads, an unverified
+    reload, and loads racing with instantiation, the start section is served exactly
+    when the instance's artifact is the one the current grant was published for.
+  references:
+  - cabinet.NewMemModuleStore
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - require.NoError
+  - cabinet.NewWasmManager
+  - assert.Equal
+  calls:
+  - Close
+  - NewHostInstance
+  - assert.Equal
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewWasmManager
+  - require.NoError
+- name: callingGuest
+  kind: func
+  description: callingGuest assembles a module that satisfies the CIC guest ABI and
+    whose Call invokes git.status once with the given request. Unlike the start-section
+    guest it can be instantiated first and asked later, so an instance can outlive
+    a reload of its module.
+  references: []
+  calls: []
+- name: newLifecycleEnv
+  kind: func
+  description: ''
+  references:
+  - cabinet.NewMemModuleStore
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - require.NoError
+  - cabinet.NewWasmManager
+  calls:
+  - Close
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewWasmManager
+  - require.NoError
+- name: load
+  kind: method
+  receiver: lifecycleEnv
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Helper
+  - require.NoError
+- name: call
+  kind: method
+  receiver: lifecycleEnv
+  description: call runs the instance's Call, which asks git for status; it returns
+    how many times git was reached.
+  references: []
+  calls:
+  - Process
+- name: TestGitCapability_SameArtifactDifferentManifest
+  kind: func
+  description: 'F8.1: the same wasm (so the same artifact checksum) loaded again with
+    another capability manifest. An instance created before the reload keeps the manifest
+    it started under: it is refused under the new one, whether wider or narrower,
+    and an instance created after is served under the new one.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Equal
+  calls:
+  - Checksum
+  - Close
+  - GetModule
+  - NewHostInstance
+  - assert.Equal
+  - require.Equal
+  - require.NoError
+- name: TestGitCapability_StagedGrantAuthorisesNothingUntilStored
+  kind: func
+  description: 'F8.2: between publishing the grant and storing the artifact the grant
+    is staged and authorises nothing; an instance created in that window carries no
+    binding and stays refused, even for the same artifact.'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Close
+  - NewHostInstance
+  - assert.Equal
+  - require.NoError
+- name: TestGitGrant_CommitIsBoundToTheStagedArtifact
+  kind: func
+  description: commitGrant activates only the grant staged for exactly that artifact.
+  references:
+  - require.NoError
+  - assert.Error
+  - assert.NoError
+  calls:
+  - assert.Error
+  - assert.NoError
+  - require.NoError
+- name: manifestStatusOnly
+  kind: const
+  description: ''
+  references: []
+- name: manifestStatusFetch
+  kind: const
+  description: manifestStatusFetch is the same module with a different, wider manifest.
+  references: []

@@ -1,0 +1,581 @@
+---
+package: git
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: markerProgram
+  kind: func
+  description: markerProgram writes an executable script that creates a marker file
+    when run, and returns the script path and the marker path. If a guest-supplied
+    value ever makes git run the script, the marker exists afterwards.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: argTestOps
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Clone
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - require.NoError
+- name: resetMarker
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: requireNoMarker
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  calls:
+  - assert.True
+- name: TestGuestValuesNeverReachGitAsOptions
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.NoError
+  - assert.Len
+  calls:
+  - Checkout
+  - Clone
+  - CombinedOutput
+  - Commit
+  - Error
+  - Fetch
+  - NewExecGitOps
+  - Push
+  - assert.Contains
+  - assert.Error
+  - assert.ErrorIs
+  - assert.Len
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestLocalSourcePolicy
+  kind: func
+  description: Local sources are an explicit, narrow form, not the fallthrough for
+    anything that fails to parse.
+  references:
+  - assert.NoError
+  - assert.ErrorIs
+  calls:
+  - assert.ErrorIs
+  - assert.NoError
+- name: TestURLCredentialsNeverLeak
+  kind: func
+  description: URLs can carry credentials. They are refused when a password is present,
+    and masked wherever text that may contain a URL leaves the package.
+  references:
+  - require.ErrorIs
+  - assert.NotContains
+  - require.Error
+  - assert.NotErrorIs
+  - assert.Equal
+  calls:
+  - Clone
+  - Error
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - assert.Equal
+  - assert.NotContains
+  - assert.NotErrorIs
+  - require.Error
+  - require.ErrorIs
+- name: TestCommitScopeIsExactlyTheRequestedPaths
+  kind: func
+  description: 'F6: the commit holds exactly the paths the request named. Something
+    staged earlier, outside this request, must neither be committed nor lost from
+    the index.'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - CombinedOutput
+  - Commit
+  - assert.Equal
+  - require.NoError
+- name: TestRefValidatorIsNeverLooserThanGit
+  kind: func
+  description: 'F5: every ref the validator accepts must also be accepted by git''s
+    own rules. The validator may be stricter than git, never looser. Deterministic
+    corpus built from tokens that exercise the rules.'
+  references:
+  - assert.NoError
+  - assert.Greater
+  calls:
+  - CombinedOutput
+  - assert.Greater
+  - assert.NoError
+- name: TestBranchRefsAreBranchesOrTags
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.ErrorIs
+  calls:
+  - assert.ErrorIs
+  - assert.NoError
+- name: TestRepoConfigThatCanRunProgramsIsRefused
+  kind: func
+  description: 'F3: configuration that can name a program or rewrite a URL is refused
+    before git acts on it. The fsmonitor case is a real execution: git would run the
+    program on `git status`.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.NoError
+  calls:
+  - Checkout
+  - CombinedOutput
+  - Commit
+  - Error
+  - Fetch
+  - Push
+  - Status
+  - assert.Contains
+  - assert.ErrorIs
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestPushURLIsValidatedToo
+  kind: func
+  description: 'A push URL is a URL: a remote whose fetch URL is fine but whose push
+    URL is not must be refused.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  calls:
+  - CombinedOutput
+  - Error
+  - Push
+  - assert.Contains
+  - assert.ErrorIs
+  - require.Error
+  - require.NoError
+- name: TestGlobalConfigurationIsNotRead
+  kind: func
+  description: 'No global or XDG configuration is read: a hostile or merely different
+    ~/.gitconfig has no effect. The test asks git itself, with the exact environment
+    and options the relay uses.'
+  references:
+  - require.NoError
+  - assert.NotContains
+  - assert.Contains
+  calls:
+  - CombinedOutput
+  - assert.Contains
+  - assert.NotContains
+  - require.NoError
+- name: TestOperatorGlobalConfigMustBeSafe
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NoError
+  - assert.Error
+  calls:
+  - Status
+  - assert.Error
+  - assert.NoError
+  - require.NoError
+- name: TestSafeDirectoryStillWorksForForeignOwner
+  kind: func
+  description: 'Dropping the global configuration must not break a repository owned
+    by another account: safe.directory is given on the command line for the registered
+    path. Needs root to create the case.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.NoError
+  calls:
+  - CombinedOutput
+  - Status
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestEveryURLOfARemoteIsValidated
+  kind: func
+  description: A remote may have several URLs, and a push goes to all of them. The
+    first being fine proves nothing about the rest, so each one is validated, for
+    fetch URLs and for push URLs alike. Each case names the operations that must refuse
+    it; the others are not affected by that URL.
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - CombinedOutput
+  - Error
+  - Fetch
+  - NewExecGitOps
+  - Push
+  - assert.Contains
+  - assert.ErrorIs
+  - assert.NotContains
+  - require.Error
+  - require.NoError
+- name: TestRemoteTargetsAreValidatedPerOperation
+  kind: func
+  description: 'Fetch and push have different targets, and each is validated for the
+    operation that uses it: a bad push URL must not block a fetch, and a good push
+    URL must not excuse a bad fetch URL for the fetch. All push URLs count, and no
+    URL at all is a refusal.'
+  references:
+  - require.NoError
+  - assert.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.Error
+  calls:
+  - CombinedOutput
+  - Error
+  - NewExecGitOps
+  - assert.Contains
+  - assert.Error
+  - assert.ErrorIs
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestRemoteWithoutURLIsRefused
+  kind: func
+  description: 'A remote with no URL at all has no target: refused for both operations,
+    local sources on or off. (git itself would print the remote''s name as its URL,
+    and read it as a path; the stored values are read directly, so the absence is
+    seen as an absence.)'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  calls:
+  - CombinedOutput
+  - Error
+  - NewExecGitOps
+  - assert.Contains
+  - assert.ErrorIs
+  - require.Error
+  - require.NoError
+- name: TestStoredURLIsOneRawRecord
+  kind: func
+  description: 'F1.3: a stored URL is one record, exactly as stored. A value that
+    contains a newline (or any control character or whitespace) is not "several URLs"
+    and not a URL with trimmed edges: it is refused whole, before anything is split
+    or normalised.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Equal
+  calls:
+  - CombinedOutput
+  - NewExecGitOps
+  - Run
+  - assert.Equal
+  - assert.ErrorIs
+  - require.Error
+  - require.NoError
+- name: TestEffectiveTargetsAreValidated
+  kind: func
+  description: 'F1.4-F1.5: the policy applies to what git will actually contact, not
+    only to what was written under remote.<n>.url. The checks here call validateRemoteTargets
+    directly, so they hold even if the repository-configuration audit were bypassed;
+    the public operations are checked as well.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.NoError
+  calls:
+  - CombinedOutput
+  - Error
+  - Fetch
+  - NewExecGitOps
+  - Push
+  - assert.Contains
+  - assert.ErrorIs
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestURLContractIsPrintableASCII
+  kind: func
+  description: 'F1.6: the URL contract is printable ASCII, stated and enforced as
+    such. Unicode whitespace, control, zero-width, direction-control and look-alike
+    characters are refused, and so are non-ASCII hosts.'
+  references:
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.NoError
+  calls:
+  - Error
+  - assert.Contains
+  - assert.ErrorIs
+  - assert.NoError
+  - require.Error
+- name: TestStoredAndEffectiveTargetCountsMustAgree
+  kind: func
+  description: The stored and the effective target lists must have the same shape.
+    A real configuration can make them differ (see TestRealConfigurationCanMakeTheTargetCountsDiffer);
+    this test additionally simulates the disagreement with a git front that reports
+    one extra effective target, so the refusal is checked independently of how git
+    happens to deduplicate. The operation must be refused, not matched up approximately.
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  calls:
+  - CombinedOutput
+  - Error
+  - NewExecGitOps
+  - assert.Contains
+  - assert.ErrorIs
+  - require.Error
+  - require.NoError
+- name: TestRealConfigurationCanMakeTheTargetCountsDiffer
+  kind: func
+  description: 'F1.7: git CAN make the stored and effective target counts differ with
+    a plain configuration. With two stored URLs and a pushInsteadOf rule that matches
+    only the first, "git remote get-url --push --all" reports one target (the rewritten
+    one), not two; without the rule it reports both. The disagreement is refused (fail
+    closed); for such a remote it is a compatibility limit of this policy, not a gap.
+    Real git, no simulation.'
+  references:
+  - require.NoError
+  - assert.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  calls:
+  - CombinedOutput
+  - Error
+  - NewExecGitOps
+  - assert.Contains
+  - assert.ErrorIs
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestRemoteHelperAndTransportKeysAreRefused
+  kind: func
+  description: remote.<name>.vcs would hand the remote to a remote helper program
+    (git-remote-<vcs>). Like every key outside the allowlist it is refused before
+    git acts on the repository, together with the other remote.* keys that change
+    what a remote does.
+  references:
+  - require.NoError
+  - assert.ErrorIs
+  - require.Error
+  - assert.Contains
+  calls:
+  - CombinedOutput
+  - Error
+  - Fetch
+  - Push
+  - assert.Contains
+  - assert.ErrorIs
+  - require.Error
+  - require.NoError
+- name: TestGuestReachableOperationsDoNotWriteTheConfiguration
+  kind: func
+  description: 'F1.2 evidence: the operations a guest can reach do not write the repository
+    configuration at all. Together with "the guest has no file access" (core/cabinet/cicwasm.go:
+    the module is instantiated with no filesystem), this is what limits who can change
+    the configuration between a validation and the git command that follows: not the
+    guest, through any operation it can reach. Note a behaviour this pins: checkout
+    runs "git checkout <ref> --", and with "--" git does not create a local tracking
+    branch from a remote-only name (the DWIM that would write branch.<n>.remote/merge).
+    A branch that exists locally, a tag or a commit check out as before.'
+  references:
+  - require.NoError
+  - assert.Error
+  - assert.Equal
+  calls:
+  - Checkout
+  - CombinedOutput
+  - Commit
+  - Fetch
+  - Push
+  - Status
+  - assert.Equal
+  - assert.Error
+  - require.NoError
+- name: TestPushDestinationIsFullyQualifiedBranchOrTag
+  kind: func
+  description: 'F10, F10.1: a push destination is always fully qualified (refs/heads/
+    or refs/tags/). Git resolves a SHORT destination against the refs that already
+    exist on the remote, so "notes/commits" would update the remote''s refs/notes/commits;
+    the canonical form leaves nothing to resolve. Authorization and execution use
+    the same canonical form.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.ErrorIs
+  - require.NotEqual
+  calls:
+  - CanonicalPushRefspec
+  - CombinedOutput
+  - Push
+  - assert.Equal
+  - assert.ErrorIs
+  - require.NoError
+  - require.NotEqual
+- name: TestPushShortSourceIsABranchNeverATag
+  kind: func
+  description: 'F10.2: a SHORT source is a branch name. Git would resolve it against
+    any local ref of that name, a tag included, so a grant limited to branches could
+    forward the content of a tag. The source is qualified like the destination, and
+    a tag is pushed only as refs/tags/<name>. Real git, a source repository that has
+    a TAG release/1 and no such branch.'
+  references:
+  - require.NoError
+  - require.Equal
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - CombinedOutput
+  - Error
+  - Push
+  - assert.Contains
+  - assert.ErrorIs
+  - assert.NotContains
+  - require.Equal
+  - require.Error
+  - require.NoError
+- name: TestPushQualifiedSourceIsResolvedExactly
+  kind: func
+  description: 'F10.3: even a FULLY QUALIFIED source name is not exact to git: with
+    no branch refs/heads/release/1, git finds the tag refs/tags/refs/heads/release/1
+    for it. The source is resolved exactly (show-ref --verify) and pushed as an object
+    id. Reproduction as reported: real git, such a tag, no such branch.'
+  references:
+  - require.NoError
+  - require.Equal
+  - require.NotEmpty
+  - require.Error
+  - assert.ErrorIs
+  - assert.Empty
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - CombinedOutput
+  - Push
+  - assert.Empty
+  - assert.Equal
+  - assert.ErrorIs
+  - assert.NotEqual
+  - require.Equal
+  - require.Error
+  - require.NoError
+  - require.NotEmpty
+- name: TestPushDestinationAmbiguousOnTheRemoteIsRefused
+  kind: func
+  description: 'F10.4: the same on the remote side. If the remote holds refs/heads/refs/heads/release/1
+    and the guest pushes to refs/heads/release/1, git updates the lookalike (it is
+    the only match) and creates nothing at the granted name. Reproduction as reported,
+    real git.'
+  references:
+  - require.NoError
+  - require.NotEqual
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.Equal
+  - assert.Empty
+  calls:
+  - CombinedOutput
+  - Error
+  - Push
+  - assert.Contains
+  - assert.Empty
+  - assert.Equal
+  - assert.ErrorIs
+  - require.Error
+  - require.NoError
+  - require.NotEqual
+- name: TestPushObjectIdIsNotReadAsARefName
+  kind: func
+  description: 'F10.5: the object id that is pushed is itself a name git may resolve.
+    A tag called exactly like the 40 hex digits of the authorised commit, pointing
+    at another commit, wins the lookup when "<oid>:<dst>" is pushed (git matches the
+    source against local ref names before it reads it as an object id). The source
+    is handed over as "<oid>^{object}", which is not a ref name. SHA-256 repositories
+    use the same path.'
+  references:
+  - require.NoError
+  - require.NotEqual
+  - require.Equal
+  - assert.Equal
+  calls:
+  - CombinedOutput
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Push
+  - Register
+  - assert.Equal
+  - require.Equal
+  - require.NoError
+  - require.NotEqual
+- name: TestPushChecksTheEndpointItWritesTo
+  kind: func
+  description: 'F10.6: a remote''s fetch and push URLs may differ, and a push goes
+    to every push URL. The lookalike check and the push are made against the effective
+    PUSH URL(s) themselves, all checked before any is written.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.ErrorIs
+  - assert.Contains
+  - assert.Equal
+  - assert.Empty
+  calls:
+  - CombinedOutput
+  - Error
+  - Push
+  - Run
+  - assert.Contains
+  - assert.Empty
+  - assert.Equal
+  - assert.ErrorIs
+  - require.Error
+  - require.NoError
+- name: TestSHA256RepositoryPassesTheAuditButOtherExtensionsDoNot
+  kind: func
+  description: A SHA-256 repository writes extensions.objectformat; that key, and
+    only that one under extensions.*, is part of the allowlist.
+  references:
+  - require.NoError
+  - assert.ErrorIs
+  calls:
+  - CombinedOutput
+  - NewExecGitOps
+  - NewRepoRegistry
+  - Register
+  - assert.ErrorIs
+  - require.NoError

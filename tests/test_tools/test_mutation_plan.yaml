@@ -1,9 +1,220 @@
-module: test_mutation_plan
-description: ''
+---
+module: test_tools.test_mutation_plan
+description: What the mutation gates mutate is discovered from the diff (scripts/mutation_plan.py).
 tags:
 - test
 category: []
 used_in: []
 entrypoint: false
 related_nodes: []
-objects: []
+objects:
+- name: SCRIPTS
+  kind: const
+  description: ''
+  references: []
+- name: PLAN
+  kind: const
+  description: ''
+  references: []
+- name: ROOT_ONLY
+  kind: const
+  description: ''
+  references: []
+- name: WITH_NESTED
+  kind: const
+  description: ''
+  references: []
+- name: test_non_test_go_source_selects_its_package
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_test_only_change_selects_the_package_it_tests
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_vendor_and_non_go_are_ignored
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_testdata_change_selects_the_package_that_owns_it
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_package_without_source_at_head_is_not_planned
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_nested_module_is_not_part_of_the_root_module
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_root_package_is_dot
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_packages_are_unique_and_sorted
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.go_packages
+  calls:
+  - mutation_plan.go_packages
+- name: test_rust_changed
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  - mutation_plan.rust_changed
+  calls:
+  - mutation_plan.rust_changed
+- name: test_chunks_are_bounded_and_cover_every_package_once
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.chunk
+  calls:
+  - mutation_plan.chunk
+- name: test_no_packages_no_chunks
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.chunk
+  calls:
+  - mutation_plan.chunk
+- name: HINTS
+  kind: const
+  description: ''
+  references: []
+- name: test_with_cost_hints_the_heavy_packages_do_not_share_a_job
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.chunk
+  calls:
+  - mutation_plan.chunk
+- name: test_with_cost_hints_every_package_is_in_exactly_one_job
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.chunk
+  calls:
+  - mutation_plan.chunk
+- name: test_cost_hints_make_the_split_deterministic
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.chunk
+  calls:
+  - mutation_plan.chunk
+- name: test_an_unlisted_package_costs_the_default
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.chunk
+  calls:
+  - mutation_plan.chunk
+- name: test_without_cost_hints_it_stays_round_robin
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.chunk
+  calls:
+  - mutation_plan.chunk
+- name: test_load_costs_reads_the_file_and_tolerates_a_bad_one
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.load_costs
+  calls:
+  - bad.write_text
+  - good.write_text
+  - mutation_plan.load_costs
+- name: test_the_committed_cost_hints_are_loadable
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - mutation_plan.load_costs
+  calls:
+  - mutation_plan.load_costs
+- name: git
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: repo
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: ''
+  references:
+  - pytest.fixture
+  calls:
+  - f.write_text
+- name: plan
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - line.split
+- name: test_cli_diff_mode_selects_only_the_changed_package
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_cli_all_mode_plans_every_root_module_package
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_cli_needs_a_base_unless_all
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []

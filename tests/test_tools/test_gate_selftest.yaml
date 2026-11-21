@@ -1,0 +1,120 @@
+---
+module: test_tools.test_gate_selftest
+description: 'PR-06 probes 1 and 2: the self-test of the real gates (scripts/gate_selftest.py).'
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: HERE
+  kind: const
+  description: ''
+  references: []
+- name: ROOT
+  kind: const
+  description: ''
+  references: []
+- name: WF
+  kind: const
+  description: ''
+  references: []
+- name: _wf
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - yaml.safe_dump
+  calls:
+  - p.write_text
+  - yaml.safe_dump
+- name: test_extract_step_returns_the_script_unchanged_except_the_named_expressions
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gate_selftest.extract_step
+  calls:
+  - _wf
+  - gate_selftest.extract_step
+  - script.replace
+- name: test_extract_step_refuses_an_expression_it_cannot_fill_in
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gate_selftest.extract_step
+  - gate_selftest.SelfTestError
+  - pytest.raises
+  calls:
+  - _wf
+  - gate_selftest.extract_step
+  - pytest.raises
+- name: test_extract_step_refuses_a_missing_ambiguous_or_script_less_step
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references:
+  - pytest.mark
+  - gate_selftest.extract_step
+  - gate_selftest.SelfTestError
+  - pytest.raises
+  calls:
+  - _wf
+  - gate_selftest.extract_step
+  - pytest.raises
+- name: test_the_gates_the_cases_extract_exist_in_the_real_workflows
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gate_selftest.extract_step
+  calls:
+  - __import__
+  - gate_selftest.extract_step
+- name: test_the_planted_code_comes_in_a_blind_and_an_asserting_variant
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - gate_selftest.GO_PLANTED_TEST_BLIND
+  - gate_selftest.GO_PLANTED_TEST_ASSERTING
+  - gate_selftest.RUST_TEST_BLIND
+  - gate_selftest.RUST_TEST_ASSERTING
+  calls: []
+- name: test_the_workflow_is_report_only_and_runs_when_a_gate_it_exercises_changes
+  kind: function
+  decorators: []
+  description: ''
+  references:
+  - yaml.safe_load
+  calls:
+  - doc.get
+  - yaml.safe_load
+- name: test_the_gate_selftest_is_gate_logic_for_the_planner
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: test_the_go_coverage_case_is_green_on_the_real_gate_and_goes_red_when_the_gate_is_weakened
+  kind: function
+  decorators:
+  - pytest.mark.skipif
+  description: ''
+  references:
+  - pytest.mark
+  - gate_selftest.case_go_cov
+  - gate_selftest.copy_tree
+  calls:
+  - __import__
+  - gate_selftest.case_go_cov
+  - gate_selftest.copy_tree
+  - ok.lines
+  - text.count
+  - text.replace
+  - weak.lines
+  - wf.read_text
+  - wf.write_text

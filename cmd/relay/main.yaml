@@ -72,6 +72,19 @@ objects:
   calls:
   - Encode
   - Set
+- name: writeEvidenceRequired
+  kind: func
+  description: writeEvidenceRequired answers 503 for a workflow that ran but whose
+    proof was not persisted while evidence is required. Besides the usual error/code
+    it states structurally that the execution completed, so a client does not retry
+    it blindly, and returns the chain hash of the executed workflow.
+  references:
+  - cabinet.ProofStatus
+  - cabinet.EvidenceRequiredError
+  calls:
+  - Encode
+  - Error
+  - Set
 - name: newMux
   kind: func
   description: newMux creates a new HTTP multiplexer and registers all relay API routes.
@@ -131,6 +144,8 @@ objects:
   - cabinet.SetPayload
   - cabinet.NewAPI
   - cabinet.IsTimeout
+  - cabinet.IsUnauthorized
+  - cabinet.IsEvidenceRequired
   - cabinet.IsInvalid
   - obs.LogRecord
   - obs.ExecutionContext
@@ -147,8 +162,10 @@ objects:
   - WithError
   - WithField
   - WithFields
+  - cabinet.IsEvidenceRequired
   - cabinet.IsInvalid
   - cabinet.IsTimeout
+  - cabinet.IsUnauthorized
   - cabinet.NewAPI
   - uuid.New
 - name: validateConfig
@@ -175,6 +192,13 @@ objects:
   - logrus.Logger.Warn
   calls:
   - logrus.Logger.Warn
+- name: evidenceRequiredFromEnv
+  kind: func
+  description: evidenceRequiredFromEnv reads CIC_EVIDENCE_REQUIRED. Unset or empty
+    means false; only "true" and "false" are accepted, so a typo cannot silently switch
+    a required mode off.
+  references: []
+  calls: []
 - name: buildRecorderOption
   kind: func
   description: buildRecorderOption constructs a cabinet.WithRecorder option from the
@@ -277,6 +301,8 @@ objects:
   - obs.NewMultiMetricSink
   - cabinet.WithObsSinks
   - cabinet.NewCabinetService
+  - cabinet.WithEvidenceRequired
+  - cabinet.WithProtectedModules
   - merkle.BuildContext
   - merkle.GoSumDigest
   - merkle.GoRuntimeDigest
@@ -299,7 +325,9 @@ objects:
   - cabinet.NewMemModuleStore
   - cabinet.NewMemSchemaStore
   - cabinet.NewMemWorkflowStore
+  - cabinet.WithEvidenceRequired
   - cabinet.WithObsSinks
+  - cabinet.WithProtectedModules
   - crypto.NewVaultCryptoService
   - git.NewExecGitOps
   - git.NewRepoRegistry
@@ -311,6 +339,16 @@ objects:
   - obs.NewMultiMetricSink
   - obs.NewPrometheusSink
   - uuid.New
+- name: productionHostSetup
+  kind: func
+  description: 'productionHostSetup is the one place that decides which host modules
+    a guest can import besides WASI: "git" and "cic-flow". main uses it, and the host-function
+    enumeration test runs the very same function, so a host module added here is seen
+    by that test and must be classified there.'
+  references:
+  - git.GitOps
+  - wazero.Runtime
+  calls: []
 - name: BuildID
   kind: var
   description: ''

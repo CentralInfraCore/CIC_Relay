@@ -9,6 +9,13 @@ used_in: []
 entrypoint: false
 related_nodes: []
 objects:
+- name: ProofStatus
+  kind: struct
+  description: ProofStatus tells the caller whether the ProofTrace of an execution
+    was persisted. Execution succeeded, the chain hash was computed (SetResponse.Trace)
+    and the record was persisted are three separate facts; this is the third.
+  implements: []
+  references: []
 - name: SetResponse
   kind: struct
   description: SetResponse is the response to a Set call.
@@ -33,3 +40,11 @@ objects:
   - API.ValidateSet
   - CanonicalizeSetPayload
   - Setx
+- name: ProofErrRecorderNotConfigured
+  kind: const
+  description: ''
+  references: []
+- name: ProofErrRecordFailed
+  kind: const
+  description: ''
+  references: []

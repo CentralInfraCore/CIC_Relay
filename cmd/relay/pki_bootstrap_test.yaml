@@ -10,27 +10,92 @@ used_in: []
 entrypoint: true
 related_nodes: []
 objects:
-- name: TestResolveTrustMode_Default
+- name: TestResolveTrustMode_Empty_Error
   kind: func
   description: ''
   references:
-  - assert.Equal
+  - require.Error
+  - assert.Empty
+  - assert.Contains
   calls:
-  - assert.Equal
+  - Error
+  - assert.Contains
+  - assert.Empty
+  - require.Error
+- name: TestResolveTrustMode_Unset_Error
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Empty
+  calls:
+  - assert.Empty
+  - require.Error
+  - require.NoError
 - name: TestResolveTrustMode_Dev
   kind: func
   description: ''
   references:
+  - require.NoError
   - assert.Equal
   calls:
   - assert.Equal
+  - require.NoError
 - name: TestResolveTrustMode_Prod
   kind: func
   description: ''
   references:
+  - require.NoError
   - assert.Equal
   calls:
   - assert.Equal
+  - require.NoError
+- name: TestBootstrapTrust_Unset_Error
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Empty
+  - assert.Nil
+  calls:
+  - assert.Empty
+  - assert.Nil
+  - require.Error
+- name: TestBootstrapTrust_Dev_LoadsTrustStore
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.True
+  calls:
+  - assert.Equal
+  - assert.True
+  - require.NoError
+- name: TestBootstrapTrust_Prod_EmptyBundle_Error
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Nil
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - assert.Nil
+  - require.Error
+  - require.NoError
+- name: TestRequireTrustStore
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - assert.NoError
+  calls:
+  - assert.Error
+  - assert.NoError
 - name: TestBootstrapPKI_DevMode_TrustStoreLoaded
   kind: func
   description: ''

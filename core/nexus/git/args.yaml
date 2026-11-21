@@ -1,0 +1,123 @@
+---
+package: git
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: validateRemoteName
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - MatchString
+- name: validateRef
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - MatchString
+- name: validateBranchRef
+  kind: func
+  description: 'validateBranchRef is validateRef for a name the operation will CREATE
+    or MOVE (a clone branch, a push destination): a short branch or tag name, or a
+    fully qualified refs/heads/ or refs/tags/ name. HEAD and other refs/ namespaces
+    (refs/remotes, refs/notes, refs/replace, refs/stash, ...) are not accepted.'
+  references: []
+  calls: []
+- name: CanonicalPushRefspec
+  kind: func
+  description: 'CanonicalPushRefspec validates a push refspec and returns its canonical,
+    FULLY QUALIFIED source and destination: "refs/heads/<name>" or "refs/tags/<name>"
+    on both sides. A short name, on either side, is a branch name and is qualified
+    as refs/heads/; a tag is named only as refs/tags/<name>. Nothing is left for git
+    to resolve. Git would otherwise resolve a short SOURCE against whatever local
+    ref has that name (a tag "release/1" when there is no such branch), and a short
+    DESTINATION against the refs that already exist on the remote (so "notes/commits"
+    would update the remote''s refs/notes/commits); the manifest grants refs by namespace,
+    so what is checked must be what git is given. A push of "<ref>" alone pushes to
+    the same name. HEAD, a bare commit id and anything under refs/ other than heads/
+    and tags/ are refused on either side: they have no acceptable qualified form.
+    A forced ("+") or deleting (empty source) refspec is refused: the typed ABI never
+    offered either. The same function serves authorization and execution: what is
+    authorised is what is run.'
+  references: []
+  calls: []
+- name: normalizeRefspec
+  kind: func
+  description: normalizeRefspec returns the canonical refspec as the "<src>:<dst>"
+    string handed to git.
+  references: []
+  calls:
+  - CanonicalPushRefspec
+- name: validateCloneURL
+  kind: func
+  description: 'validateCloneURL accepts https:// and ssh:// URLs with a plain host
+    and no password. Everything else is refused: scp-like "host:path", transport helpers
+    such as "ext::", and, unless the operator enabled local sources, local paths and
+    file://. A value that does not parse is refused, never waved through. With local
+    sources enabled (tests and operator-owned wiring only; the guest cannot set it)
+    the only extra form accepted is an absolute, already-clean filesystem path or
+    a file:// URL with no host and such a path. Such a value is recognised explicitly;
+    it is not "whatever failed to parse as a URL". Error messages never contain the
+    URL: a URL can carry credentials.'
+  references: []
+  calls:
+  - Hostname
+  - Password
+- name: isLocalSource
+  kind: func
+  description: isLocalSource reports whether raw is an absolute clean path or a file://
+    URL naming one.
+  references: []
+  calls: []
+- name: scrubURLs
+  kind: func
+  description: 'scrubURLs masks URL userinfo in s. It is applied to every message
+    that can leave the package: error text, git''s own output, and log attributes.'
+  references: []
+  calls:
+  - ReplaceAllString
+- name: validatePath
+  kind: func
+  description: validatePath checks one pathspec the guest wants staged. It must be
+    a plain relative path inside the repository; pathspec magic, absolute and parent-escaping
+    paths and the .git directory are refused.
+  references: []
+  calls: []
+- name: hasControl
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: clip
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: ErrInvalidArgument
+  kind: var
+  description: ErrInvalidArgument is wrapped by every refusal of a guest-supplied
+    value, so callers and tests can tell "refused by validation" from "git ran and
+    failed".
+  references: []
+- name: remoteNameRe
+  kind: var
+  description: 'remoteNameRe: a configured remote''s name, never a URL or path.'
+  references: []
+- name: refRe
+  kind: var
+  description: 'refRe: a branch, tag or ref name. No leading dash, no whitespace,
+    no revision syntax.'
+  references: []
+- name: credentialsInURL
+  kind: var
+  description: credentialsInURL matches "scheme://userinfo@" so userinfo can be masked
+    wherever text may carry a URL.
+  references: []
+- name: maxArgLen
+  kind: const
+  description: ''
+  references: []

@@ -1,0 +1,36 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: InstanceIdentity
+  kind: struct
+  description: 'InstanceIdentity names one live module instance and the exact artifact
+    it was instantiated from. It is created by the WasmManager, before the instance
+    exists, and travels in the context of every call into the instance (the instantiation
+    itself included, so a start section runs under it too). A host function reads
+    it back from the context it is given. The guest never supplies it and cannot alter
+    it: it is not part of anything the guest can write, and each instance gets its
+    own Serial, so one instance''s identity can never be mistaken for the next one''s,
+    however the names are reused.'
+  implements: []
+  references: []
+- name: instanceIdentityKey
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: WithInstanceIdentity
+  kind: func
+  description: WithInstanceIdentity returns ctx carrying id.
+  references: []
+  calls: []
+- name: InstanceIdentityFrom
+  kind: func
+  description: InstanceIdentityFrom returns the identity carried by ctx, if any.
+  references: []
+  calls: []

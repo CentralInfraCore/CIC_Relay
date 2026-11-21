@@ -1,0 +1,96 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: protectedFixture
+  kind: struct
+  description: protectedFixture builds a service with a counting unprotected "echo"
+    step and a counting protected "sign" step, and a workflow that runs echo first
+    and sign second.
+  implements: []
+  references: []
+- name: newProtectedFixture
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - ID
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewWorkflow
+  - Put
+  - WithProtectedModules
+  - require.NoError
+- name: run
+  kind: method
+  receiver: protectedFixture
+  description: ''
+  references: []
+  calls:
+  - Setx
+- name: TestSetx_ProtectedStep_RefusedWithoutPrincipal_NoStepRuns
+  kind: func
+  description: 'The decision is made once, at the execution boundary, before any step
+    runs: a refused call has no side effects, not even from the unprotected step in
+    front of the protected one.'
+  references:
+  - require.Error
+  - assert.Nil
+  - assert.True
+  - assert.Equal
+  calls:
+  - IsUnauthorized
+  - assert.Equal
+  - assert.Nil
+  - assert.True
+  - require.Error
+- name: TestSetx_ProtectedStep_AllowedWithPrincipal
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotNil
+  - assert.Equal
+  calls:
+  - WithPrincipal
+  - assert.Equal
+  - require.NoError
+  - require.NotNil
+- name: TestSetx_NothingProtected_BehavesAsBefore
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.NoError
+- name: TestSetx_UnprotectedWorkflow_RunsAnonymously
+  kind: func
+  description: A workflow without a protected step is unaffected even when a protected
+    set exists.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestPrincipal_ContextRoundTrip
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - require.True
+  - assert.Equal
+  calls:
+  - PrincipalFrom
+  - WithPrincipal
+  - assert.Equal
+  - assert.False
+  - require.True

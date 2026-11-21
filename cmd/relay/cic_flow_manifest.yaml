@@ -29,6 +29,15 @@ objects:
     value.
   implements: []
   references: []
+- name: gitRule
+  kind: struct
+  description: 'gitRule is one permitted git reach: which registered repository, which
+    operations on it, and for the operations that name something outside the repository
+    (a remote, a ref, a clone source) exactly which ones. Nothing is implied: an operation
+    that is not listed, a remote or ref that is not listed, or a repository that is
+    not named is refused.'
+  implements: []
+  references: []
 - name: moduleProject
   kind: struct
   description: moduleProject is the subset of a module's project.yaml the relay reads
@@ -45,6 +54,15 @@ objects:
     over the relay-provisioned Vault key behind it. The module never names key material;
     provisioning the OCI key into Vault is a separate operator flow (r3-plan.md).
   references: []
+- name: validateGit
+  kind: method
+  receiver: capabilityManifest
+  description: validateGit rejects a manifest whose git block is malformed or too
+    loose to enforce. A rule that grants fetch or push without naming a remote, or
+    clone, checkout or push without naming refs, would be unbounded, so it is an error
+    at load, never a silent widening.
+  references: []
+  calls: []
 - name: parseModuleProject
   kind: func
   description: parseModuleProject unmarshals a module's project.yaml.
@@ -109,6 +127,13 @@ objects:
   description: cicFlowImports returns the set of cic-flow functions the module imports.
   references: []
   calls: []
+- name: gitImports
+  kind: method
+  receiver: moduleProject
+  description: gitImports returns the set of git host functions the module declares
+    it imports.
+  references: []
+  calls: []
 - name: checkImportsWithinManifest
   kind: method
   receiver: moduleProject
@@ -130,3 +155,20 @@ objects:
   description: ''
   references: []
   calls: []
+- name: gitOpSet
+  kind: var
+  description: ''
+  references: []
+- name: gitPushDisabled
+  kind: const
+  description: 'gitPushDisabled is why git.push can not be granted. Pushing from a
+    guest needs the exact source object, the exact remote identity, the exact destination
+    ref and the destination''s expected previous state to be bound to one authorised
+    decision; the git command line does not give that (it resolves refs by name on
+    both ends, and a remote can show a different ref list to a reader than to a writer
+    or hide that a ref is symbolic). Until a push primitive that does is designed
+    and proven, the capability is withdrawn: no manifest can grant it, no module can
+    import it, and the host function refuses at run time whatever the registry holds.
+    ExecGitOps.Push stays, with its hardening, and is simply not reachable from a
+    guest.'
+  references: []

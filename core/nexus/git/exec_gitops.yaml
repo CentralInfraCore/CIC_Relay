@@ -66,7 +66,28 @@ objects:
   description: Push pushes refspec to remote for the registered repo.
   references: []
   calls:
+  - CanonicalPushRefspec
   - Resolve
+- name: resolveExactRef
+  kind: method
+  receiver: ExecGitOps
+  description: 'resolveExactRef returns the object id of the local ref named exactly
+    refname ("refs/heads/..." or "refs/tags/..."), or an error if there is no such
+    ref. "git show-ref --verify" requires the exact ref path: it does not try the
+    other places a short or qualified name could also be looked up.'
+  references: []
+  calls: []
+- name: requireUnambiguousRemoteRef
+  kind: method
+  receiver: ExecGitOps
+  description: requireUnambiguousRemoteRef refuses a push whose destination refname
+    git could match to a different ref of the remote. Given "refs/heads/x", git also
+    accepts the remote's "refs/refs/heads/x", "refs/tags/refs/heads/x", "refs/heads/refs/heads/x",
+    "refs/remotes/refs/heads/x" and ".../HEAD" for it, and updates that one when it
+    is the only match. Everything that could be taken for the destination is asked
+    of the remote; the only acceptable answer is nothing, or exactly the destination.
+  references: []
+  calls: []
 - name: Status
   kind: method
   receiver: ExecGitOps
@@ -77,6 +98,88 @@ objects:
 - name: parsePortcelainStatus
   kind: func
   description: parsePortcelainStatus parses the output of `git status --porcelain`.
+  references: []
+  calls: []
+- name: auditRepoConfig
+  kind: method
+  receiver: ExecGitOps
+  description: auditRepoConfig reads the repository's local configuration and refuses
+    it if it carries a key outside repoConfigAllowed. It runs before any operation
+    that would otherwise let git act on that configuration.
+  references: []
+  calls:
+  - MatchString
+- name: checkGlobalConfigFile
+  kind: func
+  description: 'checkGlobalConfigFile validates the operator-designated global configuration
+    file, if one is set: an absolute path to a regular file that only its owner can
+    write. Anything else disables git operations (fail closed) instead of being read.'
+  references: []
+  calls:
+  - IsRegular
+  - Mode
+  - Perm
+- name: requireConfiguredRemote
+  kind: method
+  receiver: ExecGitOps
+  description: requireConfiguredRemote proves that name is a remote of this repository,
+    that the repository's configuration is one we accept, and that every target the
+    operation will use passes the URL policy. A syntactically valid name is not evidence
+    that the remote is configured (git would read an unknown name as a path or a URL),
+    so the repository is asked.
+  references: []
+  calls: []
+- name: configuredRemoteTargets
+  kind: method
+  receiver: ExecGitOps
+  description: configuredRemoteTargets is requireConfiguredRemote that also returns
+    the validated effective target URLs.
+  references: []
+  calls: []
+- name: validateRemoteTargets
+  kind: method
+  receiver: ExecGitOps
+  description: 'validateRemoteTargets checks the targets of a remote for one operation,
+    at two levels that must agree: 1. the stored values, as raw NUL-delimited records,
+    with include files and every other configuration scope git itself reads applied
+    (so a pushurl that lives in an included file or in the worktree configuration
+    is seen), each validated exactly as stored; 2. the effective targets git will
+    actually use, from "git remote get-url", which apply insteadOf and pushInsteadOf
+    rewriting, each validated as well. The two lists must have the same number of
+    entries: a difference means the target was rewritten into something else or a
+    value contains a line break, and either way the operation is refused. The URL
+    policy is applied to what git will contact, not only to what was written down.'
+  references: []
+  calls: []
+- name: remoteTargets
+  kind: method
+  receiver: ExecGitOps
+  description: remoteTargets is validateRemoteTargets that also returns the effective
+    target URLs it validated, in the order git lists them. A caller that acts on a
+    target uses THESE strings, not the remote's name, so that the endpoint that was
+    checked is the endpoint that is used.
+  references: []
+  calls: []
+- name: remoteConfigValues
+  kind: method
+  receiver: ExecGitOps
+  description: 'remoteConfigValues returns every value of a multi-valued key as NUL-delimited
+    records (git config -z), so one record is exactly one stored value however many
+    lines it contains. It reads what git itself would read: all configuration scopes
+    that are enabled, with include files applied. An absent key is an empty result,
+    not an error.'
+  references: []
+  calls: []
+- name: gitEnv
+  kind: func
+  description: 'gitEnv builds the child environment: the allowlisted inherited variables,
+    then the fixed hardening values, which are appended last and so win over anything
+    inherited.'
+  references: []
+  calls: []
+- name: localProtocol
+  kind: func
+  description: ''
   references: []
   calls: []
 - name: runGit
@@ -107,6 +210,24 @@ objects:
   - RecordLog
   - Run
   - UTC
+- name: repoConfigAllowed
+  kind: var
+  description: 'repoConfigAllowed lists the repository-local configuration keys a
+    registered repository may carry. Anything else is refused: git configuration can
+    name programs to run (core.sshCommand, core.fsmonitor, remote.<n>.receivepack,
+    filter and diff drivers, credential helpers, aliases, includes) and can rewrite
+    URLs (url.<base>.insteadOf), which would undo the transport and URL policy. The
+    list is what "git clone" itself writes, plus remote and branch tracking.'
+  references: []
+- name: envAllowlist
+  kind: var
+  description: 'envAllowlist names the only variables a git child inherits from the
+    relay process. Everything else (API tokens, Vault credentials, CIC_* settings,
+    GIT_* overrides) stays with the relay: git, and the ssh/credential helpers it
+    starts, have no use for them, and a transport that misbehaves must not be able
+    to read them. These are the variables git needs to find itself, its home, a proxy
+    or a CA bundle.'
+  references: []
 - name: maxOutputSize
   kind: const
   description: maxOutputSize limits the amount of git output captured in memory.

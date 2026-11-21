@@ -1,0 +1,166 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: vcnSidecar
+  kind: struct
+  description: vcnSidecar is what the evidence says about the case in words a reader
+    can check, bound to the chain by the hash in the last step. ProofArtifact has
+    only hashes; this is the human-readable part. It is a test-side struct, not a
+    Relay schema.
+  implements: []
+  references: []
+- name: vcnRead
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: vcnJSON
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: vcnObj
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: vcnHash
+  kind: func
+  description: 'vcnHash is the hex SHA-256 of the canonical JSON of a value: the hash
+    of a stage artifact, independent of its formatting.'
+  references:
+  - canonicaljson.ToJSON
+  calls:
+  - canonicaljson.ToJSON
+- name: vcnCases
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: vcnAggregate
+  kind: func
+  description: vcnAggregate restates the precedence DRIFT/NOT_COMPARABLE > UNOBSERVED
+    > CONFORMANT, so that a stored object verdict is never taken on trust.
+  references: []
+  calls: []
+- name: vcnClaims
+  kind: func
+  description: 'vcnClaims derives the sidecar from the stage-4 observation and the
+    stage-5 verdict, and REFUSES to claim conformance for anything that was not observed.
+    The rule: conformance may be claimed only if the object verdict, recomputed from
+    the field verdicts, is CONFORMANT, and no compared path has an unobserved or unknown
+    coverage.'
+  references: []
+  calls: []
+- name: vcnEvidence
+  kind: func
+  description: 'vcnEvidence builds the evidence record of one case: one chain step
+    per stage, hashes of the canonical stage artifacts.'
+  references: []
+  calls: []
+- name: vcnEvidenceFrom
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProofTraceStep
+  - cabinet.ComputeChainHashV1
+  calls:
+  - cabinet.ComputeChainHashV1
+- name: vcnToDoc
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: vcnSidecarBound
+  kind: func
+  description: vcnSidecarBound reports whether the sidecar is the one the last step
+    of the chain was made over.
+  references: []
+  calls: []
+- name: TestVCNSlice_FixtureIsIntact
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVCNSlice_EvidenceChainVerifiesAndMatchesTheExpectedClaims
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - VerifyProofArtifact
+- name: TestVCNSlice_ConformanceIsClaimedOnlyWhenEverythingWasObserved
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVCNSlice_UnknownAndUnobservedAreExplicitInTheEvidence
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVCNSlice_TheEvidenceRefusesWhatTheStagesDoNotSupport
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVCNSlice_TamperingBreaksTheChain
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - VerifyProofArtifact
+- name: vcnPlan
+  kind: func
+  description: ''
+  references:
+  - iac.ConformancePlan
+  - iac.FieldPlan
+  - iac.CompareExact
+  - iac.CollectionPlan
+  - iac.Collection
+  - iac.TopologyMap
+  calls: []
+- name: vcnGoEvaluate
+  kind: func
+  description: 'vcnGoEvaluate runs iac.Evaluate for a case: the fixture''s registry-side
+    observed state, coverage mapped into the two lists the Go Observation has. A coverage
+    state the Go envelope has no name for (unknown) ends up in neither list, i.e.
+    unobserved.'
+  references:
+  - iac.ConformanceResult
+  - iac.Observation
+  - iac.Evaluate
+  calls:
+  - iac.Evaluate
+- name: vcnDivergences
+  kind: func
+  description: 'vcnDivergences lists every difference between iac.Evaluate and the
+    fixture''s expected verdict, as "case: what".'
+  references: []
+  calls: []
+- name: TestVCNSlice_GoIacDifferential
+  kind: func
+  description: 'TestVCNSlice_GoIacDifferential freezes the exact set of differences
+    between iac.Evaluate (an earlier parallel implementation, implemented, with no
+    `unknown` coverage state) and the fixture. A new difference, or a vanished one,
+    fails the test: the table in features/feature-011-oci-provider/vcn-slice.md is
+    meant to stay true.'
+  references:
+  - iac.VerdictNotComparable
+  calls: []
+- name: vcnFixtureDir
+  kind: const
+  description: ''
+  references: []
+- name: vcnInjectedTime
+  kind: const
+  description: 'vcnInjectedTime is the timestamp every evidence record of this test
+    carries: ProofTrace takes its clock from the caller.'
+  references: []

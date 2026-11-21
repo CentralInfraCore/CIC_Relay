@@ -102,6 +102,13 @@ objects:
   - Get
   - Hostname
   - Set
+- name: egressWriteError
+  kind: func
+  description: 'egressWriteError writes a typed egress error: {"error": <msg>, "code":
+    <code>}. The "error" key is the one every guest already reads; "code" is additive.'
+  references:
+  - api.Module
+  calls: []
 - name: portOf
   kind: func
   description: 'portOf returns the request''s TCP port: the explicit URL port, else
@@ -116,3 +123,7 @@ objects:
   references:
   - wazero.Runtime
   calls: []
+- name: egressTooLargeMsg
+  kind: var
+  description: egressTooLargeMsg is the message of the response_too_large error.
+  references: []

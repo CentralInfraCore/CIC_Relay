@@ -1,0 +1,29 @@
+---
+package: schemacompile
+description: ''
+tags:
+- schema
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ValidateSchemaRef
+  kind: func
+  description: ValidateSchemaRef checks the caller-supplied schema name and version
+    against a strict format. They are interpolated into a YAML document that the relay
+    then signs, so a newline, colon, space or any other character outside the format
+    could inject keys into the signed artifact. It rejects them before they reach
+    any formatted string.
+  references: []
+  calls:
+  - MatchString
+- name: schemaNamePattern
+  kind: var
+  description: 'schemaNamePattern: a schema name such as "postgresql" or "some.schema".'
+  references: []
+- name: versionPattern
+  kind: var
+  description: 'versionPattern: a version such as "v1.0.0" or "v0.18.dev".'
+  references: []

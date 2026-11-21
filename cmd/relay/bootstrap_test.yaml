@@ -173,16 +173,16 @@ objects:
   - require.NoError
   - assert.Error
   - assert.Contains
-  - assert.ErrorIs
+  - require.Error
   calls:
   - Error
   - assert.Contains
   - assert.Error
-  - assert.ErrorIs
   - cabinet.NewCabinetService
   - cabinet.NewMemModuleStore
   - cabinet.NewMemSchemaStore
   - cabinet.NewMemWorkflowStore
+  - require.Error
   - require.NoError
 - name: TestLoadComponentsFromFS
   kind: func
@@ -223,6 +223,7 @@ objects:
   - assert.ErrorIs
   - logrus.New
   - logrus.ErrorLevel
+  - require.Error
   - mock.Anything
   - cabinet.ErrNotFound
   calls:
@@ -246,6 +247,7 @@ objects:
   - logrus.New
   - mockCabinetService.AssertExpectations
   - mockCabinetService.On
+  - require.Error
   - require.NoError
 - name: TestLoadComponentsFromFS_WalkDirError
   kind: func
@@ -477,7 +479,7 @@ objects:
   - cabinet.NewMemWorkflowStore
   - require.Error
   - require.NoError
-- name: TestLoadModule_PKIVerification_TrustStoreNotLoaded_Skips
+- name: TestLoadModule_PKIVerification_TrustStoreNotLoaded_Rejected
   kind: func
   description: ''
   references:
@@ -488,8 +490,10 @@ objects:
   - cabinet.NewMemWorkflowStore
   - require.NoError
   - logrus.New
+  - require.Error
   - assert.Contains
   calls:
+  - Error
   - SetOutput
   - assert.Contains
   - cabinet.NewCabinetService
@@ -497,6 +501,7 @@ objects:
   - cabinet.NewMemSchemaStore
   - cabinet.NewMemWorkflowStore
   - logrus.New
+  - require.Error
   - require.NoError
 - name: TestLoadComponentsFromFS_UnknownKind
   kind: func
@@ -707,18 +712,26 @@ objects:
   - cabinet.NewMemWorkflowStore
   - require.NoError
   - logrus.New
-  - assert.NoError
+  - require.Error
   - assert.Contains
   calls:
+  - Error
   - SetOutput
   - assert.Contains
-  - assert.NoError
   - cabinet.NewCabinetService
   - cabinet.NewMemModuleStore
   - cabinet.NewMemSchemaStore
   - cabinet.NewMemWorkflowStore
   - logrus.New
+  - require.Error
   - require.NoError
+- name: allowingUnsigned
+  kind: func
+  description: allowingUnsigned returns a copy of the trust context with the explicit
+    dev-mode opt-in for modules without a signature file. Fixtures that load an unsigned
+    module say so; nothing admits one by default.
+  references: []
+  calls: []
 - name: embeddedTestdata
   kind: var
   description: go:embed testdata

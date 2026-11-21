@@ -1,0 +1,108 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: crlCA
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - require.NoError
+- name: crlOf
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestVerifyCRLSignature
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - require.Error
+  - assert.Contains
+  - assert.Error
+  calls:
+  - Add
+  - Error
+  - VerifyCRLSignature
+  - assert.Contains
+  - assert.Error
+  - assert.NoError
+  - require.Error
+- name: TestCheckCRLFresh
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - Add
+  - CheckCRLFresh
+  - Error
+  - assert.Contains
+  - assert.NoError
+  - require.Error
+- name: TestVerifyCertificateChain_StaleCRL
+  kind: func
+  description: 'A long-running relay verifies certificates long after load: a CRL
+    that went stale since then must stop being trusted when a freshness rule is set.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  - assert.NoError
+  calls:
+  - Add
+  - AddCert
+  - Error
+  - VerifyCertificateChain
+  - assert.Contains
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestCheckRevocation_BindsToTheChainIssuer
+  kind: func
+  description: 'F1: a CRL must be bound to the certificate that actually issued the
+    chain, not to a name. An impostor CA with the same name but another key must not
+    be able to revoke (or, by being stale, break) a certificate of the real CA.'
+  references:
+  - require.NoError
+  - assert.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - Add
+  - AddCert
+  - Error
+  - VerifyCertificateChain
+  - assert.Contains
+  - assert.NoError
+  - require.Error
+  - require.NoError
+- name: TestCheckCRLFresh_FullInterval
+  kind: func
+  description: 'F2: temporal validity is checked in full, not only NextUpdate.'
+  references:
+  - assert.NoError
+  - require.Error
+  - assert.Contains
+  - assert.Error
+  calls:
+  - Add
+  - CheckCRLFresh
+  - Error
+  - assert.Contains
+  - assert.Error
+  - assert.NoError
+  - require.Error

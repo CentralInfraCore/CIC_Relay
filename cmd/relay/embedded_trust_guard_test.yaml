@@ -1,0 +1,50 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: spkiDigest
+  kind: func
+  description: spkiDigest is the SHA-256 of a public key's PKIX encoding.
+  references: []
+  calls: []
+- name: privateKeyPublic
+  kind: func
+  description: privateKeyPublic parses a PEM private key (PKCS#8, SEC1 or PKCS#1)
+    and returns its public key.
+  references: []
+  calls:
+  - Public
+- name: repoKnownKeys
+  kind: func
+  description: repoKnownKeys maps the SPKI digest of every private key file (*.key)
+    under root to its path.
+  references: []
+  calls: []
+- name: embeddedCertsWithKnownKey
+  kind: func
+  description: embeddedCertsWithKnownKey returns one message per certificate in dir
+    of fsys whose private key is among keys.
+  references: []
+  calls:
+  - Error
+  - IsDir
+  - Name
+  - String
+- name: TestEmbeddedTrustHasNoRepoKnownPrivateKey
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestEmbeddedTrustGuardDetectsKnownKey
+  kind: func
+  description: 'The guard has to be able to fail: a CA whose key is among the known
+    keys is reported.'
+  references: []
+  calls:
+  - Add

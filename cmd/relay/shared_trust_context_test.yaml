@@ -1,0 +1,85 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: outcome
+  kind: struct
+  description: 'outcome is what a load path did with a module: whether it is registered,
+    and whether the cic-flow capability binding hook was invoked for it.'
+  implements: []
+  references: []
+- name: loadVia
+  kind: func
+  description: loadVia runs one module through the embedded or the installed loader
+    against the same trust context, and reports the outcome. Both loaders are fed
+    the identical module files.
+  references:
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - require.NoError
+  calls:
+  - GetModule
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - require.NoError
+- name: sharedAssets
+  kind: func
+  description: sharedAssets is the test trust store with the cic-flow provenance anchor
+    set to the same roots, so a verified module also reaches the capability binding.
+  references: []
+  calls: []
+- name: TestEmbeddedAndInstalled_SameVerdictAndCapability
+  kind: func
+  description: 'Acceptance 1: the same module and certificate, loaded from the embedded
+    and from the installed path, gives the same accept/reject and the same capability
+    result.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Empty
+  calls:
+  - assert.Empty
+  - assert.Equal
+  - require.NoError
+- name: trustCtxCA
+  kind: func
+  description: trustCtxCA builds a root CA and a code-signing leaf signed by it; returns
+    both as PEM.
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - require.NoError
+- name: TestProd_ModuleSignedOutsideOperatorBundle_RejectedOnBothPaths
+  kind: func
+  description: 'Acceptance 2: in prod the trust context is the operator''s CIC_PLATFORM_CA_BUNDLE.
+    A module signed only by a CA that is NOT in that bundle (here: the test PKI, standing
+    in for the CAs embedded in the binary) is rejected on both paths; one signed by
+    the operator''s CA is accepted on both. Being embedded does not widen trust.'
+  references:
+  - require.NoError
+  - assert.False
+  - assert.Empty
+  - assert.True
+  - assert.Equal
+  calls:
+  - assert.Empty
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - require.NoError
+- name: sharedTrustModuleID
+  kind: const
+  description: ''
+  references: []

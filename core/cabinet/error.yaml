@@ -8,6 +8,14 @@ used_in: []
 entrypoint: false
 related_nodes: []
 objects:
+- name: EvidenceRequiredError
+  kind: struct
+  description: EvidenceRequiredError is the structured form of ErrEvidenceRequired.
+    The workflow has already run when it is returned, so the caller must not treat
+    the call as a plain failure it can safely retry; the fields carry the partial
+    evidence.
+  implements: []
+  references: []
 - name: FieldError
   kind: struct
   description: FieldError describes a validation error for a specific field.
@@ -43,6 +51,27 @@ objects:
   kind: func
   description: IsTimeout checks if an error is an ErrTimeout execution exceeded time
     budget.
+  references: []
+  calls: []
+- name: Error
+  kind: method
+  receiver: EvidenceRequiredError
+  description: Error implements the error interface, returning a JSON-encoded list
+    of field-level validation errors or a generic message if empty.
+  references: []
+  calls: []
+- name: Is
+  kind: method
+  receiver: EvidenceRequiredError
+  description: Is makes errors.Is(err, ErrEvidenceRequired) hold for the structured
+    error.
+  references: []
+  calls: []
+- name: IsEvidenceRequired
+  kind: func
+  description: 'IsEvidenceRequired checks if an error is an ErrEvidenceRequired: the
+    execution happened, but its proof was not persisted although the service requires
+    it.'
   references: []
   calls: []
 - name: Error
@@ -86,4 +115,9 @@ objects:
 - name: ErrTimeout
   kind: var
   description: ''
+  references: []
+- name: ErrEvidenceRequired
+  kind: var
+  description: 'ErrEvidenceRequired: the workflow ran, but the ProofTrace was not
+    persisted and the service is configured to require persisted evidence.'
   references: []

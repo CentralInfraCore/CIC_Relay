@@ -1,0 +1,200 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: inst
+  kind: func
+  description: 'gitRegistryWith registers a verified module and runs it: the grant
+    is bound to artifact "art-1" and an instance named id is running that artifact,
+    as after a normal load and instantiation. inst is the identity the WasmManager
+    would attach to an instance of module name built from artifact.'
+  references:
+  - cabinet.InstanceIdentity
+  calls: []
+- name: instUnder
+  kind: func
+  description: instUnder is inst for an instance that started while the manifest document
+    manifestYAML was in force.
+  references:
+  - cabinet.InstanceIdentity
+  calls: []
+- name: invokeAs
+  kind: func
+  description: 'invokeAs runs a host function the way the runtime does: with the instance
+    identity on the context. A nil identity is a call that does not come from a managed
+    instance.'
+  references:
+  - cabinet.InstanceIdentity
+  - cabinet.WithInstanceIdentity
+  calls:
+  - cabinet.WithInstanceIdentity
+- name: gitRegistryWith
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestGitManifest_Validation
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - assert.Error
+- name: TestGitManifest_ImportsMustBeGranted
+  kind: func
+  description: A module that imports a git function its manifest does not grant is
+    rejected at load.
+  references:
+  - assert.Error
+  calls:
+  - assert.Error
+- name: TestGitAuthorize_Matrix
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - assert.Error
+  - assert.NoError
+- name: TestGitHostFunction_IdentityComesFromTheRuntime
+  kind: func
+  description: The caller's identity is the one the runtime attached to the call context
+    for that instance. Nothing in the request can name another module, and a call
+    without an identity is not served.
+  references:
+  - api.Module
+  - assert.Nil
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.Contains
+  - cabinet.InstanceIdentity
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - assert.Nil
+  - assert.NotEmpty
+- name: gitModuleFS
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: gitModuleFSWith
+  kind: func
+  description: 'gitModuleFSWith is gitModuleFS with the module''s manifest given:
+    the same wasm can be loaded with different capability manifests.'
+  references: []
+  calls:
+  - Replace
+- name: hexOf
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: hooks
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: loadGit
+  kind: func
+  description: ''
+  references:
+  - cabinet.Cabinet
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestGitGrant_FollowsTheVerifiedArtifactAndTheRunningInstance
+  kind: func
+  description: 'A grant belongs to the verified module state: the artifact the cabinet
+    stored, and the instance that is actually running it. A reload revokes the grant,
+    an unverified reload does not get it back, and an instance that started before
+    the reload keeps no authority from the new grant.'
+  references:
+  - require.NoError
+  - assert.Error
+  - assert.NoError
+  - assert.NotEmpty
+  - assert.Equal
+  - require.NotEqual
+  calls:
+  - Checksum
+  - GetModule
+  - assert.Equal
+  - assert.Error
+  - assert.NoError
+  - assert.NotEmpty
+  - require.NoError
+  - require.NotEqual
+- name: TestGitGrant_ConcurrentReloadNeverAuthorizesAStaleInstance
+  kind: func
+  description: While a module is being reloaded over and over, an instance that is
+    running a stale artifact is never authorized, whatever the interleaving. (Run
+    with -race.)
+  references:
+  - require.NoError
+  - assert.Zero
+  calls:
+  - assert.Zero
+  - require.NoError
+- name: TestGitGrant_UnboundOrUnknownInstanceIsDenied
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Error
+  - assert.NoError
+  calls:
+  - assert.Error
+  - assert.NoError
+  - require.NoError
+- name: TestGitHostModule_EndToEnd
+  kind: func
+  description: 'Through the real host module and a real git repository: a module with
+    no grant gets nothing, a granted module gets exactly what its manifest lists,
+    and the argument validation underneath still holds.'
+  references:
+  - wazero.NewRuntime
+  - require.NoError
+  - assert.Len
+  - assert.NotEmpty
+  calls:
+  - Close
+  - ExportedFunctionDefinitions
+  - Module
+  - assert.Len
+  - assert.NotEmpty
+  - require.NoError
+  - wazero.NewRuntime
+- name: TestGitManifest_RefsAreBranchesAndTagsOnly
+  kind: func
+  description: 'A manifest can grant branch and tag names only: not HEAD, and nothing
+    under refs/ except heads/ and tags/.'
+  references:
+  - require.Error
+  - assert.Error
+  - assert.NoError
+  calls:
+  - assert.Error
+  - assert.NoError
+  - require.Error
+- name: wasmBase
+  kind: var
+  description: ''
+  references: []
+- name: wasmVariant
+  kind: var
+  description: ''
+  references: []
+- name: gitManifestYAML
+  kind: const
+  description: ''
+  references: []

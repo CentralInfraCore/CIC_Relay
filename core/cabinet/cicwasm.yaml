@@ -81,6 +81,15 @@ objects:
     compilations.
   references:
   - wazero.CompiledModule
+  calls: []
+- name: compile
+  kind: method
+  receiver: WasmManager
+  description: compile is PreCompileModule that also returns the checksum of the descriptor
+    it compiled, read from the same descriptor, so the checksum names exactly the
+    artifact the compiled module came from.
+  references:
+  - wazero.CompiledModule
   - obs.HistogramPoint
   - obs.Resource
   calls:
@@ -104,14 +113,16 @@ objects:
   - obs.HistogramPoint
   - obs.Resource
   calls:
+  - Add
   - Close
   - Format
+  - InstanceBinding
   - InstantiateModule
   - Load
   - Milliseconds
   - RecordHistogram
   - UTC
-  - WasmManager.PreCompileModule
+  - WithInstanceIdentity
   - WithName
   - WithStartFunctions
   - wazero.NewModuleConfig
@@ -193,6 +204,7 @@ objects:
   - Call
   - Memory
   - Read
+  - WithInstanceIdentity
 - name: writeStringToWasm
   kind: method
   receiver: CicWasmHost

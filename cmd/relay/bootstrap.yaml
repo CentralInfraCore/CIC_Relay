@@ -14,7 +14,8 @@ objects:
   kind: struct
   description: PKIAssets holds the loaded public key infrastructure components.
   implements: []
-  references: []
+  references:
+  - cabinet.CRLFreshness
 - name: ComponentHeader
   kind: struct
   description: ComponentHeader defines the common fields for identifying a component
@@ -116,9 +117,15 @@ objects:
   - logrus.Info
 - name: loadEmbeddedComponents
   kind: func
-  description: loadEmbeddedComponents loads schemas, workflows, and PKI assets from
-    the embedded filesystem. It processes all embedded components and registers them
-    with the cabinet service.
+  description: 'loadEmbeddedComponents loads schemas, workflows and modules from the
+    embedded filesystems and registers them with the cabinet service. Embedded components
+    are verified against the SAME trust context as installed ones (pkiAssets, the
+    result of bootstrapTrust): being compiled into the binary grants no extra trust.
+    Origin (the signer chain against the configured anchors), authenticity and the
+    capability a module receives are decided by the same rules on both load paths.
+    The loader used to build a second trust store from the embedded CAs, so in prod
+    an embedded module was judged against the development CAs instead of the operator''s
+    bundle.'
   references:
   - cabinet.Cabinet
   - logrus.Logger
@@ -201,17 +208,19 @@ objects:
   - cabinet.Cabinet
   - logrus.Logger
   - yaml.Unmarshal
+  - cabinet.ModuleDescriptor
   - logrus.Fields
   - cabinet.VerifyOptions
   - cabinet.VerifyCertificateChain
   - cabinet.NewModuleDescriptor
   - logrus.WithField
   - logrus.Logger.WithFields
+  - cabinet.ModuleDescriptor.Checksum
   - cabinet.Cabinet.GetModule
+  - cabinet.ModuleDescriptor.ID
   - cabinet.Cabinet.PutModule
   calls:
   - Error
-  - ID
   - Info
   - Size
   - String
@@ -223,6 +232,8 @@ objects:
   - Write
   - cabinet.Cabinet.GetModule
   - cabinet.Cabinet.PutModule
+  - cabinet.ModuleDescriptor.Checksum
+  - cabinet.ModuleDescriptor.ID
   - cabinet.NewModuleDescriptor
   - cabinet.VerifyCertificateChain
   - logrus.Logger.WithFields
@@ -230,9 +241,11 @@ objects:
   - yaml.Unmarshal
 - name: loadPKIAssets
   kind: func
-  description: loadPKIAssets loads X.509 certificates and CRLs from a filesystem path
-    and populates PKIAssets with root certificates, intermediates, and revocation
-    lists.
+  description: 'loadPKIAssets loads X.509 certificates and CRLs from a filesystem
+    path and populates PKIAssets with root certificates, intermediates, and revocation
+    lists. This is the lenient (dev) loader: every CRL still needs a valid signature
+    from a CA certificate loaded here, and one that fails is never used, but an unparsable
+    or stale CRL is only logged. The strict (prod) path is the CA bundle in bootstrapPKI.'
   references:
   - logrus.Logger
   - logrus.Fields
@@ -252,3 +265,13 @@ objects:
   - logrus.Logger.Info
   - logrus.Logger.WithField
   - logrus.Logger.WithFields
+- name: moduleLoadMu
+  kind: var
+  description: moduleLoadMu serialises loadModule (see there).
+  references: []
+- name: afterCapabilityPublished
+  kind: var
+  description: 'afterCapabilityPublished is a test seam: called inside loadModule
+    after the capability grant was published and before the artifact is stored, i.e.
+    at the one point where an interleaving could hurt. Always nil in the relay.'
+  references: []

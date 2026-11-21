@@ -256,22 +256,6 @@ objects:
   calls:
   - Read
   - assert.Contains
-- name: TestMakePushFn_Success
-  kind: func
-  description: ''
-  references:
-  - assert.Contains
-  calls:
-  - Read
-  - assert.Contains
-- name: TestMakePushFn_Error
-  kind: func
-  description: ''
-  references:
-  - assert.Contains
-  calls:
-  - Read
-  - assert.Contains
 - name: TestMakeStatusFn_Success
   kind: func
   description: ''
@@ -312,14 +296,6 @@ objects:
   - Read
   - assert.Contains
 - name: TestMakeCommitFn_BadRequest
-  kind: func
-  description: ''
-  references:
-  - assert.Contains
-  calls:
-  - Read
-  - assert.Contains
-- name: TestMakePushFn_BadRequest
   kind: func
   description: ''
   references:

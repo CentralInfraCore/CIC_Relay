@@ -27,6 +27,15 @@ objects:
   receiver: WorkflowRecorder
   description: Record persists the ProofTrace via the underlying StateRecorder. workflowID
     is used as the RunID; trace is stored as the actual state.
+  references: []
+  calls:
+  - WorkflowRecorder.RecordCommit
+- name: RecordCommit
+  kind: method
+  receiver: WorkflowRecorder
+  description: RecordCommit is Record that also returns the persisted record's commit
+    hash. It satisfies cabinet.CommitRecorder, so Setx can return the hash in the
+    response.
   references:
   - types.ExpectedState
   calls:
