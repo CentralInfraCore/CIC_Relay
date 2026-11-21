@@ -1,3 +1,6 @@
+// Command symbolsgen writes the exported symbols (constants, variables, functions, types) of the packages
+// listed in an allowlist file to a Markdown file. make symbols regenerates context/SYMBOLS.md with it; make
+// check-symbols fails when the committed file has drifted. Usage: symbolsgen <allowlist_file> <output_file>
 package main
 
 import (
@@ -184,6 +187,7 @@ func run(allowFilePath, outputFilePath string) error {
 	return nil
 }
 
+// main checks the two arguments and runs the generator, exiting with status 1 on error.
 func main() {
 	// Handle command-line arguments
 	if len(os.Args) != 3 {

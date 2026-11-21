@@ -87,6 +87,8 @@ func buildConstraint(f *ast.File) string {
 	return ""
 }
 
+// dumpFile parses one Go file and lists its function and method declarations with their spans; init functions
+// are numbered in source order. A file that does not parse is reported with its error and no functions.
 func dumpFile(path string) File {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
@@ -143,6 +145,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
+// main runs the tool on the command-line arguments and exits with run's status.
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }

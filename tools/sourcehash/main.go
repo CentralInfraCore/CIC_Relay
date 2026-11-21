@@ -16,8 +16,11 @@ import (
 	"centralrelay/pkg/sourcedigest"
 )
 
+// osExit is os.Exit, replaceable in tests.
 var osExit = os.Exit
 
+// main prints the tree hash of the directory given as the first argument (default ".") and exits with status
+// 1 when it cannot be computed.
 func main() {
 	root := "."
 	if len(os.Args) > 1 {
