@@ -27,7 +27,8 @@ objects:
 - name: load
   kind: function
   decorators: []
-  description: ''
+  description: Read a mutation baseline file and return its packages; ValueError unless
+    every entry has non-negative integer killed / lived / not_covered counts.
   references: []
   calls:
   - ValueError
@@ -36,7 +37,8 @@ objects:
 - name: check
   kind: function
   decorators: []
-  description: ''
+  description: 'Compare the head baseline with the base one and list every weakening:
+    an entry the base does not have, or a lowered efficacy or mutant-coverage requirement.'
   references:
   - gremlins_gate.thresholds
   calls:
@@ -46,7 +48,9 @@ objects:
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Fail (exit 1) when either baseline cannot be read or the head baseline
+    weakens the base one; a removed entry is only noted, since the package then needs
+    the default 90.
   references: []
   calls:
   - ap.add_argument

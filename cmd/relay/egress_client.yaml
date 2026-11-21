@@ -39,13 +39,15 @@ objects:
   references: []
 - name: egressRequestTimeout
   kind: const
-  description: ''
+  description: egressRequestTimeout bounds one whole egress request, response body
+    included.
   references: []
 - name: egressConnectTimeout
   kind: const
-  description: ''
+  description: egressConnectTimeout bounds the TCP connect and the TLS handshake.
   references: []
 - name: egressMaxResponseBytes
   kind: const
-  description: ''
+  description: egressMaxResponseBytes caps the response body returned to the module;
+    a larger response is refused (egressTooLargeMsg), never truncated.
   references: []

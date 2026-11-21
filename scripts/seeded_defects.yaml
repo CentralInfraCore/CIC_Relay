@@ -33,7 +33,9 @@ objects:
   kind: method
   receiver: Bundle
   decorators: []
-  description: ''
+  description: Run the real verifier (object_model.verify_record) on record, or on
+    the honest record when none is given, with this bundle's context; keyword arguments
+    override single context fields.
   references:
   - object_model.verify_record
   calls:
@@ -54,19 +56,20 @@ objects:
 - name: _first
   kind: function
   decorators: []
-  description: ''
+  description: Index of the first object of the record that satisfies pred.
   references: []
   calls: []
 - name: _go
   kind: function
   decorators: []
-  description: ''
+  description: Whether the object is a Go object.
   references: []
   calls: []
 - name: _measured_go
   kind: function
   decorators: []
-  description: ''
+  description: Whether the object is a Go object with measured, incomplete coverage
+    (a tamper target).
   references:
   - object_model.MEASURED
   calls:
@@ -74,14 +77,14 @@ objects:
 - name: d_delete
   kind: function
   decorators: []
-  description: ''
+  description: Drop one Go object from the record and reseal it.
   references: []
   calls:
   - _first
 - name: d_insert
   kind: function
   decorators: []
-  description: ''
+  description: Add an invented Go object that is not in the source, and reseal.
   references: []
   calls:
   - _first
@@ -96,7 +99,7 @@ objects:
 - name: d_dup_same_id
   kind: function
   decorators: []
-  description: ''
+  description: List one Go object twice under the same id, and reseal.
   references: []
   calls:
   - _first
@@ -111,33 +114,36 @@ objects:
 - name: d_tamper_naive
   kind: function
   decorators: []
-  description: ''
+  description: Mark an incompletely covered Go object as fully covered without resealing
+    the record.
   references: []
   calls:
   - _first
 - name: d_tamper_resealed
   kind: function
   decorators: []
-  description: ''
+  description: Mark an incompletely covered Go object as fully covered and reseal,
+    as an attacker who fixes the digest and the summary would.
   references: []
   calls:
   - _first
 - name: d_other_commit
   kind: function
   decorators: []
-  description: ''
+  description: Claim a different commit and tree as the record's identity, and reseal.
   references: []
   calls: []
 - name: d_forged_input_digest
   kind: function
   decorators: []
-  description: ''
+  description: Replace the recorded digest of one input file by a forged one, and
+    reseal.
   references: []
   calls: []
 - name: d_missing_field
   kind: function
   decorators: []
-  description: ''
+  description: Remove the coverage field of one object, and reseal.
   references: []
   calls:
   - _first
@@ -172,7 +178,8 @@ objects:
 - name: _with_tools
   kind: function
   decorators: []
-  description: ''
+  description: Apply edit to the record's tool versions and reseal (the base of the
+    TOOLS cases).
   references: []
   calls: []
 - name: d_tool_unknown
@@ -230,7 +237,8 @@ objects:
   kind: class
   decorators:
   - dataclass
-  description: ''
+  description: 'One seeded defect: how to derive the defective bundle, the level that
+    must reach verdict, and the diagnostic code that must appear.'
   implements: []
   references: []
 - name: CASES
@@ -240,7 +248,7 @@ objects:
 - name: _codes
   kind: function
   decorators: []
-  description: ''
+  description: The diagnostic codes of findings written as "[CODE] message".
   references: []
   calls:
   - f.index
@@ -248,7 +256,9 @@ objects:
 - name: run_case
   kind: function
   decorators: []
-  description: ''
+  description: 'Derive the case''s defective bundle, verify it and report whether
+    it was caught: the expected level reaches the expected verdict with the expected
+    code (STABILITY: the stability verdict, naming the nondeterministic objects).'
   references: []
   calls:
   - _codes
@@ -289,7 +299,9 @@ objects:
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Build the bundle from the given files, run the controls and every case,
+    print the table; return 0 only if every control is honest and every defect is
+    caught.
   references: []
   calls:
   - __doc__.split

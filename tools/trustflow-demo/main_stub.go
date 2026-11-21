@@ -7,6 +7,7 @@ package main
 
 import "fmt"
 
+// main only explains how to build and run the demo: without the ffi_cgo tag there is no Rust airlock to call.
 func main() {
 	fmt.Println("build with `-tags ffi_cgo` and the live cic-ffi staticlib — run via `make demo-trustflow`")
 }

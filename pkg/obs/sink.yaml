@@ -1,6 +1,10 @@
 ---
 package: obs
-description: ''
+description: 'Package obs is the relay''s observability layer: components emit traces,
+  log records and metric points (counters, gauges, histograms) through the TraceSink,
+  LogSink and MetricSink interfaces, and sinks deliver them to logrus, a Prometheus
+  text exposition, several sinks at once, an in-memory capture for tests, or nowhere.
+  Metric instruments are registered under the "relay." prefix.'
 tags:
 - metrics
 category: []
@@ -37,30 +41,30 @@ objects:
 - name: RecordTrace
   kind: method
   receiver: NoopSink
-  description: ''
+  description: RecordTrace discards the frame.
   references: []
   calls: []
 - name: RecordLog
   kind: method
   receiver: NoopSink
-  description: ''
+  description: RecordLog discards the record.
   references: []
   calls: []
 - name: RecordCounter
   kind: method
   receiver: NoopSink
-  description: ''
+  description: RecordCounter discards the point.
   references: []
   calls: []
 - name: RecordGauge
   kind: method
   receiver: NoopSink
-  description: ''
+  description: RecordGauge discards the point.
   references: []
   calls: []
 - name: RecordHistogram
   kind: method
   receiver: NoopSink
-  description: ''
+  description: RecordHistogram discards the point.
   references: []
   calls: []

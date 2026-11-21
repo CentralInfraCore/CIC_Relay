@@ -56,11 +56,12 @@ objects:
   - FieldID
 - name: asString
   kind: func
-  description: ''
+  description: asString returns v when it is a string and "" for any other value.
   references: []
   calls: []
 - name: asStringSlice
   kind: func
-  description: ''
+  description: asStringSlice returns the string elements of v when it is a []interface{}
+    (non-string elements are skipped), and nil for any other value.
   references: []
   calls: []

@@ -179,7 +179,8 @@ objects:
   calls: []
 - name: localProtocol
   kind: func
-  description: ''
+  description: localProtocol returns the GIT_ALLOW_PROTOCOL suffix that additionally
+    permits the file transport when local sources are allowed, and nothing otherwise.
   references: []
   calls: []
 - name: runGit
@@ -198,7 +199,13 @@ objects:
 - name: runGitOutputDir
   kind: method
   receiver: ExecGitOps
-  description: ''
+  description: runGitOutputDir runs one git subcommand in dir (the caller's working
+    directory when empty) and returns its combined stdout and stderr, capped at maxOutputSize.
+    The command gets the hardening configuration on the command line (no hooks, https
+    and ssh only, plus file when local sources are allowed, and safe.directory for
+    dir), the environment from gitEnv, and defaultTimeout when ctx has no deadline.
+    The duration is recorded as a histogram per subcommand; on failure the output
+    is scrubbed of URL credentials, logged and wrapped into the returned error.
   references:
   - obs.HistogramPoint
   - obs.Resource

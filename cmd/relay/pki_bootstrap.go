@@ -12,9 +12,14 @@ import (
 	"centralrelay/core/cabinet"
 )
 
+// The values of CIC_TRUST_MODE. There is no default: an unset or unknown mode is a start-up error.
 const (
-	TrustModeDev  = "dev"
-	TrustModeProd = "prod" // scaffold: CICPlatformCA not embedded — out-of-band provisioning required
+	// TrustModeDev trusts the development CAs embedded in the binary (embedded/pki) and is the only
+	// mode in which CIC_ALLOW_UNSIGNED_MODULES=1 is honoured.
+	TrustModeDev = "dev"
+	// TrustModeProd trusts only the CA bundle provisioned out-of-band at CIC_PLATFORM_CA_BUNDLE (the
+	// CICPlatformCA is not embedded), with strict CRL handling.
+	TrustModeProd = "prod" // CICPlatformCA is not embedded: provisioned out-of-band (CIC_PLATFORM_CA_BUNDLE)
 )
 
 // resolveTrustMode reads the CIC_TRUST_MODE environment variable and returns the trust mode.
@@ -88,7 +93,10 @@ func bootstrapTrust(embeddedPKI fs.FS, logger *logrus.Logger) (string, *PKIAsset
 // bootstrapPKI loads the CA trust store based on trustMode.
 //
 // dev  → loads CICDeveloperCA + rootCA from embeddedPKI; TrustStoreLoaded=true
-// prod → scaffold: CICPlatformCA not embedded; returns empty pool with WARN
+// prod → loads the CA bundle (certificates and CRLs) named by CIC_PLATFORM_CA_BUNDLE; TrustStoreLoaded=true
+//
+// In prod a missing or unreadable bundle, a bundle without certificates, a bad or stale CRL,
+// or an unmet CIC_CRL_REQUIRED_ISSUERS policy is an error.
 //
 // Any other value returns an error.
 func bootstrapPKI(trustMode string, embeddedPKI fs.FS, logger *logrus.Logger) (*PKIAssets, error) {

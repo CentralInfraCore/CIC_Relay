@@ -1,3 +1,6 @@
+// Command affected reads changed file paths from standard input, one per line, and prints the import paths of
+// the Go packages whose tests they can affect: the packages containing a changed file and every package that
+// transitively imports one of them.
 package main
 
 import (
@@ -91,6 +94,7 @@ func affectedPackages(cfg *packages.Config, changedFiles []string) ([]string, er
 	return result, nil
 }
 
+// main reads the changed files from stdin and prints the affected packages, one per line.
 func main() {
 	var changedFiles []string
 	scanner := bufio.NewScanner(os.Stdin)

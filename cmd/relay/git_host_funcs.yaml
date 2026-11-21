@@ -18,15 +18,7 @@ objects:
   methods: []
 - name: gitHostFn
   kind: type
-  description: 'authorized wraps a git host function so that it runs only if the *calling
-    instance* is permitted. The caller''s identity is the one the WasmManager attached
-    to the call context when it created the instance (module ID, the artifact compiled
-    for it, a per-instance serial). It is never read from the request, and a context
-    without it is refused, so a call that does not come from a managed instance (a
-    start section included: it runs under the same identity) can not borrow one. The
-    instance name the runtime reports for the module must agree with the identity;
-    a disagreement is refused as well. gitHostFn is the uniform host-function ABI
-    of the git module.'
+  description: gitHostFn is the uniform host-function ABI of the git module.
   references:
   - api.Module
 - name: makeGitHostSetupFn
@@ -41,7 +33,14 @@ objects:
   calls: []
 - name: authorized
   kind: func
-  description: ''
+  description: 'authorized wraps a git host function so that it runs only if the *calling
+    instance* is permitted. The caller''s identity is the one the WasmManager attached
+    to the call context when it created the instance (module ID, the artifact compiled
+    for it, a per-instance serial). It is never read from the request, and a context
+    without it is refused, so a call that does not come from a managed instance (a
+    start section included: it runs under the same identity) can not borrow one. The
+    instance name the runtime reports for the module must agree with the identity;
+    a disagreement is refused as well.'
   references:
   - api.Module
   - cabinet.InstanceIdentityFrom

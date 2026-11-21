@@ -21,7 +21,8 @@ objects:
   references: []
 - name: instanceIdentityKey
   kind: struct
-  description: ''
+  description: instanceIdentityKey is the unexported context key under which WithInstanceIdentity
+    stores the InstanceIdentity; no other package can set or overwrite it.
   implements: []
   references: []
 - name: WithInstanceIdentity

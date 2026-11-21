@@ -20,8 +20,11 @@ import (
 type EventType string
 
 const (
+	// EventCreate reports a file that appeared since the previous scan (every file on the first scan).
 	EventCreate EventType = "CREATE"
+	// EventUpdate reports a file whose content changed since the previous scan.
 	EventUpdate EventType = "UPDATE"
+	// EventDelete reports a file that disappeared since the previous scan; its Content is nil.
 	EventDelete EventType = "DELETE"
 )
 
@@ -354,6 +357,9 @@ func emitDiff(ctx context.Context, ch chan<- Event, prev, curr map[string]string
 	}
 }
 
+// Watch scans RootPath every Interval and sends the difference to the previous scan as events on the returned
+// channel (the first scan reports every file as CREATE). A failed scan is logged and skipped. The channel is
+// closed when ctx is cancelled.
 func (pw *PollingWatcher) Watch(ctx context.Context) (<-chan Event, error) {
 	events := make(chan Event, 16)
 

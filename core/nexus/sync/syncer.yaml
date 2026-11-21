@@ -1,6 +1,8 @@
 ---
 package: sync
-description: ''
+description: 'Package sync pushes the relay''s local state repository to a central
+  repository: GitSyncer squashes a day''s commits and pushes the result with the git
+  command line.'
 tags:
 - core
 category: []

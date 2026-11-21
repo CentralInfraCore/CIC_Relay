@@ -467,6 +467,8 @@ func gitEnv(environ []string, allowLocal bool, globalConfig string) []string {
 	)
 }
 
+// localProtocol returns the GIT_ALLOW_PROTOCOL suffix that additionally permits the file transport when local
+// sources are allowed, and nothing otherwise.
 func localProtocol(allow bool) string {
 	if allow {
 		return ":file"
@@ -486,6 +488,12 @@ func (e *ExecGitOps) runGitOutput(ctx context.Context, dir string, args ...strin
 	return e.runGitOutputDir(ctx, dir, args...)
 }
 
+// runGitOutputDir runs one git subcommand in dir (the caller's working directory when empty) and returns its
+// combined stdout and stderr, capped at maxOutputSize. The command gets the hardening configuration on the
+// command line (no hooks, https and ssh only, plus file when local sources are allowed, and safe.directory
+// for dir), the environment from gitEnv, and defaultTimeout when ctx has no deadline. The duration is
+// recorded as a histogram per subcommand; on failure the output is scrubbed of URL credentials, logged and
+// wrapped into the returned error.
 func (e *ExecGitOps) runGitOutputDir(ctx context.Context, dir string, args ...string) (string, error) {
 	// Ensure a deadline so we don't hang indefinitely.
 	if _, ok := ctx.Deadline(); !ok {

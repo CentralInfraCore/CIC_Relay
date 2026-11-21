@@ -40,7 +40,8 @@ objects:
   calls: []
 - name: disabled
   kind: const
-  description: ''
+  description: disabled is the panic message of every bridge call in a build without
+    the ffi_cgo tag.
   references: []
 - name: ExpectedABIVersion
   kind: const

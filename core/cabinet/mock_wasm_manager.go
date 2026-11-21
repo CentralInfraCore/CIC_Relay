@@ -34,26 +34,31 @@ type MockCicWasmHost struct {
 	mock.Mock
 }
 
+// Process returns the stubbed (result, error) strings.
 func (m *MockCicWasmHost) Process(ctx context.Context, authContextJson, inputJson string) (string, string) {
 	args := m.Called(ctx, authContextJson, inputJson)
 	return args.String(0), args.String(1)
 }
 
+// Get returns the stubbed (result, error) strings.
 func (m *MockCicWasmHost) Get(ctx context.Context, authContextJson, queryJson string) (string, string) {
 	args := m.Called(ctx, authContextJson, queryJson)
 	return args.String(0), args.String(1)
 }
 
+// Init returns the stubbed (result, error) strings.
 func (m *MockCicWasmHost) Init(ctx context.Context, authContextJson, configJson string) (string, string) {
 	args := m.Called(ctx, authContextJson, configJson)
 	return args.String(0), args.String(1)
 }
 
+// Notify returns the stubbed (result, error) strings.
 func (m *MockCicWasmHost) Notify(ctx context.Context, authContextJson, eventJson string) (string, string) {
 	args := m.Called(ctx, authContextJson, eventJson)
 	return args.String(0), args.String(1)
 }
 
+// Close records the call and returns the stubbed error.
 func (m *MockCicWasmHost) Close(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)

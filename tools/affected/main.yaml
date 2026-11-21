@@ -1,6 +1,9 @@
 ---
 package: main
-description: ''
+description: 'Command affected reads changed file paths from standard input, one per
+  line, and prints the import paths of the Go packages whose tests they can affect:
+  the packages containing a changed file and every package that transitively imports
+  one of them.'
 tags:
 - builder
 - core
@@ -29,7 +32,8 @@ objects:
   - packages.PrintErrors
 - name: main
   kind: func
-  description: ''
+  description: main reads the changed files from stdin and prints the affected packages,
+    one per line.
   references:
   - packages.Config
   calls:

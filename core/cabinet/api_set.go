@@ -8,8 +8,10 @@ import (
 // Proof error codes reported in ProofStatus.ErrorCode. They carry no error text:
 // the cause (which may name Vault paths or tokens) stays in the relay log.
 const (
+	// ProofErrRecorderNotConfigured: the service has no recorder, so the trace could not be persisted.
 	ProofErrRecorderNotConfigured = "recorder_not_configured"
-	ProofErrRecordFailed          = "record_failed"
+	// ProofErrRecordFailed: the recorder was called and failed.
+	ProofErrRecordFailed = "record_failed"
 )
 
 // ProofStatus tells the caller whether the ProofTrace of an execution was persisted.

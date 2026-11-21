@@ -24,6 +24,7 @@ import (
 	"centralrelay/core/nexus/recorder"
 )
 
+// main runs the demo and exits with status 1 when any step fails.
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "\n[!] demo failed: %v\n", err)
@@ -31,6 +32,8 @@ func main() {
 	}
 }
 
+// run records the demo's state transitions into a fresh git repository, each commit signed with the Vault
+// Transit key, verifies the whole chain, then tampers a committed state and expects the verification to fail.
 func run() error {
 	ctx := context.Background()
 	mount := envOr("DEMO_TRANSIT_MOUNT", "cic-transit")
@@ -161,6 +164,8 @@ func tamper(repo string) error {
 	return nil
 }
 
+// readJSON decodes the JSON file at path into v; a missing or invalid file leaves v unchanged (the demo only
+// prints what it finds).
 func readJSON(path string, v any) {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -169,6 +174,7 @@ func readJSON(path string, v any) {
 	_ = json.Unmarshal(b, v)
 }
 
+// short abbreviates a hash to its first 12 characters for display, and shows an empty one as "<root>".
 func short(s string) string {
 	if len(s) <= 12 {
 		if s == "" {
@@ -179,6 +185,7 @@ func short(s string) string {
 	return s[:12] + ".."
 }
 
+// envOr returns the environment variable k, or def when it is unset or empty.
 func envOr(k, def string) string {
 	if v := os.Getenv(k); v != "" {
 		return v

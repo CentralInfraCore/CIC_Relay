@@ -149,6 +149,11 @@ def row(pkg: str, status: str, nums: tuple[int, int, int, int] | None = None) ->
 
 
 def run_one(pkg: str, entry: dict | None, workers: int) -> tuple[bool, dict]:
+    """Run gremlins on one package against its thresholds (the baseline entry, or the
+    defaults) and return (passed, report row). When timed-out mutants dominate and more
+    than one worker was used, the run is repeated with one worker. A package without
+    mutants passes; output that cannot be parsed fails.
+    """
     eff_t, mc_t = thresholds(entry)
     proc, out, nums = attempt(pkg, eff_t, mc_t, workers)
     retried = ""
@@ -185,6 +190,9 @@ def run_one(pkg: str, entry: dict | None, workers: int) -> tuple[bool, dict]:
 
 
 def main() -> int:
+    """Gate every given package, optionally write the per-package verdicts as a
+    gremlins-report/1 file bound to the plan, and return 0 only if every package passed.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--baseline", default=".mutation-baseline.json")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) // 2))

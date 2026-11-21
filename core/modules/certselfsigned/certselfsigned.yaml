@@ -32,22 +32,23 @@ objects:
   - UTC
 - name: parseInput
   kind: func
-  description: ''
+  description: parseInput converts the untyped module input to Input via a JSON round
+    trip; cn is required.
   references: []
   calls: []
 - name: generateKey
   kind: var
-  description: ''
+  description: generateKey creates the P-256 key pair of the certificate.
   references: []
 - name: generateSerial
   kind: var
-  description: ''
+  description: generateSerial draws a random 128-bit serial number.
   references: []
 - name: createCertificate
   kind: var
-  description: ''
+  description: createCertificate signs the certificate template (x509.CreateCertificate).
   references: []
 - name: marshalECPrivateKey
   kind: var
-  description: ''
+  description: marshalECPrivateKey encodes the private key as SEC 1 DER.
   references: []

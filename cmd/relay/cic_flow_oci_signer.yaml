@@ -19,7 +19,8 @@ objects:
 - name: Sign
   kind: method
   receiver: ociVaultSigner
-  description: ''
+  description: Sign returns the raw base64 OCI request signature of data, computed
+    by Vault (see VaultCryptoService.SignOCI).
   references: []
   calls:
   - SignOCI

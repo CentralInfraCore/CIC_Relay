@@ -1,6 +1,11 @@
 ---
 package: iac
-description: ''
+description: 'Package iac is the relay''s infrastructure-as-code object model (feature-011,
+  iac-object-model.md): it loads resource configuration from a file, git or upstream
+  HTTP source, validates it against its schema, builds the canonical Node IR with
+  stable field ids, canonical numbers and spec digests, tracks object references,
+  collection topology and sensitive (secret) fields, evaluates field-level ACLs (cic-acl/v1)
+  and classifies observed state against intent per field and per object (conformance).'
 tags:
 - core
 - loader

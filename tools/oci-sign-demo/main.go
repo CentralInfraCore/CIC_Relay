@@ -36,13 +36,17 @@ import (
 )
 
 const (
+	// keyID is the fake OCI key identifier (tenancy/user/fingerprint) put into the Authorization header.
 	keyID = "ocid1.tenancy.oc1..demo/ocid1.user.oc1..demo/aa:bb:cc:dd"
-	host  = "iaas.eu-frankfurt-1.oraclecloud.com"
+	// host is the OCI endpoint host named in the signed request (only the signature covers it; the request goes
+	// to the local fake endpoint).
+	host = "iaas.eu-frankfurt-1.oraclecloud.com"
 )
 
 // signedHeaders is the OCI header set + order for body methods (POST/PUT/PATCH).
 var signedHeaders = []string{"(request-target)", "host", "date", "x-content-sha256", "content-type", "content-length"}
 
+// main runs the demo and exits with status 1 when any step fails.
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "\n[!] demo failed: %v\n", err)
@@ -50,6 +54,9 @@ func main() {
 	}
 }
 
+// run generates a per-run RSA key, starts the fake OCI endpoint, sends a correctly signed request that must
+// be accepted and a tampered one that must be rejected, and returns an error when either outcome is not the
+// expected one.
 func run() error {
 	// A per-run RSA-2048 key stands in for the scoped Vault Transit key that
 	// cic-flow.sign uses; in production the key never leaves Vault.
@@ -180,6 +187,7 @@ func actuate(url, method, hostHeader string, body []byte, authz string, wire map
 	return resp.StatusCode, nil
 }
 
+// sigParamRE extracts the base64 signature parameter from an Authorization: Signature header.
 var sigParamRE = regexp.MustCompile(`signature="([^"]+)"`)
 
 // ociVerifyHandler returns an HTTP handler that re-derives the canonical string
@@ -221,6 +229,7 @@ func ociVerifyHandler(pub *rsa.PublicKey) http.HandlerFunc {
 	}
 }
 
+// b64sha returns the base64-encoded SHA-256 of b, the form of OCI's x-content-sha256 header.
 func b64sha(b []byte) string {
 	s := sha256.Sum256(b)
 	return base64.StdEncoding.EncodeToString(s[:])

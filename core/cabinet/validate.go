@@ -13,8 +13,12 @@ import (
 
 // Kind constants for checksum discrimination.
 const (
-	KindSpec   = "spec|"
-	KindWf     = "wf|"
+	// KindSpec prefixes the checksum input of a schema.
+	KindSpec = "spec|"
+	// KindWf prefixes the checksum input of a workflow.
+	KindWf = "wf|"
+	// KindModule prefixes the checksum input of a module; validateAndChecksum also size-checks and
+	// strips the custom sections of a raw []byte WASM payload of this kind before hashing it.
 	KindModule = "wasm|"
 )
 

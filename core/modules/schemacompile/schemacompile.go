@@ -58,6 +58,12 @@ func AssertSource(_ context.Context, input interface{}) (interface{}, error) {
 	return assertSourceImpl(input, nil)
 }
 
+// assertSourceImpl is cic.source.assert. Without source_assertion it passes the input through, marked
+// asserted (stub mode). Otherwise it parses the assertion YAML and rejects it unless metadata carries name,
+// version, checksum, sign and createdBy.certificate, metadata.checksum equals the SHA-256 of the canonical
+// JSON of spec (when spec is present), the certificate passes verify (when verify is non-nil), and the
+// requested schema and version (when given) match the asserted ones. The result carries the asserted
+// identity, metadata, spec and raw YAML, plus the provenance fields of the input.
 func assertSourceImpl(input interface{}, verify CertVerifyFunc) (interface{}, error) {
 	m, ok := input.(map[string]interface{})
 	if !ok {

@@ -20,6 +20,7 @@ var ErrInvalidArgument = errors.New("invalid argument")
 // guest-supplied value before it builds a command line, and the command lines also separate options
 // from operands where git allows it. Both layers are intended; neither is the only defence.
 
+// maxArgLen bounds the length of every guest-supplied remote name and ref.
 const maxArgLen = 512
 
 var (
@@ -29,6 +30,8 @@ var (
 	refRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/+@-]*$`)
 )
 
+// validateRemoteName accepts only the name of a configured remote (letters, digits, '.', '_', '-', not
+// starting with a symbol), never a URL or a path; anything else is refused with ErrInvalidArgument.
 func validateRemoteName(name string) error {
 	if len(name) == 0 || len(name) > maxArgLen || !remoteNameRe.MatchString(name) {
 		return fmt.Errorf("%w: remote name %q: only a configured remote's name is accepted", ErrInvalidArgument, clip(name))
@@ -36,6 +39,10 @@ func validateRemoteName(name string) error {
 	return nil
 }
 
+// validateRef accepts a branch, tag or ref name and refuses, with ErrInvalidArgument, anything git could read
+// as an option or as revision syntax: a leading symbol, whitespace, "..", "@{", a lone "@", a trailing dot,
+// and any path component that is empty, starts with a dot or ends in ".lock" (the git check-ref-format
+// rules).
 func validateRef(ref string) error {
 	bad := fmt.Errorf("%w: ref %q", ErrInvalidArgument, clip(ref))
 	if len(ref) == 0 || len(ref) > maxArgLen || !refRe.MatchString(ref) || ref == "@" ||
@@ -181,6 +188,7 @@ func validatePath(p string) error {
 	return nil
 }
 
+// hasControl reports whether s contains an ASCII control character (below 0x20, or DEL).
 func hasControl(s string) bool {
 	for _, r := range s {
 		if r < 0x20 || r == 0x7f {
@@ -190,6 +198,8 @@ func hasControl(s string) bool {
 	return false
 }
 
+// clip shortens s to its first 64 bytes for an error message, so a hostile oversized value is not echoed back
+// in full.
 func clip(s string) string {
 	if len(s) > 64 {
 		return s[:64] + "…"

@@ -132,6 +132,8 @@ func crlIssuerPolicyFromEnv() (crlIssuerPolicy, error) {
 	return p, nil
 }
 
+// certFingerprint is the lowercase hex SHA-256 of the certificate's DER encoding — the form in which
+// CIC_CRL_REQUIRED_ISSUERS names an issuer.
 func certFingerprint(c *x509.Certificate) string {
 	sum := sha256.Sum256(c.Raw)
 	return hex.EncodeToString(sum[:])

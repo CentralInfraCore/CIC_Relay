@@ -19,7 +19,7 @@ objects:
 - name: RecordTrace
   kind: method
   receiver: CaptureSink
-  description: ''
+  description: RecordTrace appends f to Traces.
   references: []
   calls:
   - Lock
@@ -27,7 +27,7 @@ objects:
 - name: RecordLog
   kind: method
   receiver: CaptureSink
-  description: ''
+  description: RecordLog appends r to Logs.
   references: []
   calls:
   - Lock
@@ -35,7 +35,7 @@ objects:
 - name: RecordCounter
   kind: method
   receiver: CaptureSink
-  description: ''
+  description: RecordCounter appends p to Counters.
   references: []
   calls:
   - Lock
@@ -43,7 +43,7 @@ objects:
 - name: RecordGauge
   kind: method
   receiver: CaptureSink
-  description: ''
+  description: RecordGauge appends p to Gauges.
   references: []
   calls:
   - Lock
@@ -51,7 +51,7 @@ objects:
 - name: RecordHistogram
   kind: method
   receiver: CaptureSink
-  description: ''
+  description: RecordHistogram appends p to Histos.
   references: []
   calls:
   - Lock

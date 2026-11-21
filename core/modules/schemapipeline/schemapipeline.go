@@ -71,6 +71,7 @@ type PipelineConfig struct {
 	Runner CommandRunner
 }
 
+// runner returns the configured CommandRunner, or an OSCommandRunner when none is set.
 func (c *PipelineConfig) runner() CommandRunner {
 	if c.Runner != nil {
 		return c.Runner

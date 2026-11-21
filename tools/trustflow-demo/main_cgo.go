@@ -25,6 +25,7 @@ import (
 	"centralrelay/pkg/cicffi"
 )
 
+// main runs the demo and exits with status 1 when any step fails.
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "\n[!] demo failed: %v\n", err)
@@ -32,6 +33,8 @@ func main() {
 	}
 }
 
+// run connects to the throwaway Vault named by VAULT_LIVE_ADDR / VAULT_LIVE_CACERT, hands one request to the
+// Rust airlock and prints the outcome that crosses back.
 func run() error {
 	addr := os.Getenv("VAULT_LIVE_ADDR")
 	if addr == "" {
@@ -127,6 +130,7 @@ func run() error {
 	return nil
 }
 
+// short abbreviates a hash to its first 12 characters for display.
 func short(s string) string {
 	if len(s) <= 12 {
 		return s

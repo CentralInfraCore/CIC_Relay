@@ -1,6 +1,10 @@
 ---
 package: git
-description: ''
+description: 'Package git gives WASM modules typed git operations (clone, fetch, checkout,
+  commit, push, status) on repositories registered with the relay. Every guest-supplied
+  value is validated before it reaches a command line, and the git binary runs with
+  a hardened environment: no system or global configuration, no hooks, no prompts,
+  and only the https and ssh transports.'
 tags:
 - core
 category: []

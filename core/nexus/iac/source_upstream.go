@@ -15,10 +15,14 @@ import (
 )
 
 const (
+	// defaultUpstreamTimeout is the HTTP client timeout when the caller does not configure one.
 	defaultUpstreamTimeout = 10 * time.Second
-	maxRetries             = 3
+	// maxRetries is the number of fetch attempts FetchConfig makes before it gives up.
+	maxRetries = 3
 )
 
+// retryBackoff holds the delay before each retry: entry i is waited before attempt i+2. With maxRetries = 3
+// only the first two entries are used.
 var retryBackoff = []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second}
 
 // UpstreamSource implements IaCSource by fetching config from an upstream HTTP endpoint.

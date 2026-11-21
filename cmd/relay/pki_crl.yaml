@@ -68,7 +68,8 @@ objects:
   calls: []
 - name: certFingerprint
   kind: func
-  description: ''
+  description: certFingerprint is the lowercase hex SHA-256 of the certificate's DER
+    encoding — the form in which CIC_CRL_REQUIRED_ISSUERS names an issuer.
   references: []
   calls: []
 - name: enforceCRLIssuerPolicy

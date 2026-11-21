@@ -26,15 +26,15 @@ type gitAuthorizer interface {
 	authorizeGit(instance cabinet.InstanceIdentity, op string, req gitAuthRequest) error
 }
 
+// gitHostFn is the uniform host-function ABI of the git module.
+type gitHostFn = func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
+
 // authorized wraps a git host function so that it runs only if the *calling instance* is permitted.
 // The caller's identity is the one the WasmManager attached to the call context when it created the
 // instance (module ID, the artifact compiled for it, a per-instance serial). It is never read from the
 // request, and a context without it is refused, so a call that does not come from a managed instance (a
 // start section included: it runs under the same identity) can not borrow one. The instance name the
 // runtime reports for the module must agree with the identity; a disagreement is refused as well.
-// gitHostFn is the uniform host-function ABI of the git module.
-type gitHostFn = func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32
-
 func authorized(authz gitAuthorizer, op string, inner gitHostFn) gitHostFn {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
 		var req gitAuthRequest

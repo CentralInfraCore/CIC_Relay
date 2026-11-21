@@ -47,7 +47,7 @@ objects:
 - name: Error
   kind: method
   receiver: Denied
-  description: ''
+  description: Error returns the reason the policy gave for the refusal.
   references: []
   calls: []
 - name: NewAllowlistPolicy

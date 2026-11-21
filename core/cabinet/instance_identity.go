@@ -19,6 +19,8 @@ type InstanceIdentity struct {
 	Binding string
 }
 
+// instanceIdentityKey is the unexported context key under which WithInstanceIdentity stores the
+// InstanceIdentity; no other package can set or overwrite it.
 type instanceIdentityKey struct{}
 
 // WithInstanceIdentity returns ctx carrying id.

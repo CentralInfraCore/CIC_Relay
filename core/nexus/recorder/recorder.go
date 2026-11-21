@@ -1,3 +1,6 @@
+// Package recorder persists state snapshots as commits in a local git repository (GitStateRecorder) and
+// adapts that to cabinet.ExecutionRecorder (WorkflowRecorder), which stores each ProofTrace as the actual
+// state next to a minimal expected state.
 package recorder
 
 import (

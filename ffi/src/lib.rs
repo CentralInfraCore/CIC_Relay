@@ -184,6 +184,8 @@ mod flow {
         })
     }
 
+    /// Reads the request's `scope` array into an [`AuthScope`]: every non-empty string becomes one
+    /// CN; a missing or malformed field yields an empty scope.
     fn parse_scope(doc: &Value) -> AuthScope {
         let cns = doc
             .get("scope")
@@ -199,6 +201,8 @@ mod flow {
         AuthScope::from_cns(cns)
     }
 
+    /// Maps the request's HTTP method, case-insensitively, to POST, PUT or DELETE; anything else,
+    /// including a missing method, is GET.
     fn parse_method(raw: Option<&str>) -> Method {
         match raw.map(str::to_ascii_uppercase).as_deref() {
             Some("POST") => Method::Post,
@@ -208,6 +212,7 @@ mod flow {
         }
     }
 
+    /// Reads the request's `headers` object; entries whose value is not a string are dropped.
     fn parse_headers(doc: &Value) -> BTreeMap<String, String> {
         doc.get("headers")
             .and_then(Value::as_object)
@@ -219,6 +224,8 @@ mod flow {
             .unwrap_or_default()
     }
 
+    /// Reads the request's `allow_hosts` array (the egress allowlist); non-string entries are
+    /// dropped.
     fn parse_allow_hosts(doc: &Value) -> Vec<String> {
         doc.get("allow_hosts")
             .and_then(Value::as_array)
@@ -241,6 +248,11 @@ mod flow {
         audit: ChainedEntry,
     }
 
+    /// Runs the whole trust-flow in-process with the mock profile: the module mints a per-request
+    /// identity and CSR, an in-memory countersigner grants the requested scope, the secret is
+    /// sealed to the module's public key, the connection is advanced through its typestate and the
+    /// token is opened inside the module, then the request is actuated with the opened credential.
+    /// Returns the outcome and the CNs that were actually countersigned.
     fn execute_flow(input: &FlowInput) -> Result<(Actuated, Vec<String>), FlowError> {
         let subject = Cn::new(input.subject.clone());
 

@@ -16,12 +16,13 @@ related_nodes: []
 objects:
 - name: main
   kind: func
-  description: ''
+  description: main prints the tree hash of the directory given as the first argument
+    (default ".") and exits with status 1 when it cannot be computed.
   references:
   - sourcedigest.ComputeTreeHash
   calls:
   - sourcedigest.ComputeTreeHash
 - name: osExit
   kind: var
-  description: ''
+  description: osExit is os.Exit, replaceable in tests.
   references: []

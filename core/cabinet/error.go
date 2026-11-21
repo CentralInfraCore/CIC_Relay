@@ -12,10 +12,14 @@ var jsonMarshal = json.Marshal
 
 // Common error values for Cabinet operations.
 var (
-	ErrInvalid  = errors.New("invalid")   // validation or integrity failure
-	ErrConflict = errors.New("conflict")  // conflicting resource state
-	ErrNotFound = errors.New("not_found") // resource not found
-	ErrTimeout  = errors.New("timeout")   // execution exceeded time budget
+	// ErrInvalid: a validation or integrity failure (missing fields, checksum mismatch, oversized module).
+	ErrInvalid = errors.New("invalid")
+	// ErrConflict: the request conflicts with the existing resource state.
+	ErrConflict = errors.New("conflict")
+	// ErrNotFound: the referenced resource does not exist.
+	ErrNotFound = errors.New("not_found")
+	// ErrTimeout: an execution exceeded its time budget.
+	ErrTimeout = errors.New("timeout")
 
 	// ErrEvidenceRequired: the workflow ran, but the ProofTrace was not persisted
 	// and the service is configured to require persisted evidence.
@@ -43,6 +47,8 @@ type EvidenceRequiredError struct {
 	ErrorCode  string // ProofErrRecordFailed or ProofErrRecorderNotConfigured
 }
 
+// Error starts with the text of ErrEvidenceRequired and names the workflow, the proof error
+// code and the chain hash.
 func (e *EvidenceRequiredError) Error() string {
 	return fmt.Sprintf("%s: workflow %q executed but its proof was not persisted (%s), chain_hash=%s",
 		ErrEvidenceRequired, e.WorkflowID, e.ErrorCode, e.ChainHash)

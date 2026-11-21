@@ -1,3 +1,6 @@
+// Package operator manages the lifecycle of the hosts a relay serves: it issues bootstrap tokens
+// (HMAC-signed, a pre-PKI scaffold), onboards and offboards hosts in a HostRegistry, and watches a directory
+// of infrastructure definitions for created, updated and deleted files.
 package operator
 
 // NOTE: pre-PKI scaffold — HMAC-based token generation.
@@ -17,6 +20,7 @@ import (
 	"centralrelay/core/nexus/types"
 )
 
+// bootstrapTokenTTL is how long a newly issued bootstrap token stays valid.
 const bootstrapTokenTTL = 24 * time.Hour
 
 // HostDefinition describes a host to be bootstrapped.

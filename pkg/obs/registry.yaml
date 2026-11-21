@@ -52,5 +52,6 @@ objects:
   - RUnlock
 - name: requiredPrefix
   kind: const
-  description: ''
+  description: requiredPrefix is the prefix every registered metric instrument name
+    must carry.
   references: []

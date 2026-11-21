@@ -43,7 +43,8 @@ objects:
 - name: runner
   kind: method
   receiver: PipelineConfig
-  description: ''
+  description: runner returns the configured CommandRunner, or an OSCommandRunner
+    when none is set.
   references: []
   calls: []
 - name: NewStartFunc

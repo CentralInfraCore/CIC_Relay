@@ -1,6 +1,14 @@
 ---
 package: main
-description: ''
+description: 'Command relay is the CIC relay (cic-relay): the HTTP control-plane server
+  that hosts the Cabinet (schema, module and workflow stores plus the wazero WASM
+  runtime) and runs workflows through it. At start-up it loads its configuration from
+  the environment, bootstraps PKI trust (CIC_TRUST_MODE), registers the native modules,
+  loads the embedded components and those installed under /etc/cic-relay/components.d,
+  wires the "git" and "cic-flow" host modules with per-module capability grants taken
+  from each verified module manifest, optionally starts the IaC operator, and serves
+  the API on :8080 (routes and their protection: apiRoutes). Started with --mode=module-worker
+  it instead runs the subprocess isolation worker loop on stdin/stdout.'
 tags:
 - core
 - gateway
@@ -281,7 +289,9 @@ objects:
   - logrus.Logger.Printf
 - name: main
   kind: func
-  description: ''
+  description: main starts the relay as described in the package documentation. Every
+    start-up failure (configuration, trust bootstrap, component loading, an invalid
+    CIC_API_TOKEN) is fatal.
   references:
   - isolation.RunWorkerLoop
   - logrus.New
@@ -351,23 +361,30 @@ objects:
   calls: []
 - name: BuildID
   kind: var
-  description: ''
+  description: BuildID identifies the build ("<version>-<commit>"); "dev" when not
+    injected.
   references: []
 - name: CommitHash
   kind: var
-  description: ''
+  description: CommitHash is the source commit; it is the SourceRef of the Merkle
+    build context.
   references: []
 - name: Timestamp
   kind: var
-  description: ''
+  description: Timestamp is the build time (UTC, RFC 3339); dev/debug builds only,
+    not release builds.
   references: []
 - name: SourceTreeHash
   kind: var
-  description: ''
+  description: SourceTreeHash is the digest of all tracked source files (tools/sourcehash,
+    pkg/sourcedigest). It is the Merkle build context's SourceTreeDigest and the default
+    SourceDigest of a /set request that names none; builds without it fall back to
+    CommitHash there.
   references: []
 - name: BuilderImageDigest
   kind: var
-  description: ''
+  description: BuilderImageDigest is the digest of the pinned builder image; it becomes
+    the DockerImageChecksum of the Merkle build context.
   references: []
 - name: listenAndServe
   kind: var
@@ -380,5 +397,6 @@ objects:
   references: []
 - name: newGitStateRecorder
   kind: var
-  description: ''
+  description: newGitStateRecorder opens the git-backed audit recorder (recorder.NewGitStateRecorder)
+    at path; tests replace it.
   references: []

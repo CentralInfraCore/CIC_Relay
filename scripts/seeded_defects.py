@@ -41,6 +41,10 @@ class Bundle:
     tool_pins: dict | None = None
 
     def verify(self, record: dict | None = None, **over) -> dict:
+        """Run the real verifier (object_model.verify_record) on record, or on the honest
+        record when none is given, with this bundle's context; keyword arguments
+        override single context fields.
+        """
         kw = dict(
             root=self.root,
             inputs=self.inputs,
@@ -65,14 +69,19 @@ def reseal(rec: dict) -> dict:
 
 
 def _first(rec: dict, pred: Callable[[dict], bool]) -> int:
+    """Index of the first object of the record that satisfies pred."""
     return next(i for i, o in enumerate(rec["objects"]) if pred(o))
 
 
 def _go(o: dict) -> bool:
+    """Whether the object is a Go object."""
     return o["lang"] == "go"
 
 
 def _measured_go(o: dict) -> bool:
+    """Whether the object is a Go object with measured, incomplete coverage (a tamper
+    target).
+    """
     return (
         _go(o)
         and o["coverage"]["state"] == om.MEASURED
@@ -84,12 +93,14 @@ def _measured_go(o: dict) -> bool:
 
 
 def d_delete(b: Bundle):
+    """Drop one Go object from the record and reseal it."""
     r = copy.deepcopy(b.record)
     del r["objects"][_first(r, _go)]
     return reseal(r), {}
 
 
 def d_insert(b: Bundle):
+    """Add an invented Go object that is not in the source, and reseal."""
     r = copy.deepcopy(b.record)
     o = copy.deepcopy(r["objects"][_first(r, _go)])
     o["id"], o["name"] = "go:invented.DoesNotExist", "DoesNotExist"
@@ -108,6 +119,7 @@ def d_swap(b: Bundle):
 
 
 def d_dup_same_id(b: Bundle):
+    """List one Go object twice under the same id, and reseal."""
     r = copy.deepcopy(b.record)
     r["objects"].append(copy.deepcopy(r["objects"][_first(r, _go)]))
     r["objects"].sort(key=lambda x: x["id"])
@@ -127,6 +139,9 @@ def d_dup_other_id(b: Bundle):
 
 
 def d_tamper_naive(b: Bundle):
+    """Mark an incompletely covered Go object as fully covered without resealing the
+    record.
+    """
     r = copy.deepcopy(b.record)
     o = r["objects"][_first(r, _measured_go)]
     o["coverage"]["covered"] = o["coverage"]["total"]
@@ -134,6 +149,9 @@ def d_tamper_naive(b: Bundle):
 
 
 def d_tamper_resealed(b: Bundle):
+    """Mark an incompletely covered Go object as fully covered and reseal, as an attacker
+    who fixes the digest and the summary would.
+    """
     r = copy.deepcopy(b.record)
     o = r["objects"][_first(r, _measured_go)]
     o["coverage"]["covered"] = o["coverage"]["total"]
@@ -142,12 +160,14 @@ def d_tamper_resealed(b: Bundle):
 
 
 def d_other_commit(b: Bundle):
+    """Claim a different commit and tree as the record's identity, and reseal."""
     r = copy.deepcopy(b.record)
     r["identity"] = {"commit": "0" * 40, "tree": "1" * 40}
     return reseal(r), {}
 
 
 def d_forged_input_digest(b: Bundle):
+    """Replace the recorded digest of one input file by a forged one, and reseal."""
     r = copy.deepcopy(b.record)
     name = sorted(r["inputs"])[0]
     r["inputs"][name] = {"sha256": "f" * 64, "bytes": r["inputs"][name]["bytes"]}
@@ -155,6 +175,7 @@ def d_forged_input_digest(b: Bundle):
 
 
 def d_missing_field(b: Bundle):
+    """Remove the coverage field of one object, and reseal."""
     r = copy.deepcopy(b.record)
     del r["objects"][_first(r, lambda o: True)]["coverage"]
     return reseal(r), {}
@@ -193,6 +214,7 @@ def d_forged_stability(b: Bundle):
 
 
 def _with_tools(b: Bundle, edit: Callable[[dict], None]):
+    """Apply edit to the record's tool versions and reseal (the base of the TOOLS cases)."""
     r = copy.deepcopy(b.record)
     edit(r["tools"])
     return reseal(r), {}
@@ -240,6 +262,10 @@ def d_nondeterministic(b: Bundle):
 
 @dataclass
 class Case:
+    """One seeded defect: how to derive the defective bundle, the level that must reach
+    verdict, and the diagnostic code that must appear.
+    """
+
     id: str
     title: str
     derive: Callable[[Bundle], tuple]
@@ -397,10 +423,15 @@ CASES = [
 
 
 def _codes(findings: list[str]) -> set[str]:
+    """The diagnostic codes of findings written as "[CODE] message"."""
     return {f[1 : f.index("]")] for f in findings if f.startswith("[") and "]" in f}
 
 
 def run_case(b: Bundle, c: Case) -> dict:
+    """Derive the case's defective bundle, verify it and report whether it was caught: the
+    expected level reaches the expected verdict with the expected code (STABILITY: the
+    stability verdict, naming the nondeterministic objects).
+    """
     rec, over = c.derive(b)
     res = b.verify(rec, **over)
     if c.level == "STABILITY":
@@ -486,6 +517,9 @@ def bundle_from_files(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Build the bundle from the given files, run the controls and every case, print the
+    table; return 0 only if every control is honest and every defect is caught.
+    """
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--list", action="store_true", help="list the cases and stop")
     ap.add_argument("--record", help="the real evidence record")

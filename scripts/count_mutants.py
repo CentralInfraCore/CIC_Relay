@@ -42,6 +42,9 @@ def count_listing(cmd: list[str], out_path: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the listing command after -- and print how many mutants it lists; exit 1 on an
+    error.
+    """
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--out", help="keep the raw listing here (default: temporary)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- <listing command...>")

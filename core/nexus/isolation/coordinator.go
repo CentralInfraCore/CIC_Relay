@@ -1,3 +1,6 @@
+// Package isolation removes a layered (onion) encryption in steps, each layer by its own isolated Worker: the
+// Coordinator hands the payload to the relay, module and host workers in turn, so each component only ever
+// unwraps its own layer.
 package isolation
 
 import (

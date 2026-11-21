@@ -36,6 +36,7 @@ type Denied struct {
 	Reason string
 }
 
+// Error returns the reason the policy gave for the refusal.
 func (d *Denied) Error() string { return d.Reason }
 
 // Policy decides whether an Intent is authorized. A real deployment plugs richer

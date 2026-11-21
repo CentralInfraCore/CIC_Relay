@@ -19,12 +19,14 @@ related_nodes: []
 objects:
 - name: main
   kind: func
-  description: ''
+  description: main runs the demo and exits with status 1 when any step fails.
   references: []
   calls: []
 - name: run
   kind: func
-  description: ''
+  description: run records the demo's state transitions into a fresh git repository,
+    each commit signed with the Vault Transit key, verifies the whole chain, then
+    tampers a committed state and expects the verification to fail.
   references:
   - crypto.NewVaultCryptoService
   - recorder.NewGitStateRecorder
@@ -54,16 +56,19 @@ objects:
   - CombinedOutput
 - name: readJSON
   kind: func
-  description: ''
+  description: readJSON decodes the JSON file at path into v; a missing or invalid
+    file leaves v unchanged (the demo only prints what it finds).
   references: []
   calls: []
 - name: short
   kind: func
-  description: ''
+  description: short abbreviates a hash to its first 12 characters for display, and
+    shows an empty one as "<root>".
   references: []
   calls: []
 - name: envOr
   kind: func
-  description: ''
+  description: envOr returns the environment variable k, or def when it is unset or
+    empty.
   references: []
   calls: []

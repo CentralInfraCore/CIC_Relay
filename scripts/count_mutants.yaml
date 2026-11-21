@@ -29,7 +29,8 @@ objects:
 - name: main
   kind: function
   decorators: []
-  description: ''
+  description: Run the listing command after -- and print how many mutants it lists;
+    exit 1 on an error.
   references: []
   calls:
   - __doc__.split

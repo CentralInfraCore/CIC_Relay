@@ -16,7 +16,8 @@ objects:
   references: []
 - name: principalKey
   kind: struct
-  description: ''
+  description: principalKey is the unexported context key under which WithPrincipal
+    stores the Principal.
   implements: []
   references: []
 - name: IsUnauthorized

@@ -82,18 +82,22 @@ class ModelError(Exception):
 
 
 def field(state: str, **kw) -> dict:
+    """A per-object field value - its state plus any detail."""
     return {"state": state, **kw}
 
 
 def unverifiable(reason: str, **kw) -> dict:
+    """A field in state UNVERIFIABLE, with the reason it could not be established."""
     return field(UNVERIFIABLE, reason=reason, **kw)
 
 
 def not_applicable(reason: str, **kw) -> dict:
+    """A field in state NOT_APPLICABLE, with the reason it does not apply to the object."""
     return field(NOT_APPLICABLE, reason=reason, **kw)
 
 
 def sha256_file(path: str) -> tuple[str, int]:
+    """The hex SHA-256 and the size in bytes of a file."""
     data = Path(path).read_bytes()
     return hashlib.sha256(data).hexdigest(), len(data)
 
@@ -155,6 +159,7 @@ def scope_files(scope: dict, lang: str, tracked: list[str]) -> dict[str, list[st
 
 
 def go_module_path(gomod_text: str) -> str:
+    """The module path declared in a go.mod text; ModelError if it has no module line."""
     m = re.search(r"^module\s+(\S+)", gomod_text, re.M)
     if not m:
         raise ModelError("go.mod has no module line")
@@ -204,6 +209,7 @@ def go_object_id(module: str, file: str, fn: dict, build: str = "") -> str:
 
 
 def _pos(line: int, col: int) -> tuple[int, int]:
+    """A source position as a comparable (line, column) pair."""
     return (line, col)
 
 
@@ -644,6 +650,7 @@ def rust_objects(
 
 
 def canonical_digest(obj: object) -> str:
+    """The sha256 of the canonical JSON of obj - the same function as quality_gate's."""
     return qg.canonical_digest(obj)
 
 
@@ -687,6 +694,11 @@ def build_record(
     scope: dict,
     attribution: dict,
 ) -> dict:
+    """Assemble and seal the evidence record of one measurement. Refuses (ModelError) an
+    unknown tool version and duplicate object ids. The objects are sorted by id; the
+    record binds the commit and tree, the scope digest, the tool versions, the input
+    file digests and the attribution statistics, and carries its summary and its digest.
+    """
     for name, ver in tools.items():
         if not ver or str(ver).lower() in ("unknown", "none", ""):
             raise ModelError(
@@ -999,6 +1011,9 @@ def verify_l2(
 
 
 def _brief(c: dict) -> str:
+    """A short text form of a coverage field for messages ("MEASURED 3/5" or "STATE
+    (reason)").
+    """
     return f"{c.get('state')}" + (
         f" {c.get('covered')}/{c.get('total')}"
         if c.get("state") == MEASURED
@@ -1236,6 +1251,9 @@ def go_func_lines(root: str, files: list[str]) -> int:
 
 
 def _diff(have: set[str], want: set[str]) -> str:
+    """Describe how two id sets differ - the count and first few missing and unexpected
+    ids.
+    """
     miss, extra = sorted(want - have), sorted(have - want)
     return f"{len(miss)} missing {miss[:3]}, {len(extra)} unexpected {extra[:3]}"
 
@@ -1390,6 +1408,7 @@ def verify_record(
 
 
 def _load(path: str):
+    """Read a JSON file; ModelError if it is missing, unreadable or not JSON."""
     try:
         return json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
@@ -1418,6 +1437,7 @@ def demangle(symbols: list[str]) -> tuple[dict[str, str], str]:
 
 
 def _git(root: str, *args: str) -> str:
+    """Run git in root and return its stripped stdout; ModelError if it fails."""
     try:
         return subprocess.run(
             ["git", "-C", root, *args], capture_output=True, text=True, check=True
@@ -1624,6 +1644,9 @@ def build_context(rec: dict, root: str, scope: dict, inputs: dict[str, str]) -> 
 
 
 def cmd_verify(a: argparse.Namespace) -> int:
+    """verify: check an evidence record at every level (L1 to L3, plus the tool pins when
+    given) and print the verdicts; returns 1 if any level fails.
+    """
     rec = _load(a.record)
     inputs = dict(kv.split("=", 1) for kv in a.input or [])
     mutants = _load(a.rust_list) if a.rust_list else None
@@ -1670,6 +1693,7 @@ def cmd_verify(a: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the build or verify subcommand; return its exit status."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     sub = ap.add_subparsers(dest="command", required=True)
     p = sub.add_parser("build")

@@ -19,12 +19,13 @@ related_nodes: []
 objects:
 - name: main
   kind: func
-  description: ''
+  description: main runs the demo and exits with status 1 when any step fails.
   references: []
   calls: []
 - name: run
   kind: func
-  description: ''
+  description: run connects to the throwaway Vault named by VAULT_LIVE_ADDR / VAULT_LIVE_CACERT,
+    hands one request to the Rust airlock and prints the outcome that crosses back.
   references:
   - cicffi.RunFlow
   - cicffi.ParseRunFlowResult
@@ -37,6 +38,6 @@ objects:
   - cicffi.RunFlow
 - name: short
   kind: func
-  description: ''
+  description: short abbreviates a hash to its first 12 characters for display.
   references: []
   calls: []
