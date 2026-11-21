@@ -41,6 +41,10 @@ IGNORE = shutil.ignore_patterns(
 
 
 class SelfTestError(Exception):
+    """The self-test cannot run as specified (e.g. a workflow step it must extract is not
+    there).
+    """
+
     pass
 
 
@@ -69,10 +73,16 @@ def extract_step(workflow: Path, job: str, step: str, expr: dict[str, str]) -> s
 
 
 def copy_tree(src: Path, dst: Path) -> None:
+    """Copy the checkout into an isolated work directory, without VCS, build and cache
+    directories.
+    """
     shutil.copytree(src, dst, ignore=IGNORE, symlinks=True)
 
 
 def run(cmd: list[str], cwd: Path, env: dict | None = None) -> tuple[int, str]:
+    """Run cmd in cwd with env added to the environment; return its exit status and
+    combined output.
+    """
     import os
 
     e = dict(os.environ)
@@ -82,6 +92,9 @@ def run(cmd: list[str], cwd: Path, env: dict | None = None) -> tuple[int, str]:
 
 
 def status(src: Path) -> str:
+    """The porcelain status of the tracked files of src (used to prove the checkout was not
+    written).
+    """
     return subprocess.run(
         ["git", "-C", str(src), "status", "--porcelain", "--untracked-files=no"],
         capture_output=True,
@@ -92,6 +105,8 @@ def status(src: Path) -> str:
 
 @dataclass
 class Result:
+    """The outcome of one case - its positive control and its planted defect."""
+
     case: str
     title: str
     control_ok: bool
@@ -101,9 +116,11 @@ class Result:
 
     @property
     def ok(self) -> bool:
+        """The case passes only if both the control and the defect behaved as expected."""
         return self.control_ok and self.defect_ok
 
     def lines(self) -> list[str]:
+        """The two report lines of the case, control first."""
         return [
             f"{'OK  ' if self.control_ok else 'FAIL'} {self.case:<8} control: {self.control_got}",
             f"{'OK  ' if self.defect_ok else 'FAIL'} {self.case:<8} {self.title}: {self.defect_got}",
@@ -364,6 +381,9 @@ CASES = {
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the selected cases on isolated copies of --src; return 0 only if every case
+    passes.
+    """
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--src", required=True, help="the checkout (never written)")
     ap.add_argument(

@@ -129,6 +129,7 @@ def unviable_ratio(acct: dict | None) -> dict:
 
 
 def sha256_hex(data: bytes) -> str:
+    """Return the lowercase hex SHA-256 of data."""
     return hashlib.sha256(data).hexdigest()
 
 
@@ -142,6 +143,7 @@ def canonical_digest(obj: object) -> str:
 
 
 def plan_body(kind: str, ids: list[str], extra: dict) -> dict:
+    """Build the unsealed body of a plan record (mutation-plan/1) for the given ids."""
     return {
         "schema": PLAN_SCHEMA,
         "id_contract": ID_CONTRACT,
@@ -212,6 +214,9 @@ def build_rust_plan(
 
 
 def build_go_plan(pkgs: list[str], source: dict) -> dict:
+    """Seal the Go plan record: the planned packages, sorted and de-duplicated, measured by
+    gremlins; source says which planner produced the list.
+    """
     uniq = sorted(set(pkgs))
     return seal(plan_body("go-packages", uniq, {"tool": "gremlins", "source": source}))
 
@@ -320,6 +325,11 @@ def rust_verdicts(outcomes: dict, where: str) -> dict[str, str]:
 
 
 def wrap_shard(plan_digest: str, shard: int, shards: int, outcomes_path: str) -> dict:
+    """Bind one cargo-mutants shard's outcomes.json to the plan, as a shard report. The
+    outcomes are checked for consistency first (a file whose verdicts do not add up is
+    refused, GateError); the report records the plan digest, the shard position and the
+    tool version.
+    """
     try:
         outcomes = json.loads(Path(outcomes_path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
@@ -338,6 +348,9 @@ def wrap_shard(plan_digest: str, shard: int, shards: int, outcomes_path: str) ->
 
 
 def read_reports(directory: str, pattern: str) -> list[tuple[str, dict]]:
+    """Load every report matching pattern under directory, sorted by path. A missing
+    directory yields no reports; an unreadable or corrupt report is a GateError.
+    """
     out = []
     for p in sorted(Path(directory).rglob(pattern)) if Path(directory).is_dir() else []:
         try:
@@ -532,6 +545,9 @@ def check_coverprofile(path: str) -> int:
 
 
 def _run_listing(cmd: list[str]) -> tuple[bytes, int]:
+    """Run the mutant listing command; return its stdout and exit status (the status is
+    recorded, not judged here).
+    """
     try:
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, check=False)
     except OSError as e:
@@ -540,6 +556,9 @@ def _run_listing(cmd: list[str]) -> tuple[bytes, int]:
 
 
 def _tool_version(binary: list[str]) -> str:
+    """Return the x.y.z version the tool prints for --version; GateError when it cannot be
+    read.
+    """
     try:
         out = subprocess.run(
             binary + ["--version"], capture_output=True, text=True, check=True
@@ -553,6 +572,7 @@ def _tool_version(binary: list[str]) -> str:
 
 
 def _write(path: str, doc: dict) -> None:
+    """Write doc as sorted, indented JSON to path, creating the parent directory."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(
         json.dumps(doc, indent=1, sort_keys=True) + "\n", encoding="utf-8"
@@ -560,6 +580,11 @@ def _write(path: str, doc: dict) -> None:
 
 
 def cmd_plan_rust(a: argparse.Namespace) -> int:
+    """plan-rust: write the Rust plan record. Any previous record at --out is removed
+    first, so a failed run cannot leave a stale one behind. With --skipped the plan is
+    the empty plan with the planner's reason; otherwise the listing command after -- is
+    run and its output becomes the plan.
+    """
     # a stale record must never survive a failed run
     if os.path.exists(a.out):
         os.unlink(a.out)
@@ -589,6 +614,9 @@ def cmd_plan_rust(a: argparse.Namespace) -> int:
 
 
 def cmd_plan_go(a: argparse.Namespace) -> int:
+    """plan-go - write the Go plan record from the planner's package list (a stale record
+    is removed first).
+    """
     if os.path.exists(a.out):
         os.unlink(a.out)
     plan = build_go_plan(
@@ -600,6 +628,9 @@ def cmd_plan_go(a: argparse.Namespace) -> int:
 
 
 def cmd_wrap_shard(a: argparse.Namespace) -> int:
+    """wrap-shard - bind one cargo-mutants outcomes.json to the plan and write the shard
+    report.
+    """
     rep = wrap_shard(a.plan_digest, a.shard, a.shards, a.outcomes)
     _write(a.out, rep)
     print(
@@ -609,6 +640,10 @@ def cmd_wrap_shard(a: argparse.Namespace) -> int:
 
 
 def cmd_verify(a: argparse.Namespace) -> int:
+    """verify: check the Rust and/or Go plan against its shard / chunk reports. Prints the
+    accounting and the scores per language; returns 1 when any planned set and measured
+    set differ (or a record is invalid), 0 otherwise.
+    """
     ok = True
     if a.rust_plan:
         try:
@@ -745,10 +780,14 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def _digest(data: bytes) -> str:
+    """Return the "sha256:<hex>" digest of data."""
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def _git(repo: str, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run git in repo (bytes output); with check, a non-zero exit is a GateError carrying
+    git's stderr.
+    """
     r = subprocess.run(
         ["git", "-C", repo, *args], capture_output=True, text=False, check=False
     )
@@ -760,6 +799,9 @@ def _git(repo: str, *args: str, check: bool = True) -> subprocess.CompletedProce
 
 
 def _approvers(pin_bytes: bytes, where: str) -> list[str]:
+    """Return the approvers (GitHub logins) listed in a tool-pins file; GateError when the
+    file is not JSON or the list is malformed.
+    """
     try:
         doc = json.loads(pin_bytes)
     except ValueError as e:
@@ -932,6 +974,9 @@ def pin_reference(
 
 
 def cmd_pin_reference(a: argparse.Namespace) -> int:
+    """pin-reference: resolve and record the reference pins of a job (the base branch's,
+    not the pull request's own - #195) and print the reference commit and digest.
+    """
     rec = pin_reference(
         mode=a.mode,
         pins=a.pins,
@@ -976,6 +1021,12 @@ def verify_reference_record(record_path: str, pins_path: str) -> dict:
 
 
 def cmd_check_tools(a: argparse.Namespace) -> int:
+    """check-tools: fail closed unless every measuring tool a surface needs is declared
+    with its pinned version. The declared NAME=VERSION pairs are compared with the pins
+    of the surface (optionally after verifying a pin reference record); an unusable or
+    unverifiable tool is a GateError, because the job's result must then not be
+    accepted.
+    """
     pins = load_tool_pins(a.pins)
     if a.surface not in pins["surfaces"]:
         raise GateError(
@@ -1012,12 +1063,16 @@ def cmd_check_tools(a: argparse.Namespace) -> int:
 
 
 def cmd_check_coverprofile(a: argparse.Namespace) -> int:
+    """check-coverprofile - require a Go coverage profile that exists, parses and holds at
+    least one block.
+    """
     n = check_coverprofile(a.profile)
     print(f"{a.profile}: {n} blocks")
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the subcommand; return its exit status (1 on a GateError, shown as ::error::)."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     sub = ap.add_subparsers(dest="command", required=True)
 

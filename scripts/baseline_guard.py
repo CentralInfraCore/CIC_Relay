@@ -30,6 +30,9 @@ EPS = 1e-9
 
 
 def load(path: str) -> dict[str, dict]:
+    """Read a mutation baseline file and return its packages; ValueError unless every entry
+    has non-negative integer killed / lived / not_covered counts.
+    """
     doc = json.loads(Path(path).read_text())
     pkgs = doc["packages"]
     if not isinstance(pkgs, dict):
@@ -43,6 +46,9 @@ def load(path: str) -> dict[str, dict]:
 
 
 def check(base: dict[str, dict], head: dict[str, dict]) -> list[str]:
+    """Compare the head baseline with the base one and list every weakening: an entry the
+    base does not have, or a lowered efficacy or mutant-coverage requirement.
+    """
     problems = []
     for name, e in sorted(head.items()):
         if name not in base:
@@ -63,6 +69,10 @@ def check(base: dict[str, dict], head: dict[str, dict]) -> list[str]:
 
 
 def main() -> int:
+    """Fail (exit 1) when either baseline cannot be read or the head baseline weakens the
+    base one; a removed entry is only noted, since the package then needs the default
+    90.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", required=True)
     ap.add_argument("--head", required=True)

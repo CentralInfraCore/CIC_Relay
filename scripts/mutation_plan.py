@@ -138,6 +138,7 @@ def first_cfg_test_line(text: str) -> int | None:
 
 
 def git_show(rev: str, path: str) -> str | None:
+    """The content of path at rev, or None when it does not exist there."""
     r = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True, text=True)
     return r.stdout if r.returncode == 0 else None
 
@@ -289,6 +290,9 @@ def chunk(
 
 
 def rust_changed(files: list[str]) -> bool:
+    """Whether any changed file is Rust source or a file that forces a full Rust mutation
+    run.
+    """
     for f in files:
         base = f.rsplit("/", 1)[-1]
         if (
@@ -301,6 +305,10 @@ def rust_changed(files: list[str]) -> bool:
 
 
 def main() -> int:
+    """Plan the gate for --base..--head (or everything at --head with --all) and write the
+    plan as key=value lines to $GITHUB_OUTPUT, or to stdout outside GitHub Actions; the
+    reasoning goes to stderr.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--base")
     ap.add_argument("--head", required=True)
