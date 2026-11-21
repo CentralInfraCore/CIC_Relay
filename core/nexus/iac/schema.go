@@ -126,11 +126,14 @@ func parseSchemaField(path string, raw interface{}) SchemaField {
 	return f
 }
 
+// asString returns v when it is a string and "" for any other value.
 func asString(v interface{}) string {
 	s, _ := v.(string)
 	return s
 }
 
+// asStringSlice returns the string elements of v when it is a []interface{} (non-string elements are
+// skipped), and nil for any other value.
 func asStringSlice(v interface{}) []string {
 	list, ok := v.([]interface{})
 	if !ok {

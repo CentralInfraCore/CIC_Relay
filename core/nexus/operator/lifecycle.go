@@ -33,6 +33,7 @@ func NewHostRegistry() *HostRegistry {
 	return &HostRegistry{hosts: make(map[string]*HostState)}
 }
 
+// get returns the state registered for hostID and whether there is one.
 func (r *HostRegistry) get(hostID string) (*HostState, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -40,6 +41,7 @@ func (r *HostRegistry) get(hostID string) (*HostState, bool) {
 	return h, ok
 }
 
+// set stores h under its HostID, replacing any previous state for that host.
 func (r *HostRegistry) set(h *HostState) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

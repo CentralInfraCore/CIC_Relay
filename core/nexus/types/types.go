@@ -1,3 +1,5 @@
+// Package types holds the definitions of the relay's infrastructure graph — Relay, Host and Service nodes
+// with their specs and the common metadata block — as read from YAML or JSON.
 package types
 
 import (
@@ -54,6 +56,7 @@ type Relay struct {
 	Spec          RelaySpec `json:"spec" yaml:"spec"`
 }
 
+// RelaySpec is the desired state of a Relay node: the hosts it serves.
 type RelaySpec struct {
 	// Hosts is a list of references to Host definition files or embedded objects.
 	Hosts []string `json:"hosts" yaml:"hosts"`
@@ -65,6 +68,7 @@ type Host struct {
 	Spec          HostSpec `json:"spec" yaml:"spec"`
 }
 
+// HostSpec is the desired state of a Host node: its operating system and the services it runs.
 type HostSpec struct {
 	OS       string   `json:"os" yaml:"os"`
 	Services []string `json:"services" yaml:"services"` // References to Service definitions
@@ -76,6 +80,8 @@ type Service struct {
 	Spec          ServiceSpec `json:"spec" yaml:"spec"`
 }
 
+// ServiceSpec is the desired state of a Service node: the schema/module that implements it, plus either a
+// legacy free-form Config or schema-driven Resources.
 type ServiceSpec struct {
 	Module    string                 `json:"module" yaml:"module"`                           // Reference to the schema/module name (e.g., "postgresql")
 	Config    map[string]interface{} `json:"config,omitempty" yaml:"config,omitempty"`       // Legacy configuration payload

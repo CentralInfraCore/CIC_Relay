@@ -1,3 +1,5 @@
+// Package sync pushes the relay's local state repository to a central repository: GitSyncer squashes a day's
+// commits and pushes the result with the git command line.
 package sync
 
 import (

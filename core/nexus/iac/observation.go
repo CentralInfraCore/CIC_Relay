@@ -45,10 +45,16 @@ func (o Observation) Coverage(path string) CoverageState {
 type FieldVerdict string
 
 const (
-	VerdictConformant     FieldVerdict = "CONFORMANT"
-	VerdictDrift          FieldVerdict = "DRIFT"
+	// VerdictConformant means the field was observed and its value equals the intent.
+	VerdictConformant FieldVerdict = "CONFORMANT"
+	// VerdictDrift means the observed value differs from the intent, or the intent declares a field that was
+	// observed to be absent.
+	VerdictDrift FieldVerdict = "DRIFT"
+	// VerdictObservedAbsent means the field was observed to be absent and the intent does not declare it either.
 	VerdictObservedAbsent FieldVerdict = "OBSERVED_ABSENT"
-	VerdictUnobserved     FieldVerdict = "UNOBSERVED"
+	// VerdictUnobserved means the observation did not cover the field, so conformance cannot be claimed for it
+	// either way.
+	VerdictUnobserved FieldVerdict = "UNOBSERVED"
 	// VerdictNotComparable is produced by the comparison layer (Task 1) when the
 	// intent and observed values are not type-compatible; ClassifyField does not
 	// emit it.

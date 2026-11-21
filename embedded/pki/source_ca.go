@@ -9,5 +9,8 @@ package pki
 
 import _ "embed"
 
+// CICSourceCAPEM is the PEM-encoded CIC Source CA certificate (cic-source-ca.pem, written by
+// make fetch-pki), embedded at compile time.
+//
 //go:embed cic-source-ca.pem
 var CICSourceCAPEM []byte

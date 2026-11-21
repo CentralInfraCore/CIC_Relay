@@ -7,6 +7,7 @@
 // See features/feature-008/ffi-boundary.md.
 package cicffi
 
+// disabled is the panic message of every bridge call in a build without the ffi_cgo tag.
 const disabled = "cicffi: built without the ffi_cgo build tag (CGO bridge disabled)"
 
 // ExpectedABIVersion is the C-ABI version this package targets (see the cgo

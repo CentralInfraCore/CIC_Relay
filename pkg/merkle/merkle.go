@@ -21,9 +21,13 @@ const (
 	// structure stable regardless of which fields are populated.
 	NullMarker = "∅"
 
+	// leafPrefix is the first byte hashed for a leaf, so a leaf hash can never equal an inner-node hash (domain
+	// separation).
 	leafPrefix = byte(0x00)
+	// nodePrefix is the first byte hashed for an inner node.
 	nodePrefix = byte(0x01)
-	fieldSep   = byte(0x1f) // ASCII unit separator between name and value
+	// fieldSep separates a leaf's name from its value in the hash input.
+	fieldSep = byte(0x1f) // ASCII unit separator between name and value
 )
 
 // LeafHash computes a domain-separated hash for a named leaf.

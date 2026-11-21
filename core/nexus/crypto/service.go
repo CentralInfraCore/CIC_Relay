@@ -1,3 +1,6 @@
+// Package crypto signs and verifies data with a HashiCorp Vault Transit key: signatures in Vault's
+// "vault:v1:" wire form (typically over a commit hash) and OCI request signatures (RSASSA-PKCS#1
+// v1.5 over SHA-256). The key never leaves Vault.
 package crypto
 
 import (

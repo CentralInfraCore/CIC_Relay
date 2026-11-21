@@ -136,6 +136,7 @@ func (s ACLSet) Effective(id FieldID, objectDefault ACL) ACL {
 	return objectDefault
 }
 
+// contains reports whether v is an element of xs.
 func contains(xs []string, v string) bool {
 	for _, x := range xs {
 		if x == v {

@@ -33,6 +33,7 @@ func NewPrometheusSink() *PrometheusSink {
 	}
 }
 
+// label is one Prometheus label of a series.
 type label struct{ key, value string }
 
 // series identifies one labeled time series (a metric name plus its sorted labels).
@@ -42,16 +43,19 @@ type series struct {
 	key    string // precomputed seriesKey(name, labels), used for map lookup and sorting
 }
 
+// counterEntry is the running total of one counter series.
 type counterEntry struct {
 	series
 	value float64
 }
 
+// gaugeEntry is the last value set for one gauge series.
 type gaugeEntry struct {
 	series
 	value float64
 }
 
+// histogramEntry accumulates the sum and count of one histogram series (no buckets).
 type histogramEntry struct {
 	series
 	sum   float64
@@ -72,6 +76,8 @@ func labelsFor(res Resource, attrs map[string]string) []label {
 	return labels
 }
 
+// seriesKey builds the map key of a series from its name and its labels in order, separated by NUL bytes so
+// that no name or label text can make two different series collide.
 func seriesKey(name string, labels []label) string {
 	var b strings.Builder
 	b.WriteString(name)
@@ -84,6 +90,8 @@ func seriesKey(name string, labels []label) string {
 	return b.String()
 }
 
+// newSeries returns the series for a metric name with the labels derived from res and attrs, its key
+// precomputed.
 func newSeries(name string, res Resource, attrs map[string]string) series {
 	labels := labelsFor(res, attrs)
 	return series{name: name, labels: labels, key: seriesKey(name, labels)}
@@ -167,6 +175,7 @@ type errWriter struct {
 	err error
 }
 
+// printf writes the formatted text unless an earlier write already failed; the first error is kept in e.err.
 func (e *errWriter) printf(format string, args ...any) {
 	if e.err != nil {
 		return

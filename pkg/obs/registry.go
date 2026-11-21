@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// requiredPrefix is the prefix every registered metric instrument name must carry.
 const requiredPrefix = "relay."
 
 // MetricInstrument describes a named metric that a component may emit.
