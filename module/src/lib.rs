@@ -35,6 +35,7 @@ pub use sealing::seal;
 pub struct ModuleError(String);
 
 impl ModuleError {
+    /// Wraps a failure message (which must not contain key material).
     fn new(message: impl Into<String>) -> Self {
         Self(message.into())
     }

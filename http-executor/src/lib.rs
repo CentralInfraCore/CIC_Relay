@@ -222,6 +222,8 @@ fn is_blocked_ip(ip: IpAddr) -> bool {
     }
 }
 
+/// Whether an IPv4 address is in a range egress must never reach: loopback, private, link-local,
+/// unspecified or broadcast. Also applied to IPv4-mapped IPv6 addresses.
 fn is_blocked_v4(v4: Ipv4Addr) -> bool {
     v4.is_loopback()
         || v4.is_private()
@@ -469,6 +471,8 @@ pub struct HashChainedAuditSink {
     signer: Option<Arc<dyn RecordSigner>>,
 }
 
+/// The mutable state of the hash-chained audit sink: the sequence number and hash the next entry
+/// links to, and the entries recorded so far.
 struct AuditChainState {
     next_seq: u64,
     prev_hash: String,
