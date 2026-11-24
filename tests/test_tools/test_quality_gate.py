@@ -829,7 +829,7 @@ def test_check_tools_a_required_tool_that_is_not_declared_is_unverifiable(
         ("coverage-go", ["go=go1.26.10"], "TOOL_UNUSABLE", "UNUSABLE"),
         (
             "coverage-rust",
-            ["rustc=1.96.0", "cargo-llvm-cov=0.9.1"],
+            ["rustc=1.96.0", "cargo-llvm-cov=0.9.2"],
             "TOOL_UNUSABLE",
             "UNUSABLE",
         ),
@@ -841,7 +841,7 @@ def test_check_tools_a_required_tool_that_is_not_declared_is_unverifiable(
         ),
         (
             "coverage-rust",
-            ["rustc=1.96.1", "cargo-llvm-cov=0.9.2"],
+            ["rustc=1.96.1", "cargo-llvm-cov=0.9.1"],
             "TOOL_UNUSABLE",
             "UNUSABLE",
         ),
