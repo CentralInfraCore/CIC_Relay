@@ -1,0 +1,184 @@
+---
+package: cidag
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: loadVectors
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ParseStrict
+- name: kindOf
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Error
+- name: asList
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: asMap
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: deepCopy
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: applyOps
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: step
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: rootsOf
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: bundleOf
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestCanonVectors
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Canonical
+- name: TestPositiveVectors
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Build
+  - Verify
+- name: TestNegativeBuildVectors
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Build
+- name: TestVerifyVectors
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Verify
+- name: TestParseVectors
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Canonical
+  - ParseStrict
+- name: linear
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestOrderIndependence
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Build
+- name: TestChangesPropagate
+  kind: func
+  description: 'TestChangesPropagate measures what a change does: it changes the CI
+    root, the root of the changed step and of every step that depends on it, and nothing
+    else.'
+  references: []
+  calls:
+  - Build
+- name: TestDomainSeparation
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestCanonicalEqualsStandardJSON
+  kind: func
+  description: 'TestCanonicalEqualsStandardJSON: on the profile, pkg/canonicaljson.ToJSON,
+    encoding/json (which sorts map keys by byte order) and the independent implementation
+    give the same bytes.'
+  references: []
+  calls:
+  - Build
+- name: TestProfile
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Canonical
+  - Error
+- name: TestBuildRefusesWhatCannotBeCanonicalized
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Build
+- name: TestVerifyShapes
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Verify
+- name: TestJSONEqual
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestTemplateFromWorkflow
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Build
+  - Canonical
+  - TemplateFromWorkflow
+- name: TestRelayWorkflowsAreStructural
+  kind: func
+  description: 'TestRelayWorkflowsAreStructural runs the adapter on the real workflow
+    files of this repository: each one gives a valid, acyclic template, the same one
+    every time, and a complete evidence set builds a root.'
+  references: []
+  calls:
+  - Build
+  - TemplateFromWorkflow
+- name: failingToJSON
+  kind: func
+  description: 'failingToJSON makes the nth call of the canonical writer fail, like
+    pkg/canonicaljson''s own mock hook is meant to be used: it reaches the error returns
+    that validation makes unreachable with real input.'
+  references:
+  - canonicaljson.SetToJSONMock
+  - canonicaljson.ToJSONOriginal
+  calls:
+  - canonicaljson.SetToJSONMock
+  - canonicaljson.ToJSONOriginal
+- name: TestAWriterFailureIsAnErrorNotARoot
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Build
+  - Error
+- name: sampleWorkflow
+  kind: const
+  description: ''
+  references: []

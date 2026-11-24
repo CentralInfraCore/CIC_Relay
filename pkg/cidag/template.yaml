@@ -1,0 +1,94 @@
+---
+package: cidag
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: stepDef
+  kind: struct
+  description: 'stepDef is a step of the template: its id, definition digest and the
+    steps it needs.'
+  implements: []
+  references: []
+- name: template
+  kind: struct
+  description: 'template is the validated structure of a CI process: its steps and
+    the dependency edges between them. It is a derived representation (see TemplateFromWorkflow):
+    the same versioned definitions give the same template.'
+  implements: []
+  references: []
+- name: keysAre
+  kind: func
+  description: keysAre reports whether m has exactly the given member names.
+  references: []
+  calls: []
+- name: sortedKeys
+  kind: func
+  description: sortedKeys returns the member names of m in ascending byte order.
+  references: []
+  calls: []
+- name: parseID
+  kind: func
+  description: parseID returns v if it is an identifier of the permitted form, else
+    an error of the given class.
+  references: []
+  calls:
+  - MatchString
+- name: parseDigest
+  kind: func
+  description: parseDigest returns v if it is a digest of the permitted form, else
+    an error of the given class.
+  references: []
+  calls:
+  - MatchString
+- name: parseTemplate
+  kind: func
+  description: 'parseTemplate validates a template of the form {"workflow": id, "steps":
+    [{"id","definition_digest","needs"}]}. The order of the checks is part of the
+    contract (the first refusal names the class).'
+  references: []
+  calls: []
+- name: order
+  kind: method
+  receiver: template
+  description: 'order is Kahn''s algorithm with the ready steps taken in ascending
+    id order: one deterministic order, or a TEMPLATE_CYCLE refusal.'
+  references: []
+  calls: []
+- name: object
+  kind: method
+  receiver: template
+  description: 'object is the canonical object whose digest is the template digest:
+    the step ids with their definition digests and their (sorted) needs, so that a
+    missing step or edge changes the CI root.'
+  references: []
+  calls: []
+- name: TemplateFromWorkflow
+  kind: func
+  description: 'TemplateFromWorkflow derives the template of a GitHub Actions workflow
+    file: one step per job, the edges from `needs`. It reads nothing else of the YAML
+    (no `if`, no matrix, no reusable workflows): a job that may not run is a step
+    whose result can be `skipped`. The definition digest of every job is the SHA-256
+    of the raw bytes of the workflow file, which is coarse (a change anywhere in the
+    file changes every digest) and safe: no YAML semantics decide what a definition
+    is. The result is in the generic form Build and Verify take.'
+  references:
+  - yaml.Unmarshal
+  calls:
+  - yaml.Unmarshal
+- name: KindWorkflowParse
+  kind: const
+  description: 'KindWorkflowParse: the workflow file is not YAML the reader accepts.'
+  references: []
+- name: KindWorkflowShape
+  kind: const
+  description: 'KindWorkflowShape: a job''s needs is neither a string nor a list of
+    strings.'
+  references: []
+- name: KindWorkflowEmpty
+  kind: const
+  description: 'KindWorkflowEmpty: the workflow has no jobs.'
+  references: []

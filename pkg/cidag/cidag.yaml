@@ -1,0 +1,253 @@
+---
+package: cidag
+description: 'Package cidag builds the deterministic Merkle DAG of a CI process: one
+  canonical object per CI step (its definition, inputs, dependency roots and result)
+  and one CI root over all of them. The contract is docs/hu/CI-MERKLE-DAG-CONTRACT.md.
+  It is additive: it changes no existing hash, root or canonical form. The canonical
+  bytes come from pkg/canonicaljson (the CIC Canonical Object Encoding); this package
+  only restricts what may be written to a profile on which that encoding can never
+  apply an escape (so the escaping rules it inherits from encoding/json never matter),
+  hashes with versioned domain prefixes in the style of core/cabinet.ComputeChainHashV1,
+  and wires the dependency structure. It deliberately does not reuse pkg/merkle.MerkleRoot:
+  that tree duplicates the last element of an odd level, so root([a,b,c]) == root([a,b,c,c]),
+  which is harmless for its fixed field set and wrong for a variable-length list of
+  steps. The independent implementation is tests/test_tools/cidag_independent.py;
+  both read testdata/vectors.json.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Error
+  kind: struct
+  description: Error is a refusal with a stable class.
+  implements: []
+  references: []
+- name: Error
+  kind: method
+  receiver: Error
+  description: Error returns the class and the detail of the refusal.
+  references: []
+  calls: []
+- name: fail
+  kind: func
+  description: fail returns an *Error of the given class with a formatted detail.
+  references: []
+  calls: []
+- name: paramChar
+  kind: func
+  description: 'paramChar reports whether a character of a string is inside the escape-free
+    profile: printable ASCII without the characters a JSON writer would escape or
+    an HTML-safe encoder would rewrite (" \ < > &).'
+  references: []
+  calls: []
+- name: paramString
+  kind: func
+  description: paramString reports whether every character of s is inside the escape-free
+    profile.
+  references: []
+  calls: []
+- name: asInt
+  kind: func
+  description: asInt returns the value of a JSON integer (not a bool) held in any
+    Go integer type the package produces.
+  references: []
+  calls: []
+- name: checkProfile
+  kind: func
+  description: 'checkProfile refuses any value outside the profile: strings that need
+    no escape, integers within +-(2^53-1), booleans and null, arrays and objects of
+    those.'
+  references: []
+  calls: []
+- name: Canonical
+  kind: func
+  description: Canonical returns the canonical bytes of a value of the profile (pkg/canonicaljson.ToJSON,
+    after the profile check).
+  references:
+  - canonicaljson.ToJSON
+  calls:
+  - canonicaljson.ToJSON
+- name: digest
+  kind: func
+  description: digest returns "sha256:" + hex(SHA-256(prefix || canonical(v))) and
+    the canonical bytes.
+  references: []
+  calls:
+  - Canonical
+  - Sum
+  - Write
+- name: stepPrefix
+  kind: var
+  description: stepPrefix is hashed before the canonical bytes of a step object.
+  references: []
+- name: templatePrefix
+  kind: var
+  description: templatePrefix is hashed before the canonical bytes of the template
+    object.
+  references: []
+- name: rootPrefix
+  kind: var
+  description: rootPrefix is hashed before the canonical bytes of the CI root object.
+  references: []
+- name: statuses
+  kind: var
+  description: Statuses are the conclusions a CI check can have (the set of cic-primitive-forms
+    tools/test-evidence/record.py).
+  references: []
+- name: nullDigestStatuses
+  kind: var
+  description: 'nullDigestStatuses are the statuses whose result has no digest (nothing
+    was produced): the digest is null.'
+  references: []
+- name: idRe
+  kind: var
+  description: idRe is the form of a step id, a workflow id and an input name.
+  references: []
+- name: digestRe
+  kind: var
+  description: 'digestRe is the form of a digest: sha256: and 64 lowercase hexadecimal
+    digits.'
+  references: []
+- name: intRe
+  kind: var
+  description: intRe is the form of an integer literal the strict reader accepts.
+  references: []
+- name: StepContract
+  kind: const
+  description: StepContract identifies the canonical object of one CI step.
+  references: []
+- name: RootContract
+  kind: const
+  description: RootContract identifies the canonical object of the CI root.
+  references: []
+- name: TemplateContract
+  kind: const
+  description: TemplateContract identifies the canonical object of the template.
+  references: []
+- name: KindParse
+  kind: const
+  description: 'KindParse: the input is not a document the strict reader accepts.'
+  references: []
+- name: KindProfile
+  kind: const
+  description: 'KindProfile: a value is outside the escape-free profile.'
+  references: []
+- name: KindTemplateShape
+  kind: const
+  description: 'KindTemplateShape: the template or a step does not have exactly the
+    members of the contract.'
+  references: []
+- name: KindTemplateEmpty
+  kind: const
+  description: 'KindTemplateEmpty: the template has no steps.'
+  references: []
+- name: KindTemplateID
+  kind: const
+  description: 'KindTemplateID: an identifier is not of the permitted form.'
+  references: []
+- name: KindTemplateDigest
+  kind: const
+  description: 'KindTemplateDigest: a definition digest is not sha256: and 64 lowercase
+    hexadecimal digits.'
+  references: []
+- name: KindTemplateDuplicateID
+  kind: const
+  description: 'KindTemplateDuplicateID: two steps share an identifier.'
+  references: []
+- name: KindTemplateNeedUnknown
+  kind: const
+  description: 'KindTemplateNeedUnknown: a step needs a step that does not exist.'
+  references: []
+- name: KindTemplateNeedDuplicate
+  kind: const
+  description: 'KindTemplateNeedDuplicate: a step lists the same need twice.'
+  references: []
+- name: KindTemplateCycle
+  kind: const
+  description: 'KindTemplateCycle: the dependency graph has a cycle.'
+  references: []
+- name: KindEvidenceMissing
+  kind: const
+  description: 'KindEvidenceMissing: a step of the template has no evidence (a step
+    that did not run is skipped, not absent).'
+  references: []
+- name: KindEvidenceExtra
+  kind: const
+  description: 'KindEvidenceExtra: there is evidence for a step that is not in the
+    template.'
+  references: []
+- name: KindEvidenceShape
+  kind: const
+  description: 'KindEvidenceShape: evidence does not have exactly the members of the
+    contract.'
+  references: []
+- name: KindInputName
+  kind: const
+  description: 'KindInputName: an input name is not of the permitted form.'
+  references: []
+- name: KindInputValue
+  kind: const
+  description: 'KindInputValue: an input value is outside the permitted types and
+    ranges.'
+  references: []
+- name: KindResultShape
+  kind: const
+  description: 'KindResultShape: a result does not have exactly status and digest.'
+  references: []
+- name: KindResultStatus
+  kind: const
+  description: 'KindResultStatus: a status is not one of the permitted conclusions.'
+  references: []
+- name: KindResultDigest
+  kind: const
+  description: 'KindResultDigest: a result digest has the wrong form, or the wrong
+    null-ness for its status.'
+  references: []
+- name: KindBundleShape
+  kind: const
+  description: 'KindBundleShape: a published bundle does not have exactly the members
+    of the contract.'
+  references: []
+- name: KindObjectShape
+  kind: const
+  description: 'KindObjectShape: a published step object does not have exactly the
+    members of the contract.'
+  references: []
+- name: KindObjectContractMismatch
+  kind: const
+  description: 'KindObjectContractMismatch: a published object names another contract.'
+  references: []
+- name: KindObjectStepMismatch
+  kind: const
+  description: 'KindObjectStepMismatch: a published object''s step identity differs
+    from the template''s.'
+  references: []
+- name: KindObjectDependenciesMismatch
+  kind: const
+  description: 'KindObjectDependenciesMismatch: a published object''s dependency roots
+    differ from the recomputed ones.'
+  references: []
+- name: KindStepRootMismatch
+  kind: const
+  description: 'KindStepRootMismatch: the published step roots differ from the recomputed
+    ones.'
+  references: []
+- name: KindCIRootMismatch
+  kind: const
+  description: 'KindCIRootMismatch: the published CI root differs from the recomputed
+    one.'
+  references: []
+- name: maxInt
+  kind: const
+  description: maxInt is the largest magnitude of an integer the profile accepts (2^53-1).
+  references: []
+- name: maxParam
+  kind: const
+  description: maxParam is the longest string an input value may be.
+  references: []
+- name: MaxDepth
+  kind: const
+  description: MaxDepth is the deepest nesting the strict reader accepts.
+  references: []

@@ -1,0 +1,104 @@
+---
+module: test_tools.cidag_make_vectors
+description: 'Writes pkg/cidag/testdata/vectors.json: the vectors both implementations
+  of the CI Merkle DAG contract read.
+
+
+  The expected values come from the independent Python implementation (cidag_independent.py),
+  the ORACLE, not
+
+  from the Go package: the Go package is measured against these vectors, never the
+  other way round. One case is
+
+  also fixed by hand (docs/hu/CI-MERKLE-DAG-CONTRACT.md, worked example) so that the
+  oracle itself is checked
+
+  with `printf | sha256sum`.
+
+
+  Run:  python3 tests/test_tools/cidag_make_vectors.py [OUTPUT]'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: d
+  kind: function
+  decorators: []
+  description: A realistic digest made from a short label.
+  references: []
+  calls:
+  - hexdigest
+  - hashlib.sha256
+  - label.encode
+- name: step
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - d
+  - list
+- name: ev
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - d
+- name: POSITIVE
+  kind: const
+  description: ''
+  references: []
+- name: CANON
+  kind: const
+  description: ''
+  references: []
+- name: build_vectors
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - POSITIVE.items
+  - neg
+  - ci.build
+  - ver
+  - append
+  - mutate
+  - copy.deepcopy
+  - list
+  - AssertionError
+  - t.update
+  - t.pop
+  - update
+  - e.pop
+  - e.update
+  - pop
+  - op.get
+  - ci.verify
+  - ci.parse_strict
+  - decode
+  - P
+  - d
+  - ci.canonical
+  - items
+- name: main
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - os.makedirs
+  - print
+  - os.path.join
+  - os.path.dirname
+  - json.dumps
+  - open
+  - f.write
+  - len
+  - build_vectors
+  - os.path.abspath
+  - os.path.normpath
+  - text.encode
