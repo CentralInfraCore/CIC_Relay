@@ -1,0 +1,64 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: run
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Run
+- name: linearInput
+  kind: func
+  description: linearInput is the input of `cidag build` for the "linear" vector.
+  references:
+  - cidag.ParseStrict
+  calls:
+  - cidag.ParseStrict
+- name: TestBuildThenVerify
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestBuildRefusals
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVerifyRefusals
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestUsageAndIOErrors
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestTemplateCommand
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestMain_UsesRunFuncAndExit
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestWriterFailure
+  kind: func
+  description: 'TestWriterFailure: when the canonical writer itself fails (injected),
+    the tool reports an error of its own (exit 2), not a refusal of the content and
+    never a root.'
+  references:
+  - canonicaljson.SetToJSONMock
+  - canonicaljson.ToJSONOriginal
+  calls:
+  - canonicaljson.SetToJSONMock
+  - canonicaljson.ToJSONOriginal

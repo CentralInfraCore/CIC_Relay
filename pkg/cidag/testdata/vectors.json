@@ -1,0 +1,4427 @@
+{
+ "canon": [
+  {
+   "canonical": "{}",
+   "name": "empty object",
+   "value": {}
+  },
+  {
+   "canonical": "[]",
+   "name": "empty list",
+   "value": []
+  },
+  {
+   "canonical": "null",
+   "name": "null",
+   "value": null
+  },
+  {
+   "canonical": "true",
+   "name": "true",
+   "value": true
+  },
+  {
+   "canonical": "false",
+   "name": "false",
+   "value": false
+  },
+  {
+   "canonical": "0",
+   "name": "zero",
+   "value": 0
+  },
+  {
+   "canonical": "-17",
+   "name": "negative",
+   "value": -17
+  },
+  {
+   "canonical": "9007199254740991",
+   "name": "max int",
+   "value": 9007199254740991
+  },
+  {
+   "canonical": "\"a b c\"",
+   "name": "string with space",
+   "value": "a b c"
+  },
+  {
+   "canonical": "\"a/b\"",
+   "name": "slash is not escaped",
+   "value": "a/b"
+  },
+  {
+   "canonical": "{\"a\":{\"c\":null,\"d\":[]},\"b\":1}",
+   "name": "nested keys sorted",
+   "value": {
+    "a": {
+     "c": null,
+     "d": []
+    },
+    "b": 1
+   }
+  },
+  {
+   "canonical": "[3,1,2]",
+   "name": "list keeps order",
+   "value": [
+    3,
+    1,
+    2
+   ]
+  },
+  {
+   "canonical": "\"sha256:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881\"",
+   "name": "digest string",
+   "value": "sha256:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+  }
+ ],
+ "negative_build": [
+  {
+   "error": "TEMPLATE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "template extra member",
+   "template": {
+    "extra": 1,
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "template without workflow",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "error": "TEMPLATE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "template with a renamed member",
+   "template": {
+    "flow": "ci",
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "error": "TEMPLATE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "step with a renamed member",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "deps": [],
+      "id": "build"
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_EMPTY",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "no steps",
+   "template": {
+    "steps": [],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "step extra member",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": [],
+      "x": 1
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "needs is not a list",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": "build"
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "workflow id with a space",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "a b"
+   }
+  },
+  {
+   "error": "TEMPLATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "empty step id",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "step id with a quote",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "b\"x",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "step id with non-ASCII",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "b\u00e9",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "step id too long",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_DIGEST",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "definition digest wrong form",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:ABC",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_DIGEST",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "definition digest upper case",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_DUPLICATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "duplicate step id",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "build",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_NEED_UNKNOWN",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "unknown need",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "nope"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "need with an empty identifier",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       ""
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_ID",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "need that is not a string",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       5
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_NEED_DUPLICATE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "duplicate need",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build",
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_CYCLE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "two-step cycle",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": [
+       "test"
+      ]
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "TEMPLATE_CYCLE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "self need",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "EVIDENCE_MISSING",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    }
+   },
+   "name": "evidence missing for a step",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "EVIDENCE_EXTRA",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "ghost": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "evidence for an unknown step",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "EVIDENCE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "evidence step without result",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "EVIDENCE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     },
+     "x": 1
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "evidence step with extra member",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "EVIDENCE_SHAPE",
+   "evidence": {
+    "build": {
+     "params": {},
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "evidence step with a renamed member",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "hash": "x",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "result with a renamed member",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "EVIDENCE_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": [],
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "inputs is not an object",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_NAME",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "a b": "x",
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input name with a space",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_NAME",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "": "x",
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "empty input name",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": null,
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input null",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": {
+       "a": 1
+      },
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input nested object",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": [
+       1
+      ],
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input list",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input empty string",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "a<b",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input string with <",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "a&b",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input string with &",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "a\"b",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input string with a quote",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "a\\b",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input string with a backslash",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "a\tb",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input string with a tab",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "caf\u00e9",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input string with non-ASCII",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input string too long",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": 9007199254740992,
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input integer beyond 2^53-1",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "INPUT_VALUE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "k": -9007199254740992,
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "input integer below -(2^53-1)",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success",
+      "x": 1
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "result extra member",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "result without digest",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_SHAPE",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": "success"
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "result is not an object",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_STATUS",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "ok"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "unknown status",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_STATUS",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "SUCCESS"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "status in upper case",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_DIGEST",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": null,
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "success with a null digest",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_DIGEST",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "skipped"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "skipped with a digest",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_DIGEST",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "cancelled"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "cancelled with a digest",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_DIGEST",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:1234",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "result digest wrong form",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "error": "RESULT_DIGEST",
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": 7,
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "name": "result digest not a string",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  }
+ ],
+ "negative_verify": [
+  {
+   "error": "BUNDLE_SHAPE",
+   "name": "bundle extra member",
+   "ops": [
+    {
+     "path": [
+      "x"
+     ],
+     "set": 1
+    }
+   ]
+  },
+  {
+   "error": "BUNDLE_SHAPE",
+   "name": "bundle without ci_root",
+   "ops": [
+    {
+     "delete": true,
+     "path": [
+      "ci_root"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_SHAPE",
+   "name": "object extra member",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build",
+      "x"
+     ],
+     "set": 1
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_SHAPE",
+   "name": "object without inputs",
+   "ops": [
+    {
+     "delete": true,
+     "path": [
+      "objects",
+      "test",
+      "inputs"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_CONTRACT_MISMATCH",
+   "name": "object contract changed",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build",
+      "contract"
+     ],
+     "set": "cic-ci-step/2"
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_STEP_MISMATCH",
+   "name": "object step id changed",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build",
+      "step",
+      "id"
+     ],
+     "set": "other"
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_STEP_MISMATCH",
+   "name": "object definition digest changed",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build",
+      "step",
+      "definition_digest"
+     ],
+     "set": "sha256:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_STEP_MISMATCH",
+   "name": "two objects exchanged",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build"
+     ],
+     "set": {
+      "contract": "cic-ci-step/1",
+      "dependencies": [
+       "sha256:c656d5f8a42cd17cbf47c10d4c2440dcf96083dd3d4c9678cafdd8feda75be22"
+      ],
+      "inputs": {
+       "gate_enabled": true,
+       "mode": "full",
+       "retries": 2,
+       "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+      },
+      "result": {
+       "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+       "status": "success"
+      },
+      "step": {
+       "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+       "id": "test"
+      }
+     }
+    },
+    {
+     "path": [
+      "objects",
+      "test"
+     ],
+     "set": {
+      "contract": "cic-ci-step/1",
+      "dependencies": [],
+      "inputs": {
+       "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+       "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+      },
+      "result": {
+       "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+       "status": "success"
+      },
+      "step": {
+       "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+       "id": "build"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_DEPENDENCIES_MISMATCH",
+   "name": "dependency removed from an object",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "test",
+      "dependencies"
+     ],
+     "set": []
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_DEPENDENCIES_MISMATCH",
+   "name": "dependency replaced by another root",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "release",
+      "dependencies"
+     ],
+     "set": [
+      "sha256:c656d5f8a42cd17cbf47c10d4c2440dcf96083dd3d4c9678cafdd8feda75be22"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_DEPENDENCIES_MISMATCH",
+   "name": "edge removed from the template",
+   "ops": [
+    {
+     "path": [
+      "template",
+      "steps",
+      1,
+      "needs"
+     ],
+     "set": []
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "input value changed in the last step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "release",
+      "inputs",
+      "channel"
+     ],
+     "set": "beta"
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "input added to the last step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "release",
+      "inputs",
+      "extra"
+     ],
+     "set": "x"
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "input removed from the last step",
+   "ops": [
+    {
+     "delete": true,
+     "path": [
+      "objects",
+      "release",
+      "inputs",
+      "channel"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "result digest changed in the last step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "release",
+      "result",
+      "digest"
+     ],
+     "set": "sha256:b5c1fb2efc6d6b4674c2fdcc48ce01b43a3b7c03763c0c3355de0099ee0f8c73"
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "result status changed in the last step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "release",
+      "result",
+      "status"
+     ],
+     "set": "neutral"
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_DEPENDENCIES_MISMATCH",
+   "name": "input value changed in a middle step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "test",
+      "inputs",
+      "mode"
+     ],
+     "set": "delta"
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_DEPENDENCIES_MISMATCH",
+   "name": "input removed from the first step",
+   "ops": [
+    {
+     "delete": true,
+     "path": [
+      "objects",
+      "build",
+      "inputs",
+      "compiler"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_DEPENDENCIES_MISMATCH",
+   "name": "result digest changed in the first step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build",
+      "result",
+      "digest"
+     ],
+     "set": "sha256:b5c1fb2efc6d6b4674c2fdcc48ce01b43a3b7c03763c0c3355de0099ee0f8c73"
+    }
+   ]
+  },
+  {
+   "error": "OBJECT_DEPENDENCIES_MISMATCH",
+   "name": "result status changed in the first step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build",
+      "result",
+      "status"
+     ],
+     "set": "neutral"
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "a step root changed",
+   "ops": [
+    {
+     "path": [
+      "step_roots",
+      "build"
+     ],
+     "set": "sha256:b5c1fb2efc6d6b4674c2fdcc48ce01b43a3b7c03763c0c3355de0099ee0f8c73"
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "a step root removed",
+   "ops": [
+    {
+     "delete": true,
+     "path": [
+      "step_roots",
+      "release"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "STEP_ROOT_MISMATCH",
+   "name": "a step root added",
+   "ops": [
+    {
+     "path": [
+      "step_roots",
+      "ghost"
+     ],
+     "set": "sha256:b5c1fb2efc6d6b4674c2fdcc48ce01b43a3b7c03763c0c3355de0099ee0f8c73"
+    }
+   ]
+  },
+  {
+   "error": "CI_ROOT_MISMATCH",
+   "name": "ci root changed",
+   "ops": [
+    {
+     "path": [
+      "ci_root"
+     ],
+     "set": "sha256:b5c1fb2efc6d6b4674c2fdcc48ce01b43a3b7c03763c0c3355de0099ee0f8c73"
+    }
+   ]
+  },
+  {
+   "error": "CI_ROOT_MISMATCH",
+   "name": "workflow renamed",
+   "ops": [
+    {
+     "path": [
+      "template",
+      "workflow"
+     ],
+     "set": "other"
+    }
+   ]
+  },
+  {
+   "error": "EVIDENCE_MISSING",
+   "name": "object removed",
+   "ops": [
+    {
+     "delete": true,
+     "path": [
+      "objects",
+      "release"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "EVIDENCE_EXTRA",
+   "name": "object for an unknown step",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "ghost"
+     ],
+     "set": {
+      "contract": "cic-ci-step/1",
+      "dependencies": [],
+      "inputs": {
+       "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+       "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+      },
+      "result": {
+       "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+       "status": "success"
+      },
+      "step": {
+       "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+       "id": "build"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "error": "EVIDENCE_MISSING",
+   "name": "step added to the template without an object",
+   "ops": [
+    {
+     "path": [
+      "template",
+      "steps"
+     ],
+     "set": [
+      {
+       "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+       "id": "build",
+       "needs": []
+      },
+      {
+       "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+       "id": "test",
+       "needs": [
+        "build"
+       ]
+      },
+      {
+       "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+       "id": "release",
+       "needs": [
+        "test"
+       ]
+      },
+      {
+       "definition_digest": "sha256:acac86c0e609ca906f632b0e2dacccb2b77d22b0621f20ebece1a4835b93f6f0",
+       "id": "late",
+       "needs": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "error": "TEMPLATE_CYCLE",
+   "name": "cycle introduced in the template",
+   "ops": [
+    {
+     "path": [
+      "template",
+      "steps",
+      0,
+      "needs"
+     ],
+     "set": [
+      "release"
+     ]
+    }
+   ]
+  },
+  {
+   "error": "INPUT_VALUE",
+   "name": "input value turned invalid",
+   "ops": [
+    {
+     "path": [
+      "objects",
+      "build",
+      "inputs",
+      "source"
+     ],
+     "set": null
+    }
+   ]
+  }
+ ],
+ "parse": [
+  {
+   "error": "PARSE",
+   "name": "duplicate member name",
+   "text": "{\"a\":1,\"a\":2}"
+  },
+  {
+   "error": "PARSE",
+   "name": "float",
+   "text": "{\"a\":1.5}"
+  },
+  {
+   "error": "PARSE",
+   "name": "exponent",
+   "text": "{\"a\":1e3}"
+  },
+  {
+   "error": "PARSE",
+   "name": "integer with a fraction of zero",
+   "text": "{\"a\":1.0}"
+  },
+  {
+   "error": "PARSE",
+   "name": "NaN",
+   "text": "{\"a\":NaN}"
+  },
+  {
+   "error": "PARSE",
+   "name": "Infinity",
+   "text": "[Infinity]"
+  },
+  {
+   "error": "PARSE",
+   "name": "leading zero",
+   "text": "{\"a\":01}"
+  },
+  {
+   "error": "PARSE",
+   "name": "not JSON",
+   "text": "{"
+  },
+  {
+   "error": "PARSE",
+   "name": "duplicate in a nested object",
+   "text": "{\"o\":{\"k\":1,\"k\":1}}"
+  },
+  {
+   "error": "PARSE",
+   "name": "integer beyond int64",
+   "text": "{\"a\":9223372036854775808}"
+  },
+  {
+   "error": "PARSE",
+   "name": "nesting deeper than 64",
+   "text": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+  }
+ ],
+ "parse_ok": [
+  {
+   "canonical": "{\"a\":{\"x\":null,\"y\":true},\"b\":[1,-2,0]}",
+   "name": "plain object",
+   "text": "{\"b\":[1,-2,0],\"a\":{\"x\":null,\"y\":true}}"
+  }
+ ],
+ "positive": [
+  {
+   "evidence": {
+    "build": {
+     "inputs": {
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:762069bc07a6e1b5df123a5ae7bd91c10daa04694fbaa17fba0cd6a8dcce8f22",
+      "status": "success"
+     }
+    }
+   },
+   "expect": {
+    "canonical_objects": {
+     "build": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{\"source\":\"sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26\"},\"result\":{\"digest\":\"sha256:762069bc07a6e1b5df123a5ae7bd91c10daa04694fbaa17fba0cd6a8dcce8f22\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd\",\"id\":\"build\"}}"
+    },
+    "ci_root": "sha256:e32c9614f7d46d93c43629a2918deb191431e34d0f85e014da72ba9882554707",
+    "step_roots": {
+     "build": "sha256:1a91e268620d9eed69bf1e183cb2bc91f2046f427a6004c7f6be2bdad14dba4f"
+    },
+    "template_digest": "sha256:1f18bbeaac2d8c3917497e7b8577e2aff076673992339b6e4d4632f6ac8b7e12"
+   },
+   "name": "single",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "evidence": {
+    "build": {
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "release": {
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     }
+    },
+    "test": {
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     }
+    }
+   },
+   "expect": {
+    "canonical_objects": {
+     "build": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{\"compiler\":\"sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e\",\"source\":\"sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26\"},\"result\":{\"digest\":\"sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd\",\"id\":\"build\"}}",
+     "release": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:f1b2f93783af07ff48f34c067bdc517e29ce187bd16169e6e374fedaffacf9a0\"],\"inputs\":{\"channel\":\"stable\"},\"result\":{\"digest\":\"sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b\",\"id\":\"release\"}}",
+     "test": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:c656d5f8a42cd17cbf47c10d4c2440dcf96083dd3d4c9678cafdd8feda75be22\"],\"inputs\":{\"gate_enabled\":true,\"mode\":\"full\",\"retries\":2,\"tests\":\"sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441\"},\"result\":{\"digest\":\"sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8\",\"id\":\"test\"}}"
+    },
+    "ci_root": "sha256:dfd4b6d0a30386b1b47c21d748fbfa095617f18317c0470bef21b1791a837ba9",
+    "step_roots": {
+     "build": "sha256:c656d5f8a42cd17cbf47c10d4c2440dcf96083dd3d4c9678cafdd8feda75be22",
+     "release": "sha256:b8422605848f36c40d3cf7f6fa5025edc1e009b7e13b59d4459acb9a1ebcf648",
+     "test": "sha256:f1b2f93783af07ff48f34c067bdc517e29ce187bd16169e6e374fedaffacf9a0"
+    },
+    "template_digest": "sha256:fb3e8082cf419106843aff1f9a27e4eecf060b1617f70621b0d48bbd306e1d2f"
+   },
+   "name": "linear",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "evidence": {
+    "join": {
+     "inputs": {},
+     "result": {
+      "digest": "sha256:189f40034be7a199f1fa9891668ee3ab6049f82d38c68be70f596eab2e1857b7",
+      "status": "success"
+     }
+    },
+    "lint": {
+     "inputs": {
+      "rules": "sha256:acac86c0e609ca906f632b0e2dacccb2b77d22b0621f20ebece1a4835b93f6f0"
+     },
+     "result": {
+      "digest": "sha256:ad37904674a147c288a217815f68866333e3826507a27129fcaf2ec236f7054a",
+      "status": "success"
+     }
+    },
+    "setup": {
+     "inputs": {
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:043a718774c572bd8a25adbeb1bfcd5c0256ae11cecf9f9c3f925d0e52beaf89",
+      "status": "success"
+     }
+    },
+    "unit": {
+     "inputs": {
+      "tests": "sha256:0bfe935e70c321c7ca3afc75ce0d0ca2f98b5422e008bb31c00c6d7f1f1c0ad6"
+     },
+     "result": {
+      "digest": "sha256:2ecdb5650aeae33957001ded8d5b7517e8e00c8edff79bf696f949b3eab56217",
+      "status": "success"
+     }
+    }
+   },
+   "expect": {
+    "canonical_objects": {
+     "join": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:5b76b6433f1a66644cc6e4b68165b9b56ec534317b187cae33b06ec702a1368f\",\"sha256:cef029f054a9ac4067bfe76a2c0fc3a954f9584527813e355d1ac4431b6ed121\"],\"inputs\":{},\"result\":{\"digest\":\"sha256:189f40034be7a199f1fa9891668ee3ab6049f82d38c68be70f596eab2e1857b7\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:925b04082c554ddf66e9d974c94bd3ba0617ab78d7cef230b63d4e56e31e53d7\",\"id\":\"join\"}}",
+     "lint": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:3c31f04c6d410be268b51fc2f116b82f7926f8315f3bc391170413771db9d75e\"],\"inputs\":{\"rules\":\"sha256:acac86c0e609ca906f632b0e2dacccb2b77d22b0621f20ebece1a4835b93f6f0\"},\"result\":{\"digest\":\"sha256:ad37904674a147c288a217815f68866333e3826507a27129fcaf2ec236f7054a\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:765b40778d0bac7ad1b431d1a4e056cbab71004e42af8801875e62686a9737f0\",\"id\":\"lint\"}}",
+     "setup": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{\"source\":\"sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26\"},\"result\":{\"digest\":\"sha256:043a718774c572bd8a25adbeb1bfcd5c0256ae11cecf9f9c3f925d0e52beaf89\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:2edfc585207956d191baffbb525feadaba9d25e9a6d1424ce215c5856b3ced34\",\"id\":\"setup\"}}",
+     "unit": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:3c31f04c6d410be268b51fc2f116b82f7926f8315f3bc391170413771db9d75e\"],\"inputs\":{\"tests\":\"sha256:0bfe935e70c321c7ca3afc75ce0d0ca2f98b5422e008bb31c00c6d7f1f1c0ad6\"},\"result\":{\"digest\":\"sha256:2ecdb5650aeae33957001ded8d5b7517e8e00c8edff79bf696f949b3eab56217\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:fd92f205d0b00cd1ee5220e8c36e1462c3ead769c344c253abd2a2c42397a9e4\",\"id\":\"unit\"}}"
+    },
+    "ci_root": "sha256:46f939e25616ac2f363698d6aac8b09be891c8f73176f87895c4988d484f07ba",
+    "step_roots": {
+     "join": "sha256:2f416f1e4e2e2052f0225b11148ac64bac32b27e0285de9876872070db70844e",
+     "lint": "sha256:cef029f054a9ac4067bfe76a2c0fc3a954f9584527813e355d1ac4431b6ed121",
+     "setup": "sha256:3c31f04c6d410be268b51fc2f116b82f7926f8315f3bc391170413771db9d75e",
+     "unit": "sha256:5b76b6433f1a66644cc6e4b68165b9b56ec534317b187cae33b06ec702a1368f"
+    },
+    "template_digest": "sha256:920a49809dd11b1c708287c386f6d1288043fa4337ae67257de97034632cd21f"
+   },
+   "name": "diamond_parallel",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:925b04082c554ddf66e9d974c94bd3ba0617ab78d7cef230b63d4e56e31e53d7",
+      "id": "join",
+      "needs": [
+       "lint",
+       "unit"
+      ]
+     },
+     {
+      "definition_digest": "sha256:fd92f205d0b00cd1ee5220e8c36e1462c3ead769c344c253abd2a2c42397a9e4",
+      "id": "unit",
+      "needs": [
+       "setup"
+      ]
+     },
+     {
+      "definition_digest": "sha256:765b40778d0bac7ad1b431d1a4e056cbab71004e42af8801875e62686a9737f0",
+      "id": "lint",
+      "needs": [
+       "setup"
+      ]
+     },
+     {
+      "definition_digest": "sha256:2edfc585207956d191baffbb525feadaba9d25e9a6d1424ce215c5856b3ced34",
+      "id": "setup",
+      "needs": []
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "evidence": {
+    "build": {
+     "inputs": {
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     }
+    },
+    "deploy": {
+     "inputs": {},
+     "result": {
+      "digest": null,
+      "status": "skipped"
+     }
+    },
+    "lint": {
+     "inputs": {},
+     "result": {
+      "digest": null,
+      "status": "cancelled"
+     }
+    },
+    "notify": {
+     "inputs": {
+      "always": true
+     },
+     "result": {
+      "digest": "sha256:1b16b1df538ba12dc3f97edbb85caa7050d46c148134290feba80f8236c83db9",
+      "status": "neutral"
+     }
+    },
+    "test": {
+     "inputs": {
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:f0e79709fdcffa02f8109d3c2eccbf26d25c74c5d9a4ab2e8f9aca72b4db88cb",
+      "status": "failure"
+     }
+    }
+   },
+   "expect": {
+    "canonical_objects": {
+     "build": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{\"source\":\"sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26\"},\"result\":{\"digest\":\"sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd\",\"id\":\"build\"}}",
+     "deploy": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:5b6deb710fb67d4d2c4cfcf1f6e6276a2c10c55d57f56cdd2c31fe6f5edc0441\",\"sha256:eab5886dbc445e5f7c386b95e3594cd194ade059f00b79f68bbcee60caab1a6f\"],\"inputs\":{},\"result\":{\"digest\":null,\"status\":\"skipped\"},\"step\":{\"definition_digest\":\"sha256:ac42e9b908afad1dd850b07721901b2ba1e66329a4eb44eaf1a01915f606b49e\",\"id\":\"deploy\"}}",
+     "lint": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:c95a359ff34dddd2dbd9848524a5edde64326304755181ed03bf9e507c69f0d8\"],\"inputs\":{},\"result\":{\"digest\":null,\"status\":\"cancelled\"},\"step\":{\"definition_digest\":\"sha256:765b40778d0bac7ad1b431d1a4e056cbab71004e42af8801875e62686a9737f0\",\"id\":\"lint\"}}",
+     "notify": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:0de690df2592f7beaf97aed64c60a58ca9dd60474814a7cc267f8857ebfa06dc\"],\"inputs\":{\"always\":true},\"result\":{\"digest\":\"sha256:1b16b1df538ba12dc3f97edbb85caa7050d46c148134290feba80f8236c83db9\",\"status\":\"neutral\"},\"step\":{\"definition_digest\":\"sha256:71b633fae11bb9faf5ad3c731fdedfa2c6b217183010d50aa2ac62ef70aef294\",\"id\":\"notify\"}}",
+     "test": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:c95a359ff34dddd2dbd9848524a5edde64326304755181ed03bf9e507c69f0d8\"],\"inputs\":{\"tests\":\"sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441\"},\"result\":{\"digest\":\"sha256:f0e79709fdcffa02f8109d3c2eccbf26d25c74c5d9a4ab2e8f9aca72b4db88cb\",\"status\":\"failure\"},\"step\":{\"definition_digest\":\"sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8\",\"id\":\"test\"}}"
+    },
+    "ci_root": "sha256:5d626e33a0808e9fa22b0644aa9422fe21b91a6d7c52e2dba65207c6e6ede0ec",
+    "step_roots": {
+     "build": "sha256:c95a359ff34dddd2dbd9848524a5edde64326304755181ed03bf9e507c69f0d8",
+     "deploy": "sha256:0de690df2592f7beaf97aed64c60a58ca9dd60474814a7cc267f8857ebfa06dc",
+     "lint": "sha256:5b6deb710fb67d4d2c4cfcf1f6e6276a2c10c55d57f56cdd2c31fe6f5edc0441",
+     "notify": "sha256:975e746a6d2c0113eb06d12dc58e7048855227d59b8864e05a3e920c4256be8b",
+     "test": "sha256:eab5886dbc445e5f7c386b95e3594cd194ade059f00b79f68bbcee60caab1a6f"
+    },
+    "template_digest": "sha256:5b14e8d0ef1d46d4877f2a167f821eecc95ee2ca41a1f26c1b64924a140f971c"
+   },
+   "name": "failed_skipped_cancelled",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:765b40778d0bac7ad1b431d1a4e056cbab71004e42af8801875e62686a9737f0",
+      "id": "lint",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:ac42e9b908afad1dd850b07721901b2ba1e66329a4eb44eaf1a01915f606b49e",
+      "id": "deploy",
+      "needs": [
+       "test",
+       "lint"
+      ]
+     },
+     {
+      "definition_digest": "sha256:71b633fae11bb9faf5ad3c731fdedfa2c6b217183010d50aa2ac62ef70aef294",
+      "id": "notify",
+      "needs": [
+       "deploy"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "evidence": {
+    "branch_a": {
+     "inputs": {},
+     "result": {
+      "digest": "sha256:733b94430628a88bc56043208f90105b80a901486558f4c0eb9fa31e248cb590",
+      "status": "success"
+     }
+    },
+    "branch_b": {
+     "inputs": {},
+     "result": {
+      "digest": null,
+      "status": "skipped"
+     }
+    },
+    "decide": {
+     "inputs": {
+      "change_set": "sha256:d0b4ba2311b3e84977dc4bb320fe72cd85426f5cf14b487a4c5352ae3ad8cb37",
+      "policy": "sha256:823412d1eacb67956220e532959f0104603057c88704863ca38e7cd188fda812"
+     },
+     "result": {
+      "digest": "sha256:c5d423d4f1037e80b1fa609c5b559bfe777fd543f6579b8f1932f5d343126b84",
+      "status": "success"
+     }
+    },
+    "done": {
+     "inputs": {},
+     "result": {
+      "digest": "sha256:18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4",
+      "status": "success"
+     }
+    }
+   },
+   "expect": {
+    "canonical_objects": {
+     "branch_a": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:259652059bd123f86aa75432f0db4b9c94042b31bc72224ff0de7647adc6d36b\"],\"inputs\":{},\"result\":{\"digest\":\"sha256:733b94430628a88bc56043208f90105b80a901486558f4c0eb9fa31e248cb590\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:ca6754f9e91dd4464b26fc0e7d40bfe0a21bacd216911007ebfb594404141dfb\",\"id\":\"branch_a\"}}",
+     "branch_b": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:259652059bd123f86aa75432f0db4b9c94042b31bc72224ff0de7647adc6d36b\"],\"inputs\":{},\"result\":{\"digest\":null,\"status\":\"skipped\"},\"step\":{\"definition_digest\":\"sha256:7d3de9b2cdf825d8e11d4b25798ad36a3c7720ec3154957b16f6d73f8a616a21\",\"id\":\"branch_b\"}}",
+     "decide": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{\"change_set\":\"sha256:d0b4ba2311b3e84977dc4bb320fe72cd85426f5cf14b487a4c5352ae3ad8cb37\",\"policy\":\"sha256:823412d1eacb67956220e532959f0104603057c88704863ca38e7cd188fda812\"},\"result\":{\"digest\":\"sha256:c5d423d4f1037e80b1fa609c5b559bfe777fd543f6579b8f1932f5d343126b84\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:2a7605244d0512dec0999a57314efb430e839bf3e73d63f5bc328fb10ed129a5\",\"id\":\"decide\"}}",
+     "done": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[\"sha256:0f99f3959c4004d77d356a5b907ba6f0d2a4ed30fe65a7a0f3c1d0fe55bf776f\",\"sha256:58aef2698648146abe6ae69d8a23303e79f31372d3e57060191ab6ed19ae7c4c\"],\"inputs\":{},\"result\":{\"digest\":\"sha256:18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:d905b339b72b9b6ab8d48911023a302fe179945b8415efae4534c75bc64bcaaa\",\"id\":\"done\"}}"
+    },
+    "ci_root": "sha256:fb09e31b93f26fc650ecf5f0b7e79da0cc2e827a1f19db774f2a259cb104d38a",
+    "step_roots": {
+     "branch_a": "sha256:58aef2698648146abe6ae69d8a23303e79f31372d3e57060191ab6ed19ae7c4c",
+     "branch_b": "sha256:0f99f3959c4004d77d356a5b907ba6f0d2a4ed30fe65a7a0f3c1d0fe55bf776f",
+     "decide": "sha256:259652059bd123f86aa75432f0db4b9c94042b31bc72224ff0de7647adc6d36b",
+     "done": "sha256:02755a0542d582ba6beaac2b242c76c0b57da6d99d0394e8b9a5b1d6a8d71f57"
+    },
+    "template_digest": "sha256:16dfba0ee15bc570a92f695ce3c72a0e4ba7d9e11a15cfc1d5ee0d865129d740"
+   },
+   "name": "dynamic_branch",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:2a7605244d0512dec0999a57314efb430e839bf3e73d63f5bc328fb10ed129a5",
+      "id": "decide",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:ca6754f9e91dd4464b26fc0e7d40bfe0a21bacd216911007ebfb594404141dfb",
+      "id": "branch_a",
+      "needs": [
+       "decide"
+      ]
+     },
+     {
+      "definition_digest": "sha256:7d3de9b2cdf825d8e11d4b25798ad36a3c7720ec3154957b16f6d73f8a616a21",
+      "id": "branch_b",
+      "needs": [
+       "decide"
+      ]
+     },
+     {
+      "definition_digest": "sha256:d905b339b72b9b6ab8d48911023a302fe179945b8415efae4534c75bc64bcaaa",
+      "id": "done",
+      "needs": [
+       "branch_a",
+       "branch_b"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  {
+   "evidence": {
+    "s1": {
+     "inputs": {},
+     "result": {
+      "digest": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "status": "timed_out"
+     }
+    },
+    "s2": {
+     "inputs": {},
+     "result": {
+      "digest": "sha256:d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+      "status": "action_required"
+     }
+    },
+    "s3": {
+     "inputs": {},
+     "result": {
+      "digest": "sha256:4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+      "status": "stale"
+     }
+    },
+    "s4": {
+     "inputs": {
+      "m": 9007199254740991,
+      "n": -9007199254740991
+     },
+     "result": {
+      "digest": "sha256:4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
+      "status": "success"
+     }
+    }
+   },
+   "expect": {
+    "canonical_objects": {
+     "s1": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{},\"result\":{\"digest\":\"sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\",\"status\":\"timed_out\"},\"step\":{\"definition_digest\":\"sha256:1cd48051a3501d3e0830c14fd8c09674e44ef6888fa7d1fc547d93129ec1f9c5\",\"id\":\"s1\"}}",
+     "s2": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{},\"result\":{\"digest\":\"sha256:d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35\",\"status\":\"action_required\"},\"step\":{\"definition_digest\":\"sha256:204b579d70178066a41b93f97f9ee3dd1bd690d9fe327773e856dc7a7d69192c\",\"id\":\"s2\"}}",
+     "s3": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{},\"result\":{\"digest\":\"sha256:4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce\",\"status\":\"stale\"},\"step\":{\"definition_digest\":\"sha256:18eebc518ef036a5a736279261685480f22535e7f1f726a13f8e28dc072b58bc\",\"id\":\"s3\"}}",
+     "s4": "{\"contract\":\"cic-ci-step/1\",\"dependencies\":[],\"inputs\":{\"m\":9007199254740991,\"n\":-9007199254740991},\"result\":{\"digest\":\"sha256:4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a\",\"status\":\"success\"},\"step\":{\"definition_digest\":\"sha256:5066ccaac3f93deb167c0cc370748a56a72be9cf336d9f4c5637d4f87e7e4732\",\"id\":\"s4\"}}"
+    },
+    "ci_root": "sha256:961548067a9d2a839290ad4e7cd8d58173049b75d634b5872bfa237db8f76ec0",
+    "step_roots": {
+     "s1": "sha256:5d179df820d71d87ded19063465283d7fb331d314746d6665e61c3d627e023ac",
+     "s2": "sha256:4fcdd04f506f726bf426fa6b397e66e5ad71d3cef2c9458d1a4f7c1f09c2c9f7",
+     "s3": "sha256:cb7f72c1a5752537d6166e2c34ae2972c6c11ca1a99d1ef9e617057496129173",
+     "s4": "sha256:00db4bfdd35cacaba84dc1d7c41c93117f4276826b6f7f0a87454b8c9af43ba1"
+    },
+    "template_digest": "sha256:90f1ae4a2998af4ef605ef834b320325cb199f6c3211e5cfaacca33879a20c61"
+   },
+   "name": "empty_inputs_all_statuses",
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:1cd48051a3501d3e0830c14fd8c09674e44ef6888fa7d1fc547d93129ec1f9c5",
+      "id": "s1",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:204b579d70178066a41b93f97f9ee3dd1bd690d9fe327773e856dc7a7d69192c",
+      "id": "s2",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:18eebc518ef036a5a736279261685480f22535e7f1f726a13f8e28dc072b58bc",
+      "id": "s3",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:5066ccaac3f93deb167c0cc370748a56a72be9cf336d9f4c5637d4f87e7e4732",
+      "id": "s4",
+      "needs": []
+     }
+    ],
+    "workflow": "wf/main@1"
+   }
+  }
+ ],
+ "profile": "CI step profile v1",
+ "verify_base": {
+  "bundle": {
+   "ci_root": "sha256:dfd4b6d0a30386b1b47c21d748fbfa095617f18317c0470bef21b1791a837ba9",
+   "objects": {
+    "build": {
+     "contract": "cic-ci-step/1",
+     "dependencies": [],
+     "inputs": {
+      "compiler": "sha256:478c8a713b6c3de7fb805d48384ccec64e48f20fcaef3deaeedd414f793f039e",
+      "source": "sha256:25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26"
+     },
+     "result": {
+      "digest": "sha256:51a1f05af85e342e3c849b47d387086476282d5f50dc240c19216d6edfb1eb5a",
+      "status": "success"
+     },
+     "step": {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build"
+     }
+    },
+    "release": {
+     "contract": "cic-ci-step/1",
+     "dependencies": [
+      "sha256:f1b2f93783af07ff48f34c067bdc517e29ce187bd16169e6e374fedaffacf9a0"
+     ],
+     "inputs": {
+      "channel": "stable"
+     },
+     "result": {
+      "digest": "sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3",
+      "status": "success"
+     },
+     "step": {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release"
+     }
+    },
+    "test": {
+     "contract": "cic-ci-step/1",
+     "dependencies": [
+      "sha256:c656d5f8a42cd17cbf47c10d4c2440dcf96083dd3d4c9678cafdd8feda75be22"
+     ],
+     "inputs": {
+      "gate_enabled": true,
+      "mode": "full",
+      "retries": 2,
+      "tests": "sha256:59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+     },
+     "result": {
+      "digest": "sha256:11e221bd1b7fc99544f3f765b0c39dd2786e636c3422d6bec026d1ed03884cac",
+      "status": "success"
+     },
+     "step": {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test"
+     }
+    }
+   },
+   "step_roots": {
+    "build": "sha256:c656d5f8a42cd17cbf47c10d4c2440dcf96083dd3d4c9678cafdd8feda75be22",
+    "release": "sha256:b8422605848f36c40d3cf7f6fa5025edc1e009b7e13b59d4459acb9a1ebcf648",
+    "test": "sha256:f1b2f93783af07ff48f34c067bdc517e29ce187bd16169e6e374fedaffacf9a0"
+   },
+   "template": {
+    "steps": [
+     {
+      "definition_digest": "sha256:665f84cec0e7e19c0c59ba446b79595699b71f8c613c44b19cd32e84b12881fd",
+      "id": "build",
+      "needs": []
+     },
+     {
+      "definition_digest": "sha256:a56f515c0ab6e75c4984ff4894cd930b794bea258d973c65946ac3fc1d1fcea8",
+      "id": "test",
+      "needs": [
+       "build"
+      ]
+     },
+     {
+      "definition_digest": "sha256:117e99c6e0e8cbf3a6256d27b76a1cf11febf0c525a0dafcadf9b5712155208b",
+      "id": "release",
+      "needs": [
+       "test"
+      ]
+     }
+    ],
+    "workflow": "ci"
+   }
+  },
+  "name": "linear"
+ },
+ "version": 1
+}
