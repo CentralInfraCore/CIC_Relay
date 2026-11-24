@@ -3,10 +3,10 @@
   "approvers": [
     "sinkog"
   ],
-  "note": "Exact versions of the tools whose output decides a quality verdict. Values observed in the object-evidence CI run 43701788247 (main 7386565); gremlins: the module version and content hash of the v0.6.0 install (`go version -m`: the binary itself only prints `dev`). A different known version is UNUSABLE; a missing, unknown or unpinned one is UNVERIFIABLE; both reject the measurement. surfaces: the tool set each measuring surface MUST declare; a required tool that is not declared is UNVERIFIABLE (check-tools --surface). Changing this file is a gate-logic change (the planner escalates to FULL) and a toolchain update: on a pull request the pins are read from the BASE branch, and a changed file is accepted only with an approval comment of one of `approvers` (read from the BASE file) bound to the exact head and the exact digest of the new file (CIC_Relay #195).",
+  "note": "Exact versions of the tools whose output decides a quality verdict. Values observed in the object-evidence CI run 43701788247 (main 7386565); gremlins: the module version and content hash of the v0.6.0 install (`go version -m`: the binary itself only prints `dev`). A different known version is UNUSABLE; a missing, unknown or unpinned one is UNVERIFIABLE; both reject the measurement. surfaces: the tool set each measuring surface MUST declare; a required tool that is not declared is UNVERIFIABLE (check-tools --surface). Changing this file is a gate-logic change (the planner escalates to FULL) and a toolchain update: on a pull request the pins are read from the BASE branch, and a changed file is accepted only with an approval comment of one of `approvers` (read from the BASE file) bound to the exact head and the exact digest of the new file (CIC_Relay #195). cargo-llvm-cov 0.9.2 (released 2026-11-20; 0.9.1 before): the runner installs the tool unpinned, the first red run was verify 45342059963 on PR #226; the 0.9.1 and 0.9.2 exports of the same tree were compared before the pin moved.",
   "tools": {
     "c++filt": "GNU c++filt (GNU Binutils for Ubuntu) 2.46",
-    "cargo-llvm-cov": "0.9.1",
+    "cargo-llvm-cov": "0.9.2",
     "cargo-mutants": "27.1.0",
     "go": "go1.26.11",
     "gremlins": "v0.6.0 h1:3G2ROO0I3q4bb5bxElQIUITTuEbl1iOfVYFqunGwrJI=",
