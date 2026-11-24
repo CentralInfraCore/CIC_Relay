@@ -1,0 +1,231 @@
+---
+module: test_tools.test_cidag_independent
+description: 'Tests of the independent implementation of the CI Merkle DAG contract,
+  on the vectors shared with pkg/cidag.
+
+
+  The vectors are the point of agreement between the two implementations: this file
+  proves the Python side meets
+
+  them, and proves that the vector set CAN FAIL: each planted defect in the independent
+  implementation must be
+
+  caught by at least one vector (the seeded pattern of cic-primitive-forms tools/test-evidence/seeded.py).'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: HERE
+  kind: const
+  description: ''
+  references: []
+- name: VECTORS
+  kind: const
+  description: ''
+  references: []
+- name: vectors
+  kind: function
+  decorators:
+  - pytest.fixture
+  description: ''
+  references: []
+  calls:
+  - pytest.fixture
+  - open
+  - ci.parse_strict
+  - f.read
+- name: apply_ops
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - copy.deepcopy
+  - op.get
+- name: kind_of
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - fn
+- name: run_vectors
+  kind: function
+  decorators: []
+  description: Every vector against `mod`; returns the list of vectors it fails (empty
+    for a correct implementation).
+  references: []
+  calls:
+  - kind_of
+  - failed.append
+  - mod.build
+  - decode
+  - apply_ops
+  - mod.canonical
+  - mod.parse_strict
+  - items
+  - type
+- name: test_the_independent_implementation_meets_every_vector
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - run_vectors
+- name: test_vector_set_is_not_trivial
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - len
+- name: test_canonical_form_equals_python_json_on_the_profile
+  kind: function
+  decorators: []
+  description: On the profile the bytes equal json.dumps(sort_keys=True, separators=(",",
+    ":")) (the release compiler's form).
+  references: []
+  calls:
+  - values
+  - ci.canonical
+  - encode
+  - json.dumps
+  - ci.build
+- name: test_worked_example_is_reproducible_with_the_shell
+  kind: function
+  decorators:
+  - pytest.mark.skipif
+  description: 'The `single` case, hashed by coreutils from the canonical text: the
+    oracle is not checking itself.'
+  references: []
+  calls:
+  - pytest.mark.skipif
+  - next
+  - decode
+  - canon.startswith
+  - shutil.which
+  - stdout.split
+  - subprocess.run
+  - canon.encode
+- name: test_order_independence
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - copy.deepcopy
+  - reverse
+  - ci.build
+  - dict
+  - reversed
+  - list
+  - items
+- name: test_domain_separation
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - len
+  - ci.digest
+- name: test_depth_limit_is_exact
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - ci.parse_strict
+  - pytest.raises
+- name: test_profile_refusals
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - object
+  - ci.canonical
+  - pytest.raises
+- name: ORIG
+  kind: const
+  description: ''
+  references: []
+- name: _no_domain
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - hexdigest
+  - hashlib.sha256
+  - ci.canonical
+- name: _reversed_keys_ser
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - isinstance
+  - join
+  - _reversed_keys_ser
+  - reversed
+  - list
+- name: _build_ignoring_needs
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - copy.deepcopy
+  - dict
+- name: _verify_skipping
+  kind: function
+  decorators: []
+  description: A verifier that is the real one except that it does not compare the
+    named parts (planted defect).
+  references: []
+  calls:
+  - sorted
+  - ci.topo_order
+  - ci.CidagError
+  - isinstance
+  - set
+- name: _Anything
+  kind: class
+  decorators: []
+  description: ''
+  implements: []
+  references: []
+- name: __contains__
+  kind: method
+  receiver: _Anything
+  decorators: []
+  description: ''
+  references: []
+  calls: []
+- name: _evidence_ignoring_extra
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - evidence.items
+- name: SEEDED
+  kind: const
+  description: ''
+  references: []
+- name: test_the_vectors_catch_a_planted_defect
+  kind: function
+  decorators:
+  - pytest.mark.parametrize
+  description: ''
+  references: []
+  calls:
+  - pytest.mark.parametrize
+  - sorted
+  - getattr
+  - patches.items
+  - run_vectors
+  - saved.items
+  - setattr
