@@ -1,0 +1,44 @@
+---
+package: cidag
+description: ''
+tags:
+- parser
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ParseStrict
+  kind: func
+  description: 'ParseStrict reads one JSON document into the generic model the package
+    works on (nil, bool, int64, string, []any, map[string]any) and refuses what two
+    correct readers could read differently: a duplicate member name, any number that
+    is not an integer within int64, a constant (NaN, Infinity), trailing data and
+    nesting deeper than MaxDepth. Every refusal is of class PARSE.'
+  references: []
+  calls:
+  - Token
+  - UseNumber
+- name: parseValue
+  kind: func
+  description: parseValue reads one JSON value, refusing nesting deeper than MaxDepth.
+  references: []
+  calls: []
+- name: parseObject
+  kind: func
+  description: parseObject reads the members of an object and refuses a duplicate
+    member name.
+  references: []
+  calls: []
+- name: parseArray
+  kind: func
+  description: parseArray reads the elements of an array.
+  references: []
+  calls: []
+- name: parseInteger
+  kind: func
+  description: parseInteger reads a number that must be an integer literal within
+    int64 (the minimum, whose magnitude has no int64 counterpart, is refused too).
+  references: []
+  calls:
+  - MatchString
