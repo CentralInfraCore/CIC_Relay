@@ -1,0 +1,288 @@
+---
+module: test_tools.cidag_independent
+description: 'Independent recomputation of the CIC CI Merkle DAG (contracts cic-ci-step/1,
+  cic-ci-root/1).
+
+
+  This module shares NO code with pkg/cidag (Go): it is a second implementation of
+  the same contract,
+
+  written from docs/hu/CI-MERKLE-DAG-CONTRACT.md, standard library only. Both implementations
+  read the
+
+  same vectors (pkg/cidag/testdata/vectors.json) and must agree on every canonical
+  byte, every root and
+
+  every refusal class.
+
+
+  The canonical form is the PROFILE of the CIC Canonical Object Encoding used for
+  CI step objects: only
+
+  strings that never need an escape (so Go''s json.Marshal escaping, which the encoding
+  inherits, never
+
+  applies), integers, booleans and null; object keys sorted by their UTF-8 bytes;
+  no white space. For that
+
+  profile the bytes are identical to Go pkg/canonicaljson.ToJSON, to Python json.dumps(sort_keys=True,
+
+  separators=(",", ":")) and to RFC 8785.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: STEP_CONTRACT
+  kind: const
+  description: ''
+  references: []
+- name: ROOT_CONTRACT
+  kind: const
+  description: ''
+  references: []
+- name: TEMPLATE_CONTRACT
+  kind: const
+  description: ''
+  references: []
+- name: STEP_PREFIX
+  kind: const
+  description: ''
+  references: []
+- name: TEMPLATE_PREFIX
+  kind: const
+  description: ''
+  references: []
+- name: ROOT_PREFIX
+  kind: const
+  description: ''
+  references: []
+- name: STATUSES
+  kind: const
+  description: ''
+  references: []
+- name: NULL_DIGEST_STATUSES
+  kind: const
+  description: ''
+  references: []
+- name: ID_RE
+  kind: const
+  description: ''
+  references: []
+- name: DIGEST_RE
+  kind: const
+  description: ''
+  references: []
+- name: INT_RE
+  kind: const
+  description: ''
+  references: []
+- name: MAX_INT
+  kind: const
+  description: ''
+  references: []
+- name: MAX_PARAM
+  kind: const
+  description: ''
+  references: []
+- name: MAX_DEPTH
+  kind: const
+  description: ''
+  references: []
+- name: PARAM_CHARS
+  kind: const
+  description: ''
+  references: []
+- name: CidagError
+  kind: class
+  decorators: []
+  description: A refusal with a stable class (`kind`) that the Go implementation names
+    the same way.
+  implements:
+  - Exception
+  references: []
+- name: __init__
+  kind: method
+  receiver: CidagError
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - __init__
+  - super
+- name: _fail
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - CidagError
+- name: parse_strict
+  kind: function
+  decorators: []
+  description: Parse JSON refusing duplicate member names, any non-integer number
+    and any constant (NaN, Infinity).
+  references: []
+  calls:
+  - _fail
+  - int
+  - json.loads
+  - _depth
+  - INT_RE.match
+  - abs
+  - str
+- name: _depth
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - isinstance
+  - max
+  - _depth
+  - v.values
+- name: _is_int
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - isinstance
+- name: _ser
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _is_int
+  - isinstance
+  - _fail
+  - str
+  - abs
+  - all
+  - join
+  - type
+  - _ser
+  - sorted
+  - s.encode
+- name: canonical
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - encode
+  - _ser
+- name: digest
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - hexdigest
+  - hashlib.sha256
+  - canonical
+- name: _id
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _fail
+  - isinstance
+  - ID_RE.match
+- name: _digest
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _fail
+  - isinstance
+  - DIGEST_RE.match
+- name: check_template
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - _id
+  - _fail
+  - _digest
+  - set
+  - isinstance
+  - seen.add
+- name: topo_order
+  kind: function
+  decorators: []
+  description: 'Kahn''s algorithm, ready steps taken in ascending id order: one deterministic
+    order or TEMPLATE_CYCLE.'
+  references: []
+  calls:
+  - byid.items
+  - sorted
+  - len
+  - ready.pop
+  - out.append
+  - ready.sort
+  - _fail
+  - append
+  - indeg.items
+  - ready.append
+- name: check_evidence
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - sorted
+  - isinstance
+  - _fail
+  - _is_int
+  - _digest
+  - set
+  - all
+  - ID_RE.match
+  - abs
+  - len
+- name: template_object
+  kind: function
+  decorators: []
+  description: ''
+  references: []
+  calls:
+  - sorted
+- name: build
+  kind: function
+  decorators: []
+  description: Returns {"objects", "step_roots", "template_digest", "ci_root"} or
+    raises CidagError.
+  references: []
+  calls:
+  - check_template
+  - topo_order
+  - check_evidence
+  - digest
+  - template_object
+  - dict
+  - sorted
+- name: verify
+  kind: function
+  decorators: []
+  description: 'Recompute everything from a published bundle {template, objects, step_roots,
+    ci_root}; the published
+
+    objects are never trusted: only their inputs and result are read, every other
+    member is recomputed and
+
+    compared.'
+  references: []
+  calls:
+  - check_template
+  - sorted
+  - build
+  - topo_order
+  - _fail
+  - isinstance
+  - set
