@@ -1,0 +1,89 @@
+---
+package: main
+description: 'Command cidag builds and verifies the Merkle DAG of a CI process (docs/hu/CI-MERKLE-DAG-CONTRACT.md).
+  cidag build [FILE] {"template":..., "evidence":...} -> the bundle (objects, roots,
+  CI root) cidag verify [FILE] a bundle -> "OK <ci_root>", or the refusal and its
+  class (exit 1) cidag template WORKFLOW [ID] the template of a GitHub Actions workflow
+  file (jobs and `needs`) FILE is a path, or "-" or nothing for standard input. Input
+  is read by the strict reader (a duplicate member name, a non-integer number or a
+  nesting deeper than 64 is refused). Exit status: 0 success, 1 refusal of the content,
+  2 usage or I/O error. It reads and computes only: it signs nothing, publishes nothing,
+  writes no file.'
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: main
+  kind: func
+  description: main runs RunFunc with the process arguments and exits with its status.
+  references: []
+  calls:
+  - RunFunc
+- name: Run
+  kind: func
+  description: Run executes one command and returns the exit status.
+  references: []
+  calls: []
+- name: readInput
+  kind: func
+  description: readInput reads the named file, or standard input for no argument or
+    "-".
+  references: []
+  calls: []
+- name: refuse
+  kind: func
+  description: refuse prints a refusal of the content (exit 1) or any other error
+    (exit 2).
+  references:
+  - cidag.Error
+  calls: []
+- name: runBuild
+  kind: func
+  description: runBuild reads {template, evidence} and prints the bundle with the
+    step roots and the CI root.
+  references:
+  - cidag.ParseStrict
+  - cidag.Error
+  - cidag.KindBundleShape
+  - cidag.Build
+  - cidag.Canonical
+  calls:
+  - cidag.Build
+  - cidag.Canonical
+  - cidag.ParseStrict
+- name: runVerify
+  kind: func
+  description: runVerify recomputes a published bundle and prints its CI root, or
+    the refusal.
+  references:
+  - cidag.ParseStrict
+  - cidag.Verify
+  calls:
+  - cidag.ParseStrict
+  - cidag.Verify
+- name: runTemplate
+  kind: func
+  description: runTemplate prints the template of a GitHub Actions workflow file.
+  references:
+  - cidag.TemplateFromWorkflow
+  - cidag.Canonical
+  calls:
+  - cidag.Canonical
+  - cidag.TemplateFromWorkflow
+- name: RunFunc
+  kind: var
+  description: RunFunc is the entry point; tests replace it (the pattern of tools/canonicalize).
+  references: []
+- name: osExit
+  kind: var
+  description: osExit is replaceable in tests so that main can be exercised without
+    ending the process.
+  references: []
+- name: usage
+  kind: const
+  description: usage is printed for a missing or unknown command.
+  references: []
