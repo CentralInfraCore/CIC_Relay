@@ -1,0 +1,54 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: o1VectorCase
+  kind: struct
+  description: o1VectorCase is one envelope vector.
+  implements: []
+  references: []
+- name: loadO1Vectors
+  kind: func
+  description: loadO1Vectors reads the provisional vector file.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: b64
+  kind: func
+  description: b64 decodes a vector field.
+  references:
+  - require.NoError
+  calls:
+  - DecodeString
+  - require.NoError
+- name: TestO1EnvelopeVectors_Provisional
+  kind: func
+  description: Every vector gives its expected result code (nil = accepted), with
+    the vectors' own executed representation.
+  references:
+  - require.Len
+  - require.NoError
+  - require.Error
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Error
+  - require.Len
+  - require.NoError
+- name: TestO1EnvelopeVectors_WabinExecutedRepresentation
+  kind: func
+  description: 'Measures the reference executed representation against the relay''s
+    own transformation (wasm-canon/v1, wabin re-encode). Not an assertion about the
+    vectors'' correctness: it records what the relay derives from wasm_raw.'
+  references:
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  calls:
+  - cabinet.NewModuleDescriptor

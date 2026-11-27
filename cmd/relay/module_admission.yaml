@@ -1,0 +1,266 @@
+---
+package: main
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: admissionError
+  kind: struct
+  description: admissionError is a rejection on the envelope path with its contract
+    result code.
+  implements: []
+  references: []
+- name: moduleReleaseEnvelope
+  kind: struct
+  description: moduleReleaseEnvelope is the wire form of the envelope (schemas/module-release-envelope.schema.json).
+  implements: []
+  references: []
+- name: envelopeInput
+  kind: struct
+  description: 'envelopeInput is everything the envelope check looks at, taken from
+    the buffers the loader already holds: nothing here is read from disk again.'
+  implements: []
+  references: []
+- name: verifiedEnvelope
+  kind: struct
+  description: verifiedEnvelope is the outcome of a successful envelope check.
+  implements: []
+  references: []
+- name: Error
+  kind: method
+  receiver: admissionError
+  description: Error renders the code first so that logs and wrapped errors keep the
+    named reason visible.
+  references: []
+  calls: []
+- name: reject
+  kind: func
+  description: reject builds an admissionError.
+  references: []
+  calls: []
+- name: admissionCode
+  kind: func
+  description: admissionCode returns the result code carried by err, or "" if err
+    is not an admission rejection.
+  references: []
+  calls: []
+- name: signedBytes
+  kind: method
+  receiver: moduleReleaseEnvelope
+  description: 'signedBytes is the byte-exact CICMODENVv1 signed domain: the domain
+    line, then the six fields in fixed order, LF terminated. The values are validated
+    (validateEnvelopeForm) before this is called, so none contains a line break.'
+  references: []
+  calls: []
+- name: sha256Ref
+  kind: func
+  description: sha256Ref returns "sha256:<lower hex>" of b.
+  references: []
+  calls: []
+- name: parseEnvelope
+  kind: func
+  description: 'parseEnvelope decodes the envelope file strictly: one JSON object,
+    no unknown field, no trailing data. The version is checked first (an unknown version
+    is ENVELOPE_VERSION, not a form error), then the form of every field.'
+  references: []
+  calls:
+  - Decode
+  - DisallowUnknownFields
+  - Token
+- name: validateEnvelopeForm
+  kind: func
+  description: 'validateEnvelopeForm checks every field against the schema: kind,
+    version, module_id form, the four digests in the sha256:<64 lower hex> form, and
+    the algorithm allowlist.'
+  references: []
+  calls:
+  - MatchString
+- name: decodeSignatureFile
+  kind: func
+  description: decodeSignatureFile accepts exactly one line of RFC 4648 section 4
+    standard base64 (padded, no whitespace) ended by one LF (ENV-02); anything else
+    is SIG_ENCODING.
+  references: []
+  calls:
+  - DecodeString
+  - EncodeToString
+  - Strict
+- name: verifyEnvelope
+  kind: func
+  description: 'verifyEnvelope runs V1, V2, V4 (digests) and V5 of the contract in
+    the reference order: version, form, algorithm against the key type, key_id against
+    the SPKI, signature encoding, signature, raw wasm digest, executed wasm digest,
+    manifest digest. It is pure: the signer authority (V2b), the certificate chain
+    (V3) and buildHash are the loader''s.'
+  references: []
+  calls: []
+- name: signerAuthorized
+  kind: func
+  description: signerAuthorized reports whether the operator's pinned authority bindings
+    grant keyID the module:sign role. The key's presence in a certificate, even a
+    verified one, is not an authority (V2b).
+  references: []
+  calls: []
+- name: admitEnvelope
+  kind: func
+  description: 'admitEnvelope is the loader''s full envelope admission for a certificate-verified
+    module: the pure envelope check (verifyEnvelope), then the signer authority from
+    the operator''s pinned bindings (V2b), the module identity, and the equality chain
+    sha256(raw) = envelope.wasm_sha256 = wasmDigest = metadata.buildHash (V4, verifyBuildHash).'
+  references: []
+  calls: []
+- name: importsCICFlow
+  kind: func
+  description: importsCICFlow reports whether the release manifest declares a cic-flow
+    import (V6).
+  references: []
+  calls: []
+- name: readOptional
+  kind: func
+  description: readOptional reads one companion file; a missing file is (nil, nil),
+    an unreadable one is an error.
+  references: []
+  calls: []
+- name: signatureMaterialPresent
+  kind: func
+  description: signatureMaterialPresent reports whether an envelope or a .sig exists
+    beside the module manifest.
+  references: []
+  calls: []
+- name: requiresAuthentication
+  kind: func
+  description: 'requiresAuthentication reports whether the V6 rule applies: everywhere
+    except an explicit dev trust mode.'
+  references: []
+  calls: []
+- name: admitModuleArtifact
+  kind: func
+  description: 'admitModuleArtifact decides the trust state of a module whose signer
+    certificate already verified against the trust store (V3, the #155 path). It is
+    given the buffers loadModule read once: the manifest, the raw wasm and the executed
+    wasm of the descriptor built from it. - envelope and .sig both present: V1-V5
+    and V2b must all hold, else the module is rejected with the named code (a present
+    signature always has to verify, in every mode). Then the CICSourceCA provenance
+    decides between authenticated and transitional. - exactly one of them present:
+    ENVELOPE_MISSING. - neither: transitional (the pre-#162 path). A module that is
+    not authenticated never gets a capability; in prod one that imports cic-flow is
+    rejected (V6, MODULE_REJECTED) instead of being loaded without its capability.'
+  references:
+  - logrus.Entry
+  - logrus.Entry.WithError
+  calls:
+  - Warn
+  - logrus.Entry.WithError
+- name: envDigestRE
+  kind: var
+  description: 'envDigestRE is the digest form of the envelope: sha256: and 64 lowercase
+    hex.'
+  references: []
+- name: envModuleIDRE
+  kind: var
+  description: 'envModuleIDRE is the module_id form: name@semver.'
+  references: []
+- name: codeEnvelopeMissing
+  kind: const
+  description: 'codeEnvelopeMissing: the envelope or its .sig is missing while the
+    other is present.'
+  references: []
+- name: codeEnvelopeInvalid
+  kind: const
+  description: 'codeEnvelopeInvalid: the envelope is not a schema-valid ModuleReleaseEnvelope,
+    or names another module.'
+  references: []
+- name: codeEnvelopeVersion
+  kind: const
+  description: 'codeEnvelopeVersion: envelope_version is not 1.'
+  references: []
+- name: codeAlgMismatch
+  kind: const
+  description: 'codeAlgMismatch: signer.alg does not match the certificate key type.'
+  references: []
+- name: codeKeyMismatch
+  kind: const
+  description: 'codeKeyMismatch: signer.key_id is not sha256 of the certificate''s
+    SubjectPublicKeyInfo.'
+  references: []
+- name: codeSigEncoding
+  kind: const
+  description: 'codeSigEncoding: the .sig file is not one line of canonical standard
+    base64 ended by LF.'
+  references: []
+- name: codeSignatureInvalid
+  kind: const
+  description: 'codeSignatureInvalid: the signature does not verify over the CICMODENVv1
+    signed bytes.'
+  references: []
+- name: codeSignerNotAuthorized
+  kind: const
+  description: 'codeSignerNotAuthorized: the signer key holds no module:sign authority
+    in the pinned bindings (V2b).'
+  references: []
+- name: codeWasmDigestMismatch
+  kind: const
+  description: 'codeWasmDigestMismatch: the raw wasm is not the one the manifest,
+    buildHash or envelope names.'
+  references: []
+- name: codeExecutedDigestMismatch
+  kind: const
+  description: 'codeExecutedDigestMismatch: the executed (stripped) wasm is not the
+    one the envelope names.'
+  references: []
+- name: codeManifestDigestMismatch
+  kind: const
+  description: 'codeManifestDigestMismatch: the release manifest bytes are not the
+    ones the envelope names.'
+  references: []
+- name: codeModuleRejected
+  kind: const
+  description: 'codeModuleRejected: a module that must be authenticated is not (V6),
+    or carries signature material without a certificate.'
+  references: []
+- name: trustAuthenticated
+  kind: const
+  description: 'trustAuthenticated: V1-V7 hold: the only state a capability is bound
+    in.'
+  references: []
+- name: trustTransitional
+  kind: const
+  description: 'trustTransitional: certificate-verified, no verified envelope (or
+    no provenance): no capability.'
+  references: []
+- name: trustDev
+  kind: const
+  description: 'trustDev: unsigned, admitted by the explicit dev opt-in: no capability,
+    no trusted claim.'
+  references: []
+- name: envelopeDomain
+  kind: const
+  description: envelopeDomain is the domain-separation line of the signed bytes; it
+    also names the transformation contract wasm-canon/v1 (the relay's existing custom-section
+    strip, core/cabinet stripWasmModuleFunc).
+  references: []
+- name: moduleSignRole
+  kind: const
+  description: moduleSignRole is the authority a signer key must hold in the operator's
+    pinned authority bindings (V2b).
+  references: []
+- name: algECDSAP256
+  kind: const
+  description: 'algECDSAP256: ECDSA P-256 over SHA-256 of the signed bytes, ASN.1
+    DER signature.'
+  references: []
+- name: algEd25519
+  kind: const
+  description: 'algEd25519: pure Ed25519 over the signed bytes, 64-byte signature.'
+  references: []
+- name: envelopeSuffix
+  kind: const
+  description: 'envelopeSuffix: the envelope file beside <module>.yaml.'
+  references: []
+- name: signatureSuffix
+  kind: const
+  description: 'signatureSuffix: the detached signature of the envelope.'
+  references: []

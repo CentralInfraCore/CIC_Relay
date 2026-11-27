@@ -45,10 +45,10 @@ var stripWasmModuleFunc = func(rawData []byte) ([]byte, error) {
 	return encodedBytes, nil
 }
 
-// SetStripWasmModuleFunc allows overriding the default WASM stripping function for testing purposes.
-func SetStripWasmModuleFunc(f func([]byte) ([]byte, error)) {
-	stripWasmModuleFunc = f
-}
+// The transformation is the executed-identity contract wasm-canon/v1 (#162 5a): the relay admits a module only if
+// sha256 of its output equals the envelope's executed_wasm_sha256. Nothing in a production build can replace it: the
+// only exported override, SetStripWasmModuleFunc, exists solely under the cic_test_seams build tag
+// (strip_seam_testhook.go), and inside this package only tests assign stripWasmModuleFunc.
 
 // metaForChecksum is a helper struct to select only the non-volatile fields from BaseBlock for checksum calculation.
 type metaForChecksum struct {

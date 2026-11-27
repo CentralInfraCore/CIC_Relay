@@ -14,7 +14,9 @@ objects:
   kind: func
   description: moduleFSWith builds a single-module fstest.MapFS whose project.yaml
     carries the given abi/capability_manifest body, signed with the valid module ee
-    cert so it passes PKI verification in loadModule.
+    cert so it passes PKI verification in loadModule. The module ID is <name>@1.0.0
+    and the manifest carries metadata.buildHash; addEnvelope makes it an authenticated
+    release.
   references:
   - require.NoError
   calls:
@@ -45,32 +47,41 @@ objects:
   calls: []
 - name: TestLoadModule_BindsCICFlowCapability
   kind: func
-  description: A verified module that declares cic-flow imports + a matching manifest
-    has its capability bound into the registry at load (the load → hook → register
-    path).
+  description: 'An authenticated module (#162: envelope, authorised signer, digests,
+    provenance) that declares cic-flow imports and a matching manifest has its capability
+    bound at load under (module_id, envelope_digest), and the grant becomes active
+    once the module is stored.'
   references:
   - require.NoError
   - require.True
   - require.Len
   - assert.Equal
+  - assert.True
   calls:
   - assert.Equal
+  - assert.True
   - require.Len
   - require.NoError
   - require.True
 - name: TestLoadModule_CICFlow_FailClosedWithoutSourceCA
   kind: func
-  description: Without the CICSourceCA provenance anchor, a cic-flow module still
-    loads but gets no capability — fail-closed (R3b).
+  description: 'Without the CICSourceCA provenance anchor, an enveloped cic-flow module
+    is not authenticated: in dev it loads as transitional with no capability; in prod
+    it is rejected (V6, MODULE_REJECTED), not loaded without its capability.'
   references:
   - require.NoError
+  - require.Error
+  - assert.Equal
   - assert.False
   calls:
+  - Error
+  - assert.Equal
   - assert.False
+  - require.Error
   - require.NoError
 - name: TestLoadModule_RejectsOverDeclaredCICFlow
   kind: func
-  description: A verified module that over-declares its cic-flow imports (imports
+  description: An authenticated module that over-declares its cic-flow imports (imports
     sign but declares no sign secret) is rejected at load — fail-closed.
   references:
   - require.Error
@@ -81,3 +92,7 @@ objects:
   - assert.Contains
   - assert.False
   - require.Error
+- name: ociFlowManifest
+  kind: const
+  description: ''
+  references: []

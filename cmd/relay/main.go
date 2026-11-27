@@ -782,6 +782,10 @@ func main() {
 	if err := loadProvenanceAnchors(pkiAssets, logger); err != nil {
 		logger.WithError(err).Fatal("FATAL: cic-flow trust anchor load failed")
 	}
+	// #162 V2b: the pinned module-sign authority bindings. Absent → no envelope is authenticated (fail-closed).
+	if err := loadModuleSignAuthorities(pkiAssets, logger); err != nil {
+		logger.WithError(err).Fatal("FATAL: module-sign authority load failed")
+	}
 
 	// M34+M36: build context for Merkle-root verification hash.
 	// ToolchainDigest: sha256 of the Go runtime version string (stable, no external dep).

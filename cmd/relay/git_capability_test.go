@@ -218,6 +218,9 @@ func gitModuleFSWith(t *testing.T, wasm []byte, manifest string) (fstest.MapFS, 
 		fsys["m.yaml"] = &fstest.MapFile{Data: yamlContent}
 		fsys["m.wasm"] = &fstest.MapFile{Data: wasm}
 	}
+	// A released module: the envelope and its signature by the test module signer (#162), so that a load with
+	// loadedPKIWithSource authenticates it and binds its capability.
+	addEnvelope(t, fsys, "m.yaml", testModuleSigner(t), nil)
 	return fsys, yamlContent
 }
 
@@ -242,7 +245,7 @@ func TestGitGrant_FollowsTheVerifiedArtifactAndTheRunningInstance(t *testing.T) 
 	reg := newCICFlowRegistry(nil, &stubDoer{})
 	defer hooks(reg)()
 	svc := newCabinetForTest(t)
-	const id = "gitmod@1.0"
+	const id = "gitmod@1.0.0"
 	status := gitAuthRequest{RepoID: "infra"}
 
 	fs1, y1 := gitModuleFS(t, nil)
@@ -251,8 +254,8 @@ func TestGitGrant_FollowsTheVerifiedArtifactAndTheRunningInstance(t *testing.T) 
 	require.NoError(t, err)
 	art1 := d1.Checksum()
 
-	assert.Error(t, reg.authorizeGit(instUnder(id, "never-stored", string(y1)), "status", status), "an instance of some other artifact: denied")
-	assert.NoError(t, reg.authorizeGit(instUnder(id, art1, string(y1)), "status", status), "an instance of the verified artifact: allowed")
+	assert.Error(t, reg.authorizeGit(instOf(t, id, "never-stored", fs1), "status", status), "an instance of some other artifact: denied")
+	assert.NoError(t, reg.authorizeGit(instOf(t, id, art1, fs1), "status", status), "an instance of the verified artifact: allowed")
 	g := reg.git[id]
 	assert.NotEmpty(t, g.wasmDigest)
 	assert.NotEmpty(t, g.manifestDigest)
@@ -264,16 +267,16 @@ func TestGitGrant_FollowsTheVerifiedArtifactAndTheRunningInstance(t *testing.T) 
 	d2, err := svc.GetModule(id)
 	require.NoError(t, err)
 	require.NotEqual(t, art1, d2.Checksum(), "a different binary is a different artifact")
-	assert.Error(t, reg.authorizeGit(instUnder(id, art1, string(y1)), "status", status),
+	assert.Error(t, reg.authorizeGit(instOf(t, id, art1, fs1), "status", status),
 		"the instance that is still running the old artifact must not use the new artifact's grant")
-	assert.NoError(t, reg.authorizeGit(instUnder(id, d2.Checksum(), string(y2)), "status", status), "a new instance of the new artifact is granted")
+	assert.NoError(t, reg.authorizeGit(instOf(t, id, d2.Checksum(), fs2), "status", status), "a new instance of the new artifact is granted")
 
 	// The same ID loads again without the provenance anchor: it loads, but is granted nothing.
-	loadGit(t, svc, fs1, y1, buildLoadedPKIAssets(t))
-	assert.Error(t, reg.authorizeGit(instUnder(id, d2.Checksum(), string(y2)), "status", status), "an unverified reload must not keep the earlier grant")
+	loadGit(t, svc, fs1, y1, loadedPKIWithoutSource(t))
+	assert.Error(t, reg.authorizeGit(instOf(t, id, d2.Checksum(), fs2), "status", status), "an unverified reload must not keep the earlier grant")
 	d3, err := svc.GetModule(id)
 	require.NoError(t, err)
-	assert.Error(t, reg.authorizeGit(instUnder(id, d3.Checksum(), string(y1)), "status", status),
+	assert.Error(t, reg.authorizeGit(instOf(t, id, d3.Checksum(), fs1), "status", status),
 		"the unverified artifact must not inherit the earlier grant even once it is stored and running")
 }
 

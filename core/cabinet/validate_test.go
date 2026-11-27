@@ -35,7 +35,7 @@ func TestValidateAndChecksum(t *testing.T) {
 	// Save and restore original function to prevent test pollution
 	originalStripFunc := stripWasmModuleFunc
 	t.Cleanup(func() {
-		SetStripWasmModuleFunc(originalStripFunc)
+		stripWasmModuleFunc = originalStripFunc
 		canonicaljson.SetToJSONMock(nil)
 	})
 
@@ -151,14 +151,14 @@ func TestValidateAndChecksum(t *testing.T) {
 	t.Run("WASM module canonicalization error should be propagated", func(t *testing.T) {
 		originalFunc := stripWasmModuleFunc
 		t.Cleanup(func() {
-			SetStripWasmModuleFunc(originalFunc)
+			stripWasmModuleFunc = originalFunc
 		})
 
 		meta := &BaseBlock{Name: "test-wasm-error", Version: "1.0"}
 		rawWasmData := []byte("some raw wasm data")
 
 		// Temporarily override the stripWasmModuleFunc to return an error
-		SetStripWasmModuleFunc(func(rawData []byte) ([]byte, error) {
+		stripWasmModuleFunc = (func(rawData []byte) ([]byte, error) {
 			return nil, errors.New("wasm stripping failed")
 		})
 
