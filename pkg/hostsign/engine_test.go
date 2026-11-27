@@ -209,6 +209,33 @@ func TestAC_SS03_ReferenceCases(t *testing.T) {
 	}
 }
 
+// SS-03 step 6 is an EXACT match of the substituted template, not a prefix or a normalisation.
+func TestAC_SS03_PathExactness(t *testing.T) {
+	good := "/20160918/vcns/" + resA
+	for name, path := range map[string]string{
+		"suffix segment": good + "/actions",
+		"trailing slash": good + "/",
+		"suffix text":    good + "x",
+		"prefix dropped": "/vcns/" + resA,
+		"uppercase":      strings.ToUpper(good),
+		"backslash":      "/20160918/vcns\\" + resA,
+		"double slash":   "/20160918//vcns/" + resA,
+		"encoded slash":  "/20160918/vcns%2f" + resA,
+		"encoded dot":    "/20160918/vcns/%2E%2E/" + resA,
+		"dot segment":    "/20160918/./vcns/" + resA,
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := newRig(t, nil)
+			req := baseReq()
+			sub(req, "request")["path"] = path
+			resp, _ := r.do(t, req)
+			require.NotNil(t, resp.Denial, "must be refused")
+			assert.Equal(t, CodePolicyPath, resp.Denial.Code)
+			r.assertNothingLeft(t)
+		})
+	}
+}
+
 // The six SS-03 steps are checked in a fixed order: when several are violated the first one wins.
 func TestAC_SS03_StepOrder(t *testing.T) {
 	r := newRig(t, nil)
