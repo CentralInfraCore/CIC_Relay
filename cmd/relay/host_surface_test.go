@@ -65,6 +65,7 @@ var expectedHostSurface = map[string]map[string]string{
 	"cic-flow": {
 		"sign":    classCICFlowCapability,
 		"actuate": classCICFlowCapability,
+		"send":    classCICFlowCapability, // O-1 WP-04: host-side sign+send; same per-module grant, no grant = denied
 	},
 	"wasi_snapshot_preview1": wasiClasses(),
 }

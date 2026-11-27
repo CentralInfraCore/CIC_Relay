@@ -285,6 +285,19 @@ func (p *moduleProject) gitImports() map[string]bool {
 // at call time.
 func (p *moduleProject) checkImportsWithinManifest() error {
 	imports := p.cicFlowImports()
+	if imports["send"] {
+		// send is the host-side sign+send capability: the guest must not also hold the raw primitives,
+		// or it could build its own Authorization header around the host's back.
+		if imports["sign"] || imports["actuate"] {
+			return fmt.Errorf("module imports cic-flow.send together with cic-flow.sign/actuate: a send module may not import the raw primitives")
+		}
+		if !p.CapabilityManifest.grantsSign() {
+			return fmt.Errorf("module imports cic-flow.send but declares no secrets entry with ops:[sign]")
+		}
+		if len(p.CapabilityManifest.Egress) == 0 {
+			return fmt.Errorf("module imports cic-flow.send but declares no egress")
+		}
+	}
 	if imports["sign"] && !p.CapabilityManifest.grantsSign() {
 		return fmt.Errorf("module imports cic-flow.sign but declares no secrets entry with ops:[sign]")
 	}

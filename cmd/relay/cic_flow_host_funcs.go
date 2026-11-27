@@ -13,6 +13,8 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+
+	"centralrelay/pkg/hostsign"
 )
 
 // cic-flow is the decomposed, guest-facing, pure-Go counterpart of the FFI
@@ -50,9 +52,10 @@ type httpDoer interface {
 // error, and an empty egress set denies every `actuate`. Real deps are bound
 // per-module from the signed capability manifest once R3 lands.
 type cicFlowDeps struct {
-	sign   signer       // Vault Transit signer; nil → sign returns a typed error
-	doer   httpDoer     // egress transport; nil → http.DefaultClient
-	egress egressPolicy // per-module egress policy (host/method/path/port); empty → deny all
+	sign   signer           // Vault Transit signer; nil → sign returns a typed error
+	doer   httpDoer         // egress transport; nil → http.DefaultClient
+	egress egressPolicy     // per-module egress policy (host/method/path/port); empty → deny all
+	send   *hostsign.Engine // cic-flow.send engine; nil → send is refused. Set INSTEAD of sign/egress for a send module.
 }
 
 // makeCICFlowHostSetupFn returns a HostSetupFn that registers the "cic-flow"
@@ -86,6 +89,14 @@ func registerCICFlowHostFunctions(ctx context.Context, r wazero.Runtime, reg *ci
 		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
 		WithResultNames("n").
 		Export("actuate")
+
+	// send: the structured sign+send capability (O-1 WP-04). The host validates the target against the
+	// operator policy, signs and sends; the guest never receives a signature or an Authorization header.
+	b.NewFunctionBuilder().
+		WithFunc(perModule(reg, makeSendFn)).
+		WithParameterNames("req_ptr", "req_len", "out_ptr", "out_len").
+		WithResultNames("n").
+		Export("send")
 
 	_, err := b.Instantiate(ctx)
 	return err

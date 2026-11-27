@@ -1,11 +1,12 @@
 package main
 
 import (
-	"errors"
 	"net"
 	"net/http"
 	"syscall"
 	"time"
+
+	"centralrelay/pkg/hostsign"
 )
 
 // The egress limits of the `actuate` host function. They mirror the Rust
@@ -24,7 +25,7 @@ const (
 
 // errEgressBlockedAddr is returned when a connection would reach an address an actuation
 // must never reach.
-var errEgressBlockedAddr = errors.New("egress: destination address is blocked (private, loopback, link-local, unspecified or broadcast)")
+var errEgressBlockedAddr = hostsign.ErrEgressBlockedAddr
 
 // isBlockedIP reports whether ip is in a private, loopback, link-local, unspecified or
 // broadcast range (SSRF defense). IPv4-mapped IPv6 addresses are judged as IPv4. The
