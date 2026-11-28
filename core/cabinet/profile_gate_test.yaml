@@ -8,6 +8,12 @@ used_in: []
 entrypoint: false
 related_nodes: []
 objects:
+- name: archivingSource
+  kind: struct
+  description: the cabinet produces the full, bound record for a decision, and hands
+    it to an archiving source
+  implements: []
+  references: []
 - name: gateSvc
   kind: func
   description: gateSvc is a dispatch service with generic dispatch on, the reference
@@ -134,12 +140,75 @@ objects:
   description: ''
   references:
   - assert.Equal
+  calls:
+  - assert.Equal
+- name: baseRecord
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - PolicyDigestOf
+- name: TestAuthorizationRecordDigestCoversEveryField
+  kind: func
+  description: 'every field of the record is covered by its digest: changing any one
+    changes it'
+  references:
   - assert.Regexp
+  - assert.Equal
+  - assert.True
   - assert.NotEqual
   calls:
+  - Canonical
+  - Digest
   - assert.Equal
   - assert.NotEqual
   - assert.Regexp
+  - assert.True
+- name: TestPolicyDigestAndPrincipalString
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - PolicyDigestOf
+  - PrincipalString
+  - assert.Equal
+  - assert.NotEqual
+- name: ArchiveDecision
+  kind: method
+  receiver: archivingSource
+  description: ''
+  references: []
+  calls: []
+- name: TestTheGateProducesABoundRecordForEveryDecision
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  - require.Len
+  - require.True
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - Digest
+  - ID
+  - NewWorkflow
+  - 'On'
+  - PolicyDigestOf
+  - Put
+  - Return
+  - Setx
+  - Twice
+  - WithPrincipal
+  - WithRealizationContext
+  - WithTraceV2
+  - assert.Equal
+  - assert.NotEqual
+  - require.Len
+  - require.NoError
+  - require.True
 - name: TestProfileGateErrorRendersItsCode
   kind: func
   description: ''

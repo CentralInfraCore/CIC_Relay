@@ -14,6 +14,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -415,4 +416,61 @@ func TestINT07_OperatorValidator(t *testing.T) {
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, cabinet.ErrSchemaUnavailable, "a non-conforming payload is not an unavailable schema")
 	assert.ErrorIs(t, operatorValidator{}.ValidatePayload("s", dg("bb"), []byte(`{}`)), cabinet.ErrSchemaUnavailable, "another digest is not the pinned body")
+}
+
+// G-1: the principal's type comes from the authentication layer; a dedicated service principal is valid, the shared bearer
+// token stays the restricted default, and a misconfiguration stops the start.
+func TestG1_APIPrincipalFromTheEnvironment(t *testing.T) {
+	saved := apiPrincipal
+	t.Cleanup(func() { apiPrincipal = saved })
+	set := func(id, typ string) {
+		t.Setenv("CIC_API_PRINCIPAL_ID", id)
+		t.Setenv("CIC_API_PRINCIPAL_TYPE", typ)
+	}
+
+	set("", "")
+	p, err := apiPrincipalFromEnv()
+	require.NoError(t, err)
+	assert.Equal(t, cabinet.Principal{ID: "api-token", Method: "bearer", Type: cabinet.PrincipalTypeSharedBearer}, p, "default: the shared bearer identity")
+
+	set("relay-observer@prod", "")
+	p, err = apiPrincipalFromEnv()
+	require.NoError(t, err)
+	assert.Equal(t, cabinet.Principal{ID: "relay-observer@prod", Method: "bearer", Type: cabinet.PrincipalTypeService}, p, "a named principal defaults to a service")
+
+	for _, typ := range []string{"human", "service", "agent"} {
+		set("p1", typ)
+		p, err = apiPrincipalFromEnv()
+		require.NoError(t, err, typ)
+		assert.Equal(t, typ, p.Type)
+	}
+
+	for name, c := range map[string][2]string{
+		"type without id":           {"", "service"},
+		"unknown type":              {"p1", "root"},
+		"shared type not choosable": {"p1", "shared-bearer-token"},
+		"id with a space":           {"a b", ""},
+		"id with a newline":         {"a\nb", ""},
+		"leading dot":               {".x", ""},
+		"too long":                  {strings.Repeat("a", 129), ""},
+	} {
+		set(c[0], c[1])
+		_, err := apiPrincipalFromEnv()
+		assert.Error(t, err, name)
+	}
+}
+
+func TestG1_ThePrincipalInTheRequestContextIsTheConfiguredOne(t *testing.T) {
+	saved := apiPrincipal
+	t.Cleanup(func() { apiPrincipal = saved })
+	apiPrincipal = cabinet.Principal{ID: "svc-1", Method: "bearer", Type: cabinet.PrincipalTypeService}
+	r := withAPIPrincipal(httptest.NewRequest("GET", "/x", nil))
+	p, ok := cabinet.PrincipalFrom(r.Context())
+	require.True(t, ok)
+	assert.Equal(t, apiPrincipal, p)
+
+	assert.True(t, cabinet.ValidPrincipalType("human"))
+	assert.True(t, cabinet.ValidPrincipalType("shared-bearer-token"))
+	assert.False(t, cabinet.ValidPrincipalType(""))
+	assert.False(t, cabinet.ValidPrincipalType("admin"))
 }

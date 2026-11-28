@@ -1,0 +1,73 @@
+---
+package: o1verify
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: oneLine
+  kind: func
+  description: oneLine keeps a value on a single line, as the producer's canonical
+    text does.
+  references: []
+  calls:
+  - Replace
+- name: fieldText
+  kind: func
+  description: fieldText renders a record value the way the canonical text does (numbers
+    as their literal).
+  references: []
+  calls:
+  - String
+- name: recordDigest
+  kind: func
+  description: recordDigest recomputes the digest of a record from its fields in the
+    given order; ok=false if a field is missing or has an unusable type.
+  references: []
+  calls: []
+- name: checkDecisions
+  kind: func
+  description: checkDecisions applies the content rules to every step that references
+    an authorization decision.
+  references: []
+  calls: []
+- name: str
+  kind: func
+  description: str reads a string at a dotted path of a step.
+  references: []
+  calls: []
+- name: checkDecisionContent
+  kind: func
+  description: checkDecisionContent compares one decision record with the step it
+    belongs to.
+  references: []
+  calls:
+  - String
+- name: checkContext
+  kind: func
+  description: checkContext cross-checks the decision against the execution-context
+    record the step references.
+  references: []
+  calls: []
+- name: authzFields
+  kind: var
+  description: authzFields is the fixed order of an authorization record's fields.
+  references: []
+- name: ctxFields
+  kind: var
+  description: ctxFields is the fixed order of an execution-context record's fields.
+  references: []
+- name: none
+  kind: const
+  description: none is the explicit value of a field for which there is no value.
+  references: []
+- name: authzHeader
+  kind: const
+  description: authzHeader heads the canonical text of an authorization record.
+  references: []
+- name: ctxHeader
+  kind: const
+  description: ctxHeader heads the canonical text of an execution-context record.
+  references: []

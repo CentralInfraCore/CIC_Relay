@@ -1,0 +1,56 @@
+---
+package: realization
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: code
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - require.True
+  calls:
+  - Admit
+  - require.Error
+  - require.True
+- name: TestAdmitsThePinnedObjectAndAddressesItByContent
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - Admit
+  - Digest
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+- name: TestNotPinned
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - Digest
+  - assert.Equal
+- name: TestInvalidShapeAndValues
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - Digest
+  - Error
+  - assert.Contains
+  - assert.Equal
+- name: good
+  kind: const
+  description: ''
+  references: []

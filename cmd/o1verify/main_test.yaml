@@ -209,6 +209,18 @@ objects:
   - assert.Contains
   - assert.Equal
   - require.NoError
+- name: TestDecisionContentIsRequiredFromTheCommandLine
+  kind: func
+  description: 'An artifact whose step references an authorization decision is verified
+    only with the record behind it (G-2): the real fixture of pkg/o1verify (produced
+    by the production source) is complete with --decisions and --contexts and incomplete
+    without.'
+  references:
+  - assert.Equal
+  - assert.NotEmpty
+  calls:
+  - assert.Equal
+  - assert.NotEmpty
 - name: now
   kind: var
   description: ''

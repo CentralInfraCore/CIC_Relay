@@ -106,6 +106,9 @@ type traceSource struct {
 
 	mu      sync.Mutex
 	archive map[string][]hostsign.Record // interaction-list digest -> its records, for persistence and the verifier
+	// decisions and contexts keep the records behind the digests the artifact references, so that a verifier can check their content.
+	decisions map[string]cabinet.AuthorizationRecordV2
+	contexts  map[string]map[string]string
 }
 
 // newTraceSource builds the source. protected is the operator's protected-component set (the cabinet's own).
@@ -114,7 +117,7 @@ func newTraceSource(ids *identityRegistry, trustMode string, protected []string)
 	for _, id := range protected {
 		p[id] = true
 	}
-	return &traceSource{identities: ids, trustMode: trustMode, protected: p, archive: map[string][]hostsign.Record{}}
+	return &traceSource{identities: ids, trustMode: trustMode, protected: p, archive: map[string][]hostsign.Record{}, decisions: map[string]cabinet.AuthorizationRecordV2{}, contexts: map[string]map[string]string{}}
 }
 
 // ExecutedIdentity implements cabinet.TraceV2Source. ok=false: the module was not admitted with a profile binding, or the
@@ -128,37 +131,58 @@ func (s *traceSource) ExecutedIdentity(m *cabinet.ModuleDescriptor, dispatched s
 	return ident, true
 }
 
-// recordDigest is the digest of a small canonical record: a fixed header, then key=value lines in the given order.
-func recordDigest(header string, kv ...string) string {
-	var b strings.Builder
-	b.WriteString(header + "\n")
-	for i := 0; i+1 < len(kv); i += 2 {
-		b.WriteString(kv[i] + "=" + kv[i+1] + "\n")
-	}
-	return sha256Of([]byte(b.String()))
-}
-
 // Authorization implements cabinet.TraceV2Source: a protected component is refused at the execution boundary (the cabinet
-// has no other authorization decision), and that refusal gets a decision record; everything else is not evaluated.
-func (s *traceSource) Authorization(_ context.Context, step cabinet.ExecutionGraphStep) (string, string) {
+// has no other authorization decision outside the profile gate, which records its own), and that refusal gets an
+// authorization record; everything else is not evaluated here. The record states "none" for what a refusal before
+// admission cannot know (no envelope, no profile, no input).
+func (s *traceSource) Authorization(ctx context.Context, step cabinet.ExecutionGraphStep) (string, string) {
 	if !s.protected[string(step.ComponentID)] {
 		return cabinet.AuthorizationNotEvaluated, ""
 	}
-	return cabinet.AuthorizationDenied, recordDigest("CICAUTHZv1",
-		"component", string(step.ComponentID), "decision", "denied", "reason", "protected_operation")
+	p, ok := cabinet.PrincipalFrom(ctx)
+	r := cabinet.AuthorizationRecordV2{
+		ModuleID: string(step.ComponentID), EnvelopeDigest: cabinet.None, ProfileID: cabinet.None, ProfileDigest: cabinet.None,
+		Operation: step.FunctionName, HostBoundary: cabinet.None, Effect: cabinet.None, EffectResolved: cabinet.None,
+		Principal: cabinet.PrincipalString(p, ok), RealizationContextDigest: realizationDigest(), PolicyDigest: cabinet.None,
+		Decision: cabinet.AuthorizationDenied, Reason: "protected_operation", WorkflowID: cabinet.None, StepIndex: 0, InputDigest: cabinet.None,
+	}
+	d := r.Digest()
+	s.ArchiveDecision(ctx, d, r)
+	return cabinet.AuthorizationDenied, d
 }
 
-// ExecutionContext implements cabinet.TraceV2Source. The record carries what the relay knows; it states that the principal
-// and the realization context are not available instead of leaving them out.
-func (s *traceSource) ExecutionContext(ctx context.Context, workflowID string) string {
-	principal := "unavailable"
-	if p, ok := cabinet.PrincipalFrom(ctx); ok {
-		// what the relay actually has: the id and method the HTTP layer established. In this build that is the shared
-		// bearer-token principal ("api-token"), a service identity, NOT an individual caller.
-		principal = p.ID + "/" + p.Method
+// ArchiveDecision implements cabinet.DecisionArchiver: the cabinet's own decision records are kept for the verifier.
+func (s *traceSource) ArchiveDecision(_ context.Context, digest string, r cabinet.AuthorizationRecordV2) {
+	s.mu.Lock()
+	s.decisions[digest] = r
+	s.mu.Unlock()
+}
+
+// executionContextText is the canonical text of the execution-context record (CICEXECCTXv2).
+func executionContextText(f map[string]string) string {
+	var b strings.Builder
+	b.WriteString("CICEXECCTXv2\n")
+	for _, k := range []string{"workflow_id", "trust_mode", "principal", "realization_context_digest"} {
+		b.WriteString(k + "=" + strings.NewReplacer("\n", " ", "\r", " ").Replace(f[k]) + "\n")
 	}
-	return recordDigest("CICEXECCTXv1",
-		"workflow", workflowID, "trust_mode", s.trustMode, "principal", principal, "realization_context", "unavailable")
+	return b.String()
+}
+
+// ExecutionContext implements cabinet.TraceV2Source. The record carries what the relay knows, from the authentication layer
+// and the operator's pinned realization context, and says "unavailable" or "none" where there is nothing: the principal's
+// type, id and method are never taken from the request payload.
+func (s *traceSource) ExecutionContext(ctx context.Context, workflowID string) string {
+	p, ok := cabinet.PrincipalFrom(ctx)
+	return s.putContext(map[string]string{"workflow_id": workflowID, "trust_mode": s.trustMode, "principal": cabinet.PrincipalString(p, ok), "realization_context_digest": realizationDigest()})
+}
+
+// putContext archives an execution-context record and returns its digest.
+func (s *traceSource) putContext(f map[string]string) string {
+	d := sha256Of([]byte(executionContextText(f)))
+	s.mu.Lock()
+	s.contexts[d] = f
+	s.mu.Unlock()
+	return d
 }
 
 // ScopeStep implements cabinet.StepScoper: the step's host interactions go to a log of their own.
@@ -275,6 +299,34 @@ func (s *traceSource) persist(dir string, a *cabinet.ProofArtifactV2) (string, e
 	}
 	lj, err := json.Marshal(lists)
 	if err != nil {
+		return "", err
+	}
+	decs := map[string]cabinet.AuthorizationRecordV2{}
+	ctxs := map[string]map[string]string{}
+	s.mu.Lock()
+	for _, st := range a.Steps {
+		if st.References.AuthorizationDecision != nil {
+			if r, ok := s.decisions[st.References.AuthorizationDecision.Digest]; ok {
+				decs[st.References.AuthorizationDecision.Digest] = r
+			}
+		}
+		if c, ok := s.contexts[st.References.ExecutionContext.Digest]; ok {
+			ctxs[st.References.ExecutionContext.Digest] = c
+		}
+	}
+	s.mu.Unlock()
+	dj, err := json.Marshal(decs)
+	if err != nil {
+		return "", err
+	}
+	cj, err := json.Marshal(ctxs)
+	if err != nil {
+		return "", err
+	}
+	if err := writeDurable(dir, name+".decisions.json", dj); err != nil {
+		return "", err
+	}
+	if err := writeDurable(dir, name+".contexts.json", cj); err != nil {
 		return "", err
 	}
 	if err := writeDurable(dir, name+".json", doc); err != nil {

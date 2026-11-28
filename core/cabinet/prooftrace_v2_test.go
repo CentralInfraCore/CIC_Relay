@@ -277,7 +277,7 @@ func requireVerified(t *testing.T, a *ProofArtifactV2) o1verify.Result {
 	doc, err := json.Marshal(a)
 	require.NoError(t, err)
 	recs := map[string][]map[string]any{EmptyHostInteractionsDigestV2(): {}}
-	res := o1verify.Verify(doc, o1verify.Options{Verifier: o1verify.VerifierInfo{ID: "o1verify", Version: "0"}, HostInteractions: recs})
+	res := o1verify.Verify(doc, o1verify.Options{LegacyDigestOnlyAuthorization: true, Verifier: o1verify.VerifierInfo{ID: "o1verify", Version: "0"}, HostInteractions: recs})
 	assert.Empty(t, res.Problems, "the independent verifier accepts the producer's artifact")
 	assert.Equal(t, o1verify.VerificationComplete, res.Dimensions.Verification)
 	return res

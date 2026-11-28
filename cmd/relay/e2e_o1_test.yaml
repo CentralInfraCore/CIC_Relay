@@ -1,0 +1,229 @@
+---
+package: main
+description: ''
+tags:
+- executor
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: e2eKey
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: e2eRun
+  kind: struct
+  description: e2eRun is one execution and the files the recorder wrote for it.
+  implements: []
+  references:
+  - cabinet.ProofArtifactV2
+- name: inputs
+  kind: struct
+  description: inputs are everything the verifier is given; a negative run changes
+    exactly one.
+  implements: []
+  references:
+  - o1verify.Persistence
+  - attest.Material
+- name: lyingSource
+  kind: struct
+  description: lyingSource is a production source that says one thing differently
+    from the decision the cabinet recorded.
+  implements: []
+  references: []
+- name: responseWasm
+  kind: func
+  description: responseWasm is a minimal guest with the cic ABI whose Call returns
+    the fixed JSON document `response` (read from linear memory at 0); allocate hands
+    out a high fixed address so the response is not overwritten by the inputs.
+  references: []
+  calls: []
+- name: newE2EKey
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: runE2E
+  kind: func
+  description: runE2E executes one describe step. withPrincipal and withRealization
+    switch those inputs off for the negative runs; wrap lets a negative run replace
+    the trace source by one that lies about one thing.
+  references:
+  - cabinet.TraceV2Source
+  - realization.Admit
+  - realization.Digest
+  - require.NoError
+  - cabinet.ParseProfile
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - cabinet.NewModuleProfileBinding
+  - cabinet.ProfileDigest
+  - cabinet.PinnedProfile
+  - logrus.New
+  - cabinet.NewMemModuleStore
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - cabinet.WithGenericDispatch
+  - cabinet.WithEffectPolicy
+  - cabinet.EffectLocal
+  - cabinet.EffectExternalRead
+  - cabinet.WithPayloadValidator
+  - cabinet.WithRealizationContext
+  - cabinet.WithTraceV2
+  - cabinet.ProofArtifactV2
+  - cabinet.ModuleProfileBinding
+  - cabinet.NewWorkflow
+  - cabinet.WorkflowIdentity
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowSigning
+  - cabinet.WithPrincipal
+  - cabinet.Principal
+  - cabinet.PrincipalTypeService
+  - cabinet.SetPayload
+  - require.NotNil
+  calls:
+  - Checksum
+  - Close
+  - ID
+  - Put
+  - PutWorkflow
+  - SetModuleProfile
+  - Setx
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewModuleProfileBinding
+  - cabinet.NewWorkflow
+  - cabinet.ParseProfile
+  - cabinet.ProfileDigest
+  - cabinet.WithEffectPolicy
+  - cabinet.WithGenericDispatch
+  - cabinet.WithPayloadValidator
+  - cabinet.WithPrincipal
+  - cabinet.WithRealizationContext
+  - cabinet.WithTraceV2
+  - logrus.New
+  - realization.Admit
+  - realization.Digest
+  - require.NoError
+  - require.NotNil
+- name: readJSONFile
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Decode
+  - UseNumber
+  - require.NoError
+- name: load
+  kind: method
+  receiver: e2eRun
+  description: ''
+  references:
+  - require.NoError
+  - o1verify.Persistence
+  - o1verify.InteractionsDigest
+  calls:
+  - DecodeString
+  - o1verify.InteractionsDigest
+  - require.NoError
+- name: verify
+  kind: method
+  receiver: inputs
+  description: ''
+  references:
+  - o1verify.Result
+  - o1verify.Verify
+  - o1verify.Options
+  - o1verify.VerifierInfo
+  - attest.RecorderVerifier
+  - attest.Material
+  calls:
+  - o1verify.Verify
+- name: problems
+  kind: func
+  description: ''
+  references:
+  - o1verify.Result
+  calls: []
+- name: TestO1E2E_PositiveAndEveryIdentityNegative
+  kind: func
+  description: ''
+  references:
+  - require.Empty
+  - assert.Equal
+  - o1verify.VerificationComplete
+  - o1verify.EvidencePersisted
+  - o1verify.VerdictVerified
+  - o1verify.AcceptanceAccepted
+  - realization.Digest
+  - attest.SignResult
+  - require.NoError
+  - attest.VerifyResult
+  - assert.Contains
+  - o1verify.VerdictNotVerified
+  - o1verify.VerificationIncomplete
+  - o1verify.InteractionsDigest
+  - assert.NotEmpty
+  - assert.NotEqual
+  - attest.RecorderSignedBytes
+  - attest.AlgEd25519
+  - attest.Material
+  - o1verify.Attestation
+  - assert.Error
+  - cabinet.TraceV2Source
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - assert.Error
+  - assert.NotEmpty
+  - assert.NotEqual
+  - attest.RecorderSignedBytes
+  - attest.SignResult
+  - attest.VerifyResult
+  - o1verify.InteractionsDigest
+  - realization.Digest
+  - require.Empty
+  - require.NoError
+- name: ExecutedIdentity
+  kind: method
+  receiver: lyingSource
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.ExecutedIdentityV2
+  calls:
+  - ExecutedIdentity
+- name: ExecutionContext
+  kind: method
+  receiver: lyingSource
+  description: ''
+  references:
+  - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
+  calls:
+  - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
+- name: TestDumpO1Fixtures
+  kind: func
+  description: 'TestDumpO1Fixtures writes the artifact and its records of one positive
+    run to $CIC_DUMP_O1_FIXTURES (a maintenance helper: pkg/o1verify''s authorization
+    tests are built on this real artifact). It does nothing when the variable is unset.'
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: realizationDoc
+  kind: const
+  description: ''
+  references: []

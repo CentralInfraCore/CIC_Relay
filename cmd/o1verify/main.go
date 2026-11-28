@@ -1,6 +1,6 @@
 // Command o1verify is the standalone independent verifier of ProofTrace V2 artifacts (O-1 INT-10).
 //
-//	o1verify --artifact A.json [--interactions I.json] [--persistence P.json --attestation-material M.json]
+//	o1verify --artifact A.json [--interactions I.json] [--decisions D.json] [--contexts C.json] [--persistence P.json --attestation-material M.json]
 //	         [--bundle B.json --bundle-pin sha256:… ] [--policy-digest sha256:… --require-persistence]
 //	         [--sign-key K.pem] [--pinned-implementation sha256:…,…]
 //
@@ -54,6 +54,8 @@ func run(args []string, stdout, stderr io.Writer, now time.Time) int {
 	fs.SetOutput(stderr)
 	artifact := fs.String("artifact", "", "the ProofTrace V2 artifact (JSON)")
 	interactions := fs.String("interactions", "", "the host-interaction lists, a JSON map of list digest to records")
+	decisions := fs.String("decisions", "", "the authorization records behind the artifact's decision digests (JSON map of digest to record)")
+	contexts := fs.String("contexts", "", "the execution-context records behind the artifact's context digests (JSON map of digest to record)")
 	persistence := fs.String("persistence", "", "the persistence object (JSON)")
 	material := fs.String("attestation-material", "", "the recorder attestation material ({signature_b64, spki_b64})")
 	bundlePath := fs.String("bundle", "", "the operator's trust bundle")
@@ -82,6 +84,14 @@ func run(args []string, stdout, stderr io.Writer, now time.Time) int {
 
 	if *interactions != "" {
 		if err := readJSON(*interactions, &opt.HostInteractions); err != nil {
+			return fail("%v", err)
+		}
+	}
+	for path, into := range map[string]*map[string]map[string]any{*decisions: &opt.AuthorizationDecisions, *contexts: &opt.ExecutionContexts} {
+		if path == "" {
+			continue
+		}
+		if err := readJSON(path, into); err != nil {
 			return fail("%v", err)
 		}
 	}

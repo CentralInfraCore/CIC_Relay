@@ -19,7 +19,13 @@ objects:
   references: []
 - name: authzDecision
   kind: struct
-  description: authzDecision is the recorded decision of a step.
+  description: 'authzDecision is the recorded decision of a step: the outcome and
+    the full record the digest is taken over.'
+  implements: []
+  references: []
+- name: gateEnvelope
+  kind: struct
+  description: gateEnvelope is the concrete execution a decision is bound to.
   implements: []
   references: []
 - name: PayloadValidator
@@ -70,18 +76,26 @@ objects:
     it was resolved.
   references: []
   calls: []
-- name: decisionDigest
-  kind: func
-  description: decisionDigest is the digest of the decision record.
+- name: decisionRecord
+  kind: method
+  receiver: cabinetService
+  description: 'decisionRecord builds the authorization record of a step: bound to
+    the authenticated principal (from the context the authentication layer set), the
+    module''s envelope, the profile, the operation and its resolved effect, the realization
+    context, the operator''s policy, the decision, and the concrete execution.'
   references: []
   calls:
   - ModuleDescriptor.ID
+  - PolicyDigestOf
+  - PrincipalFrom
+  - PrincipalString
 - name: profileGateFor
   kind: method
   receiver: cabinetService
-  description: 'profileGateFor decides how a WASM step dispatches. (nil, nil): no
-    binding, legacy dispatch. (nil, err): the step is refused before execution. (gate,
-    nil): the profile-driven dispatch under the gate''s limits.'
+  description: 'profileGateFor decides how a WASM step dispatches: (nil, nil) no binding,
+    legacy dispatch; (nil, err) the step is refused before execution; (gate, nil)
+    the profile-driven dispatch under the gate''s limits. It records the authorization
+    decision.'
   references: []
   calls:
   - Operation

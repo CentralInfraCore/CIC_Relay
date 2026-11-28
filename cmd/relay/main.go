@@ -797,6 +797,7 @@ func main() {
 		logger.WithError(err).Fatal("FATAL: invalid ABI effect policy")
 	}
 	traceOpts = append(traceOpts, effectOpts...)
+	traceOpts = append(traceOpts, cabinet.WithRealizationContext(realizationDigest))
 	traceOpts = append(traceOpts, cabinet.WithPayloadValidator(operatorValidator{})) // INT-07: payloads are validated against the pinned schema bodies
 	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, append(traceOpts, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), cabinet.WithProtectedModules(protectedModuleIDs...), cabinet.WithGenericDispatch(genericDispatch), obsOpt)...)
 	if err != nil {
@@ -829,6 +830,10 @@ func main() {
 	// INT-12: the operator-pinned trust bundle, when configured, is the one source of the authority bindings.
 	if err := loadTrustBundle(pkiAssets, logger, time.Now()); err != nil {
 		logger.WithError(err).Fatal("FATAL: trust bundle admission failed")
+	}
+	// G-3: the operator's pinned realization context (absent: the records say none).
+	if err := loadRealizationContext(); err != nil {
+		logger.WithError(err).Fatal("FATAL: realization context admission failed")
 	}
 	// INT-05: the operator's schema registry and limit caps for ABI-profile admission (absent: profile admission fails closed).
 	if err := loadProfileOperatorConfig(); err != nil {
@@ -886,6 +891,9 @@ func main() {
 	// logrusSink/metricSink/promSink are already declared above (wired into
 	// cabinetSvc + gitOps via WithObsSinks/SetObsSinks). Reuse them here so
 	// /metrics aggregates across every component, not just cmd/relay.
+	if apiPrincipal, err = apiPrincipalFromEnv(); err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid API principal configuration")
+	}
 	apiToken, err := apiTokenFromEnv()
 	if err != nil {
 		logger.WithError(err).Fatal("FATAL: invalid API token configuration")

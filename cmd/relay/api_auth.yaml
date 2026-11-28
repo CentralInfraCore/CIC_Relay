@@ -53,13 +53,25 @@ objects:
   references: []
   calls:
   - Set
+- name: apiPrincipalFromEnv
+  kind: func
+  description: 'apiPrincipalFromEnv reads CIC_API_PRINCIPAL_ID and CIC_API_PRINCIPAL_TYPE
+    (human, service or agent; default service). Unset id: the shared-bearer default.
+    A type without an id, an unknown type or a malformed id is a start-up error.'
+  references:
+  - cabinet.Principal
+  - cabinet.PrincipalTypeService
+  - cabinet.PrincipalTypeSharedBearer
+  - cabinet.ValidPrincipalType
+  calls:
+  - MatchString
+  - cabinet.ValidPrincipalType
 - name: withAPIPrincipal
   kind: func
   description: withAPIPrincipal returns r with the authenticated API principal in
     its context.
   references:
   - cabinet.WithPrincipal
-  - cabinet.Principal
   calls:
   - cabinet.WithPrincipal
 - name: protectRoute
@@ -87,6 +99,18 @@ objects:
     way or a public route has no stated reason.
   references: []
   calls: []
+- name: apiPrincipal
+  kind: var
+  description: 'apiPrincipal is the identity the bearer token stands for. Default:
+    the shared-token service identity. With CIC_API_PRINCIPAL_ID the operator names
+    a dedicated principal (human, service or agent) for the token; the identity always
+    comes from here, from the authentication layer, never from the request.'
+  references: []
+- name: apiPrincipalIDRE
+  kind: var
+  description: 'apiPrincipalIDRE bounds a principal id: a stable identifier, not free
+    text.'
+  references: []
 - name: protectedModuleIDs
   kind: var
   description: 'protectedModuleIDs are the components only an authenticated principal

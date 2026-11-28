@@ -1,0 +1,42 @@
+---
+package: main
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: realizationDigest
+  kind: func
+  description: realizationDigest is the digest of the admitted realization context,
+    or cabinet.None. It is a function because the cabinet is built before the context
+    is loaded.
+  references:
+  - cabinet.None
+  calls: []
+- name: loadRealizationContext
+  kind: func
+  description: 'loadRealizationContext admits the operator''s realization context.
+    Unset: none (the records say "none"). Set: the pin is required, and an unreadable,
+    unpinned or malformed object is a start-up error: a context the operator named
+    but that cannot be admitted must not turn into "no context".'
+  references:
+  - realization.Admit
+  calls:
+  - realization.Admit
+- name: admittedRealization
+  kind: var
+  description: admittedRealization is the loaded, pinned realization context; nil
+    when none is configured.
+  references: []
+- name: realizationContextEnv
+  kind: const
+  description: realizationContextEnv is the path of the operator's realization context
+    object.
+  references: []
+- name: realizationContextPinEnv
+  kind: const
+  description: realizationContextPinEnv is the sha256:<hex> of the exact object bytes
+    the operator pinned (required with the path).
+  references: []

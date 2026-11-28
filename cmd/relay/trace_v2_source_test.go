@@ -123,11 +123,13 @@ func TestAuthorizationAndContextRecords(t *testing.T) {
 	assert.NotEqual(t, a, newTraceSource(newIdentityRegistry(), "dev", nil).ExecutionContext(context.Background(), "wf.1"), "bound to the trust mode")
 
 	// the principal the HTTP layer established is part of the record; its absence is stated, not invented
-	withP := cabinet.WithPrincipal(context.Background(), cabinet.Principal{ID: "api-token", Method: "bearer"})
+	withP := cabinet.WithPrincipal(context.Background(), cabinet.Principal{ID: "api-token", Method: "bearer", Type: cabinet.PrincipalTypeSharedBearer})
 	assert.NotEqual(t, a, src.ExecutionContext(withP, "wf.1"), "bound to the principal")
 	assert.Equal(t, src.ExecutionContext(withP, "wf.1"), src.ExecutionContext(withP, "wf.1"))
-	other := cabinet.WithPrincipal(context.Background(), cabinet.Principal{ID: "someone", Method: "bearer"})
+	other := cabinet.WithPrincipal(context.Background(), cabinet.Principal{ID: "someone", Method: "bearer", Type: cabinet.PrincipalTypeService})
 	assert.NotEqual(t, src.ExecutionContext(withP, "wf.1"), src.ExecutionContext(other, "wf.1"))
+	sameIDOtherType := cabinet.WithPrincipal(context.Background(), cabinet.Principal{ID: "api-token", Method: "bearer", Type: cabinet.PrincipalTypeService})
+	assert.NotEqual(t, src.ExecutionContext(withP, "wf.1"), src.ExecutionContext(sameIDOtherType, "wf.1"), "the principal's type is part of the record")
 }
 
 // The whole chain: a Setx run through the real cabinet with the production source; the module's host calls write into the

@@ -105,7 +105,7 @@ func okArtifact(t *testing.T) ([]byte, string, map[string][]map[string]any) {
 }
 
 func opts() Options {
-	return Options{Verifier: VerifierInfo{ID: "o1verify", Version: "0.1.0", ImplementationDigest: "sha256:" + strings.Repeat("00", 32)}}
+	return Options{LegacyDigestOnlyAuthorization: true, Verifier: VerifierInfo{ID: "o1verify", Version: "0.1.0", ImplementationDigest: "sha256:" + strings.Repeat("00", 32)}}
 }
 
 func TestVerifyReportsUnresolvedReferencesNotPass(t *testing.T) {

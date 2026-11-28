@@ -267,3 +267,23 @@ func TestUsageAndInputErrors(t *testing.T) {
 	assert.Equal(t, 2, code)
 	assert.Contains(t, errs, "base64")
 }
+
+// An artifact whose step references an authorization decision is verified only with the record behind it (G-2): the real
+// fixture of pkg/o1verify (produced by the production source) is complete with --decisions and --contexts and incomplete without.
+func TestDecisionContentIsRequiredFromTheCommandLine(t *testing.T) {
+	dir := "../../pkg/o1verify/testdata/authz/"
+	base := []string{"--artifact", dir + "artifact.json"}
+	code, doc, _ := exec(t, base...)
+	assert.Equal(t, 1, code, "the decision digest without its record is unresolved")
+	assert.Equal(t, "INCOMPLETE", resultOf(doc)["dimensions"].(map[string]any)["verification"])
+
+	code, doc, _ = exec(t, append(base, "--decisions", dir+"decisions.json", "--contexts", dir+"contexts.json")...)
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "VERIFIED", resultOf(doc)["evidence_verdict"])
+
+	code, _, errs := exec(t, append(base, "--decisions", dir+"absent.json")...)
+	assert.Equal(t, 2, code)
+	assert.NotEmpty(t, errs)
+	code, _, _ = exec(t, append(base, "--contexts", dir+"absent.json")...)
+	assert.Equal(t, 2, code)
+}

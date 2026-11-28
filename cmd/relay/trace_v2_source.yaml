@@ -27,6 +27,7 @@ objects:
   implements: []
   references:
   - hostsign.Record
+  - cabinet.AuthorizationRecordV2
 - name: recorderKey
   kind: struct
   description: 'recorderKey is the key a recorder attests persistence with. The attestation
@@ -88,6 +89,7 @@ objects:
     set (the cabinet's own).
   references:
   - hostsign.Record
+  - cabinet.AuthorizationRecordV2
   calls: []
 - name: ExecutedIdentity
   kind: method
@@ -103,33 +105,66 @@ objects:
   calls:
   - cabinet.ModuleDescriptor.Checksum
   - cabinet.ModuleDescriptor.ID
-- name: recordDigest
-  kind: func
-  description: 'recordDigest is the digest of a small canonical record: a fixed header,
-    then key=value lines in the given order.'
-  references: []
-  calls: []
 - name: Authorization
   kind: method
   receiver: traceSource
   description: 'Authorization implements cabinet.TraceV2Source: a protected component
-    is refused at the execution boundary (the cabinet has no other authorization decision),
-    and that refusal gets a decision record; everything else is not evaluated.'
+    is refused at the execution boundary (the cabinet has no other authorization decision
+    outside the profile gate, which records its own), and that refusal gets an authorization
+    record; everything else is not evaluated here. The record states "none" for what
+    a refusal before admission cannot know (no envelope, no profile, no input).'
   references:
   - cabinet.ExecutionGraphStep
   - cabinet.AuthorizationNotEvaluated
+  - cabinet.PrincipalFrom
+  - cabinet.AuthorizationRecordV2
+  - cabinet.None
+  - cabinet.PrincipalString
   - cabinet.AuthorizationDenied
-  calls: []
+  - cabinet.AuthorizationRecordV2.Digest
+  calls:
+  - cabinet.AuthorizationRecordV2.Digest
+  - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
+  - traceSource.ArchiveDecision
+- name: ArchiveDecision
+  kind: method
+  receiver: traceSource
+  description: 'ArchiveDecision implements cabinet.DecisionArchiver: the cabinet''s
+    own decision records are kept for the verifier.'
+  references:
+  - cabinet.AuthorizationRecordV2
+  calls:
+  - Lock
+  - Unlock
+- name: executionContextText
+  kind: func
+  description: executionContextText is the canonical text of the execution-context
+    record (CICEXECCTXv2).
+  references: []
+  calls:
+  - Replace
 - name: ExecutionContext
   kind: method
   receiver: traceSource
-  description: ExecutionContext implements cabinet.TraceV2Source. The record carries
-    what the relay knows; it states that the principal and the realization context
-    are not available instead of leaving them out.
+  description: 'ExecutionContext implements cabinet.TraceV2Source. The record carries
+    what the relay knows, from the authentication layer and the operator''s pinned
+    realization context, and says "unavailable" or "none" where there is nothing:
+    the principal''s type, id and method are never taken from the request payload.'
   references:
   - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
   calls:
   - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
+- name: putContext
+  kind: method
+  receiver: traceSource
+  description: putContext archives an execution-context record and returns its digest.
+  references: []
+  calls:
+  - Lock
+  - Unlock
 - name: ScopeStep
   kind: method
   receiver: traceSource
@@ -193,7 +228,10 @@ objects:
   references:
   - cabinet.ProofArtifactV2
   - hostsign.Record
+  - cabinet.AuthorizationRecordV2
   calls:
+  - Lock
+  - Unlock
   - traceSource.Interactions
 - name: traceSink
   kind: method

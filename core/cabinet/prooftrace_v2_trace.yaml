@@ -155,7 +155,9 @@ objects:
     and the run's error (nil = success).
   references: []
   calls:
+  - ArchiveDecision
   - Authorization
+  - Digest
   - EmptyHostInteractionsDigestV2
   - ExecutedIdentity
   - ExecutionContext

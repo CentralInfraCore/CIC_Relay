@@ -318,6 +318,7 @@ objects:
   - obs.NewPrometheusSink
   - obs.NewMultiMetricSink
   - cabinet.WithObsSinks
+  - cabinet.WithRealizationContext
   - cabinet.WithPayloadValidator
   - cabinet.NewCabinetService
   - cabinet.WithEvidenceRequired
@@ -350,6 +351,7 @@ objects:
   - cabinet.WithObsSinks
   - cabinet.WithPayloadValidator
   - cabinet.WithProtectedModules
+  - cabinet.WithRealizationContext
   - crypto.NewVaultCryptoService
   - git.NewExecGitOps
   - git.NewRepoRegistry

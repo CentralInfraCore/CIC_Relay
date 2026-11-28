@@ -81,6 +81,8 @@ objects:
   - assert.NotEqual
   - cabinet.WithPrincipal
   - cabinet.Principal
+  - cabinet.PrincipalTypeSharedBearer
+  - cabinet.PrincipalTypeService
   calls:
   - Authorization
   - ExecutionContext

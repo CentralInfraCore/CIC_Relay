@@ -131,9 +131,9 @@ func (r *traceV2Recorder) scopeStep(base context.Context, cfg *traceV2Config, st
 }
 
 // stepDecision records the authorization decision of the profile gate for the current step; nil-safe.
-func (r *traceV2Recorder) stepDecision(outcome, digest string) {
+func (r *traceV2Recorder) stepDecision(record AuthorizationRecordV2) {
 	if r != nil && r.cur() != nil {
-		r.cur().decision = &authzDecision{outcome: outcome, digest: digest}
+		r.cur().decision = &authzDecision{outcome: record.Decision, record: record}
 	}
 }
 
@@ -227,7 +227,11 @@ func (r *traceV2Recorder) build(ctx context.Context, cfg *traceV2Config, workflo
 		}
 		if rec.decision != nil { // the cabinet's own decision (the profile gate) outranks the source's
 			st.Outcome.Authorization = rec.decision.outcome
-			st.References.AuthorizationDecision = &DigestRefV2{Digest: rec.decision.digest}
+			dd := rec.decision.record.Digest()
+			st.References.AuthorizationDecision = &DigestRefV2{Digest: dd}
+			if arch, ok := src.(DecisionArchiver); ok {
+				arch.ArchiveDecision(sctx, dd, rec.decision.record)
+			}
 		}
 		var exe ExecutedIdentityV2
 		hasExe := false

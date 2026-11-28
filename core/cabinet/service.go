@@ -125,6 +125,8 @@ type cabinetService struct {
 	profileMu sync.RWMutex
 	// effectPolicy is the operator's allowed effect classes for profile-bound operations (WithEffectPolicy); nil = not configured.
 	effectPolicy map[string]bool
+	// realizationDigest yields the digest of the operator's realization context (WithRealizationContext).
+	realizationDigest func() string
 	// payloadValidator validates the request and response of profile-bound operations against the schema bodies (WithPayloadValidator).
 	payloadValidator PayloadValidator
 
@@ -322,7 +324,7 @@ func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *trace
 	traceSteps := make([]ProofTraceStep, 0, len(graph.Steps))
 
 	baseCtx := ctx
-	for _, step := range graph.Steps {
+	for stepIndex, step := range graph.Steps {
 		rec.stepBegin(step)
 		ctx = rec.scopeStep(baseCtx, c.traceV2, step) // the step's own context when V2 recording scopes it (INT-08)
 		// 3a. Resolve the component.
@@ -355,7 +357,7 @@ func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *trace
 		// 3d'. The ABI-profile gate (INT-06/07): effect authorization and the request ceiling, BEFORE the execution phase.
 		var gate *profileGate
 		if moduleDesc.NativeImpl == nil && moduleDesc.WasmCode != nil {
-			g, gerr := c.profileGateFor(moduleDesc, step, inputData, rec)
+			g, gerr := c.profileGateFor(ctx, moduleDesc, step, inputData, rec, gateEnvelope{workflowID: in.WorkflowID, stepIndex: stepIndex, inputDigest: "sha256:" + inputHash})
 			if gerr != nil {
 				return nil, gerr
 			}

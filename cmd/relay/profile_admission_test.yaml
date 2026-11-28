@@ -265,3 +265,39 @@ objects:
   - assert.NoError
   - assert.NotErrorIs
   - require.Error
+- name: TestG1_APIPrincipalFromTheEnvironment
+  kind: func
+  description: 'G-1: the principal''s type comes from the authentication layer; a
+    dedicated service principal is valid, the shared bearer token stays the restricted
+    default, and a misconfiguration stops the start.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - cabinet.Principal
+  - cabinet.PrincipalTypeSharedBearer
+  - cabinet.PrincipalTypeService
+  - assert.Error
+  calls:
+  - assert.Equal
+  - assert.Error
+  - require.NoError
+- name: TestG1_ThePrincipalInTheRequestContextIsTheConfiguredOne
+  kind: func
+  description: ''
+  references:
+  - cabinet.Principal
+  - cabinet.PrincipalTypeService
+  - cabinet.PrincipalFrom
+  - require.True
+  - assert.Equal
+  - assert.True
+  - cabinet.ValidPrincipalType
+  - assert.False
+  calls:
+  - Context
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - cabinet.PrincipalFrom
+  - cabinet.ValidPrincipalType
+  - require.True

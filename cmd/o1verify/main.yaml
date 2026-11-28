@@ -1,15 +1,16 @@
 ---
 package: main
 description: 'Command o1verify is the standalone independent verifier of ProofTrace
-  V2 artifacts (O-1 INT-10). o1verify --artifact A.json [--interactions I.json] [--persistence
-  P.json --attestation-material M.json] [--bundle B.json --bundle-pin sha256:… ] [--policy-digest
-  sha256:… --require-persistence] [--sign-key K.pem] [--pinned-implementation sha256:…,…]
-  It reads the artifact as generic JSON and shares no code with the cabinet that produced
-  it. The trust inputs are the operator''s: the trust bundle (admitted by its pinned
-  digest) says which keys may attest persistence and sign verifier results. Output
-  is the VerificationResult (and, with --sign-key, its signature). Exit 0: the evidence
-  is VERIFIED; 1: NOT_VERIFIED; 2: a usage or input error. VERIFIED is not ACCEPTED:
-  acceptance needs --policy-digest and is reported separately.'
+  V2 artifacts (O-1 INT-10). o1verify --artifact A.json [--interactions I.json] [--decisions
+  D.json] [--contexts C.json] [--persistence P.json --attestation-material M.json]
+  [--bundle B.json --bundle-pin sha256:… ] [--policy-digest sha256:… --require-persistence]
+  [--sign-key K.pem] [--pinned-implementation sha256:…,…] It reads the artifact as
+  generic JSON and shares no code with the cabinet that produced it. The trust inputs
+  are the operator''s: the trust bundle (admitted by its pinned digest) says which
+  keys may attest persistence and sign verifier results. Output is the VerificationResult
+  (and, with --sign-key, its signature). Exit 0: the evidence is VERIFIED; 1: NOT_VERIFIED;
+  2: a usage or input error. VERIFIED is not ACCEPTED: acceptance needs --policy-digest
+  and is reported separately.'
 tags:
 - core
 - gateway

@@ -1,0 +1,8 @@
+{
+ "sha256:194560ff625b5ee59f65fa779a292973cd70a8b066e68914f98c191aa5be9dac": {
+  "principal": "service:observer-1/bearer",
+  "realization_context_digest": "sha256:8c2051ed0e042d5ab37cdee6437fa1aa0e1f987b04e0d74ab28c86fb2fe27575",
+  "trust_mode": "prod",
+  "workflow_id": "wf.e2e.o1@1.0"
+ }
+}

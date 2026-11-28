@@ -1,13 +1,11 @@
 package cabinet
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -106,10 +104,10 @@ type profileGate struct {
 	validator   PayloadValidator
 }
 
-// authzDecision is the recorded decision of a step.
+// authzDecision is the recorded decision of a step: the outcome and the full record the digest is taken over.
 type authzDecision struct {
 	outcome string
-	digest  string
+	record  AuthorizationRecordV2
 }
 
 // allowedEffects is the operator's allowed effect classes, sorted.
@@ -140,24 +138,29 @@ func resolveEffect(op AbiOperation, input interface{}) (effect, via string) {
 	return r.Default, "default"
 }
 
-// decisionDigest is the digest of the decision record.
-func decisionDigest(mod *ModuleDescriptor, b *ModuleProfileBinding, op AbiOperation, effect, via string, allowed []string, outcome, reason string) string {
-	var sb strings.Builder
-	sb.WriteString("CICAUTHZv1\n")
-	for _, kv := range [][2]string{
-		{"module", mod.ID()}, {"envelope_digest", b.EnvelopeDigest}, {"profile_id", b.ProfileID}, {"profile_digest", b.ProfileDigest},
-		{"operation", op.Name}, {"host_boundary", op.HostBoundary}, {"effect", effect}, {"effect_resolved", via},
-		{"policy_allowed_effects", strings.Join(allowed, ",")}, {"decision", outcome}, {"reason", reason},
-	} {
-		sb.WriteString(kv[0] + "=" + kv[1] + "\n")
+// decisionRecord builds the authorization record of a step: bound to the authenticated principal (from the context the
+// authentication layer set), the module's envelope, the profile, the operation and its resolved effect, the realization
+// context, the operator's policy, the decision, and the concrete execution.
+func (c *cabinetService) decisionRecord(ctx context.Context, m *ModuleDescriptor, b *ModuleProfileBinding, op AbiOperation, effect, via string, allowed []string, outcome, reason string, ex gateEnvelope) AuthorizationRecordV2 {
+	p, ok := PrincipalFrom(ctx)
+	return AuthorizationRecordV2{
+		ModuleID: m.ID(), EnvelopeDigest: b.EnvelopeDigest, ProfileID: b.ProfileID, ProfileDigest: b.ProfileDigest,
+		Operation: op.Name, HostBoundary: op.HostBoundary, Effect: effect, EffectResolved: via,
+		Principal: PrincipalString(p, ok), RealizationContextDigest: c.realization(), PolicyDigest: PolicyDigestOf(allowed),
+		Decision: outcome, Reason: reason, WorkflowID: ex.workflowID, StepIndex: ex.stepIndex, InputDigest: ex.inputDigest,
 	}
-	sum := sha256.Sum256([]byte(sb.String()))
-	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-// profileGateFor decides how a WASM step dispatches. (nil, nil): no binding, legacy dispatch. (nil, err): the step is
-// refused before execution. (gate, nil): the profile-driven dispatch under the gate's limits.
-func (c *cabinetService) profileGateFor(m *ModuleDescriptor, step ExecutionGraphStep, input interface{}, rec *traceV2Recorder) (*profileGate, error) {
+// gateEnvelope is the concrete execution a decision is bound to.
+type gateEnvelope struct {
+	workflowID  string
+	stepIndex   int
+	inputDigest string
+}
+
+// profileGateFor decides how a WASM step dispatches: (nil, nil) no binding, legacy dispatch; (nil, err) the step is refused
+// before execution; (gate, nil) the profile-driven dispatch under the gate's limits. It records the authorization decision.
+func (c *cabinetService) profileGateFor(ctx context.Context, m *ModuleDescriptor, step ExecutionGraphStep, input interface{}, rec *traceV2Recorder, ex gateEnvelope) (*profileGate, error) {
 	b, err := c.profileBindingFor(m)
 	if err != nil {
 		return nil, err
@@ -179,12 +182,11 @@ func (c *cabinetService) profileGateFor(m *ModuleDescriptor, step ExecutionGraph
 	effect, via := resolveEffect(op, input)
 	allowed := c.allowedEffects()
 	if !c.effectPolicy[effect] {
-		d := decisionDigest(m, b, op, effect, via, allowed, AuthorizationDenied, "effect_not_allowed")
-		rec.stepDecision(AuthorizationDenied, d)
+		rec.stepDecision(c.decisionRecord(ctx, m, b, op, effect, via, allowed, AuthorizationDenied, "effect_not_allowed", ex))
 		return nil, &ProfileGateError{Phase: RejectionPhasePolicy, Code: CodeEffectNotAuthorized, base: ErrInvalid,
 			Detail: fmt.Sprintf("operation %q has effect %q (%s), which the operator's policy %v does not allow", op.Name, effect, via, allowed)}
 	}
-	rec.stepDecision(AuthorizationAllowed, decisionDigest(m, b, op, effect, via, allowed, AuthorizationAllowed, "effect_allowed"))
+	rec.stepDecision(c.decisionRecord(ctx, m, b, op, effect, via, allowed, AuthorizationAllowed, "effect_allowed", ex))
 	return c.gateLimits(b, op, input)
 }
 

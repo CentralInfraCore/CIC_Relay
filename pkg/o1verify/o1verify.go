@@ -124,6 +124,15 @@ type Options struct {
 	// HostInteractions holds the records of the host-interaction lists, keyed by the list digest the artifact
 	// references. A reference whose list is absent here is reported as unresolved, never as passed.
 	HostInteractions map[string][]map[string]any
+	// AuthorizationDecisions holds the authorization records behind the decision digests the artifact references, and
+	// ExecutionContexts the execution-context records behind its context digests. A decision whose record is absent is
+	// unresolved (the verification is incomplete), never passed on its digest alone (O-1 G-2).
+	AuthorizationDecisions map[string]map[string]any
+	// LegacyDigestOnlyAuthorization turns the content check off: a decision is then believed on its digest alone. It exists for
+	// fixtures that exercise other dimensions with abstract digests; no production caller sets it (the relay and cmd/o1verify
+	// never do), and a result produced with it must not be read as an authorization verification.
+	LegacyDigestOnlyAuthorization bool
+	ExecutionContexts             map[string]map[string]any
 	// PolicyDigest identifies the acceptance policy; empty means no policy was applied (acceptance NOT_EVALUATED).
 	PolicyDigest string
 	// PersistenceRequired is the policy's evidence condition.
@@ -378,6 +387,7 @@ func Verify(doc []byte, opt Options) Result {
 			fail("HOST_INTERACTIONS_COUNT_MISMATCH: %d records, count says %d", len(recs), r.count)
 		}
 	}
+	checkDecisions(art, steps, opt, &res, fail)
 	checkPersistence(&res, opt, claimed)
 	return finish(&res, opt)
 }
