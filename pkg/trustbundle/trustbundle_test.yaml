@@ -216,6 +216,33 @@ objects:
   - assert.Error
   - require.Error
   - require.NoError
+- name: TestCommitFlushesTheFileBeforeAndTheDirectoryAfterTheRename
+  kind: func
+  description: 'TB-02: the durability sequence is asserted, not assumed. The temp
+    file is flushed BEFORE the rename (the final path still holds the old state),
+    the directory AFTER it (the final path holds the new state); a failed flush is
+    an error.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Empty
+  calls:
+  - Commit
+  - IsDir
+  - assert.Empty
+  - assert.Equal
+  - require.NoError
+- name: TestAFailedFlushIsNotSwallowed
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.ErrorIs
+  calls:
+  - Commit
+  - IsDir
+  - assert.ErrorIs
+  - require.Error
 - name: TestSyncDirReportsAMissingDirectory
   kind: func
   description: ''

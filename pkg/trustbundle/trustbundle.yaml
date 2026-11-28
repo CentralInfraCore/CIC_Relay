@@ -115,7 +115,6 @@ objects:
   calls:
   - Close
   - Name
-  - Sync
   - Write
 - name: syncDir
   kind: func
@@ -123,7 +122,6 @@ objects:
   references: []
   calls:
   - Close
-  - Sync
 - name: Lock
   kind: func
   description: 'Lock takes an exclusive, non-blocking lock beside the state file for
@@ -152,6 +150,14 @@ objects:
 - name: stateShape
   kind: var
   description: stateShape is the exact wire shape of the persisted state.
+  references: []
+- name: syncFile
+  kind: var
+  description: 'syncFile flushes a file or a directory to stable storage. It is a
+    variable only so that a test can observe that the flush happens, in which order
+    relative to the rename, and that its failure is not swallowed (TB-02): removing
+    an fsync is a durability change that no unit test can see on a healthy disk, so
+    the call sequence itself is what is asserted.'
   references: []
 - name: Kind
   kind: const

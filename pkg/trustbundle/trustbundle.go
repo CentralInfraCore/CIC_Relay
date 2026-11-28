@@ -289,7 +289,7 @@ func Commit(path string, st State, adm *Admitted) (State, error) {
 		tmp.Close()
 		return st, fmt.Errorf("persist trust-bundle state: %w", err)
 	}
-	if err := tmp.Sync(); err != nil {
+	if err := syncFile(tmp); err != nil {
 		tmp.Close()
 		return st, fmt.Errorf("persist trust-bundle state: %w", err)
 	}
@@ -313,8 +313,13 @@ func syncDir(dir string) error {
 		return err
 	}
 	defer d.Close()
-	return d.Sync()
+	return syncFile(d)
 }
+
+// syncFile flushes a file or a directory to stable storage. It is a variable only so that a test can observe that the
+// flush happens, in which order relative to the rename, and that its failure is not swallowed (TB-02): removing an fsync
+// is a durability change that no unit test can see on a healthy disk, so the call sequence itself is what is asserted.
+var syncFile = func(f *os.File) error { return f.Sync() }
 
 // Lock takes an exclusive, non-blocking lock beside the state file for the duration of one admission (TB-03). The
 // supported operating boundary is one relay instance per state file: the lock makes a second instance that starts

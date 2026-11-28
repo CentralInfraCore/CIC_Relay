@@ -264,6 +264,49 @@ func TestLockAllowsOneAdmissionPerStateFile(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// TB-02: the durability sequence is asserted, not assumed. The temp file is flushed BEFORE the rename (the final path
+// still holds the old state), the directory AFTER it (the final path holds the new state); a failed flush is an error.
+func TestCommitFlushesTheFileBeforeAndTheDirectoryAfterTheRename(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	var events []string
+	saved := syncFile
+	t.Cleanup(func() { syncFile = saved })
+	syncFile = func(f *os.File) error {
+		st, err := f.Stat()
+		require.NoError(t, err)
+		_, final := os.Stat(path)
+		events = append(events, map[bool]string{true: "dir", false: "file"}[st.IsDir()]+map[bool]string{true: "+final", false: "-final"}[final == nil])
+		return f.Sync()
+	}
+	_, err := Commit(path, State{}, &Admitted{Version: 3, Digest: pd})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"file-final", "dir+final"}, events)
+
+	events = nil
+	_, err = Commit(path, State{HighWatermark: 3, HighWatermarkDigest: pd}, &Admitted{Version: 3, Digest: pd})
+	require.NoError(t, err)
+	assert.Empty(t, events, "nothing to persist: nothing is flushed")
+}
+
+func TestAFailedFlushIsNotSwallowed(t *testing.T) {
+	saved := syncFile
+	t.Cleanup(func() { syncFile = saved })
+	for name, failOn := range map[string]bool{"file": false, "dir": true} {
+		t.Run(name, func(t *testing.T) {
+			syncFile = func(f *os.File) error {
+				st, _ := f.Stat()
+				if st.IsDir() == failOn {
+					return os.ErrInvalid
+				}
+				return nil
+			}
+			_, err := Commit(filepath.Join(t.TempDir(), "state.json"), State{}, &Admitted{Version: 1, Digest: pd})
+			require.Error(t, err)
+			assert.ErrorIs(t, err, os.ErrInvalid)
+		})
+	}
+}
+
 func TestSyncDirReportsAMissingDirectory(t *testing.T) {
 	assert.NoError(t, syncDir(t.TempDir()))
 	assert.Error(t, syncDir(filepath.Join(t.TempDir(), "absent")))
