@@ -1,0 +1,26 @@
+---
+package: main
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: checkWasmImportsAgainstManifest
+  kind: func
+  description: checkWasmImportsAgainstManifest closes the gap between what the release
+    manifest DECLARES and what the executed wasm ACTUALLY imports (review F3). The
+    V6 decision and the capability grant used to rest on the declared imports alone;
+    a module could declare none and still import a cic-flow or git host function.
+    The imports are read from the bytes that will be compiled (the executed wasm).
+    Every cic-flow or git function the wasm imports must be declared in the manifest,
+    else IMPORT_UNDECLARED. It returns whether the wasm actually imports a cic-flow
+    function, so the caller applies V6 to the union of the declared and the actual
+    imports. A declared but unused import is harmless (the runtime capability check
+    still binds only authenticated modules) and is not rejected.
+  references:
+  - binary.DecodeModule
+  - wasm.CoreFeaturesV2
+  calls:
+  - binary.DecodeModule

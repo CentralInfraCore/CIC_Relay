@@ -468,8 +468,11 @@ func TestGitCapabilityLifecycle_LoadThenInstantiate(t *testing.T) {
 	assert.Equal(t, 1, servedOnStart(), "verified load: the instance's start section is served")
 	load(y, verified)
 	assert.Equal(t, 1, servedOnStart(), "verified reload with another artifact: served, under the new artifact's grant")
-	load(x, unverified)
-	assert.Equal(t, 0, servedOnStart(), "unverified reload: no grant, nothing is served, nothing is inherited")
+	fsysU, yU := gitModuleFS(t, x)
+	errU := loadModule(ctx, svc, fsysU, "m.yaml", yU, unverified, int64(16*1024*1024), newDiscardLogger())
+	require.Error(t, errU, "a verified envelope without provenance is a failed authenticated admission")
+	assert.Equal(t, codeProvenanceUnverified, admissionCode(errU), errU.Error())
+	assert.Equal(t, 0, servedOnStart(), "rejected unverified reload: no grant, nothing is served, nothing is inherited")
 	load(y, verified)
 	assert.Equal(t, 1, servedOnStart(), "verified again: served")
 

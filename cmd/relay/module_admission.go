@@ -51,6 +51,11 @@ const (
 	codeExecutedDigestMismatch = "EXECUTED_DIGEST_MISMATCH"
 	// codeManifestDigestMismatch: the release manifest bytes are not the ones the envelope names.
 	codeManifestDigestMismatch = "MANIFEST_DIGEST_MISMATCH"
+	// codeProvenanceUnverified: a verified envelope whose signer chain has no CICSourceCA provenance: a failed
+	// authenticated admission, never a quiet downgrade to transitional (D-1).
+	codeProvenanceUnverified = "PROVENANCE_UNVERIFIED"
+	// codeImportUndeclared: the executed wasm imports a host function the manifest does not declare (F3).
+	codeImportUndeclared = "IMPORT_UNDECLARED"
 	// codeModuleRejected: a module that must be authenticated is not (V6), or carries signature material without a certificate.
 	codeModuleRejected = "MODULE_REJECTED"
 )
@@ -149,13 +154,19 @@ func sha256Ref(b []byte) string {
 // parseEnvelope decodes the envelope file strictly: one JSON object, no unknown field, no trailing data. The version
 // is checked first (an unknown version is ENVELOPE_VERSION, not a form error), then the form of every field.
 func parseEnvelope(data []byte) (*moduleReleaseEnvelope, error) {
+	if err := strictScan(data, envelopeJSONShape); err != nil {
+		return nil, reject(codeEnvelopeInvalid, "envelope is not strictly the contract's shape: %v", err)
+	}
 	var probe struct {
 		EnvelopeVersion *json.RawMessage `json:"envelope_version"`
 	}
 	if err := json.Unmarshal(data, &probe); err != nil {
 		return nil, reject(codeEnvelopeInvalid, "envelope is not a JSON object: %v", err)
 	}
-	if probe.EnvelopeVersion != nil && string(*probe.EnvelopeVersion) != "1" {
+	if probe.EnvelopeVersion == nil || string(*probe.EnvelopeVersion) != "1" {
+		if probe.EnvelopeVersion == nil {
+			return nil, reject(codeEnvelopeVersion, "envelope_version is missing")
+		}
 		return nil, reject(codeEnvelopeVersion, "unknown envelope_version %s", clipForError(string(*probe.EnvelopeVersion)))
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
@@ -373,8 +384,8 @@ func requiresAuthentication(pkiAssets *PKIAssets) bool {
 // executed wasm of the descriptor built from it.
 //
 //   - envelope and .sig both present: V1-V5 and V2b must all hold, else the module is rejected with the named code
-//     (a present signature always has to verify, in every mode). Then the CICSourceCA provenance decides between
-//     authenticated and transitional.
+//     (a present signature always has to verify, in every mode). Then the CICSourceCA provenance must hold too, else
+//     PROVENANCE_UNVERIFIED: a failed authenticated attempt is rejected, never downgraded to transitional.
 //   - exactly one of them present: ENVELOPE_MISSING.
 //   - neither: transitional (the pre-#162 path).
 //
@@ -402,13 +413,18 @@ func admitModuleArtifact(fsys fs.FS, yamlPath, moduleID, wasmDigestHex string, m
 		if err != nil {
 			return "", "", err
 		}
+		// A present envelope that verifies is an attempt at authenticated admission. If the provenance then fails, that is
+		// a failed authentication, not the legacy transitional path: the module is rejected (D-1, no automatic downgrade).
 		if provErr := verifyCICFlowProvenance(cert, pkiAssets); provErr != nil {
-			logger.WithError(provErr).Warn("Envelope verified but provenance not verified: transitional, no capability.")
-		} else {
-			state, digest = trustAuthenticated, ve.Digest
+			return "", "", reject(codeProvenanceUnverified, "the envelope verifies but the signer chain has no CICSourceCA provenance: %v", provErr)
 		}
+		state, digest = trustAuthenticated, ve.Digest
 	}
-	if state != trustAuthenticated && requiresAuthentication(pkiAssets) && importsCICFlow(manifest) {
+	actualCICFlow, err := checkWasmImportsAgainstManifest(executedWasm, manifest)
+	if err != nil {
+		return "", "", err
+	}
+	if state != trustAuthenticated && requiresAuthentication(pkiAssets) && (actualCICFlow || importsCICFlow(manifest)) {
 		return "", "", reject(codeModuleRejected, "module imports cic-flow but is %s, not authenticated", state)
 	}
 	return state, digest, nil

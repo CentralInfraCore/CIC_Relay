@@ -103,6 +103,9 @@ type moduleSignAuthoritiesFile struct {
 // parseModuleSignAuthorities decodes the authority bindings strictly. An unknown field, kind, version or role, a
 // malformed or duplicated key_id is an error: a typo must not silently grant or drop an authority.
 func parseModuleSignAuthorities(data []byte) (map[string]bool, error) {
+	if err := strictScan(data, authoritiesJSONShape); err != nil {
+		return nil, fmt.Errorf("module-sign authorities: %v", err)
+	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	var f moduleSignAuthoritiesFile

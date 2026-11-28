@@ -65,11 +65,12 @@ objects:
   - require.True
 - name: TestLoadModule_CICFlow_FailClosedWithoutSourceCA
   kind: func
-  description: 'Without the CICSourceCA provenance anchor, an enveloped cic-flow module
-    is not authenticated: in dev it loads as transitional with no capability; in prod
-    it is rejected (V6, MODULE_REJECTED), not loaded without its capability.'
+  description: 'Without the CICSourceCA provenance anchor an enveloped cic-flow module
+    is not authenticated. A verified envelope is an authenticated attempt: when its
+    provenance then fails, the module is REJECTED (PROVENANCE_UNVERIFIED) in dev and
+    in prod alike, not downgraded to transitional (D-1; review F2 of #233). The envelope-less
+    transitional path is a different case (TestAdmission_AC07_MissingSignatureInProd).'
   references:
-  - require.NoError
   - require.Error
   - assert.Equal
   - assert.False
@@ -78,7 +79,6 @@ objects:
   - assert.Equal
   - assert.False
   - require.Error
-  - require.NoError
 - name: TestLoadModule_RejectsOverDeclaredCICFlow
   kind: func
   description: An authenticated module that over-declares its cic-flow imports (imports

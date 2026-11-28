@@ -97,8 +97,10 @@ func TestLoadModule_BindsCICFlowCapability(t *testing.T) {
 	assert.True(t, reg.deps["oci.mod@1.0.0"].active)
 }
 
-// Without the CICSourceCA provenance anchor, an enveloped cic-flow module is not authenticated: in dev it loads as
-// transitional with no capability; in prod it is rejected (V6, MODULE_REJECTED), not loaded without its capability.
+// Without the CICSourceCA provenance anchor an enveloped cic-flow module is not authenticated. A verified envelope
+// is an authenticated attempt: when its provenance then fails, the module is REJECTED (PROVENANCE_UNVERIFIED) in dev
+// and in prod alike, not downgraded to transitional (D-1; review F2 of #233). The envelope-less transitional path is
+// a different case (TestAdmission_AC07_MissingSignatureInProd).
 func TestLoadModule_CICFlow_FailClosedWithoutSourceCA(t *testing.T) {
 	for _, mode := range []string{TrustModeDev, TrustModeProd} {
 		t.Run(mode, func(t *testing.T) {
@@ -114,12 +116,8 @@ func TestLoadModule_CICFlow_FailClosedWithoutSourceCA(t *testing.T) {
 			assets.TrustMode = mode
 			err := loadModule(context.Background(), newCabinetForTest(t), moduleFS, "m.yaml", yamlContent,
 				assets, int64(16*1024*1024), newDiscardLogger())
-			if mode == TrustModeDev {
-				require.NoError(t, err) // module loads, transitional
-			} else {
-				require.Error(t, err)
-				assert.Equal(t, codeModuleRejected, admissionCode(err), err.Error())
-			}
+			require.Error(t, err)
+			assert.Equal(t, codeProvenanceUnverified, admissionCode(err), err.Error())
 			_, ok := reg.lookup("oci.mod@1.0.0")
 			assert.False(t, ok, "no SourceCA → cic-flow capability must not be bound (fail-closed)")
 		})

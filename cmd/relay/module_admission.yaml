@@ -144,16 +144,14 @@ objects:
     wasm of the descriptor built from it. - envelope and .sig both present: V1-V5
     and V2b must all hold, else the module is rejected with the named code (a present
     signature always has to verify, in every mode). Then the CICSourceCA provenance
-    decides between authenticated and transitional. - exactly one of them present:
-    ENVELOPE_MISSING. - neither: transitional (the pre-#162 path). A module that is
-    not authenticated never gets a capability; in prod one that imports cic-flow is
-    rejected (V6, MODULE_REJECTED) instead of being loaded without its capability.'
+    must hold too, else PROVENANCE_UNVERIFIED: a failed authenticated attempt is rejected,
+    never downgraded to transitional. - exactly one of them present: ENVELOPE_MISSING.
+    - neither: transitional (the pre-#162 path). A module that is not authenticated
+    never gets a capability; in prod one that imports cic-flow is rejected (V6, MODULE_REJECTED)
+    instead of being loaded without its capability.'
   references:
   - logrus.Entry
-  - logrus.Entry.WithError
-  calls:
-  - Warn
-  - logrus.Entry.WithError
+  calls: []
 - name: envDigestRE
   kind: var
   description: 'envDigestRE is the digest form of the envelope: sha256: and 64 lowercase
@@ -215,6 +213,17 @@ objects:
   kind: const
   description: 'codeManifestDigestMismatch: the release manifest bytes are not the
     ones the envelope names.'
+  references: []
+- name: codeProvenanceUnverified
+  kind: const
+  description: 'codeProvenanceUnverified: a verified envelope whose signer chain has
+    no CICSourceCA provenance: a failed authenticated admission, never a quiet downgrade
+    to transitional (D-1).'
+  references: []
+- name: codeImportUndeclared
+  kind: const
+  description: 'codeImportUndeclared: the executed wasm imports a host function the
+    manifest does not declare (F3).'
   references: []
 - name: codeModuleRejected
   kind: const

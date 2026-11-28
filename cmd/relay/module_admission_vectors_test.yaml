@@ -28,7 +28,7 @@ objects:
   calls:
   - DecodeString
   - require.NoError
-- name: TestO1EnvelopeVectors_Provisional
+- name: TestO1EnvelopeVectors_WasmCanonV1
   kind: func
   description: Every vector gives its expected result code (nil = accepted), with
     the vectors' own executed representation.
@@ -42,13 +42,20 @@ objects:
   - require.Error
   - require.Len
   - require.NoError
-- name: TestO1EnvelopeVectors_WabinExecutedRepresentation
+- name: TestO1EnvelopeVectors_ExecutedIsTheRelaysTransformation
   kind: func
-  description: 'Measures the reference executed representation against the relay''s
-    own transformation (wasm-canon/v1, wabin re-encode). Not an assertion about the
-    vectors'' correctness: it records what the relay derives from wasm_raw.'
+  description: 'The pinned transformation is an assertion, not a measurement: for
+    every vector that is meant to be accepted, the executed bytes the vector names
+    are exactly what the relay''s own wasm-canon/v1 derives from the vector''s raw
+    module, and the executed digest in the envelope is that value''s digest.'
   references:
   - cabinet.NewModuleDescriptor
   - cabinet.BaseBlock
+  - require.NoError
+  - assert.Equal
+  - require.Equal
   calls:
+  - assert.Equal
   - cabinet.NewModuleDescriptor
+  - require.Equal
+  - require.NoError

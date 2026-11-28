@@ -1,0 +1,36 @@
+---
+package: main
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: jsonShape
+  kind: struct
+  description: jsonShape describes one JSON value.
+  implements: []
+  references: []
+- name: strictScan
+  kind: func
+  description: strictScan validates raw against the shape and rejects trailing data.
+  references: []
+  calls:
+  - Token
+- name: scanJSONValue
+  kind: func
+  description: scanJSONValue consumes one JSON value from dec against sh, rejecting
+    what the shape does not allow.
+  references: []
+  calls: []
+- name: envelopeJSONShape
+  kind: var
+  description: envelopeJSONShape is the exact wire shape of a ModuleReleaseEnvelope
+    (module-release-envelope.schema.json).
+  references: []
+- name: authoritiesJSONShape
+  kind: var
+  description: authoritiesJSONShape is the exact wire shape of the module-sign authority
+    bindings file.
+  references: []

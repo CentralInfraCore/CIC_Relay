@@ -271,8 +271,11 @@ func TestGitGrant_FollowsTheVerifiedArtifactAndTheRunningInstance(t *testing.T) 
 		"the instance that is still running the old artifact must not use the new artifact's grant")
 	assert.NoError(t, reg.authorizeGit(instOf(t, id, d2.Checksum(), fs2), "status", status), "a new instance of the new artifact is granted")
 
-	// The same ID loads again without the provenance anchor: it loads, but is granted nothing.
-	loadGit(t, svc, fs1, y1, loadedPKIWithoutSource(t))
+	// The same ID is offered again without the provenance anchor: a verified envelope whose provenance fails is a
+	// failed authenticated admission, so the load is rejected (PROVENANCE_UNVERIFIED), not accepted without a grant.
+	err = loadModule(context.Background(), svc, fs1, "m.yaml", y1, loadedPKIWithoutSource(t), int64(16*1024*1024), newDiscardLogger())
+	require.Error(t, err)
+	assert.Equal(t, codeProvenanceUnverified, admissionCode(err), err.Error())
 	assert.Error(t, reg.authorizeGit(instOf(t, id, d2.Checksum(), fs2), "status", status), "an unverified reload must not keep the earlier grant")
 	d3, err := svc.GetModule(id)
 	require.NoError(t, err)
