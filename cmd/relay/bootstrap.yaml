@@ -16,6 +16,7 @@ objects:
   implements: []
   references:
   - cabinet.CRLFreshness
+  - trustbundle.Profile
 - name: ComponentHeader
   kind: struct
   description: ComponentHeader defines the common fields for identifying a component

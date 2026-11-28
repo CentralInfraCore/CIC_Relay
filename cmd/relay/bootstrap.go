@@ -1,6 +1,7 @@
 package main
 
 import (
+	"centralrelay/pkg/trustbundle"
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
@@ -336,6 +337,9 @@ type PKIAssets struct {
 	// module:sign role (loadModuleSignAuthorities); a key merely present in a verified certificate is not. Nil or
 	// empty: no envelope is admitted (SIGNER_NOT_AUTHORIZED).
 	ModuleSignAuthorities map[string]bool
+	// AcceptedProfiles are the ABI-profile pins (id, digest) of the admitted trust bundle (INT-12). Nil when no bundle is
+	// configured. Consuming them for profile admission is INT-05.
+	AcceptedProfiles []trustbundle.Profile
 	// TrustMode is the CIC_TRUST_MODE the assets were bootstrapped for (bootstrapTrust). Anything other than
 	// TrustModeDev, the empty value included, is treated as prod by the module admission (V6): fail-closed.
 	TrustMode string

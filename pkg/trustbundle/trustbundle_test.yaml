@@ -1,0 +1,194 @@
+---
+package: trustbundle
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: pol
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Digest
+- name: code
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  calls:
+  - Admit
+  - CodeOf
+  - require.Error
+- name: TestAdmitsThePinnedBundleAndReadsItsContent
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.EqualValues
+  - assert.True
+  calls:
+  - Admit
+  - Digest
+  - Equal
+  - assert.Equal
+  - assert.EqualValues
+  - assert.True
+  - require.NoError
+- name: TestNotPinned
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - Digest
+  - assert.Equal
+- name: TestAnUnpinnedBundleIsNotParsed
+  kind: func
+  description: The pin is checked on the raw bytes before anything else, so a hostile
+    bundle cannot choose its own diagnosis.
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestInvalidWire
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestStaleBelowTheOperatorMinimum
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.NoError
+  calls:
+  - Admit
+  - assert.Equal
+  - assert.NoError
+- name: TestRollbackBelowTheHighWatermark
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.NoError
+  calls:
+  - Admit
+  - assert.Equal
+  - assert.NoError
+- name: TestFreshness
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Equal
+  calls:
+  - Add
+  - Admit
+  - assert.Equal
+  - assert.NoError
+- name: TestIssuedInTheFuture
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.NoError
+  calls:
+  - Admit
+  - assert.Equal
+  - assert.NoError
+- name: TestCheckOrder
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestCodeOf
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - CodeOf
+  - Error
+  - assert.Equal
+- name: TestStateLifecycle
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.EqualValues
+  - assert.Empty
+  calls:
+  - Admit
+  - Commit
+  - LoadState
+  - assert.Empty
+  - assert.Equal
+  - assert.EqualValues
+  - require.NoError
+- name: TestACorruptStateIsNeverAReset
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Error
+  calls:
+  - LoadState
+  - assert.Error
+  - require.NoError
+- name: TestCommitOfTheSameVersionWritesNothing
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.EqualValues
+  calls:
+  - Commit
+  - assert.EqualValues
+  - require.NoError
+- name: TestCommitFailsLoudly
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  - require.NoError
+  calls:
+  - Commit
+  - assert.Error
+  - require.NoError
+- name: TestClip
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: k1
+  kind: var
+  description: ''
+  references: []
+- name: k2
+  kind: var
+  description: ''
+  references: []
+- name: pd
+  kind: var
+  description: ''
+  references: []
+- name: now
+  kind: var
+  description: ''
+  references: []
+- name: good
+  kind: var
+  description: ''
+  references: []

@@ -816,6 +816,10 @@ func main() {
 	if err := loadProvenanceAnchors(pkiAssets, logger); err != nil {
 		logger.WithError(err).Fatal("FATAL: cic-flow trust anchor load failed")
 	}
+	// INT-12: the operator-pinned trust bundle, when configured, is the one source of the authority bindings.
+	if err := loadTrustBundle(pkiAssets, logger, time.Now()); err != nil {
+		logger.WithError(err).Fatal("FATAL: trust bundle admission failed")
+	}
 	// #162 V2b: the pinned module-sign authority bindings. Absent → no envelope is authenticated (fail-closed).
 	if err := loadModuleSignAuthorities(pkiAssets, logger); err != nil {
 		logger.WithError(err).Fatal("FATAL: module-sign authority load failed")

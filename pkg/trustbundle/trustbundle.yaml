@@ -1,0 +1,164 @@
+---
+package: trustbundle
+description: 'Package trustbundle admits the operator''s trust bundle (O-1 INT-12;
+  contract: release-admission-contract-draft 9.2). The bundle carries what the relay
+  must take from the operator''s trust domain: which signer keys hold module:sign
+  (authority bindings) and which ABI profiles are accepted (id, digest). It does NOT
+  authenticate itself: whatever it contains, it is only as good as the operator''s
+  pin. Admission is therefore four independent checks, in this order, each with its
+  own result code: BUNDLE_NOT_PINNED the presented bytes are not the bundle whose
+  sha256 the operator pinned (checked first and on the raw bytes: nothing of an unpinned
+  bundle is trusted, not even its version or its age) BUNDLE_INVALID the pinned bytes
+  do not have the exact wire shape (strict JSON, closed vocabulary, no duplicates)
+  BUNDLE_STALE bundle_version is below the operator''s minimum_bundle_version BUNDLE_ROLLBACK
+  bundle_version is below the highest version this relay has already admitted (anti-rollback)
+  BUNDLE_EXPIRED the bundle is older than the operator''s max age, or is issued in
+  the future The first two codes and the minimum version are the draft''s; the anti-rollback
+  high-water mark and the age check are the owner''s INT-12 list (digest pin, minimum
+  version, freshness, anti-rollback) given a code each. The high-water mark is advanced
+  by the caller only through Commit, after every check passed, and is persisted atomically.'
+tags:
+- loader
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Error
+  kind: struct
+  description: Error is a named admission failure.
+  implements: []
+  references: []
+- name: Policy
+  kind: struct
+  description: Policy is what the operator pins; it is not read from the bundle.
+  implements: []
+  references: []
+- name: State
+  kind: struct
+  description: State is the relay's persisted admission state.
+  implements: []
+  references: []
+- name: Profile
+  kind: struct
+  description: Profile is one accepted ABI profile pin.
+  implements: []
+  references: []
+- name: Admitted
+  kind: struct
+  description: Admitted is an admitted bundle's content.
+  implements: []
+  references: []
+- name: wire
+  kind: struct
+  description: wire is the decoded bundle, read only after the strict scan.
+  implements: []
+  references: []
+- name: Error
+  kind: method
+  receiver: Error
+  description: Error renders the code and the message.
+  references: []
+  calls: []
+- name: fail
+  kind: func
+  description: fail builds a named admission error.
+  references: []
+  calls: []
+- name: CodeOf
+  kind: func
+  description: CodeOf returns the result code of an admission error ("" for any other
+    error).
+  references: []
+  calls: []
+- name: Digest
+  kind: func
+  description: Digest is the sha256:<hex> of the raw bundle bytes.
+  references: []
+  calls: []
+- name: Admit
+  kind: func
+  description: Admit checks raw against the operator's policy and the relay's state
+    at time now. It does not change the state.
+  references:
+  - strictjson.Scan
+  calls:
+  - After
+  - Digest
+  - MatchString
+  - Round
+  - strictjson.Scan
+- name: clip
+  kind: func
+  description: clip bounds an offending value before it is repeated in an error message.
+  references: []
+  calls: []
+- name: LoadState
+  kind: func
+  description: 'LoadState reads the persisted state. A missing file is the zero state
+    (first start); an unreadable or malformed file is an error, never a silent reset:
+    resetting the high-water mark would re-open a rollback.'
+  references:
+  - strictjson.Scan
+  - strictjson.Shape
+  calls:
+  - strictjson.Scan
+- name: Commit
+  kind: func
+  description: Commit raises the high-water mark to the admitted version and persists
+    it atomically (write, sync, rename). It never lowers it. Call it only after Admit
+    succeeded.
+  references: []
+  calls:
+  - Close
+  - Name
+  - Sync
+  - Write
+- name: digestRE
+  kind: var
+  description: ''
+  references: []
+- name: idRE
+  kind: var
+  description: ''
+  references: []
+- name: bundleShape
+  kind: var
+  description: bundleShape is the exact wire shape of the bundle.
+  references: []
+- name: Kind
+  kind: const
+  description: Kind is the wire kind of the bundle.
+  references: []
+- name: RoleModuleSign
+  kind: const
+  description: RoleModuleSign is the authority a signer key must hold to sign module
+    releases (#162 V2b).
+  references: []
+- name: MaxClockSkew
+  kind: const
+  description: MaxClockSkew is how far in the future an issued_at may lie before the
+    bundle is refused.
+  references: []
+- name: CodeNotPinned
+  kind: const
+  description: 'CodeNotPinned: the presented bytes are not the bundle the operator
+    pinned.'
+  references: []
+- name: CodeInvalid
+  kind: const
+  description: 'CodeInvalid: the bundle does not have the exact wire shape.'
+  references: []
+- name: CodeStale
+  kind: const
+  description: 'CodeStale: bundle_version is below the operator''s minimum.'
+  references: []
+- name: CodeRollback
+  kind: const
+  description: 'CodeRollback: bundle_version is below the highest admitted version.'
+  references: []
+- name: CodeExpired
+  kind: const
+  description: 'CodeExpired: the bundle is older than the operator''s limit or issued
+    in the future.'
+  references: []
