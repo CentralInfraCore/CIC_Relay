@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const sharedTrustModuleID = "pki.test@1.0"
+const sharedTrustModuleID = "pki.test@1.0.0"
 
 // outcome is what a load path did with a module: whether it is registered, and whether the
 // cic-flow capability binding hook was invoked for it.
@@ -40,7 +40,7 @@ func loadVia(t *testing.T, path string, files fstest.MapFS, assets *PKIAssets) o
 
 	var bound []string
 	prev := registerModuleCapability
-	registerModuleCapability = func(moduleID string, _ []byte, _ string) error {
+	registerModuleCapability = func(moduleID string, _ []byte, _, _ string) error {
 		bound = append(bound, moduleID)
 		return nil
 	}
@@ -82,28 +82,34 @@ func TestEmbeddedAndInstalled_SameVerdictAndCapability(t *testing.T) {
 	wrongEKU, err := fs.ReadFile(getSubFS(t, "pki/signers/negatives/client-only"), "ee.pem")
 	require.NoError(t, err)
 
+	signer := testModuleSigner(t)
 	cases := []struct {
 		name         string
 		cert         []byte
 		wantAccepted bool
 	}{
-		{"valid signer", validCert, true},
+		{"valid signer, enveloped release", validCert, true},
+		{"valid signer, no envelope (transitional)", validCert, true},
 		{"wrong EKU", wrongEKU, false},
 		{"untrusted chain", generateForeignLeafPEM(t), false},
 		{"garbage signature file", []byte("not a pem"), false}, // a bad signature is refused on both paths (#155)
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			files, _ := buildModuleFS(t, wasm, c.cert)
-			emb := loadVia(t, "embedded", files, sharedAssets(t))
-			ins := loadVia(t, "installed", files, sharedAssets(t))
+			files, yamlPath := buildModuleFS(t, wasm, c.cert)
+			enveloped := c.name == "valid signer, enveloped release"
+			if enveloped {
+				addEnvelope(t, files, yamlPath, signer, nil)
+			}
+			emb := loadVia(t, "embedded", files, signer.authorize(sharedAssets(t)))
+			ins := loadVia(t, "installed", files, signer.authorize(sharedAssets(t)))
 
 			assert.Equal(t, ins, emb, "the embedded and the installed path must reach the same verdict and capability result")
 			assert.Equal(t, c.wantAccepted, emb.registered, "embedded verdict")
-			if c.name == "valid signer" {
-				assert.Equal(t, []string{sharedTrustModuleID}, emb.bound, "a verified module gets its capability on the embedded path too")
+			if enveloped {
+				assert.Equal(t, []string{sharedTrustModuleID}, emb.bound, "an authenticated module gets its capability on the embedded path too")
 			} else {
-				assert.Empty(t, emb.bound, "no capability without verified provenance")
+				assert.Empty(t, emb.bound, "no capability without an authenticated envelope (#162) or verified provenance")
 			}
 		})
 	}
@@ -111,6 +117,13 @@ func TestEmbeddedAndInstalled_SameVerdictAndCapability(t *testing.T) {
 
 // trustCtxCA builds a root CA and a code-signing leaf signed by it; returns both as PEM.
 func trustCtxCA(t *testing.T, cn string) (rootPEM, leafPEM []byte) {
+	t.Helper()
+	rootPEM, leafPEM, _ = trustCtxCAWithKey(t, cn)
+	return rootPEM, leafPEM
+}
+
+// trustCtxCAWithKey is trustCtxCA that also returns the leaf's private key, to sign a module envelope with it.
+func trustCtxCAWithKey(t *testing.T, cn string) (rootPEM, leafPEM []byte, leafKey *ecdsa.PrivateKey) {
 	t.Helper()
 	rootKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
@@ -124,7 +137,7 @@ func trustCtxCA(t *testing.T, cn string) (rootPEM, leafPEM []byte) {
 	root, err := x509.ParseCertificate(rootDER)
 	require.NoError(t, err)
 
-	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	leafKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	leafTmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(2), Subject: pkix.Name{CommonName: cn + " module signer"},
@@ -134,7 +147,7 @@ func trustCtxCA(t *testing.T, cn string) (rootPEM, leafPEM []byte) {
 	leafDER, err := x509.CreateCertificate(rand.Reader, leafTmpl, root, &leafKey.PublicKey, rootKey)
 	require.NoError(t, err)
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootDER}),
-		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafDER})
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafDER}), leafKey
 }
 
 // Acceptance 2: in prod the trust context is the operator's CIC_PLATFORM_CA_BUNDLE. A module
@@ -142,7 +155,8 @@ func trustCtxCA(t *testing.T, cn string) (rootPEM, leafPEM []byte) {
 // embedded in the binary) is rejected on both paths; one signed by the operator's CA is
 // accepted on both. Being embedded does not widen trust.
 func TestProd_ModuleSignedOutsideOperatorBundle_RejectedOnBothPaths(t *testing.T) {
-	operatorRoot, operatorLeaf := trustCtxCA(t, "Operator Root")
+	operatorRoot, operatorLeaf, operatorKey := trustCtxCAWithKey(t, "Operator Root")
+	operatorSigner := newEnvelopeSigner(t, operatorLeaf, operatorKey)
 	bundle := filepath.Join(t.TempDir(), "bundle.pem")
 	require.NoError(t, os.WriteFile(bundle, operatorRoot, 0o600))
 	t.Setenv("CIC_PLATFORM_CA_BUNDLE", bundle)
@@ -153,7 +167,8 @@ func TestProd_ModuleSignedOutsideOperatorBundle_RejectedOnBothPaths(t *testing.T
 		require.NoError(t, err)
 		a.SourceRoots = a.Roots
 		a.SourceLoaded = true
-		return a
+		a.TrustMode = TrustModeProd
+		return operatorSigner.authorize(a)
 	}
 
 	wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
@@ -169,7 +184,8 @@ func TestProd_ModuleSignedOutsideOperatorBundle_RejectedOnBothPaths(t *testing.T
 		}
 	})
 	t.Run("signed by the operator's CA", func(t *testing.T) {
-		files, _ := buildModuleFS(t, wasm, operatorLeaf)
+		files, yamlPath := buildModuleFS(t, wasm, operatorLeaf)
+		addEnvelope(t, files, yamlPath, operatorSigner, nil)
 		emb := loadVia(t, "embedded", files, newProdAssets())
 		ins := loadVia(t, "installed", files, newProdAssets())
 		assert.True(t, emb.registered, "embedded path")

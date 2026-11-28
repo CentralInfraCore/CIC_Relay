@@ -9,6 +9,13 @@ used_in: []
 entrypoint: true
 related_nodes: []
 objects:
+- name: moduleSignAuthoritiesFile
+  kind: struct
+  description: 'moduleSignAuthoritiesFile is the wire form of the authority bindings:
+    which signer keys (by key_id = sha256 of the DER SubjectPublicKeyInfo) hold which
+    role. The only role the relay knows is module:sign.'
+  implements: []
+  references: []
 - name: loadCompanionCAPool
   kind: func
   description: loadCompanionCAPool reads a detached PEM CA bundle into a cert pool.
@@ -43,3 +50,35 @@ objects:
   - cabinet.VerifyOptions
   calls:
   - cabinet.VerifyCertificateChain
+- name: parseModuleSignAuthorities
+  kind: func
+  description: 'parseModuleSignAuthorities decodes the authority bindings strictly.
+    An unknown field, kind, version or role, a malformed or duplicated key_id is an
+    error: a typo must not silently grant or drop an authority.'
+  references: []
+  calls:
+  - Decode
+  - DisallowUnknownFields
+  - MatchString
+- name: loadModuleSignAuthorities
+  kind: func
+  description: 'loadModuleSignAuthorities loads the pinned module-sign authority bindings
+    from CIC_MODULE_SIGN_AUTHORITIES into pkiAssets. Unset: no signer is authorised,
+    so no envelope is admitted (fail-closed). Set but unreadable or invalid: an error
+    (start-up failure).'
+  references:
+  - logrus.Logger
+  - logrus.Fields
+  - logrus.Logger.WithField
+  - logrus.Logger.WithFields
+  calls:
+  - Info
+  - Warn
+  - logrus.Logger.WithField
+  - logrus.Logger.WithFields
+- name: moduleSignAuthoritiesEnv
+  kind: const
+  description: 'moduleSignAuthoritiesEnv names the operator''s pinned authority bindings
+    for module signing (#162 V2b): a detached companion, like the CICSourceCA bundle,
+    so it is part of the operator''s trust domain and not of the binary.'
+  references: []

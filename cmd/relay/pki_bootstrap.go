@@ -87,6 +87,7 @@ func bootstrapTrust(embeddedPKI fs.FS, logger *logrus.Logger) (string, *PKIAsset
 		return "", nil, err
 	}
 	assets.AllowUnsignedModules = allow
+	assets.TrustMode = trustMode
 	return trustMode, assets, nil
 }
 

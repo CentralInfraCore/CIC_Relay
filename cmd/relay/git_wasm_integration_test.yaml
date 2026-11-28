@@ -217,8 +217,10 @@ objects:
   - require.NoError
   - cabinet.NewWasmManager
   - assert.Equal
+  - require.Error
   calls:
   - Close
+  - Error
   - NewHostInstance
   - assert.Equal
   - cabinet.NewCabinetService
@@ -226,6 +228,7 @@ objects:
   - cabinet.NewMemSchemaStore
   - cabinet.NewMemWorkflowStore
   - cabinet.NewWasmManager
+  - require.Error
   - require.NoError
 - name: callingGuest
   kind: func

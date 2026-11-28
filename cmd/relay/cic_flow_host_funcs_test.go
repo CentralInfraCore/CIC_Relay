@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"centralrelay/core/cabinet"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -217,31 +218,63 @@ func TestMakeCICFlowHostSetupFn(t *testing.T) {
 	require.NoError(t, makeCICFlowHostSetupFn(newCICFlowRegistry(nil, nil))(ctx, r))
 }
 
-// perModule resolves the calling guest's deps by mod.Name() from the registry;
-// an unregistered module is denied (fail-closed), a registered one gets its deps.
+// invokeAsInstance is invoke with the runtime-assigned instance identity on the context (nil: none).
+func invokeAsInstance(fn hostFn, mod *minMod, id *cabinet.InstanceIdentity, req interface{}) map[string]interface{} {
+	const outOff = 4096
+	ctx := context.Background()
+	if id != nil {
+		ctx = cabinet.WithInstanceIdentity(ctx, *id)
+	}
+	reqLen := putJSON(mod, 0, req)
+	n := fn(ctx, mod, 0, reqLen, outOff, 2048)
+	out := map[string]interface{}{}
+	if n > 0 {
+		_ = json.Unmarshal(mod.mem.buf[outOff:outOff+uint32(n)], &out)
+	}
+	return out
+}
+
+// perModule resolves the calling instance's deps from the registry by its runtime identity: the grant must be
+// active and bound to the instance's artifact and authenticated envelope digest (#162 V7). An unregistered module, a
+// staged grant, another artifact or another envelope identity under the same module ID is denied (fail-closed).
 func TestPerModule_Resolution(t *testing.T) {
 	reg := newCICFlowRegistry(nil, &stubDoer{resp: okResponse(200, "ok", nil)})
-	reg.deps["mod-a@1.0"] = cicFlowDeps{doer: reg.doer, egress: egressPolicy{{Host: "api.example.com"}}}
+	deps := cicFlowDeps{doer: reg.doer, egress: egressPolicy{{Host: "api.example.com"}}}
+	reg.deps["mod-a@1.0"] = flowGrant{deps: deps, artifact: "art-1", envelopeDigest: "sha256:env-1", active: true}
 
 	fn := perModule(reg, makeActuateFn)
+	good := &cabinet.InstanceIdentity{Name: "mod-a@1.0", Artifact: "art-1", Serial: 1, Binding: "sha256:env-1"}
+	allowed := map[string]interface{}{"method": "GET", "url": "https://api.example.com/x"}
 
-	// registered module → egress policy applies (allowed host permitted)
-	mod := newMod(8192)
-	mod.name = "mod-a@1.0"
-	_, out := invoke(fn, mod, map[string]interface{}{"method": "GET", "url": "https://api.example.com/x"})
-	assert.Equal(t, float64(200), out["status"])
+	mod := func(name string) *minMod { m := newMod(8192); m.name = name; return m }
 
-	// registered module, host outside its policy → denied
-	mod2 := newMod(8192)
-	mod2.name = "mod-a@1.0"
-	_, out = invoke(fn, mod2, map[string]interface{}{"method": "GET", "url": "https://evil.example/x"})
-	assert.Contains(t, out["error"], "egress denied")
+	// the authenticated instance → egress policy applies (allowed host permitted)
+	assert.Equal(t, float64(200), invokeAsInstance(fn, mod("mod-a@1.0"), good, allowed)["status"])
+	// same instance, host outside its policy → denied
+	assert.Contains(t, invokeAsInstance(fn, mod("mod-a@1.0"), good, map[string]interface{}{"method": "GET", "url": "https://evil.example/x"})["error"], "egress denied")
 
-	// unregistered module → no verified capability
-	mod3 := newMod(8192)
-	mod3.name = "unknown@1.0"
-	_, out = invoke(fn, mod3, map[string]interface{}{"method": "GET", "url": "https://api.example.com/x"})
-	assert.Contains(t, out["error"], "no verified capability")
+	denied := map[string]*cabinet.InstanceIdentity{
+		"no identity":                  nil,
+		"unregistered module":          {Name: "unknown@1.0", Artifact: "art-1", Serial: 2, Binding: "sha256:env-1"},
+		"same ID, other artifact":      {Name: "mod-a@1.0", Artifact: "art-2", Serial: 3, Binding: "sha256:env-1"},
+		"same ID, other envelope":      {Name: "mod-a@1.0", Artifact: "art-1", Serial: 4, Binding: "sha256:env-2"},
+		"same ID, no envelope binding": {Name: "mod-a@1.0", Artifact: "art-1", Serial: 5, Binding: ""},
+	}
+	for name, id := range denied {
+		guest := "mod-a@1.0"
+		if id != nil {
+			guest = id.Name
+		}
+		assert.Contains(t, invokeAsInstance(fn, mod(guest), id, allowed)["error"], "no verified capability", name)
+	}
+	// the identity must name the calling guest
+	assert.Contains(t, invokeAsInstance(fn, mod("other@1.0"), good, allowed)["error"], "no verified capability")
+
+	// a staged (not yet committed) grant authorises nothing
+	g := reg.deps["mod-a@1.0"]
+	g.active = false
+	reg.deps["mod-a@1.0"] = g
+	assert.Contains(t, invokeAsInstance(fn, mod("mod-a@1.0"), good, allowed)["error"], "no verified capability")
 }
 
 func TestCombineHostSetups(t *testing.T) {

@@ -56,6 +56,12 @@ objects:
   kind: func
   description: trustCtxCA builds a root CA and a code-signing leaf signed by it; returns
     both as PEM.
+  references: []
+  calls: []
+- name: trustCtxCAWithKey
+  kind: func
+  description: trustCtxCAWithKey is trustCtxCA that also returns the leaf's private
+    key, to sign a module envelope with it.
   references:
   - require.NoError
   calls:

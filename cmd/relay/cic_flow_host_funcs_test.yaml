@@ -174,12 +174,24 @@ objects:
   - Close
   - require.NoError
   - wazero.NewRuntime
+- name: invokeAsInstance
+  kind: func
+  description: 'invokeAsInstance is invoke with the runtime-assigned instance identity
+    on the context (nil: none).'
+  references:
+  - cabinet.InstanceIdentity
+  - cabinet.WithInstanceIdentity
+  calls:
+  - cabinet.WithInstanceIdentity
 - name: TestPerModule_Resolution
   kind: func
-  description: perModule resolves the calling guest's deps by mod.Name() from the
-    registry; an unregistered module is denied (fail-closed), a registered one gets
-    its deps.
+  description: 'perModule resolves the calling instance''s deps from the registry
+    by its runtime identity: the grant must be active and bound to the instance''s
+    artifact and authenticated envelope digest (#162 V7). An unregistered module,
+    a staged grant, another artifact or another envelope identity under the same module
+    ID is denied (fail-closed).'
   references:
+  - cabinet.InstanceIdentity
   - assert.Equal
   - assert.Contains
   calls:
