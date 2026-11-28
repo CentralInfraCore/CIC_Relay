@@ -53,8 +53,9 @@ objects:
   calls: []
 - name: stripWasmModuleFunc
   kind: var
-  description: stripWasmModuleFunc uses wabin to strip all custom sections from a
-    WASM module, producing a canonical byte representation.
+  description: 'stripWasmModuleFunc is the wasm-canon/v1 transformation: pkg/wasmcanon,
+    the single implementation the producer (the release tooling) uses as well (O-1
+    INT-03). It is the former inline function, moved unchanged.'
   references: []
 - name: KindSpec
   kind: const

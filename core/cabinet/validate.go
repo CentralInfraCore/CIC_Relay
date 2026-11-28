@@ -7,8 +7,7 @@ import (
 	"fmt"
 
 	"centralrelay/pkg/canonicaljson"
-	"github.com/tetratelabs/wabin/binary"
-	"github.com/tetratelabs/wabin/wasm"
+	"centralrelay/pkg/wasmcanon"
 )
 
 // Kind constants for checksum discrimination.
@@ -25,25 +24,9 @@ const (
 // MaxWASMModuleSize defines the maximum allowed size for a WASM module in bytes (16MB).
 const MaxWASMModuleSize = 16 * 1024 * 1024
 
-// stripWasmModuleFunc uses wabin to strip all custom sections from a WASM module,
-// producing a canonical byte representation.
-var stripWasmModuleFunc = func(rawData []byte) ([]byte, error) {
-	// 1. Decode the module using wabin's decoder.
-	// This also performs validation.
-	module, err := binary.DecodeModule(rawData, wasm.CoreFeaturesV2)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode wasm module with wabin: %w", err)
-	}
-
-	// 2. Strip all custom sections by setting the field to nil.
-	// This includes potentially non-deterministic sections like 'name' and 'producers'.
-	module.CustomSections = nil
-
-	// 3. Re-encode the module without the custom sections.
-	encodedBytes := binary.EncodeModule(module)
-
-	return encodedBytes, nil
-}
+// stripWasmModuleFunc is the wasm-canon/v1 transformation: pkg/wasmcanon, the single implementation the producer
+// (the release tooling) uses as well (O-1 INT-03). It is the former inline function, moved unchanged.
+var stripWasmModuleFunc = wasmcanon.Canonicalize
 
 // The transformation is the executed-identity contract wasm-canon/v1 (#162 5a): the relay admits a module only if
 // sha256 of its output equals the envelope's executed_wasm_sha256. Nothing in a production build can replace it: the
