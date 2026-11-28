@@ -40,6 +40,12 @@ const Kind = "CICTrustBundle"
 // RoleModuleSign is the authority a signer key must hold to sign module releases (#162 V2b).
 const RoleModuleSign = "module:sign"
 
+// RoleVerifierAttest is the authority a key must hold to sign a VerificationResult as the independent verifier (INT-10).
+const RoleVerifierAttest = "verifier:attest"
+
+// RoleRecorderAttest is the authority a key must hold to sign a ProofTrace V2 persistence attestation (INT-10).
+const RoleRecorderAttest = "recorder:attest"
+
 // RoleProfileSign is the authority a signer key must hold to sign an ABI-profile artifact (INT-05). It extends the
 // closed role vocabulary of the bundle; the profile's signed domain is CICABIPROFv1 (ref 02 section 3).
 const RoleProfileSign = "profile:sign"
@@ -133,7 +139,11 @@ type Admitted struct {
 	ModuleSign map[string]bool
 	// ProfileSign holds, per signer key_id, whether profile:sign is granted.
 	ProfileSign map[string]bool
-	Profiles    []Profile
+	// VerifierAttest holds, per signer key_id, whether verifier:attest is granted.
+	VerifierAttest map[string]bool
+	// RecorderAttest holds, per signer key_id, whether recorder:attest is granted.
+	RecorderAttest map[string]bool
+	Profiles       []Profile
 }
 
 // wire is the decoded bundle, read only after the strict scan.
@@ -180,7 +190,7 @@ func Admit(raw []byte, pol Policy, st State, now time.Time) (*Admitted, error) {
 	if err != nil {
 		return nil, fail(CodeInvalid, "issued_at is not RFC 3339: %v", err)
 	}
-	out := &Admitted{Digest: got, Version: w.Version, IssuedAt: issued, ModuleSign: map[string]bool{}, ProfileSign: map[string]bool{}}
+	out := &Admitted{Digest: got, Version: w.Version, IssuedAt: issued, ModuleSign: map[string]bool{}, ProfileSign: map[string]bool{}, VerifierAttest: map[string]bool{}, RecorderAttest: map[string]bool{}}
 	for i, a := range w.Authorities {
 		if !digestRE.MatchString(a.KeyID) {
 			return nil, fail(CodeInvalid, "authorities[%d].key_id is not sha256:<64 lowercase hex>", i)
@@ -188,19 +198,25 @@ func Admit(raw []byte, pol Policy, st State, now time.Time) (*Admitted, error) {
 		if _, dup := out.ModuleSign[a.KeyID]; dup {
 			return nil, fail(CodeInvalid, "authorities[%d]: duplicate key_id", i)
 		}
-		var module, profile bool
+		var module, profile, verifier, recorder bool
 		for _, r := range a.Roles {
 			switch r {
 			case RoleModuleSign:
 				module = true
 			case RoleProfileSign:
 				profile = true
+			case RoleVerifierAttest:
+				verifier = true
+			case RoleRecorderAttest:
+				recorder = true
 			default:
 				return nil, fail(CodeInvalid, "authorities[%d]: unknown role %q", i, clip(r))
 			}
 		}
 		out.ModuleSign[a.KeyID] = module
 		out.ProfileSign[a.KeyID] = profile
+		out.VerifierAttest[a.KeyID] = verifier
+		out.RecorderAttest[a.KeyID] = recorder
 	}
 	seen := map[string]bool{}
 	for i, p := range w.Profiles {

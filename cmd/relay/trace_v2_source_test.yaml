@@ -172,3 +172,91 @@ objects:
   - assert.NoError
   - logrus.New
   - require.NoError
+- name: productionArtifact
+  kind: func
+  description: productionArtifact runs one step through the real cabinet with the
+    production source and returns the sealed artifact, the interaction lists the verifier
+    needs, and the source.
+  references:
+  - cabinet.ProofArtifactV2
+  - cabinet.NewMemModuleStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - require.NoError
+  - cabinet.NativeFunctions
+  - hostsign.LogFrom
+  - cabinet.ModuleProfileBinding
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - cabinet.WithTraceV2
+  - cabinet.NewWorkflow
+  - cabinet.WorkflowIdentity
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowSigning
+  - cabinet.SetPayload
+  - require.Len
+  calls:
+  - Append
+  - Checksum
+  - Decode
+  - ID
+  - Interactions
+  - Put
+  - PutWorkflow
+  - Setx
+  - UseNumber
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWorkflow
+  - cabinet.WithTraceV2
+  - hostsign.LogFrom
+  - require.Len
+  - require.NoError
+- name: TestINT10_AttestedPersistenceAndAttributableVerifierResult
+  kind: func
+  description: 'INT-10: the persistence claim of a production artifact is believed
+    only through a recorder key the bundle authorises, and the verifier''s own result
+    is attributable to a verifier key the bundle authorises. VERIFIED is not ACCEPTED.'
+  references:
+  - require.NoError
+  - attest.RecorderSignedBytes
+  - attest.AlgEd25519
+  - o1verify.Persistence
+  - o1verify.Attestation
+  - attest.Material
+  - o1verify.Result
+  - o1verify.Verify
+  - o1verify.Options
+  - o1verify.VerifierInfo
+  - attest.RecorderVerifier
+  - assert.Empty
+  - assert.Equal
+  - o1verify.EvidencePersisted
+  - o1verify.VerdictVerified
+  - o1verify.AcceptanceNotAccepted
+  - assert.NotEqual
+  - assert.NotEmpty
+  - o1verify.VerdictNotVerified
+  - attest.SignResult
+  - attest.VerifyResult
+  - assert.False
+  - assert.True
+  - assert.Error
+  calls:
+  - assert.Empty
+  - assert.Equal
+  - assert.Error
+  - assert.False
+  - assert.NotEmpty
+  - assert.NotEqual
+  - assert.True
+  - attest.RecorderSignedBytes
+  - attest.SignResult
+  - attest.VerifyResult
+  - o1verify.Verify
+  - require.NoError

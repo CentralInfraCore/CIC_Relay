@@ -85,6 +85,8 @@ func loadTrustBundle(pkiAssets *PKIAssets, logger *logrus.Logger, now time.Time)
 	pkiAssets.ModuleSignAuthorities = adm.ModuleSign
 	pkiAssets.AcceptedProfiles = adm.Profiles
 	pkiAssets.ProfileSignAuthorities = adm.ProfileSign
+	pkiAssets.VerifierAttestAuthorities = adm.VerifierAttest
+	pkiAssets.RecorderAttestAuthorities = adm.RecorderAttest
 	logger.WithFields(logrus.Fields{"bundle_version": adm.Version, "digest": adm.Digest, "authorities": len(adm.ModuleSign), "profiles": len(adm.Profiles)}).
 		Info("trust bundle admitted (digest-pinned, anti-rollback)")
 	return nil

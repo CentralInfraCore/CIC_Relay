@@ -1,0 +1,136 @@
+---
+package: attest
+description: 'Package attest gives the independent verifier (pkg/o1verify) two identities
+  it can check instead of take on trust (O-1 INT-10, AC-V2-13): - the recorder''s
+  persistence attestation (kind recorder-signature): a signature over the artifact''s
+  chain hash by a key that holds recorder:attest in the operator''s pinned trust bundle;
+  - the verifier''s own result: a signature over the VerificationResult by a key that
+  holds verifier:attest. In both, the public key travels with the signature and is
+  checked against the key_id (sha256 of its DER SPKI), and the AUTHORITY comes from
+  the bundle''s role map, never from the presented key: a key in a file is not an
+  authority. What this does and does not prove. A signed result is ATTRIBUTABLE: an
+  authorised verifier key stands behind exactly this result. It does not prove that
+  the declared implementation_digest is the code that ran; that holds only when the
+  operator also pins the implementation digests of the released verifier (Pinned),
+  which is what the release pipeline (INT-13) supplies. With no pin the outcome says
+  so (ImplementationPinned false) instead of implying it. Like the rest of pkg/o1verify
+  this package imports nothing from the producer.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Material
+  kind: struct
+  description: 'Material is what a recorder attestation is checked with: the signature
+    bytes and the signer''s SPKI.'
+  implements: []
+  references: []
+- name: RecorderVerifier
+  kind: struct
+  description: RecorderVerifier implements o1verify.AttestationVerifier for kind recorder-signature.
+  implements: []
+  references: []
+- name: SignedResult
+  kind: struct
+  description: SignedResult is a VerificationResult with the verifier's signature.
+  implements: []
+  references:
+  - o1verify.Result
+- name: Attribution
+  kind: struct
+  description: Attribution is the outcome of VerifyResult.
+  implements: []
+  references: []
+- name: sha
+  kind: func
+  description: sha is the sha256:<hex> form of the O-1 digests.
+  references: []
+  calls: []
+- name: keyIdentity
+  kind: func
+  description: keyIdentity parses an SPKI and returns its key_id, algorithm and a
+    verify function.
+  references: []
+  calls: []
+- name: RecorderSignedBytes
+  kind: func
+  description: RecorderSignedBytes is the byte-exact input of the recorder attestation
+    signature.
+  references: []
+  calls: []
+- name: VerifyAttestation
+  kind: method
+  receiver: RecorderVerifier
+  description: 'VerifyAttestation checks that att binds chainHash: the kind is supported,
+    the signature material exists and hashes to the stated signature_digest, the SPKI
+    is the stated key_id, the key holds recorder:attest, and the signature verifies
+    over the attestation''s signed bytes for exactly this chain hash.'
+  references:
+  - o1verify.Attestation
+  calls:
+  - RecorderSignedBytes
+  - RecorderVerifier.Lookup
+- name: resultDigest
+  kind: func
+  description: resultDigest is the digest of the result's JSON encoding (Go's struct-field
+    order; a second implementation would need to match it, which is why this domain
+    is versioned).
+  references:
+  - o1verify.Result
+  calls: []
+- name: ResultSignedBytes
+  kind: func
+  description: ResultSignedBytes is the byte-exact input of the verifier result signature.
+  references:
+  - o1verify.Result
+  calls: []
+- name: SignResult
+  kind: func
+  description: SignResult signs r with sign (which receives ResultSignedBytes) for
+    the key with the given SPKI.
+  references:
+  - o1verify.Result
+  calls:
+  - ResultSignedBytes
+- name: VerifyResult
+  kind: func
+  description: 'VerifyResult checks that sr is a result an authorised verifier key
+    signed: the key is the stated one, it holds verifier:attest, the signature verifies,
+    and the declared implementation_digest is well-formed. If pinned is non-empty
+    the declared digest must be one of them (else IMPLEMENTATION_NOT_PINNED); if pinned
+    is empty the result is accepted as attributable only, and Attribution.ImplementationPinned
+    says so.'
+  references: []
+  calls:
+  - MatchString
+  - ResultSignedBytes
+- name: RuntimeImplementationDigest
+  kind: func
+  description: 'RuntimeImplementationDigest is the sha256 of the running executable:
+    what a verifier binary declares as its implementation_digest. It is still a self-declaration;
+    the operator''s pin is what makes it an identity.'
+  references: []
+  calls: []
+- name: digestRE
+  kind: var
+  description: 'digestRE is the closed form of a digest: sha256: and 64 lowercase
+    hex.'
+  references: []
+- name: RecorderDomain
+  kind: const
+  description: RecorderDomain heads the recorder attestation's signed bytes.
+  references: []
+- name: VerifierDomain
+  kind: const
+  description: VerifierDomain heads the verifier result's signed bytes.
+  references: []
+- name: AlgECDSAP256
+  kind: const
+  description: AlgECDSAP256 is ecdsa over P-256 with sha256, ASN.1 DER signature.
+  references: []
+- name: AlgEd25519
+  kind: const
+  description: AlgEd25519 is ed25519.
+  references: []

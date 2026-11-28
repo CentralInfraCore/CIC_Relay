@@ -54,6 +54,21 @@ func TestProfileSignIsAnIndependentRole(t *testing.T) {
 	assert.True(t, a.ModuleSign[k1] && a.ProfileSign[k1])
 }
 
+func TestAttestRolesAreIndependent(t *testing.T) {
+	raw := strings.Replace(good, `"roles":[]`, `"roles":["verifier:attest","recorder:attest"]`, 1)
+	a, err := Admit([]byte(raw), pol(raw), State{}, now)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{k1: false, k2: true}, a.VerifierAttest)
+	assert.Equal(t, map[string]bool{k1: false, k2: true}, a.RecorderAttest)
+	assert.False(t, a.ModuleSign[k2] || a.ProfileSign[k2], "attesting is not signing modules or profiles")
+	assert.False(t, a.VerifierAttest[k1] || a.RecorderAttest[k1], "module:sign is not an attest authority")
+	only := strings.Replace(good, `"roles":[]`, `"roles":["recorder:attest"]`, 1)
+	a, err = Admit([]byte(only), pol(only), State{}, now)
+	require.NoError(t, err)
+	assert.True(t, a.RecorderAttest[k2])
+	assert.False(t, a.VerifierAttest[k2], "the two attest roles do not imply each other")
+}
+
 func TestNotPinned(t *testing.T) {
 	other := strings.Replace(good, `"bundle_version":5`, `"bundle_version":6`, 1)
 	assert.Equal(t, CodeNotPinned, code(t, other, pol(good), State{}), "a different bundle, even a valid and newer one")

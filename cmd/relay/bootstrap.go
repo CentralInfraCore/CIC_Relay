@@ -343,6 +343,10 @@ type PKIAssets struct {
 	// ProfileSignAuthorities holds, per signer key_id, whether the bundle grants profile:sign (INT-05). Nil: no profile
 	// signature is accepted.
 	ProfileSignAuthorities map[string]bool
+	// VerifierAttestAuthorities and RecorderAttestAuthorities hold, per key_id, the bundle's verifier:attest and
+	// recorder:attest grants (INT-10): what a verifier result or a persistence attestation is checked against.
+	VerifierAttestAuthorities map[string]bool
+	RecorderAttestAuthorities map[string]bool
 	// TrustMode is the CIC_TRUST_MODE the assets were bootstrapped for (bootstrapTrust). Anything other than
 	// TrustModeDev, the empty value included, is treated as prod by the module admission (V6): fail-closed.
 	TrustMode string

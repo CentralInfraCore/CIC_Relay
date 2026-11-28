@@ -51,6 +51,20 @@ objects:
   - assert.Equal
   - assert.True
   - require.NoError
+- name: TestAttestRolesAreIndependent
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.False
+  - assert.True
+  calls:
+  - Admit
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - require.NoError
 - name: TestNotPinned
   kind: func
   description: ''

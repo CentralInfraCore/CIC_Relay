@@ -168,6 +168,16 @@ objects:
   description: RoleModuleSign is the authority a signer key must hold to sign module
     releases (#162 V2b).
   references: []
+- name: RoleVerifierAttest
+  kind: const
+  description: RoleVerifierAttest is the authority a key must hold to sign a VerificationResult
+    as the independent verifier (INT-10).
+  references: []
+- name: RoleRecorderAttest
+  kind: const
+  description: RoleRecorderAttest is the authority a key must hold to sign a ProofTrace
+    V2 persistence attestation (INT-10).
+  references: []
 - name: RoleProfileSign
   kind: const
   description: RoleProfileSign is the authority a signer key must hold to sign an

@@ -5,6 +5,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -18,6 +21,7 @@ import (
 	"centralrelay/core/cabinet"
 	"centralrelay/pkg/hostsign"
 	"centralrelay/pkg/o1verify"
+	"centralrelay/pkg/o1verify/attest"
 )
 
 func d64(c string) string { return "sha256:" + strings.Repeat(c, 32) }
@@ -211,4 +215,108 @@ func TestTraceV2OptionsAndSink(t *testing.T) {
 		require.NoError(t, err, suffix)
 		assert.Equal(t, os.FileMode(0o600), fi.Mode().Perm())
 	}
+}
+
+// productionArtifact runs one step through the real cabinet with the production source and returns the sealed artifact, the
+// interaction lists the verifier needs, and the source.
+func productionArtifact(t *testing.T) (*cabinet.ProofArtifactV2, map[string][]map[string]any) {
+	t.Helper()
+	ctx := context.Background()
+	reg := newIdentityRegistry()
+	src := newTraceSource(reg, "prod", nil)
+	var sealed []*cabinet.ProofArtifactV2
+	mods := cabinet.NewMemModuleStore()
+	mod, err := cabinet.NewModuleDescriptor(ctx, cabinet.BaseBlock{Name: "echo", Version: "1.0"}, "native", nil, nil, nil)
+	require.NoError(t, err)
+	mod.NativeImpl = cabinet.NativeFunctions{"echo": func(ctx context.Context, in interface{}) (interface{}, error) {
+		l, _ := hostsign.LogFrom(ctx)
+		_, _, _ = l.Append(rec("allowed"))
+		return in, nil
+	}}
+	mods.Put(mod)
+	reg.set(mod.ID(), mod.Checksum(), executedIdentityOf(strings.Repeat("ab", 32), mod, []byte("manifest"), d64("12"),
+		&cabinet.ModuleProfileBinding{ProfileID: "cic:provider@0.1.0", ProfileDigest: d64("34")}))
+	svc, err := cabinet.NewCabinetService(ctx, cabinet.NewMemSchemaStore(), mods, cabinet.NewMemWorkflowStore(),
+		cabinet.WasmManagerConfig{LRUCacheSize: 10, DefaultTimeoutSeconds: 1},
+		cabinet.WithTraceV2(src, func(_ context.Context, a *cabinet.ProofArtifactV2) { sealed = append(sealed, a) }))
+	require.NoError(t, err)
+	wf, err := cabinet.NewWorkflow(ctx, cabinet.WorkflowIdentity{Version: "1.0"}, cabinet.WorkflowConfig{Name: "wf.int10", Steps: []string{"echo@1.0.echo(input) -> out"}}, cabinet.WorkflowSigning{})
+	require.NoError(t, err)
+	require.NoError(t, svc.PutWorkflow(wf))
+	_, err = svc.Setx(ctx, &cabinet.SetPayload{WorkflowID: wf.ID(), SourceDigest: "git:abc", Payload: map[string]any{"k": "v"}})
+	require.NoError(t, err)
+	require.Len(t, sealed, 1)
+	lists := map[string][]map[string]any{}
+	for _, st := range sealed[0].Steps {
+		recs, _ := src.Interactions(st.References.HostInteractions.Digest)
+		maps := make([]map[string]any, len(recs))
+		for i, r := range recs {
+			b, _ := json.Marshal(r)
+			dec := json.NewDecoder(bytes.NewReader(b))
+			dec.UseNumber()
+			require.NoError(t, dec.Decode(&maps[i]))
+		}
+		lists[st.References.HostInteractions.Digest] = maps
+	}
+	return sealed[0], lists
+}
+
+// INT-10: the persistence claim of a production artifact is believed only through a recorder key the bundle authorises, and
+// the verifier's own result is attributable to a verifier key the bundle authorises. VERIFIED is not ACCEPTED.
+func TestINT10_AttestedPersistenceAndAttributableVerifierResult(t *testing.T) {
+	art, lists := productionArtifact(t)
+	doc, err := json.Marshal(art)
+	require.NoError(t, err)
+
+	recPub, recPriv, _ := ed25519.GenerateKey(rand.Reader)
+	recSPKI, _ := x509.MarshalPKIXPublicKey(recPub)
+	recID := sha256Of(recSPKI)
+	sig := ed25519.Sign(recPriv, attest.RecorderSignedBytes(art.ChainHash, recID, attest.AlgEd25519))
+	persistence := &o1verify.Persistence{ArtifactChainHash: art.ChainHash, Persisted: true, Recorder: "relay", Commit: "abc123",
+		Attestation: &o1verify.Attestation{Kind: "recorder-signature", SignerKeyID: recID, SignatureDigest: sha256Of(sig)}}
+	material := func(d string) (attest.Material, bool) {
+		if d == sha256Of(sig) {
+			return attest.Material{Signature: sig, SPKI: recSPKI}, true
+		}
+		return attest.Material{}, false
+	}
+	verify := func(auth bool, p *o1verify.Persistence) o1verify.Result {
+		return o1verify.Verify(doc, o1verify.Options{
+			Verifier: o1verify.VerifierInfo{ID: "o1verify", Version: "1", ImplementationDigest: d64("ab")}, HostInteractions: lists, Persistence: p,
+			Attestations: attest.RecorderVerifier{Authorities: map[string]bool{recID: auth}, Lookup: material},
+			PolicyDigest: d64("cc"), PersistenceRequired: true})
+	}
+
+	res := verify(true, persistence)
+	assert.Empty(t, res.Problems)
+	assert.Equal(t, o1verify.EvidencePersisted, res.Dimensions.Evidence)
+	assert.Equal(t, o1verify.VerdictVerified, res.EvidenceVerdict)
+	assert.Equal(t, o1verify.AcceptanceNotAccepted, res.Acceptance,
+		"VERIFIED evidence is not ACCEPTED execution: authorization was never evaluated for this step")
+
+	res = verify(false, persistence)
+	assert.NotEqual(t, o1verify.EvidencePersisted, res.Dimensions.Evidence, "a recorder key without recorder:attest does not make the artifact persisted")
+	assert.NotEmpty(t, res.Problems)
+	assert.Equal(t, o1verify.VerdictNotVerified, res.EvidenceVerdict)
+
+	other := *persistence
+	other.ArtifactChainHash = d64("99")
+	res = verify(true, &other)
+	assert.NotEmpty(t, res.Problems, "an attestation of another artifact does not count")
+
+	// the verifier's own result: attributable only to an authorised verifier key
+	vPub, vPriv, _ := ed25519.GenerateKey(rand.Reader)
+	vSPKI, _ := x509.MarshalPKIXPublicKey(vPub)
+	vID := sha256Of(vSPKI)
+	good := verify(true, persistence)
+	sr, err := attest.SignResult(good, vSPKI, func(m []byte) ([]byte, error) { return ed25519.Sign(vPriv, m), nil })
+	require.NoError(t, err)
+	attr, err := attest.VerifyResult(*sr, map[string]bool{vID: true}, nil)
+	require.NoError(t, err)
+	assert.False(t, attr.ImplementationPinned, "no pinned implementation digests: attributable, not pinned")
+	attr, err = attest.VerifyResult(*sr, map[string]bool{vID: true}, map[string]bool{d64("ab"): true})
+	require.NoError(t, err)
+	assert.True(t, attr.ImplementationPinned)
+	_, err = attest.VerifyResult(*sr, map[string]bool{recID: true}, nil)
+	assert.Error(t, err, "the recorder's key is not the verifier's")
 }
