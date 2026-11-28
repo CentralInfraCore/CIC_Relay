@@ -1,0 +1,242 @@
+---
+package: o1verify
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: vectors
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: fakeAtt
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: load
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Decode
+  - UseNumber
+  - require.NoError
+- name: TestChainInputAndHashMatchTheSharedVectors
+  kind: func
+  description: 'The independent reading reproduces the shared vectors: the hash input
+    byte for byte and the hash.'
+  references:
+  - require.Len
+  - require.NoError
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - ChainHash
+  - ChainInput
+  - DecodeString
+  - assert.Equal
+  - assert.NotEqual
+  - require.Len
+  - require.NoError
+- name: TestInteractionsDigestMatchesTheSharedVectors
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - require.NoError
+  - assert.Equal
+  calls:
+  - InteractionsDigest
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: VerifyAttestation
+  kind: method
+  receiver: fakeAtt
+  description: ''
+  references: []
+  calls: []
+- name: okArtifact
+  kind: func
+  description: 'okArtifact is the shared vectors'' success artifact, made self-consistent:
+    it references the real two-record host-interaction list of the vectors (digest
+    and count) and carries the chain hash this package computes.'
+  references:
+  - require.NotEmpty
+  - require.NoError
+  calls:
+  - ChainHash
+  - Decode
+  - UseNumber
+  - require.NoError
+  - require.NotEmpty
+- name: opts
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVerifyReportsUnresolvedReferencesNotPass
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.Len
+  - assert.True
+  calls:
+  - Verify
+  - assert.Equal
+  - assert.True
+  - require.Len
+- name: persisted
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVerifyCompleteAndAccepted
+  kind: func
+  description: ''
+  references:
+  - require.Empty
+  - assert.Equal
+  calls:
+  - Verify
+  - assert.Equal
+  - require.Empty
+- name: TestPersistenceFailureKeepsExecutionAndVerdictSeparate
+  kind: func
+  description: '#186: a persistence failure is a fact about the evidence, not about
+    the operation: the execution dimension stays SUCCEEDED, the evidence is still
+    VERIFIED, and the acceptance is NOT_ACCEPTED.'
+  references:
+  - assert.Equal
+  calls:
+  - Verify
+  - assert.Equal
+- name: TestAttestationIsCheckedNotTrusted
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Contains
+  - assert.NotEqual
+  calls:
+  - Verify
+  - assert.Contains
+  - assert.Equal
+  - assert.NotEqual
+- name: TestVerifyRefusesForTheNamedReason
+  kind: func
+  description: Every refusal is for its named reason (the artifact is edited, and
+    the hash is NOT resealed unless stated).
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - Decode
+  - UseNumber
+  - Verify
+  - assert.Contains
+  - assert.Equal
+  - require.NoError
+- name: TestHostInteractionRecordsAreRecomputedNotTrusted
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+  calls:
+  - Decode
+  - UseNumber
+  - Verify
+  - assert.Contains
+  - require.NoError
+- name: TestResultJSONShape
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Contains
+  calls:
+  - Verify
+  - assert.Contains
+  - require.NoError
+- name: TestScalarBoundariesAndRefusals
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  calls:
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: editedProblems
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Decode
+  - UseNumber
+  - Verify
+  - require.NoError
+- name: firstStep
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestRejectedStepRulesAreEachChecked
+  kind: func
+  description: ''
+  references:
+  - assert.NotContains
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.NotContains
+- name: TestAuthorizationDecisionReferenceRule
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - assert.Contains
+  - assert.NotContains
+- name: TestAcceptanceEvidenceCondition
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - assert.NotEqual
+  calls:
+  - Decode
+  - UseNumber
+  - Verify
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+- name: TestUnreachableRecordsAreRefusedNotPanicked
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Equal
+  calls:
+  - InteractionsDigest
+  - Verify
+  - assert.Equal
+  - require.Error
+- name: vectorFile
+  kind: const
+  description: ''
+  references: []

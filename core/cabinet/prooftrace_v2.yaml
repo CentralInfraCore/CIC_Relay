@@ -1,0 +1,382 @@
+---
+package: cabinet
+description: ''
+tags:
+- executor
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ArtifactV2Error
+  kind: struct
+  description: 'ArtifactV2Error is a refusal with a machine-readable code: a negative
+    test can assert the reason, not just the fact of the refusal.'
+  implements: []
+  references: []
+- name: WorkflowRefV2
+  kind: struct
+  description: WorkflowRefV2 anchors the artifact to the workflow and the source revision.
+  implements: []
+  references: []
+- name: OutcomeV2
+  kind: struct
+  description: OutcomeV2 carries the two Relay-asserted result dimensions. The other
+    two (evidence, verification) live outside the artifact, by design.
+  implements: []
+  references: []
+- name: RequestedIdentityV2
+  kind: struct
+  description: 'RequestedIdentityV2 is the REQUESTED identity (V2-01): what the caller
+    asked to be executed. It exists for every step, including one rejected before
+    any load or dispatch.'
+  implements: []
+  references: []
+- name: ProfileRefV2
+  kind: struct
+  description: 'ProfileRefV2 is the ABI profile that governed the step: the content
+    digest (ABI-05: sha256 of the published raw bytes), not just the name.'
+  implements: []
+  references: []
+- name: ExecutedIdentityV2
+  kind: struct
+  description: 'ExecutedIdentityV2 is the EXECUTED identity (V2-01): what actually
+    ran. It is asserted only when the execution phase was reached, so a REJECTED step
+    must not carry it — it cannot claim a non-existent execution identity.'
+  implements: []
+  references: []
+- name: RejectionV2
+  kind: struct
+  description: RejectionV2 records where and why the operation stopped. Mandatory
+    on a REJECTED step and forbidden on any other (V2-01).
+  implements: []
+  references: []
+- name: DigestRefV2
+  kind: struct
+  description: DigestRefV2 is a content-addressed reference to an evidence record
+    that lives outside the artifact. A reference is complete evidence only if the
+    content is reachable and checkable; otherwise the verifier reports UNRESOLVED_REFERENCE.
+  implements: []
+  references: []
+- name: HostInteractionsRefV2
+  kind: struct
+  description: 'HostInteractionsRefV2 references the ordered host-interaction list:
+    its digest and its length. The list also contains the denied and the failed calls.'
+  implements: []
+  references: []
+- name: StepReferencesV2
+  kind: struct
+  description: StepReferencesV2 holds the step's references to records outside the
+    hash domain. AuthorizationDecision is mandatory for an ALLOWED or DENIED step
+    (AC-V2-11).
+  implements: []
+  references: []
+- name: ProofStepV2
+  kind: struct
+  description: ProofStepV2 is one step of a V2 artifact.
+  implements: []
+  references: []
+- name: ProofArtifactV2
+  kind: struct
+  description: 'ProofArtifactV2 is the V2 proof artifact: the whole hash domain of
+    CICCHAINv2. The persistence object is deliberately not a field here.'
+  implements: []
+  references: []
+- name: Error
+  kind: method
+  receiver: ArtifactV2Error
+  description: Error renders the code, the field and the detail.
+  references: []
+  calls: []
+- name: ArtifactV2ErrorCode
+  kind: func
+  description: ArtifactV2ErrorCode returns the code of err if it is an ArtifactV2Error,
+    and "" otherwise.
+  references: []
+  calls: []
+- name: canonValue
+  kind: func
+  description: canonValue renders one value of the hash input. An empty string means
+    the field is absent and enters as the `null` literal; a value with a line break
+    or a non-ASCII byte is refused (CodeBadValue) rather than escaped, because the
+    canonical form has no escaping.
+  references: []
+  calls: []
+- name: canonOptional
+  kind: func
+  description: canonOptional renders a nullable string field.
+  references: []
+  calls: []
+- name: ChainBytesV2
+  kind: func
+  description: 'ChainBytesV2 builds the normative CICCHAINv2 hash input (V2-03): fixed
+    order, LF-terminated `key=value` lines, with no JSON re-serialisation. Free text
+    (the step name) enters only as the sha256 of its UTF-8 bytes; an absent value
+    is the `null` literal; absent groups are explicit (`rejection=absent`, `executed=absent`);
+    the chain_hash field is not part of the input.'
+  references: []
+  calls: []
+- name: ComputeChainHashV2
+  kind: func
+  description: 'ComputeChainHashV2 returns "sha256:" + hex(sha256(ChainBytesV2(a))).
+    It is the V2 chain hash: a different hash domain from ComputeChainHashV1, over
+    a different field set, with no conversion between the two.'
+  references: []
+  calls:
+  - ChainBytesV2
+- name: SealArtifactV2
+  kind: func
+  description: 'SealArtifactV2 validates the artifact and writes its computed chain
+    hash. A refused artifact gets no chain hash: the Relay does not emit a V2 artifact
+    that breaks the V2-01 identity rules.'
+  references: []
+  calls:
+  - ComputeChainHashV2
+  - ValidateArtifactV2
+- name: ProfileRawDigestV2
+  kind: func
+  description: 'ProfileRawDigestV2 returns the ABI profile content digest (ABI-05):
+    the sha256 of the profile artifact''s published raw bytes, with no re-serialisation
+    and no canonicalisation. A modified profile therefore gives a different digest
+    (AC-V2-01).'
+  references: []
+  calls: []
+- name: requireDigest
+  kind: func
+  description: requireDigest checks a mandatory digest field.
+  references: []
+  calls:
+  - MatchString
+- name: optionalDigest
+  kind: func
+  description: optionalDigest checks an optional digest field when it is present.
+  references: []
+  calls:
+  - MatchString
+- name: ValidateArtifactV2
+  kind: func
+  description: 'ValidateArtifactV2 enforces the V2 invariants the producer must never
+    break. It is the Relay-side counterpart of the wire schema, plus the normative
+    V2-01 rules: the requested identity always exists; a REJECTED step has a rejection
+    record and no executed identity, output or host interaction; a SUCCEEDED/FAILED/ABORTED
+    step has an executed identity and no rejection; "authenticated" requires the envelope
+    digest (AC-V2-06); an ALLOWED/DENIED step requires the authorization-decision
+    reference (AC-V2-11); and a V1 record is refused in the V2 domain (AC-V2-07).'
+  references: []
+  calls: []
+- name: validExecution
+  kind: func
+  description: validExecution checks the execution enum.
+  references: []
+  calls: []
+- name: validAuthorization
+  kind: func
+  description: validAuthorization checks the authorization enum.
+  references: []
+  calls: []
+- name: validateStepV2
+  kind: func
+  description: validateStepV2 enforces the per-step V2 rules.
+  references: []
+  calls:
+  - MatchString
+- name: validateExecutedV2
+  kind: func
+  description: validateExecutedV2 enforces the executed-identity rules, including
+    AC-V2-06.
+  references: []
+  calls: []
+- name: digestPattern
+  kind: var
+  description: digestPattern is a package-level lookup table or pattern of the ProofTrace
+    V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: rejectionCodePattern
+  kind: var
+  description: 'rejectionCodePattern mirrors the wire schema: an upper-case, underscore
+    code.'
+  references: []
+- name: ProofArtifactV2Kind
+  kind: const
+  description: ProofArtifactV2Kind is the only accepted `kind` of a V2 artifact.
+  references: []
+- name: ProofArtifactV2Version
+  kind: const
+  description: ProofArtifactV2Version is the only accepted `version` of a V2 artifact.
+  references: []
+- name: ChainVersionV2
+  kind: const
+  description: ChainVersionV2 is the V2 hash domain and the only accepted `chain_version`.
+  references: []
+- name: ChainVersionV1
+  kind: const
+  description: ChainVersionV1 is the V1 hash domain. It is rejected in a V2 artifact.
+  references: []
+- name: ExecutionSucceeded
+  kind: const
+  description: ExecutionSucceeded is a named value of the ProofTrace V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: ExecutionRejected
+  kind: const
+  description: ExecutionRejected is a named value of the ProofTrace V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: ExecutionFailed
+  kind: const
+  description: ExecutionFailed is a named value of the ProofTrace V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: ExecutionAborted
+  kind: const
+  description: ExecutionAborted is a named value of the ProofTrace V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: AuthorizationAllowed
+  kind: const
+  description: AuthorizationAllowed is a named value of the ProofTrace V2 contract
+    (04-prooftrace-v2-wire.md).
+  references: []
+- name: AuthorizationDenied
+  kind: const
+  description: AuthorizationDenied is a named value of the ProofTrace V2 contract
+    (04-prooftrace-v2-wire.md).
+  references: []
+- name: AuthorizationNotEvaluated
+  kind: const
+  description: AuthorizationNotEvaluated is a named value of the ProofTrace V2 contract
+    (04-prooftrace-v2-wire.md).
+  references: []
+- name: RejectionPhaseAdmission
+  kind: const
+  description: RejectionPhaseAdmission is a rejection phase of a REJECTED step (V2-01).
+  references: []
+- name: RejectionPhaseDispatch
+  kind: const
+  description: RejectionPhaseDispatch is a rejection phase of a REJECTED step (V2-01).
+  references: []
+- name: RejectionPhasePolicy
+  kind: const
+  description: RejectionPhasePolicy is a rejection phase of a REJECTED step (V2-01).
+  references: []
+- name: TrustStateAuthenticated
+  kind: const
+  description: TrustStateAuthenticated is a trust state of an executed module artifact
+    (D-1).
+  references: []
+- name: TrustStateTransitional
+  kind: const
+  description: TrustStateTransitional is a trust state of an executed module artifact
+    (D-1).
+  references: []
+- name: TrustStateDev
+  kind: const
+  description: TrustStateDev is a trust state of an executed module artifact (D-1).
+  references: []
+- name: CodeBadValue
+  kind: const
+  description: 'CodeBadValue: a value in the hash input contains a line break or a
+    non-ASCII byte. The canonical form has no escaping, so such a value cannot be
+    represented and is refused instead of being mangled.'
+  references: []
+- name: CodeKindInvalid
+  kind: const
+  description: 'CodeKindInvalid: `kind` is not ProofArtifact.'
+  references: []
+- name: CodeVersionInvalid
+  kind: const
+  description: 'CodeVersionInvalid: `version` is not "2.0" (a V1 record in the V2
+    domain).'
+  references: []
+- name: CodeChainVersionInvalid
+  kind: const
+  description: 'CodeChainVersionInvalid: `chain_version` is not CICCHAINv2.'
+  references: []
+- name: CodeWorkflowIDRequired
+  kind: const
+  description: 'CodeWorkflowIDRequired: `workflow.id` is empty.'
+  references: []
+- name: CodeWorkflowSourceDigestRequired
+  kind: const
+  description: 'CodeWorkflowSourceDigestRequired: `workflow.source_digest` is empty.'
+  references: []
+- name: CodeExecutionInvalid
+  kind: const
+  description: 'CodeExecutionInvalid: an execution outcome outside the enum.'
+  references: []
+- name: CodeAuthorizationInvalid
+  kind: const
+  description: 'CodeAuthorizationInvalid: an authorization outcome outside the enum.'
+  references: []
+- name: CodeStepIndexMismatch
+  kind: const
+  description: 'CodeStepIndexMismatch: `step.index` is not the step''s position.'
+  references: []
+- name: CodeStepNameRequired
+  kind: const
+  description: 'CodeStepNameRequired: `step.name` is empty.'
+  references: []
+- name: CodeRequestedIdentityRequired
+  kind: const
+  description: 'CodeRequestedIdentityRequired: V2-01 — the requested identity is missing.'
+  references: []
+- name: CodeRejectedWithExecuted
+  kind: const
+  description: 'CodeRejectedWithExecuted: V2-01 — a REJECTED step claims an executed
+    identity.'
+  references: []
+- name: CodeRejectedWithoutRejection
+  kind: const
+  description: 'CodeRejectedWithoutRejection: V2-01 — a REJECTED step has no rejection
+    record.'
+  references: []
+- name: CodeRejectedWithOutput
+  kind: const
+  description: 'CodeRejectedWithOutput: a REJECTED step claims an output digest.'
+  references: []
+- name: CodeRejectedWithHostInteractions
+  kind: const
+  description: 'CodeRejectedWithHostInteractions: a REJECTED step claims host interactions.'
+  references: []
+- name: CodeExecutedRequired
+  kind: const
+  description: 'CodeExecutedRequired: V2-01 — SUCCEEDED/FAILED/ABORTED without an
+    executed identity.'
+  references: []
+- name: CodeExecutedWithRejection
+  kind: const
+  description: 'CodeExecutedWithRejection: a non-REJECTED step carries a rejection
+    record.'
+  references: []
+- name: CodeAuthenticatedWithoutEnvelopeDigest
+  kind: const
+  description: 'CodeAuthenticatedWithoutEnvelopeDigest: AC-V2-06 — trust_state "authenticated"
+    without the authenticated envelope identity.'
+  references: []
+- name: CodeAuthorizationDecisionRequired
+  kind: const
+  description: 'CodeAuthorizationDecisionRequired: AC-V2-11 — an ALLOWED/DENIED step
+    with no reference to the decision record of the deciding mechanism.'
+  references: []
+- name: CodeDigestRequired
+  kind: const
+  description: 'CodeDigestRequired: a mandatory digest field is empty.'
+  references: []
+- name: CodeDigestFormatInvalid
+  kind: const
+  description: 'CodeDigestFormatInvalid: a digest is not `sha256:` + 64 lowercase
+    hex chars.'
+  references: []
+- name: CodeRejectionPhaseInvalid
+  kind: const
+  description: 'CodeRejectionPhaseInvalid: `rejection.phase` outside the enum.'
+  references: []
+- name: CodeRejectionCodeInvalid
+  kind: const
+  description: 'CodeRejectionCodeInvalid: `rejection.code` is not /^[A-Z_]+$/.'
+  references: []
+- name: CodeTrustStateInvalid
+  kind: const
+  description: 'CodeTrustStateInvalid: `executed.trust_state` outside the enum.'
+  references: []
+- name: CodeStepsRequired
+  kind: const
+  description: 'CodeStepsRequired: an artifact with no steps.'
+  references: []

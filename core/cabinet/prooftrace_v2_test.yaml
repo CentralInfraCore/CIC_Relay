@@ -1,0 +1,354 @@
+---
+package: cabinet
+description: ''
+tags:
+- executor
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: v2Vectors
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: fakeSource
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: v2Run
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: loadV2Vectors
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: vectorArtifact
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestV2ProducerReproducesTheSharedVectors
+  kind: func
+  description: 'AC-V2-15: the producer reproduces the shared vectors'' hash input
+    byte for byte and the hash. The independent verifier (pkg/o1verify, no shared
+    code) reproduces the same bytes from the same file.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - o1verify.ChainHash
+  calls:
+  - ChainBytesV2
+  - ComputeChainHashV2
+  - DecodeString
+  - ValidateArtifactV2
+  - assert.Equal
+  - o1verify.ChainHash
+  - require.NoError
+- name: TestV2SealWritesTheHashAndRefusesABrokenArtifact
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  calls:
+  - ArtifactV2ErrorCode
+  - SealArtifactV2
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: TestV2ValidationRefusesForTheNamedReason
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Equal
+  - require.NoError
+  calls:
+  - ArtifactV2ErrorCode
+  - Error
+  - ValidateArtifactV2
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: TestV2HashInputRefusesWhatItCanNotRepresent
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Equal
+  calls:
+  - ArtifactV2ErrorCode
+  - ChainBytesV2
+  - assert.Equal
+  - require.Error
+- name: TestV2EveryIdentityFieldChangesTheChainHash
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEqual
+  calls:
+  - ComputeChainHashV2
+  - ProfileRawDigestV2
+  - assert.NotEqual
+  - require.NoError
+- name: TestV2PersistenceRecordRules
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Equal
+  calls:
+  - ArtifactV2ErrorCode
+  - NewPersistenceFailureV2
+  - PersistenceStatusV2.Validate
+  - Validate
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: ExecutedIdentity
+  kind: method
+  receiver: fakeSource
+  description: ''
+  references: []
+  calls: []
+- name: Authorization
+  kind: method
+  receiver: fakeSource
+  description: ''
+  references: []
+  calls: []
+- name: ExecutionContext
+  kind: method
+  receiver: fakeSource
+  description: ''
+  references: []
+  calls: []
+- name: HostInteractions
+  kind: method
+  receiver: fakeSource
+  description: ''
+  references: []
+  calls:
+  - EmptyHostInteractionsDigestV2
+- name: newV2Run
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - Put
+  - WithTraceV2
+  - require.NoError
+- name: run
+  kind: method
+  receiver: v2Run
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - ID
+  - NewWorkflow
+  - Put
+  - Setx
+  - require.NoError
+- name: okEcho
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: requireVerified
+  kind: func
+  description: every recorded artifact is valid, sealed, and independently re-verified
+    with the same chain hash.
+  references:
+  - o1verify.Result
+  - require.NoError
+  - assert.Equal
+  - o1verify.Verify
+  - o1verify.Options
+  - o1verify.VerifierInfo
+  - assert.Empty
+  - o1verify.VerificationComplete
+  calls:
+  - ComputeChainHashV2
+  - EmptyHostInteractionsDigestV2
+  - ValidateArtifactV2
+  - assert.Empty
+  - assert.Equal
+  - o1verify.Verify
+  - require.NoError
+- name: TestV2TraceOnSuccess
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Len
+  - assert.Equal
+  - require.NotNil
+  - assert.NotNil
+  - o1verify.VerdictVerified
+  calls:
+  - assert.Equal
+  - assert.NotNil
+  - require.Len
+  - require.NoError
+  - require.NotNil
+- name: TestV2TraceOnFailureIsRecordedAndTheErrorIsUnchanged
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Equal
+  - assert.True
+  - require.Len
+  - require.NotNil
+  - assert.Nil
+  - assert.Empty
+  calls:
+  - Error
+  - assert.Empty
+  - assert.Equal
+  - assert.Nil
+  - assert.True
+  - require.Error
+  - require.Len
+  - require.NotNil
+- name: TestV2TimeoutIsAbortedNotFailed
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - require.Len
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Error
+  - require.Len
+- name: TestV2RejectionBeforeDispatchHasNoExecutedIdentity
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - require.Len
+  - assert.Equal
+  - assert.Nil
+  - require.NotNil
+  - require.ErrorIs
+  - o1verify.AcceptanceNotEvaluated
+  calls:
+  - assert.Equal
+  - assert.Nil
+  - require.Error
+  - require.ErrorIs
+  - require.Len
+  - require.NotNil
+- name: TestV2NoIdentityNoRecord
+  kind: func
+  description: 'A source that has no authenticated identity for the module means the
+    step can not be recorded as executed: nothing is recorded (and a warning logged);
+    it is never recorded with an invented identity.'
+  references:
+  - require.NoError
+  - assert.Empty
+  calls:
+  - assert.Empty
+  - require.NoError
+- name: TestV1IsUnchangedByV2Recording
+  kind: func
+  description: 'V1 is unchanged: the same run with V2 recording on and off gives an
+    identical V1 trace and chain hash.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.True
+  - assert.NotEqual
+  calls:
+  - assert.Equal
+  - assert.NotEqual
+  - assert.True
+  - require.NoError
+- name: TestWithTraceV2NeedsASourceAndASink
+  kind: func
+  description: ''
+  references:
+  - assert.Panics
+  calls:
+  - WithTraceV2
+  - assert.Panics
+- name: TestV2NilAndNonV2Errors
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Equal
+  calls:
+  - ArtifactV2ErrorCode
+  - ChainBytesV2
+  - ComputeChainHashV2
+  - PersistenceStatusV2.Validate
+  - SealArtifactV2
+  - ValidateArtifactV2
+  - assert.Equal
+  - require.Error
+- name: TestV2MoreFieldRefusals
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Equal
+  calls:
+  - ArtifactV2ErrorCode
+  - Error
+  - ValidateArtifactV2
+  - assert.Equal
+  - require.Error
+- name: TestV2RejectionClassification
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestV2RunFailingBeforeTheFirstStepRecordsNothing
+  kind: func
+  description: 'A run that fails before its first step (here: the workflow does not
+    exist) has nothing to record: no artifact, no panic.'
+  references:
+  - require.Error
+  - assert.Empty
+  calls:
+  - Setx
+  - assert.Empty
+  - require.Error
+- name: TestV2TwoStepRunRecordsBothAndTheOutcomeOfTheFailingOne
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - require.Len
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Error
+  - require.Len
+- name: v2VectorFile
+  kind: const
+  description: ''
+  references: []

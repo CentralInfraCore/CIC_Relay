@@ -1,0 +1,76 @@
+---
+package: cabinet
+description: ''
+tags:
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: AttestationV2
+  kind: struct
+  description: AttestationV2 is the attestation of a persisted record.
+  implements: []
+  references: []
+- name: PersistenceStatusV2
+  kind: struct
+  description: PersistenceStatusV2 is the persistence object (prooftrace-v2-persistence.schema.json).
+  implements: []
+  references: []
+- name: Validate
+  kind: method
+  receiver: PersistenceStatusV2
+  description: Validate checks the shape rules of the record. It does not (and can
+    not) prove the attestation.
+  references: []
+  calls:
+  - MatchString
+- name: NewPersistenceFailureV2
+  kind: func
+  description: 'NewPersistenceFailureV2 builds the record of a failed recording. The
+    operation itself is not claimed to have not happened: this object says nothing
+    about the execution dimension (#186).'
+  references: []
+  calls:
+  - PersistenceStatusV2.Validate
+- name: AttestationGitSignedCommit
+  kind: const
+  description: AttestationGitSignedCommit is a kind of persistence attestation.
+  references: []
+- name: AttestationRecorderSignature
+  kind: const
+  description: AttestationRecorderSignature is a kind of persistence attestation.
+  references: []
+- name: CodePersistenceNotBound
+  kind: const
+  description: 'CodePersistenceNotBound: the record names no artifact (no chain hash),
+    or a malformed one.'
+  references: []
+- name: CodePersistenceRecorderRequired
+  kind: const
+  description: 'CodePersistenceRecorderRequired: the record names no recorder.'
+  references: []
+- name: CodePersistedWithoutAttestation
+  kind: const
+  description: 'CodePersistedWithoutAttestation: persisted=true without a commit or
+    without an attestation.'
+  references: []
+- name: CodePersistedWithError
+  kind: const
+  description: 'CodePersistedWithError: persisted=true but an error code is present.'
+  references: []
+- name: CodeNotPersistedWithoutError
+  kind: const
+  description: 'CodeNotPersistedWithoutError: persisted=false without an error code.'
+  references: []
+- name: CodeNotPersistedWithEvidence
+  kind: const
+  description: 'CodeNotPersistedWithEvidence: persisted=false but a commit or an attestation
+    is present.'
+  references: []
+- name: CodeAttestationInvalid
+  kind: const
+  description: 'CodeAttestationInvalid: an unknown attestation kind or a malformed
+    digest.'
+  references: []
