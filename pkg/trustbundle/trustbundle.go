@@ -77,10 +77,11 @@ func CodeOf(err error) string {
 	return ""
 }
 
-// digestRE and idRE are the closed forms of a digest and of a profile id.
 var (
+	// digestRE is the closed form of a digest: sha256: and 64 lowercase hex.
 	digestRE = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	idRE     = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,127}$`)
+	// idRE is the closed form of a profile id.
+	idRE = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,127}$`)
 )
 
 // bundleShape is the exact wire shape of the bundle.

@@ -116,11 +116,12 @@ objects:
   - Write
 - name: digestRE
   kind: var
-  description: ''
+  description: 'digestRE is the closed form of a digest: sha256: and 64 lowercase
+    hex.'
   references: []
 - name: idRE
   kind: var
-  description: ''
+  description: idRE is the closed form of a profile id.
   references: []
 - name: bundleShape
   kind: var
