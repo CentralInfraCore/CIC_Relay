@@ -213,6 +213,17 @@ func Admit(raw []byte, pol Policy, st State, now time.Time) (*Admitted, error) {
 				return nil, fail(CodeInvalid, "authorities[%d]: unknown role %q", i, clip(r))
 			}
 		}
+		held := 0
+		for _, h := range []bool{module, profile, verifier, recorder} {
+			if h {
+				held++
+			}
+		}
+		if held > 1 {
+			// the four authority roles attest four different claims; one key standing behind two of them collapses two
+			// responsibilities into one (O-1 key separation)
+			return nil, fail(CodeInvalid, "authorities[%d]: a key holds %d authority roles; module:sign, profile:sign, recorder:attest and verifier:attest need four separate keys", i, held)
+		}
 		out.ModuleSign[a.KeyID] = module
 		out.ProfileSign[a.KeyID] = profile
 		out.VerifierAttest[a.KeyID] = verifier

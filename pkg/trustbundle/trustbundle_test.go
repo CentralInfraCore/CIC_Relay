@@ -48,25 +48,49 @@ func TestProfileSignIsAnIndependentRole(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]bool{k1: false, k2: true}, a.ProfileSign)
 	assert.Equal(t, map[string]bool{k1: true, k2: false}, a.ModuleSign, "a profile signer is not a module signer")
-	both := strings.Replace(good, `"roles":["module:sign"]`, `"roles":["module:sign","profile:sign"]`, 1)
-	a, err = Admit([]byte(both), pol(both), State{}, now)
+}
+
+// the four roles need four different keys: every combination of two or more on one key is refused
+func TestAKeyHoldingTwoAuthorityRolesIsRefused(t *testing.T) {
+	roles := []string{"module:sign", "profile:sign", "recorder:attest", "verifier:attest"}
+	for i := 0; i < len(roles); i++ {
+		for j := i + 1; j < len(roles); j++ {
+			raw := strings.Replace(good, `"roles":["module:sign"]`, `"roles":["`+roles[i]+`","`+roles[j]+`"]`, 1)
+			assert.Equal(t, CodeInvalid, code(t, raw, pol(raw), State{}), roles[i]+" + "+roles[j])
+		}
+	}
+	all := strings.Replace(good, `"roles":["module:sign"]`, `"roles":["module:sign","profile:sign","recorder:attest","verifier:attest"]`, 1)
+	assert.Equal(t, CodeInvalid, code(t, all, pol(all), State{}))
+	_, err := Admit([]byte(all), pol(all), State{}, now)
+	assert.ErrorContains(t, err, "four separate keys")
+	// the same role twice on one key is one role, not a conflict
+	dup := strings.Replace(good, `"roles":["module:sign"]`, `"roles":["module:sign","module:sign"]`, 1)
+	_, err = Admit([]byte(dup), pol(dup), State{}, now)
+	assert.NoError(t, err)
+	// four distinct keys, one role each: admitted
+	k3 := "sha256:" + strings.Repeat("3", 64)
+	k4 := "sha256:" + strings.Repeat("4", 64)
+	four := `{"kind":"CICTrustBundle","bundle_version":5,"issued_at":"2026-11-28T10:00:00Z","authorities":[` +
+		`{"key_id":"` + k1 + `","roles":["module:sign"]},{"key_id":"` + k2 + `","roles":["profile:sign"]},` +
+		`{"key_id":"` + k3 + `","roles":["recorder:attest"]},{"key_id":"` + k4 + `","roles":["verifier:attest"]}],"accepted_profiles":[]}`
+	a, err := Admit([]byte(four), pol(four), State{}, now)
 	require.NoError(t, err)
-	assert.True(t, a.ModuleSign[k1] && a.ProfileSign[k1])
+	assert.True(t, a.ModuleSign[k1] && a.ProfileSign[k2] && a.RecorderAttest[k3] && a.VerifierAttest[k4])
 }
 
 func TestAttestRolesAreIndependent(t *testing.T) {
-	raw := strings.Replace(good, `"roles":[]`, `"roles":["verifier:attest","recorder:attest"]`, 1)
-	a, err := Admit([]byte(raw), pol(raw), State{}, now)
-	require.NoError(t, err)
-	assert.Equal(t, map[string]bool{k1: false, k2: true}, a.VerifierAttest)
-	assert.Equal(t, map[string]bool{k1: false, k2: true}, a.RecorderAttest)
-	assert.False(t, a.ModuleSign[k2] || a.ProfileSign[k2], "attesting is not signing modules or profiles")
-	assert.False(t, a.VerifierAttest[k1] || a.RecorderAttest[k1], "module:sign is not an attest authority")
-	only := strings.Replace(good, `"roles":[]`, `"roles":["recorder:attest"]`, 1)
-	a, err = Admit([]byte(only), pol(only), State{}, now)
+	rec := strings.Replace(good, `"roles":[]`, `"roles":["recorder:attest"]`, 1)
+	a, err := Admit([]byte(rec), pol(rec), State{}, now)
 	require.NoError(t, err)
 	assert.True(t, a.RecorderAttest[k2])
 	assert.False(t, a.VerifierAttest[k2], "the two attest roles do not imply each other")
+	assert.False(t, a.ModuleSign[k2] || a.ProfileSign[k2], "attesting is not signing modules or profiles")
+	assert.False(t, a.VerifierAttest[k1] || a.RecorderAttest[k1], "module:sign is not an attest authority")
+	ver := strings.Replace(good, `"roles":[]`, `"roles":["verifier:attest"]`, 1)
+	a, err = Admit([]byte(ver), pol(ver), State{}, now)
+	require.NoError(t, err)
+	assert.True(t, a.VerifierAttest[k2])
+	assert.False(t, a.RecorderAttest[k2])
 }
 
 func TestNotPinned(t *testing.T) {
