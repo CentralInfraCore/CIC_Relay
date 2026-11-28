@@ -207,6 +207,14 @@ objects:
     a required mode off.
   references: []
   calls: []
+- name: genericDispatchFromEnv
+  kind: func
+  description: genericDispatchFromEnv reads CIC_ABI_GENERIC_DISPATCH. Unset or empty
+    means false — Setx keeps using only the legacy built-in four-op dispatch (init/process/get/notify),
+    today's behavior (WP-03, AC-03-5). Only "true" and "false" are accepted, so a
+    typo cannot silently turn it on.
+  references: []
+  calls: []
 - name: buildRecorderOption
   kind: func
   description: buildRecorderOption constructs a cabinet.WithRecorder option from the
@@ -313,6 +321,7 @@ objects:
   - cabinet.NewCabinetService
   - cabinet.WithEvidenceRequired
   - cabinet.WithProtectedModules
+  - cabinet.WithGenericDispatch
   - merkle.BuildContext
   - merkle.GoSumDigest
   - merkle.GoRuntimeDigest
@@ -336,6 +345,7 @@ objects:
   - cabinet.NewMemSchemaStore
   - cabinet.NewMemWorkflowStore
   - cabinet.WithEvidenceRequired
+  - cabinet.WithGenericDispatch
   - cabinet.WithObsSinks
   - cabinet.WithProtectedModules
   - crypto.NewVaultCryptoService

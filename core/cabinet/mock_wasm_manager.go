@@ -58,6 +58,12 @@ func (m *MockCicWasmHost) Notify(ctx context.Context, authContextJson, eventJson
 	return args.String(0), args.String(1)
 }
 
+// Call returns the stubbed (result, error) strings for the named op.
+func (m *MockCicWasmHost) Call(ctx context.Context, op, authContextJson, inputJson string) (string, string) {
+	args := m.Called(ctx, op, authContextJson, inputJson)
+	return args.String(0), args.String(1)
+}
+
 // Close records the call and returns the stubbed error.
 func (m *MockCicWasmHost) Close(ctx context.Context) error {
 	args := m.Called(ctx)

@@ -1,0 +1,131 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ABIProfileError
+  kind: struct
+  description: ABIProfileError is a named, machine-checkable ABI-profile admission
+    failure. errors.Is(err, ErrInvalid) holds for it, like every other Cabinet validation
+    failure; Code carries the specific ABI-01..05/SS-05/registry violation.
+  implements: []
+  references: []
+- name: SchemaRegistryEntry
+  kind: struct
+  description: 'SchemaRegistryEntry is one operator-registered schema: its pinned
+    digest, and for request schemas used as an effect_resolution field source, the
+    field''s enum domain (ABI-02''s "egy deklarált, felsorolásos mező").'
+  implements: []
+  references: []
+- name: OperatorLimits
+  kind: struct
+  description: 'OperatorLimits is the operator''s upper bound on a profile''s limits
+    (SS-05): "a profil-limitek az operátori korlátot nem lépik túl". Zero means "no
+    operator cap is declared for this field", mirroring the reference''s dict lookup:
+    a profile field with no corresponding cap entry is a programming error in the
+    caller (the reference''s OPERATOR_CAPS covers all three fields), not something
+    CheckProfileSemantics silently allows.'
+  implements: []
+  references: []
+- name: SchemaRegistry
+  kind: interface
+  description: SchemaRegistry resolves a profile's schema references against the operator's
+    schema store (ABI-03). The physical location of that store is an open question
+    (ref 02 §6); this interface is what CheckProfileSemantics needs from it. InMemorySchemaRegistry
+    below is the test/reference implementation.
+  references: []
+  methods:
+  - Resolve
+- name: InMemorySchemaRegistry
+  kind: type
+  description: InMemorySchemaRegistry is a fixed-map SchemaRegistry, for tests and
+    for any caller that already has its schema set resolved in memory.
+  references: []
+- name: Error
+  kind: method
+  receiver: ABIProfileError
+  description: Error renders the ErrInvalid prefix and the named code.
+  references: []
+  calls: []
+- name: Is
+  kind: method
+  receiver: ABIProfileError
+  description: Is makes errors.Is(err, ErrInvalid) hold for ABIProfileError.
+  references: []
+  calls: []
+- name: ABIProfileErrorCode
+  kind: func
+  description: ABIProfileErrorCode returns the named code of an ABIProfileError, if
+    err is one.
+  references: []
+  calls: []
+- name: Resolve
+  kind: method
+  receiver: InMemorySchemaRegistry
+  description: Resolve looks the schema id up in the fixed map.
+  references: []
+  calls: []
+- name: cap
+  kind: method
+  receiver: OperatorLimits
+  description: cap returns the operator cap for a limit field name.
+  references: []
+  calls: []
+- name: limitFields
+  kind: method
+  receiver: AbiLimits
+  description: limitFields returns a profile's declared (non-zero) limit fields in
+    a fixed order, so CheckProfileSemantics's result does not depend on map iteration.
+  references: []
+  calls: []
+- name: CheckProfileSemantics
+  kind: func
+  description: 'CheckProfileSemantics enforces ABI-01..04 and SS-05 (ref 02 §7) on
+    an already structurally-valid AbiProfile (see ParseProfile). It returns the first
+    violation as an *ABIProfileError, or nil. The check order mirrors check_profile_semantics
+    exactly (reference-build_o1_schemas.py.txt:190-217): duplicate names, then per-operation
+    schema refs and effect-field resolution, then host-capability consistency, then
+    limits.'
+  references: []
+  calls:
+  - SchemaRegistry.Resolve
+- name: CodeDuplicateOperation
+  kind: const
+  description: 'CodeDuplicateOperation: ABI-01: two operations of one profile share
+    a name.'
+  references: []
+- name: CodeSchemaRefUnresolved
+  kind: const
+  description: 'CodeSchemaRefUnresolved: ABI-03: a request or response schema reference
+    is not in the operator''s schema store.'
+  references: []
+- name: CodeSchemaDigestMismatch
+  kind: const
+  description: 'CodeSchemaDigestMismatch: ABI-03: the referenced schema''s digest
+    differs from the stored one.'
+  references: []
+- name: CodeEffectFieldUnresolvable
+  kind: const
+  description: 'CodeEffectFieldUnresolvable: ABI-02: the effect_resolution field is
+    not a declared enum field of the request schema.'
+  references: []
+- name: CodeEffectMapKeyNotInFieldDomain
+  kind: const
+  description: 'CodeEffectMapKeyNotInFieldDomain: ABI-02: an effect_resolution map
+    key is outside the field''s value domain.'
+  references: []
+- name: CodeHostCapabilityInconsistent
+  kind: const
+  description: 'CodeHostCapabilityInconsistent: ABI-04: sign+send operations and the
+    provider-http@1 capability do not match.'
+  references: []
+- name: CodeLimitExceedsOperatorCap
+  kind: const
+  description: 'CodeLimitExceedsOperatorCap: SS-05: a profile limit is above the operator
+    cap.'
+  references: []

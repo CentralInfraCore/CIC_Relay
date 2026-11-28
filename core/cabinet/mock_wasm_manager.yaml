@@ -73,6 +73,14 @@ objects:
   calls:
   - MockCicWasmHost.Called
   - String
+- name: Call
+  kind: method
+  receiver: MockCicWasmHost
+  description: Call returns the stubbed (result, error) strings for the named op.
+  references: []
+  calls:
+  - MockCicWasmHost.Called
+  - String
 - name: Close
   kind: method
   receiver: MockCicWasmHost
