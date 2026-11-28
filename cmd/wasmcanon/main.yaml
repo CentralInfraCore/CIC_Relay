@@ -1,0 +1,43 @@
+---
+package: main
+description: 'Command wasmcanon is the thin command-line interface to pkg/wasmcanon
+  (O-1 INT-04): it lets a release producer that is not written in Go (the Python release
+  tooling) obtain the executed representation of a wasm module from the SAME implementation
+  the relay admits with, instead of carrying a second canonicalisation. wasmcanon
+  exec < raw.wasm > executed.wasm the executed bytes (wasm-canon/v1) wasmcanon digest
+  < raw.wasm sha256:<hex> of the executed bytes (executed_wasm_sha256) wasmcanon version
+  transform id and the pinned wabin version It reads stdin, writes stdout, and exits
+  non-zero with a one-line message on stderr when the module is refused.'
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: run
+  kind: func
+  description: run executes one command; it is separate from main so that it can be
+    tested.
+  references:
+  - wasmcanon.TransformID
+  - wasmcanon.Canonicalize
+  - wasmcanon.Digest
+  calls:
+  - wasmcanon.Canonicalize
+  - wasmcanon.Digest
+- name: wabinVersion
+  kind: func
+  description: wabinVersion is the wabin version this binary was built with.
+  references: []
+  calls: []
+- name: main
+  kind: func
+  description: main runs the command against the process streams.
+  references: []
+  calls: []
+- name: maxInput
+  kind: const
+  description: maxInput bounds what is read, the same ceiling as core/cabinet.MaxWASMModuleSize.
+  references: []
