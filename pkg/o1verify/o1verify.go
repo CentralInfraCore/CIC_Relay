@@ -180,8 +180,13 @@ func scalar(v any, present bool) (string, error) {
 	default:
 		return "", fmt.Errorf("a value of type %T cannot be represented", v)
 	}
-	if strings.ContainsAny(s, "\r\n") || strings.IndexFunc(s, func(r rune) bool { return r > 127 }) >= 0 {
-		return "", fmt.Errorf("a value with a line break or a non-ASCII byte")
+	if strings.ContainsAny(s, "\r\n") {
+		return "", fmt.Errorf("a value with a line break")
+	}
+	for _, r := range s {
+		if r > 127 {
+			return "", fmt.Errorf("a value with a non-ASCII character")
+		}
 	}
 	return s, nil
 }
@@ -365,12 +370,11 @@ func Verify(doc []byte, opt Options) Result {
 			continue
 		}
 		got, err := InteractionsDigest(recs)
-		switch {
-		case err != nil:
+		if err != nil {
 			fail("HOST_INTERACTIONS_INVALID: %v", err)
-		case got != r.digest:
+		} else if got != r.digest {
 			fail("HOST_INTERACTIONS_DIGEST_MISMATCH: recomputed %s, referenced %s", got, r.digest)
-		case len(recs) != r.count:
+		} else if len(recs) != r.count {
 			fail("HOST_INTERACTIONS_COUNT_MISMATCH: %d records, count says %d", len(recs), r.count)
 		}
 	}
@@ -475,13 +479,12 @@ func checkPersistence(res *Result, opt Options, chain string) {
 
 // finish derives verification, the evidence verdict and the acceptance from the collected findings.
 func finish(res *Result, opt Options) Result {
-	switch {
-	case len(res.Problems) > 0:
-		res.Dimensions.Verification = VerificationFailed
-	case len(res.UnresolvedReferences) > 0:
+	res.Dimensions.Verification = VerificationComplete
+	if len(res.UnresolvedReferences) > 0 {
 		res.Dimensions.Verification = VerificationIncomplete
-	default:
-		res.Dimensions.Verification = VerificationComplete
+	}
+	if len(res.Problems) > 0 {
+		res.Dimensions.Verification = VerificationFailed
 	}
 	res.EvidenceVerdict = VerdictNotVerified
 	if res.Dimensions.Verification == VerificationComplete {

@@ -265,3 +265,122 @@ func TestResultJSONShape(t *testing.T) {
 		assert.Contains(t, m, k)
 	}
 }
+
+func TestScalarBoundariesAndRefusals(t *testing.T) {
+	s, err := scalar("\x7f", true)
+	require.NoError(t, err, "DEL (127) is still ASCII")
+	assert.Equal(t, "\x7f", s)
+	_, err = scalar("\u0080", true)
+	require.Error(t, err, "128 is not ASCII")
+	_, err = scalar("a\nb", true)
+	require.Error(t, err)
+	_, err = scalar("a\rb", true)
+	require.Error(t, err)
+	_, err = scalar(true, true)
+	require.Error(t, err, "a bool can not be represented")
+	_, err = scalar(json.Number("1.5"), true)
+	require.Error(t, err, "a non-integer can not be represented")
+	_, err = scalar(map[string]any{}, true)
+	require.Error(t, err)
+	s, err = scalar(nil, false)
+	require.NoError(t, err)
+	assert.Equal(t, "null", s)
+	s, err = scalar(json.Number("7"), true)
+	require.NoError(t, err)
+	assert.Equal(t, "7", s)
+}
+
+func editedProblems(t *testing.T, f func(m map[string]any)) string {
+	doc, _, recs := okArtifact(t)
+	var m map[string]any
+	d := json.NewDecoder(strings.NewReader(string(doc)))
+	d.UseNumber()
+	require.NoError(t, d.Decode(&m))
+	f(m)
+	b, _ := json.Marshal(m)
+	o := opts()
+	o.HostInteractions = recs
+	return strings.Join(Verify(b, o).Problems, "|")
+}
+
+func firstStep(m map[string]any) map[string]any { return m["steps"].([]any)[0].(map[string]any) }
+
+func TestRejectedStepRulesAreEachChecked(t *testing.T) {
+	reject := func(m map[string]any) {
+		st := firstStep(m)
+		st["outcome"].(map[string]any)["execution"] = "REJECTED"
+		delete(st, "executed")
+		st["rejection"] = map[string]any{"phase": "policy", "code": "POLICY_DENIED"}
+		st["output_digest"] = nil
+		st["references"].(map[string]any)["host_interactions"].(map[string]any)["count"] = json.Number("0")
+	}
+	assert.NotContains(t, editedProblems(t, reject), "REJECTED_WITH", "a well-formed rejected step has none of the rejected-with problems")
+	assert.Contains(t, editedProblems(t, func(m map[string]any) {
+		reject(m)
+		firstStep(m)["output_digest"] = "sha256:" + strings.Repeat("ab", 32)
+	}), "REJECTED_WITH_OUTPUT")
+	assert.Contains(t, editedProblems(t, func(m map[string]any) {
+		reject(m)
+		firstStep(m)["references"].(map[string]any)["host_interactions"].(map[string]any)["count"] = json.Number("1")
+	}), "REJECTED_WITH_HOST_INTERACTIONS")
+}
+
+func TestAuthorizationDecisionReferenceRule(t *testing.T) {
+	drop := func(m map[string]any) { delete(firstStep(m)["references"].(map[string]any), "authorization_decision") }
+	assert.Contains(t, editedProblems(t, func(m map[string]any) { drop(m) }), "AUTHORIZATION_DECISION_REFERENCE_REQUIRED", "ALLOWED")
+	assert.Contains(t, editedProblems(t, func(m map[string]any) {
+		drop(m)
+		firstStep(m)["outcome"].(map[string]any)["authorization"] = "DENIED"
+	}), "AUTHORIZATION_DECISION_REFERENCE_REQUIRED", "DENIED")
+	assert.NotContains(t, editedProblems(t, func(m map[string]any) {
+		drop(m)
+		firstStep(m)["outcome"].(map[string]any)["authorization"] = "NOT_EVALUATED"
+	}), "AUTHORIZATION_DECISION_REFERENCE_REQUIRED", "NOT_EVALUATED needs no decision")
+}
+
+func TestAcceptanceEvidenceCondition(t *testing.T) {
+	doc, chain, recs := okArtifact(t)
+	policy := "sha256:" + strings.Repeat("11", 32)
+	base := func() Options {
+		o := opts()
+		o.HostInteractions, o.PolicyDigest = recs, policy
+		return o
+	}
+	t.Run("no persistence required and none supplied: accepted", func(t *testing.T) {
+		r := Verify(doc, base())
+		assert.Equal(t, EvidenceNotRequired, r.Dimensions.Evidence)
+		assert.Equal(t, AcceptanceAccepted, r.Acceptance)
+	})
+	t.Run("persistence required and none supplied: not accepted", func(t *testing.T) {
+		o := base()
+		o.PersistenceRequired = true
+		r := Verify(doc, o)
+		assert.Equal(t, EvidenceUnknown, r.Dimensions.Evidence)
+		assert.Equal(t, AcceptanceNotAccepted, r.Acceptance)
+	})
+	t.Run("not required, not persisted: accepted? no: the evidence dimension is NOT_PERSISTED, not NOT_REQUIRED", func(t *testing.T) {
+		o := base()
+		o.Persistence = &Persistence{ArtifactChainHash: chain, Recorder: "r", ErrorCode: "x"}
+		r := Verify(doc, o)
+		assert.Equal(t, EvidenceNotPersisted, r.Dimensions.Evidence)
+		assert.Equal(t, AcceptanceNotAccepted, r.Acceptance)
+	})
+	t.Run("a failed execution is never accepted", func(t *testing.T) {
+		var m map[string]any
+		d := json.NewDecoder(strings.NewReader(string(doc)))
+		d.UseNumber()
+		require.NoError(t, d.Decode(&m))
+		m["outcome"].(map[string]any)["execution"] = "FAILED"
+		b, _ := json.Marshal(m)
+		assert.NotEqual(t, AcceptanceAccepted, Verify(b, base()).Acceptance)
+	})
+}
+
+func TestUnreachableRecordsAreRefusedNotPanicked(t *testing.T) {
+	_, err := InteractionsDigest([]map[string]any{{"seq": "x"}})
+	require.Error(t, err)
+	_, err = InteractionsDigest([]map[string]any{{"seq": json.Number("0"), "host": true}})
+	require.Error(t, err)
+	r := Verify([]byte(`{"steps":[1]}`), opts())
+	assert.Equal(t, VerificationFailed, r.Dimensions.Verification)
+}

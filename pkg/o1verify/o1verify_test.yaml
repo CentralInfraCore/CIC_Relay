@@ -167,6 +167,75 @@ objects:
   - Verify
   - assert.Contains
   - require.NoError
+- name: TestScalarBoundariesAndRefusals
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  calls:
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: editedProblems
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Decode
+  - UseNumber
+  - Verify
+  - require.NoError
+- name: firstStep
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestRejectedStepRulesAreEachChecked
+  kind: func
+  description: ''
+  references:
+  - assert.NotContains
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.NotContains
+- name: TestAuthorizationDecisionReferenceRule
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - assert.Contains
+  - assert.NotContains
+- name: TestAcceptanceEvidenceCondition
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - assert.NotEqual
+  calls:
+  - Decode
+  - UseNumber
+  - Verify
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+- name: TestUnreachableRecordsAreRefusedNotPanicked
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Equal
+  calls:
+  - InteractionsDigest
+  - Verify
+  - assert.Equal
+  - require.Error
 - name: vectorFile
   kind: const
   description: ''
