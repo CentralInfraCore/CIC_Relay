@@ -1,0 +1,162 @@
+---
+package: hostsign
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: errProfile
+  kind: struct
+  description: errProfile is a profile whose canonicalisation fails.
+  implements: []
+  references: []
+- name: sizedDoer
+  kind: struct
+  description: sizedDoer answers with a body of exactly n bytes, with or without a
+    Content-Length.
+  implements: []
+  references: []
+- name: Prepare
+  kind: method
+  receiver: errProfile
+  description: ''
+  references: []
+  calls: []
+- name: Do
+  kind: method
+  receiver: sizedDoer
+  description: ''
+  references: []
+  calls: []
+- name: handle
+  kind: method
+  receiver: rig
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Handle
+  - require.NoError
+- name: TestRequestShapeRulesOneByOne
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestRawRequestSizeEdge
+  kind: func
+  description: The raw request is capped at 2*MaxRequestBytes+64KiB. The edge itself
+    is accepted, one more byte is not.
+  references:
+  - require.LessOrEqual
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - require.LessOrEqual
+- name: TestRequestBodyEdgeAndTheRecordedBodyDigest
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.Len
+  - require.NotNil
+  - require.Equal
+  - assert.Nil
+  calls:
+  - EncodeToString
+  - Log
+  - Records
+  - assert.Equal
+  - assert.Nil
+  - require.Equal
+  - require.Len
+  - require.NotNil
+- name: TestProfileCanonicalisationErrorIsASignerError
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - assert.Equal
+  - assert.Zero
+  calls:
+  - assert.Equal
+  - assert.Zero
+  - require.Equal
+- name: TestObservationOnlyLetsGetAndHeadThroughAndNothingElse
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Zero
+  calls:
+  - assert.Equal
+  - assert.Zero
+- name: TestResponseSizeEdges
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.Equal
+  calls:
+  - assert.Equal
+  - require.Equal
+- name: TestEffectiveLimitsEdges
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.ErrorIs
+  calls:
+  - assert.Equal
+  - assert.ErrorIs
+  - require.NoError
+- name: TestOperatorLimitsMustBePositive
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Error
+  - assert.NoError
+  calls:
+  - Validate
+  - assert.Error
+  - assert.NoError
+  - require.NoError
+- name: TestAsciiLineEdges
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.ErrorIs
+  calls:
+  - assert.Equal
+  - assert.ErrorIs
+  - require.NoError
+- name: TestInteractionIdsAndSequence
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Append
+  - NewLog
+  - assert.Equal
+  - require.NoError
+- name: TestTargetEncodesTheQueryCanonically
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - Target
+  - assert.Equal

@@ -1,0 +1,108 @@
+---
+package: hostsign
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: RecordIntent
+  kind: struct
+  description: RecordIntent is the intent a host interaction record carries.
+  implements: []
+  references: []
+- name: Record
+  kind: struct
+  description: 'Record is one host-interaction record (wire: host-interaction-record.schema.json,
+    contract SS-04). The host writes it, never the guest; every call is recorded,
+    denied and failed ones too.'
+  implements: []
+  references: []
+- name: Log
+  kind: struct
+  description: 'Log is the ordered host-interaction log of one scope (the WP-05 step
+    binding takes it from here: Drain returns the records so far and starts a new
+    list at seq 0).'
+  implements: []
+  references: []
+- name: recVal
+  kind: func
+  description: recVal is a helper of the cic-flow.send host capability.
+  references: []
+  calls: []
+- name: asciiLine
+  kind: func
+  description: asciiLine is a helper of the cic-flow.send host capability.
+  references: []
+  calls: []
+- name: RecordBytes
+  kind: func
+  description: RecordBytes is the fixed-order `key=value` line form of a record whose
+    sha256 is the record digest.
+  references: []
+  calls: []
+- name: RecordDigest
+  kind: func
+  description: RecordDigest is sha256:<hex> of RecordBytes.
+  references: []
+  calls:
+  - RecordBytes
+- name: InteractionsDigest
+  kind: func
+  description: 'InteractionsDigest is the list digest (the ProofTrace V2 host_interactions.digest):
+    sha256 over "CICHOSTINTv1\ncount=<n>\n" and one "<seq>:sha256:<record digest hex>\n"
+    line per record. The sequence must be contiguous from 0, in order.'
+  references: []
+  calls:
+  - RecordDigest
+- name: NewLog
+  kind: func
+  description: NewLog returns an empty log.
+  references: []
+  calls: []
+- name: Append
+  kind: method
+  receiver: Log
+  description: Append assigns seq and interaction_id, stores the record and returns
+    it with its digest.
+  references: []
+  calls:
+  - Lock
+  - RecordDigest
+  - Unlock
+- name: Records
+  kind: method
+  receiver: Log
+  description: Records returns a copy of the records so far.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: Drain
+  kind: method
+  receiver: Log
+  description: Drain returns the records so far and resets the log (the next record
+    gets seq 0).
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: Digest
+  kind: method
+  receiver: Log
+  description: Digest is the list digest of the current records.
+  references: []
+  calls:
+  - InteractionsDigest
+  - Log.Records
+- name: ErrSeqGapOrOrder
+  kind: var
+  description: ErrSeqGapOrOrder is returned by InteractionsDigest for a list that
+    is not contiguous from 0.
+  references: []
+- name: ErrBadValue
+  kind: var
+  description: ErrBadValue is returned by RecordBytes for a value with a line break
+    or a non-ASCII byte.
+  references: []

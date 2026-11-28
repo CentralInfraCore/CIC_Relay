@@ -19,10 +19,7 @@ const ProfileID = "http-signature:oci:draft-cavage@1"
 
 // descriptor is the definition the profile digest covers: identity, scheme, algorithm and the
 // exact signed header sets. Changing any of them changes the digest recorded in every interaction.
-const descriptor = `{"id":"` + ProfileID + `","scheme":"draft-cavage-http-signatures","algorithm":"rsa-sha256",` +
-	`"signed_headers":["(request-target)","host","date"],` +
-	`"signed_headers_with_body":["(request-target)","host","date","x-content-sha256","content-type","content-length"],` +
-	`"default_content_type":"application/json"}`
+const descriptor = `{"id":"http-signature:oci:draft-cavage@1","scheme":"draft-cavage-http-signatures","algorithm":"rsa-sha256","signed_headers":["(request-target)","host","date"],"signed_headers_with_body":["(request-target)","host","date","x-content-sha256","content-type","content-length"],"default_content_type":"application/json"}`
 
 // Profile is the OCI signing profile.
 type Profile struct{}

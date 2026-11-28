@@ -1,0 +1,153 @@
+---
+package: hostsign
+description: Package hostsign is the generic seam of the `cic-flow.send` host capability
+  (O-1 WP-04, D-11). A guest module hands the host a structured request description;
+  the host validates the target against the operator policy, lets a provider signing
+  profile build the canonical string, signs it through a key the guest cannot name,
+  performs the controlled HTTP call and records the interaction. The guest never receives
+  a signature or an Authorization header. This package and everything under core/...
+  must not import a provider profile (see arch_test.go); concrete profiles live in
+  sub-packages such as ociprofile and depend only on this seam plus the standard library.
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Key
+  kind: struct
+  description: 'Key is a resolved, authorised signing key: the signer plus the provider
+    key identifier the signing profile places in the Authorization header. The guest
+    names neither.'
+  implements: []
+  references: []
+- name: PrepRequest
+  kind: struct
+  description: PrepRequest is the structured request as the signing profile sees it.
+  implements: []
+  references: []
+- name: Prepared
+  kind: struct
+  description: Prepared is what a profile produces for one request.
+  implements: []
+  references: []
+- name: Signer
+  kind: interface
+  description: Signer signs caller-built bytes with a key that never leaves its backend
+    and returns the raw base64 signature. cmd/relay's Vault signer satisfies it.
+  references: []
+  methods:
+  - Sign
+- name: Doer
+  kind: interface
+  description: Doer is the egress transport. *http.Client satisfies it; NewEngine
+    disables redirect following on an *http.Client (a redirect to another host is
+    never followed).
+  references: []
+  methods:
+  - Do
+- name: Profile
+  kind: interface
+  description: Profile is a provider signing profile. Implementations must be pure
+    and deterministic given their inputs; they do not see the key, the network or
+    the policy.
+  references: []
+  methods:
+  - Digest
+  - ID
+  - Limits
+  - Prepare
+- name: Target
+  kind: method
+  receiver: PrepRequest
+  description: 'Target returns the request target: the path plus the canonically encoded
+    query (keys sorted).'
+  references: []
+  calls: []
+- name: ForbiddenRequestHeaders
+  kind: var
+  description: 'ForbiddenRequestHeaders are the headers a guest request may never
+    carry: the host sets or derives them (SS-01..SS-04 of the contract).'
+  references: []
+- name: ForbiddenResponseHeaders
+  kind: var
+  description: ForbiddenResponseHeaders never go back to the guest, whatever the operator
+    allowlist says.
+  references: []
+- name: CodePolicyHost
+  kind: const
+  description: CodePolicyHost is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodePolicyPath
+  kind: const
+  description: CodePolicyPath is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodePolicyMethod
+  kind: const
+  description: CodePolicyMethod is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodePolicyTarget
+  kind: const
+  description: CodePolicyTarget is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodePolicyBinding
+  kind: const
+  description: CodePolicyBinding is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeHeaderForbidden
+  kind: const
+  description: CodeHeaderForbidden is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeBodyTooLarge
+  kind: const
+  description: CodeBodyTooLarge is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeProfileUnknown
+  kind: const
+  description: CodeProfileUnknown is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeKeyRefUnauthorized
+  kind: const
+  description: CodeKeyRefUnauthorized is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeEgressBlocked
+  kind: const
+  description: CodeEgressBlocked is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeSignerError
+  kind: const
+  description: CodeSignerError is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeTransportError
+  kind: const
+  description: CodeTransportError is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeResponseTooLarge
+  kind: const
+  description: CodeResponseTooLarge is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeTimeout
+  kind: const
+  description: CodeTimeout is a named denial or failure code of the cic-flow.send
+    host capability (03 section 6, SS-01..05).
+  references: []
+- name: CodeRequestInvalid
+  kind: const
+  description: CodeRequestInvalid answers a request that is not a well-formed v1 sign+send
+    request at all. It is not part of the response schema (no interaction can be described
+    for it) and carries no interaction record.
+  references: []

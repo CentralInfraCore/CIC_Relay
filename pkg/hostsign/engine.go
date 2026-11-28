@@ -177,26 +177,35 @@ func parse(raw []byte) (*wireRequest, []byte, error) {
 		return nil, nil, errors.New("bad request JSON: trailing data")
 	}
 	r := w.Request
-	switch {
-	case w.V != 1:
+	// The rules are checked in this order; the first violated one is reported.
+	if w.V != 1 {
 		return nil, nil, errors.New("v must be 1")
-	case !profileRe.MatchString(w.SigningProfile):
+	}
+	if !profileRe.MatchString(w.SigningProfile) {
 		return nil, nil, errors.New("signing_profile malformed")
-	case !keyRefRe.MatchString(w.KeyRef):
+	}
+	if !keyRefRe.MatchString(w.KeyRef) {
 		return nil, nil, errors.New("key_ref malformed")
-	case !validMethods[r.Method]:
+	}
+	if !validMethods[r.Method] {
 		return nil, nil, errors.New("request.method malformed")
-	case !hostRe.MatchString(r.Host):
+	}
+	if !hostRe.MatchString(r.Host) {
 		return nil, nil, errors.New("request.host malformed")
-	case !pathRe.MatchString(r.Path):
+	}
+	if !pathRe.MatchString(r.Path) {
 		return nil, nil, errors.New("request.path malformed (no query in path)")
-	case w.Intent == nil:
+	}
+	if w.Intent == nil {
 		return nil, nil, errors.New("intent is required")
-	case !tokenRe.MatchString(w.Intent.Operation) || !tokenRe.MatchString(w.Intent.ResourceID):
+	}
+	if !tokenRe.MatchString(w.Intent.Operation) || !tokenRe.MatchString(w.Intent.ResourceID) {
 		return nil, nil, errors.New("intent.operation/resource_id malformed")
-	case !sha256Re.MatchString(w.Intent.BindingDigest):
+	}
+	if !sha256Re.MatchString(w.Intent.BindingDigest) {
 		return nil, nil, errors.New("intent.binding_digest is required and must be sha256:<hex>")
-	case len(w.TraceID) > 128:
+	}
+	if len(w.TraceID) > 128 {
 		return nil, nil, errors.New("trace_id too long")
 	}
 	for k, v := range r.Headers {
