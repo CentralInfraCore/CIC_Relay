@@ -20,6 +20,9 @@ type cicWasmHost interface {
 	Get(ctx context.Context, authContextJson, queryJson string) (string, string)
 	Init(ctx context.Context, authContextJson, configJson string) (string, string)
 	Notify(ctx context.Context, authContextJson, eventJson string) (string, string)
+	// Call invokes an arbitrary named guest function; it is the generic-dispatch
+	// (WP-03) counterpart of the four fixed-name methods above.
+	Call(ctx context.Context, op, authContextJson, inputJson string) (string, string)
 	Close(ctx context.Context) error
 }
 
@@ -107,6 +110,16 @@ type cabinetService struct {
 	// authenticated principal may run. Setx is the one execution boundary every entry path
 	// (HTTP routes, the activator, tests) goes through, so the decision is made here, once.
 	protected map[string]bool
+
+	// genericDispatch gates profile-driven dispatch (WP-03): off by default, so Setx always
+	// uses the legacy built-in four-op dispatch (init/process/get/notify) below regardless of
+	// whether a module carries an AbiProfile. See WithGenericDispatch.
+	genericDispatch bool
+
+	// profileBindings maps a module ID to its admitted ABI-profile binding (WP-03). Only
+	// consulted when genericDispatch is on; a module without a binding, or whose current
+	// checksum differs from the bound one, always uses the legacy dispatch.
+	profileBindings map[string]*ModuleProfileBinding
 }
 
 // CabinetOption is a functional option for configuring a cabinetService.
@@ -140,6 +153,36 @@ func WithProtectedModules(componentIDs ...string) CabinetOption {
 func WithEvidenceRequired(required bool) CabinetOption {
 	return func(s *cabinetService) {
 		s.evidenceRequired = required
+	}
+}
+
+// WithGenericDispatch turns on profile-driven dispatch (WP-03) for modules that
+// have an admitted ABI-profile binding (see WithModuleProfileBindings). Off by
+// default: Setx then always uses the legacy built-in four-op dispatch below,
+// exactly as before this option existed, including for a module that has a
+// binding. Even when enabled, a module without a binding is unaffected: it still
+// goes through the legacy dispatch.
+//
+// Turning this on in production is a separate decision, gated on the #162
+// acceptance (WP-02; see jobs/o1-wp03-abi-profile-dispatch/ref/02-abi-profile-wire.md
+// §7); this job only provides the switch. See cmd/relay/main.go's
+// genericDispatchFromEnv for the production wiring (default off).
+func WithGenericDispatch(enabled bool) CabinetOption {
+	return func(s *cabinetService) {
+		s.genericDispatch = enabled
+	}
+}
+
+// WithModuleProfileBindings registers admitted ABI-profile bindings (one per module).
+// A binding is inert unless WithGenericDispatch(true) is also given.
+func WithModuleProfileBindings(bindings ...*ModuleProfileBinding) CabinetOption {
+	return func(s *cabinetService) {
+		if s.profileBindings == nil {
+			s.profileBindings = make(map[string]*ModuleProfileBinding, len(bindings))
+		}
+		for _, b := range bindings {
+			s.profileBindings[b.ModuleID] = b
+		}
 	}
 }
 
@@ -274,17 +317,34 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			normalizedFn := strings.ToLower(step.FunctionName)
 
 			var dataResult, errorResult string
-			switch normalizedFn {
-			case "init":
-				dataResult, errorResult = host.Init(ctx, authContextJson, string(inputJson))
-			case "process":
-				dataResult, errorResult = host.Process(ctx, authContextJson, string(inputJson))
-			case "get":
-				dataResult, errorResult = host.Get(ctx, authContextJson, string(inputJson))
-			case "notify":
-				dataResult, errorResult = host.Notify(ctx, authContextJson, string(inputJson))
-			default:
-				execErr = fmt.Errorf("WASM module %q does not support operation %q", step.ComponentID, step.FunctionName)
+			if binding := c.profileBindingFor(moduleDesc); binding != nil {
+				// --- PROFILE-DRIVEN GENERIC DISPATCH (WP-03, off unless WithGenericDispatch(true)) ---
+				op, found := binding.Operation(normalizedFn)
+				switch {
+				case !found:
+					execErr = fmt.Errorf("%w: module %q ABI profile %q does not declare operation %q for this module", ErrInvalid, step.ComponentID, binding.Profile.ProfileID, step.FunctionName)
+				case op.HostBoundary != "none":
+					// sign+send dispatch is WP-04 scope (sign+send contract, host capability
+					// invocation); failing closed here, not falling back to the legacy switch,
+					// keeps "no implementation" from masquerading as "ran, did nothing".
+					execErr = fmt.Errorf("%w: operation %q has host_boundary %q, which generic dispatch does not execute in this build (sign+send is WP-04 scope)", ErrInvalid, op.Name, op.HostBoundary)
+				default:
+					dataResult, errorResult = host.Call(ctx, op.Name, authContextJson, string(inputJson))
+				}
+			} else {
+				// --- LEGACY FOUR-OP DISPATCH (the Relay's built-in core lifecycle profile) ---
+				switch normalizedFn {
+				case "init":
+					dataResult, errorResult = host.Init(ctx, authContextJson, string(inputJson))
+				case "process":
+					dataResult, errorResult = host.Process(ctx, authContextJson, string(inputJson))
+				case "get":
+					dataResult, errorResult = host.Get(ctx, authContextJson, string(inputJson))
+				case "notify":
+					dataResult, errorResult = host.Notify(ctx, authContextJson, string(inputJson))
+				default:
+					execErr = fmt.Errorf("WASM module %q does not support operation %q", step.ComponentID, step.FunctionName)
+				}
 			}
 
 			if execErr == nil {
@@ -439,4 +499,18 @@ func (c *cabinetService) GetWorkflow(id string) (*Workflow, error) {
 		return w, nil
 	}
 	return nil, ErrNotFound
+}
+
+// profileBindingFor returns the module's admitted ABI-profile binding if generic dispatch is on and the
+// binding belongs to exactly this module content (same ID and same current checksum); otherwise nil, and
+// the legacy four-op dispatch applies. A reused module ID with different content never inherits a binding.
+func (c *cabinetService) profileBindingFor(m *ModuleDescriptor) *ModuleProfileBinding {
+	if !c.genericDispatch {
+		return nil
+	}
+	b, ok := c.profileBindings[m.ID()]
+	if !ok || b.ModuleChecksum != m.Checksum() {
+		return nil
+	}
+	return b
 }

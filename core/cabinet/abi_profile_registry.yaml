@@ -1,0 +1,100 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: PinnedProfile
+  kind: struct
+  description: 'PinnedProfile is one entry of the operator''s pinned profile list
+    (05-admission-reuse.md §2: "a bundle accepted_profiles és az operátori policy
+    (id, digest) párokat enged be").'
+  implements: []
+  references: []
+- name: ProfileSignature
+  kind: struct
+  description: ProfileSignature is the detached signature material a profile artifact
+    carries alongside its bytes, for the CICABIPROFv1 domain (ref 02 §3).
+  implements: []
+  references: []
+- name: MockProfileSignatureVerifier
+  kind: struct
+  description: 'MockProfileSignatureVerifier is a placeholder ProfileSignatureVerifier:
+    it returns Err unconditionally (nil = accept, non-nil = the given rejection).
+    MOCK, PROVIZÓRIUS — not a real signature check; see ProfileSignatureVerifier''s
+    doc comment. The name says MOCK: if this ever appears as an argument to NewProfileRegistry
+    in a production call path, that is a defect in the caller, not something this
+    job authorized.'
+  implements: []
+  references: []
+- name: ProfileRegistry
+  kind: struct
+  description: 'ProfileRegistry is the Relay''s ABI-profile loader (ref 02 §1/§3):
+    admission (pinning + signature) and semantics (ABI-01..05, SS-05) for every profile
+    a module manifest can pin against. The operator''s pinned list, signature verifier,
+    schema registry and limit caps are supplied at construction, so a second (or Nth)
+    profile is admissible purely by adding its pin and schema entries to this configuration
+    — no change to ProfileRegistry or CheckProfileSemantics (AC-03-1).'
+  implements: []
+  references: []
+- name: ProfileSignatureVerifier
+  kind: interface
+  description: 'ProfileSignatureVerifier checks a profile''s CICABIPROFv1 signed domain
+    against the admission trust bundle''s authority bindings. This is explicitly the
+    WP-02 admission mechanism''s job (job input: "a CICABIPROFv1 aláírt tartomány
+    verifikációja a WP-02 admission-mechanizmusán át (ha az még nincs kész, interfész
+    mögötti, mockolt trust-bundle, jelölve)") — WP-02 has not landed in this repository
+    snapshot (CIC_Relay 86ea1ab), so there is no real trust bundle to call here yet.
+    This interface is that seam; MockProfileSignatureVerifier below is the explicit,
+    clearly-labelled stand-in the job input calls for. No production code in this
+    job wires the mock in — it exists so ProfileRegistry.Admit''s pinning/semantics
+    logic can be tested without waiting on WP-02, and so WP-02 can later supply the
+    real implementation without any change to ProfileRegistry itself.'
+  references: []
+  methods:
+  - VerifySignedProfile
+- name: VerifySignedProfile
+  kind: method
+  receiver: MockProfileSignatureVerifier
+  description: VerifySignedProfile returns the configured Err unconditionally (MOCK,
+    see the type).
+  references: []
+  calls: []
+- name: NewProfileRegistry
+  kind: func
+  description: NewProfileRegistry constructs a ProfileRegistry from the operator's
+    pinned profile list, signature verifier, schema registry and limit caps.
+  references: []
+  calls: []
+- name: Admit
+  kind: method
+  receiver: ProfileRegistry
+  description: 'Admit is the Relay''s ABI-profile admission decision: parse, pin-check,
+    signature-check, semantics-check, in that order — the first failure is returned
+    and nothing later runs. On success it returns the parsed profile and its digest
+    (ABI-05: sha256 of raw). sig is the profile artifact''s detached CICABIPROFv1
+    signature material.'
+  references: []
+  calls:
+  - CheckProfileSemantics
+  - ParseProfile
+  - ProfileDigest
+  - ProfileSignedBytes
+  - VerifySignedProfile
+- name: CodeProfileUnknown
+  kind: const
+  description: 'CodeProfileUnknown: the profile_id is not in the operator''s pinned
+    list.'
+  references: []
+- name: CodeProfileDigestMismatch
+  kind: const
+  description: 'CodeProfileDigestMismatch: the raw bytes do not hash to the pinned
+    digest for this id.'
+  references: []
+- name: CodeProfileSignatureInvalid
+  kind: const
+  description: 'CodeProfileSignatureInvalid: the CICABIPROFv1 signature check failed.'
+  references: []

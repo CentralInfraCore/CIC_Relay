@@ -193,6 +193,19 @@ objects:
     and event JSON, returning the result data and error JSON as strings.
   references: []
   calls: []
+- name: Call
+  kind: method
+  receiver: CicWasmHost
+  description: 'Call invokes the named guest function with the given auth context
+    and input JSON, returning the result data and error JSON as strings. It is the
+    profile-driven dispatch path''s entry point (WP-03): Process/Get/Init/Notify above
+    are all callGuest with one of four fixed op names; Call is the same mechanism
+    with the op name taken from an AbiProfile operation instead of being one of those
+    four. The guest-side ABI (the exported "Call" wazero function, see newCicWasmHost)
+    was already op-name-generic before this job; this method only exposes that genericity
+    on the Go side.'
+  references: []
+  calls: []
 - name: callGuest
   kind: method
   receiver: CicWasmHost

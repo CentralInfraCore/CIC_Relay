@@ -1,0 +1,46 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ModuleProfileBinding
+  kind: struct
+  description: ModuleProfileBinding ties one module's content to an admitted ABI profile.
+  implements: []
+  references: []
+- name: Operation
+  kind: method
+  receiver: ModuleProfileBinding
+  description: Operation returns the profile operation with that name only if the
+    module's manifest also declares it.
+  references: []
+  calls:
+  - FindOperation
+- name: NewModuleProfileBinding
+  kind: func
+  description: 'NewModuleProfileBinding binds a module to an admitted profile. profile
+    must already be admitted (ProfileRegistry.Admit): this constructor does not re-run
+    pinning, signature or semantics checks, only the manifest-to-profile binding:
+    - pin (the manifest''s abi.profile {id, digest}) must name exactly the admitted
+    profile and the digest Admit returned for it; any mismatch is rejected (CodeProfilePinMismatch),
+    with no fallback to the legacy profile. - declaredOps (the manifest''s own op
+    declaration) must be non-empty and a subset of the profile''s operation names;
+    any other name is rejected (CodeManifestOpNotInProfile).'
+  references: []
+  calls:
+  - ModuleDescriptor.Checksum
+  - ModuleDescriptor.ID
+- name: CodeProfilePinMismatch
+  kind: const
+  description: 'CodeProfilePinMismatch: the manifest''s abi.profile {id, digest} does
+    not match the admitted profile''s own identity (either field).'
+  references: []
+- name: CodeManifestOpNotInProfile
+  kind: const
+  description: 'CodeManifestOpNotInProfile: the manifest declares an operation the
+    pinned profile does not have (an "extra manifest-op", AC-03-2).'
+  references: []

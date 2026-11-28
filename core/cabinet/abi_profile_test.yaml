@@ -1,0 +1,369 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: testSchemas
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: refProfile
+  kind: func
+  description: refProfile mirrors the reference PROF of build_o1_schemas.py (describe
+    local, observe sign+send, invoke contract-dependent), as a mutable map so a test
+    can break exactly one thing.
+  references: []
+  calls: []
+- name: opAt
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: rawOf
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: mustParse
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - ParseProfile
+  - require.NoError
+- name: requireCode
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - require.True
+  - assert.Equal
+  - assert.True
+  calls:
+  - ABIProfileErrorCode
+  - assert.Equal
+  - assert.True
+  - require.Error
+  - require.True
+- name: TestAC03_3_ProfileSemanticsReferenceCases
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - CheckProfileSemantics
+  - require.NoError
+- name: TestResolveEffectFailClosed
+  kind: func
+  description: 'ResolveEffect: unmapped values of the field fall to the fail-closed
+    default (ABI-02).'
+  references:
+  - assert.Equal
+  calls:
+  - ResolveEffect
+  - assert.Equal
+- name: TestParseProfileStructuralRejections
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.True
+  - assert.Contains
+  calls:
+  - Error
+  - ParseProfile
+  - assert.Contains
+  - assert.True
+  - require.Error
+- name: TestABI05DigestAndSignedDomainMatchSharedVector
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - DecodeString
+  - ProfileDigest
+  - ProfileSignedBytes
+  - assert.Equal
+  - assert.NotEqual
+  - require.NoError
+- name: admit
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - ProfileRegistry.Admit
+- name: registryPinning
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - NewProfileRegistry
+  - ProfileDigest
+- name: TestAdmitSuccessAndOrder
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - ProfileDigest
+  - assert.Equal
+  - require.NoError
+- name: TestAC03_2_UnknownOrUnpinnedProfileRejected
+  kind: func
+  description: ''
+  references:
+  - assert.NotEqual
+  calls:
+  - ProfileDigest
+  - assert.NotEqual
+- name: TestAdmitSignatureFailureRejectsAndNoFallback
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Nil
+  - assert.True
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - assert.Nil
+  - assert.True
+  - require.Error
+- name: TestAdmitRunsSemanticsAfterPinAndSignature
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestAC03_1_SecondSyntheticProfileAdmittedByConfigurationOnly
+  kind: func
+  description: 'AC-03-1: a second, synthetic profile is admitted purely by configuration:
+    a new pin and new schema entries, with no change to ProfileRegistry or CheckProfileSemantics.'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - NewProfileRegistry
+  - OperationNames
+  - ProfileDigest
+  - assert.Equal
+  - require.NoError
+- name: admittedBase
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: plainModule
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - NewModuleDescriptor
+  - require.NoError
+- name: TestAC03_2_ManifestPinAndOpSet
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  calls:
+  - Checksum
+  - NewModuleProfileBinding
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: TestBindingDoesNotChangeModuleIdentity
+  kind: func
+  description: 'The profile binding is a separate value: ModuleDescriptor (public,
+    shape-pinned) and its Checksum() are untouched.'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Checksum
+  - NewModuleProfileBinding
+  - assert.Equal
+  - require.NoError
+- name: runStep
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - ID
+  - ModuleDescriptor.ID
+  - NewWorkflow
+  - Put
+  - cabinetService.Setx
+  - require.NoError
+- name: dispatchSvc
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  calls:
+  - Maybe
+  - MockCicWasmHost.On
+  - MockWasmManager.On
+  - ModuleDescriptor.ID
+  - NewMemModuleStore
+  - NewMemWorkflowStore
+  - Put
+  - Return
+  - WithGenericDispatch
+  - WithModuleProfileBindings
+- name: profiledModule
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - NewModuleProfileBinding
+  - require.NoError
+- name: TestAC03_5_DefaultOffUsesLegacyDispatchEvenForABoundModule
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+  - mock.Anything
+  - require.NoError
+  - assert.Equal
+  calls:
+  - Error
+  - MockCicWasmHost.AssertNotCalled
+  - MockCicWasmHost.On
+  - Once
+  - Return
+  - assert.Contains
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: TestAC03_4_GenericDispatchSwitchOnProfileOpsRun
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  - assert.True
+  - assert.Contains
+  calls:
+  - Error
+  - MockCicWasmHost.AssertExpectations
+  - MockCicWasmHost.AssertNumberOfCalls
+  - MockCicWasmHost.On
+  - Once
+  - Return
+  - assert.Contains
+  - assert.Equal
+  - assert.True
+  - require.Error
+  - require.NoError
+- name: TestDispatchHonoursTheManifestOpSet
+  kind: func
+  description: 'The manifest op-set is enforced at dispatch too: a profile op the
+    manifest does not declare is not callable.'
+  references:
+  - require.Error
+  - assert.True
+  - assert.Contains
+  - mock.Anything
+  calls:
+  - Error
+  - MockCicWasmHost.AssertNotCalled
+  - assert.Contains
+  - assert.True
+  - require.Error
+- name: TestReusedModuleIDWithDifferentContentDoesNotInheritBinding
+  kind: func
+  description: A reused module ID with different content does not inherit the binding
+    (it falls back to the legacy dispatch, whose op-set is the four).
+  references:
+  - require.NoError
+  - require.Equal
+  - require.NotEqual
+  - require.Error
+  - assert.Contains
+  - mock.Anything
+  calls:
+  - Checksum
+  - Error
+  - ID
+  - MockCicWasmHost.AssertNotCalled
+  - NewModuleDescriptor
+  - assert.Contains
+  - require.Equal
+  - require.Error
+  - require.NoError
+  - require.NotEqual
+- name: TestLegacyModuleUnaffectedWhenSwitchIsOn
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  - assert.Equal
+  - require.Error
+  - assert.Contains
+  calls:
+  - Error
+  - MockCicWasmHost.AssertNotCalled
+  - MockCicWasmHost.On
+  - Once
+  - Return
+  - assert.Contains
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: tdDescribeReq
+  kind: var
+  description: ''
+  references: []
+- name: tdManifest
+  kind: var
+  description: ''
+  references: []
+- name: tdObserveReq
+  kind: var
+  description: ''
+  references: []
+- name: tdObservation
+  kind: var
+  description: ''
+  references: []
+- name: tdOpReq
+  kind: var
+  description: ''
+  references: []
+- name: tdOpResult
+  kind: var
+  description: ''
+  references: []
+- name: testCaps
+  kind: var
+  description: ''
+  references: []
+- name: wasmHeader
+  kind: var
+  description: ''
+  references: []
