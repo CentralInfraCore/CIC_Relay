@@ -1,0 +1,201 @@
+---
+package: main
+description: ''
+tags:
+- executor
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: admittedIdentity
+  kind: struct
+  description: admittedIdentity is the admission record of one module, bound to the
+    artifact it was admitted for.
+  implements: []
+  references:
+  - cabinet.ExecutedIdentityV2
+- name: identityRegistry
+  kind: struct
+  description: identityRegistry holds the admission records, written by loadModule
+    and read by the trace source.
+  implements: []
+  references: []
+- name: traceSource
+  kind: struct
+  description: traceSource is the production cabinet.TraceV2Source (and StepScoper).
+  implements: []
+  references:
+  - hostsign.Record
+- name: newIdentityRegistry
+  kind: func
+  description: newIdentityRegistry returns an empty registry.
+  references: []
+  calls: []
+- name: set
+  kind: method
+  receiver: identityRegistry
+  description: set records the admission of moduleID; a reload replaces it.
+  references:
+  - cabinet.ExecutedIdentityV2
+  calls:
+  - Lock
+  - Unlock
+- name: forget
+  kind: method
+  receiver: identityRegistry
+  description: forget drops a module's record (a reload that is not admitted with
+    a profile must not leave the earlier one).
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: get
+  kind: method
+  receiver: identityRegistry
+  description: get returns the record only if it belongs to exactly this artifact.
+  references:
+  - cabinet.ExecutedIdentityV2
+  calls:
+  - RLock
+  - RUnlock
+- name: sha256Of
+  kind: func
+  description: sha256Of is the sha256:<hex> form of the O-1 digests.
+  references: []
+  calls: []
+- name: executedIdentityOf
+  kind: func
+  description: executedIdentityOf builds the admission record of a module from what
+    loadModule verified.
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.ModuleProfileBinding
+  - cabinet.ExecutedIdentityV2
+  - cabinet.ProfileRefV2
+  - cabinet.TrustStateAuthenticated
+  calls: []
+- name: newTraceSource
+  kind: func
+  description: newTraceSource builds the source. protected is the operator's protected-component
+    set (the cabinet's own).
+  references:
+  - hostsign.Record
+  calls: []
+- name: ExecutedIdentity
+  kind: method
+  receiver: traceSource
+  description: 'ExecutedIdentity implements cabinet.TraceV2Source. ok=false: the module
+    was not admitted with a profile binding, or the artifact is not the admitted one:
+    no executed identity may be claimed.'
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.ExecutedIdentityV2
+  - cabinet.ModuleDescriptor.ID
+  - cabinet.ModuleDescriptor.Checksum
+  calls:
+  - cabinet.ModuleDescriptor.Checksum
+  - cabinet.ModuleDescriptor.ID
+- name: recordDigest
+  kind: func
+  description: 'recordDigest is the digest of a small canonical record: a fixed header,
+    then key=value lines in the given order.'
+  references: []
+  calls: []
+- name: Authorization
+  kind: method
+  receiver: traceSource
+  description: 'Authorization implements cabinet.TraceV2Source: a protected component
+    is refused at the execution boundary (the cabinet has no other authorization decision),
+    and that refusal gets a decision record; everything else is not evaluated.'
+  references:
+  - cabinet.ExecutionGraphStep
+  - cabinet.AuthorizationNotEvaluated
+  - cabinet.AuthorizationDenied
+  calls: []
+- name: ExecutionContext
+  kind: method
+  receiver: traceSource
+  description: ExecutionContext implements cabinet.TraceV2Source. The record carries
+    what the relay knows; it states that the principal and the realization context
+    are not available instead of leaving them out.
+  references: []
+  calls: []
+- name: ScopeStep
+  kind: method
+  receiver: traceSource
+  description: 'ScopeStep implements cabinet.StepScoper: the step''s host interactions
+    go to a log of their own.'
+  references:
+  - cabinet.ExecutionGraphStep
+  - hostsign.WithLog
+  - hostsign.NewLog
+  calls:
+  - hostsign.NewLog
+  - hostsign.WithLog
+- name: HostInteractions
+  kind: method
+  receiver: traceSource
+  description: 'HostInteractions implements cabinet.TraceV2Source: the digest and
+    count of the step''s list, denied and failed calls included. The records are archived
+    under the digest so that the verifier can be given exactly them.'
+  references:
+  - cabinet.ExecutionGraphStep
+  - hostsign.LogFrom
+  - cabinet.EmptyHostInteractionsDigestV2
+  - hostsign.InteractionsDigest
+  calls:
+  - Lock
+  - Records
+  - Unlock
+  - cabinet.EmptyHostInteractionsDigestV2
+  - hostsign.InteractionsDigest
+  - hostsign.LogFrom
+- name: Interactions
+  kind: method
+  receiver: traceSource
+  description: Interactions returns the archived records of an interaction-list digest.
+  references:
+  - hostsign.Record
+  calls:
+  - Lock
+  - Unlock
+- name: traceSink
+  kind: method
+  receiver: traceSource
+  description: traceSink persists every sealed artifact and the interaction records
+    it references into dir. The files are plain evidence, NOT yet an attested persistence
+    object (the recorder attestation is INT-10's identity work).
+  references:
+  - logrus.Logger
+  - cabinet.TraceV2Sink
+  - cabinet.ProofArtifactV2
+  - hostsign.Record
+  - logrus.Logger.WithError
+  calls:
+  - Error
+  - logrus.Logger.WithError
+  - traceSource.Interactions
+- name: traceV2OptionsFromEnv
+  kind: func
+  description: traceV2OptionsFromEnv returns the cabinet options of the V2 recording,
+    or none when it is not enabled.
+  references:
+  - logrus.Logger
+  - cabinet.CabinetOption
+  - cabinet.WithTraceV2
+  - logrus.Logger.WithField
+  calls:
+  - Info
+  - cabinet.WithTraceV2
+  - logrus.Logger.WithField
+- name: moduleIdentities
+  kind: var
+  description: moduleIdentities is the process-wide registry loadModule writes to.
+  references: []
+- name: traceV2DirEnv
+  kind: const
+  description: 'traceV2DirEnv enables ProofTrace V2 recording: the directory the sealed
+    artifacts and their interaction records are written to. Unset: V2 is off and the
+    V1 path is exactly as before (production activation stays an operator decision).'
+  references: []

@@ -563,6 +563,7 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	}
 	var moduleDesc *cabinet.ModuleDescriptor
 	var profileBinding *cabinet.ModuleProfileBinding
+	var trustStateOfLoad, envelopeDigestOfLoad string
 	auditLogger := logger.WithFields(logrus.Fields{"module_id": moduleID, "checksum": calculatedDigest})
 
 	sigPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".pem"
@@ -618,6 +619,7 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 			auditLogger.WithFields(logrus.Fields{"outcome": "rejected", "code": admissionCode(admErr)}).WithError(admErr).Error("Module artifact admission failed — module rejected.")
 			return fmt.Errorf("module %q rejected: %w", moduleID, admErr)
 		}
+		trustStateOfLoad, envelopeDigestOfLoad = trustState, envelopeDigest
 		auditLogger = auditLogger.WithFields(logrus.Fields{"trust_state": trustState, "envelope_digest": envelopeDigest})
 		// INT-05: a module that names an ABI profile is admitted only with an authenticated profile binding, before any
 		// capability is published. A failure rejects the module; there is no fallback to legacy dispatch.
@@ -683,6 +685,13 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 		SetModuleProfile(string, *cabinet.ModuleProfileBinding)
 	}); ok {
 		reg.SetModuleProfile(moduleDesc.ID(), profileBinding)
+	}
+	// INT-09: the admission record the V2 trace claims as the executed identity: only an authenticated module with an
+	// admitted profile binding has one, and a reload without it drops the earlier record.
+	if profileBinding != nil && trustStateOfLoad == trustAuthenticated {
+		moduleIdentities.set(moduleDesc.ID(), moduleDesc.Checksum(), executedIdentityOf(calculatedDigest, moduleDesc, yamlContent, envelopeDigestOfLoad, profileBinding))
+	} else {
+		moduleIdentities.forget(moduleDesc.ID())
 	}
 	// Stored: the staged grant becomes active, for exactly this artifact.
 	if commitModuleCapability != nil {

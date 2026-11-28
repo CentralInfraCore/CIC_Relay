@@ -36,6 +36,17 @@ objects:
   - ExecutedIdentity
   - ExecutionContext
   - HostInteractions
+- name: StepScoper
+  kind: interface
+  description: 'StepScoper is an optional extension of a TraceV2Source: it is asked,
+    once per step and before the step dispatches, for the context the step runs under.
+    A source uses it to keep the step''s host interactions apart (O-1 INT-08): the
+    scoped context reaches the host functions the step calls, and the same context
+    is handed back to the source''s HostInteractions, Authorization and ExecutionContext
+    when the step is sealed.'
+  references: []
+  methods:
+  - ScopeStep
 - name: TraceV2Sink
   kind: type
   description: TraceV2Sink receives the sealed V2 artifact of every run, successful
@@ -82,6 +93,15 @@ objects:
     a Setx step got; nil-safe, so the V1 path pays nothing.
   references: []
   calls: []
+- name: scopeStep
+  kind: method
+  receiver: traceV2Recorder
+  description: 'scopeStep returns the context the current step runs under: the source''s
+    scoped context when it is a StepScoper (it is also kept for sealing the step),
+    else base unchanged. Nil-safe: with V2 off the recorder is nil and nothing changes.'
+  references: []
+  calls:
+  - ScopeStep
 - name: stepModule
   kind: method
   receiver: traceV2Recorder

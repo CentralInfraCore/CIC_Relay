@@ -317,8 +317,10 @@ func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *trace
 	execCtx := NewExecutionContext(in.Payload)
 	traceSteps := make([]ProofTraceStep, 0, len(graph.Steps))
 
+	baseCtx := ctx
 	for _, step := range graph.Steps {
 		rec.stepBegin(step)
+		ctx = rec.scopeStep(baseCtx, c.traceV2, step) // the step's own context when V2 recording scopes it (INT-08)
 		// 3a. Resolve the component.
 		moduleDesc, err := c.GetModule(step.ComponentID)
 		if err != nil {

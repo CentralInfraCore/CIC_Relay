@@ -122,6 +122,17 @@ func TestINT05_PositiveAuthenticatedProfileBinding(t *testing.T) {
 	assert.Equal(t, []string{"describe", "observe"}, b.Operations)
 	assert.Equal(t, "adm.mod@1.0.0", b.ModuleID)
 	assert.True(t, f.registered())
+
+	// INT-09: the admission record the V2 trace will claim as the executed identity
+	mod, err := f.svc.GetModule("adm.mod@1.0.0")
+	require.NoError(t, err)
+	ident, ok := moduleIdentities.get("adm.mod@1.0.0", mod.Checksum())
+	require.True(t, ok, "an authenticated module with an admitted profile has an executed identity")
+	assert.Equal(t, b.EnvelopeDigest, *ident.EnvelopeDigest)
+	assert.Equal(t, sha256Of(mod.WasmCode), ident.ExecutedDigest)
+	assert.Equal(t, sha256Of(f.fsys["m.yaml"].Data), ident.ManifestDigest)
+	assert.Equal(t, cabinet.ProfileRefV2{ID: b.ProfileID, Digest: b.ProfileDigest}, ident.Profile)
+	assert.Equal(t, cabinet.TrustStateAuthenticated, ident.TrustState)
 }
 
 func TestINT05_Negatives(t *testing.T) {
@@ -223,6 +234,10 @@ func TestINT05_NoProfileNamedAndReloadClearsTheBinding(t *testing.T) {
 	require.NoError(t, err, "a module that names no profile loads as before")
 	_, bound = f.binding()
 	assert.False(t, bound, "the earlier binding does not survive a reload without a profile")
+	mod, err := f.svc.GetModule("adm.mod@1.0.0")
+	require.NoError(t, err)
+	_, hasIdentity := moduleIdentities.get("adm.mod@1.0.0", mod.Checksum())
+	assert.False(t, hasIdentity, "nor does the executed identity: a module without a profile claims none")
 }
 
 func TestINT05_EcdsaSignerAlsoVerifies(t *testing.T) {

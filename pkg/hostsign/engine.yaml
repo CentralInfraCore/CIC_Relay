@@ -63,6 +63,15 @@ objects:
   - MatchString
   - NewLog
   - Validate
+- name: logFor
+  kind: method
+  receiver: Engine
+  description: 'logFor is the log a record of this call goes to: the scope''s log
+    when the caller put one into ctx (WithLog), else the engine''s own. The scope
+    is how a step''s interactions are kept apart: its list starts at seq 0 and its
+    digest is the step''s host_interactions reference (O-1 INT-08).'
+  references: []
+  calls: []
 - name: Log
   kind: method
   receiver: Engine

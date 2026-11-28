@@ -788,7 +788,11 @@ func main() {
 	metricSink := obs.NewMultiMetricSink(logrusSink, promSink)
 	gitOps.SetObsSinks(logrusSink, metricSink) // relay.git.op_duration_ms + WARN logok
 	obsOpt := cabinet.WithObsSinks(logrusSink, metricSink)
-	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), cabinet.WithProtectedModules(protectedModuleIDs...), cabinet.WithGenericDispatch(genericDispatch), obsOpt)
+	traceOpts, err := traceV2OptionsFromEnv(logger, protectedModuleIDs)
+	if err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid ProofTrace V2 configuration")
+	}
+	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, append(traceOpts, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), cabinet.WithProtectedModules(protectedModuleIDs...), cabinet.WithGenericDispatch(genericDispatch), obsOpt)...)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
 	}

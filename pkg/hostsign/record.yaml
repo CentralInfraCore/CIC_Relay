@@ -26,6 +26,11 @@ objects:
     list at seq 0).'
   implements: []
   references: []
+- name: logScopeKey
+  kind: struct
+  description: logScopeKey is the context key of a scoped log.
+  implements: []
+  references: []
 - name: recVal
   kind: func
   description: recVal is a helper of the cic-flow.send host capability.
@@ -56,6 +61,17 @@ objects:
   references: []
   calls:
   - RecordDigest
+- name: WithLog
+  kind: func
+  description: WithLog returns a context whose host interactions are recorded in l
+    instead of the engine's own log.
+  references: []
+  calls: []
+- name: LogFrom
+  kind: func
+  description: LogFrom returns the scoped log of ctx, if any.
+  references: []
+  calls: []
 - name: NewLog
   kind: func
   description: NewLog returns an empty log.

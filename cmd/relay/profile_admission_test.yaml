@@ -74,7 +74,11 @@ objects:
   - require.True
   - assert.Equal
   - assert.True
+  - cabinet.ProfileRefV2
+  - cabinet.TrustStateAuthenticated
   calls:
+  - Checksum
+  - GetModule
   - assert.Equal
   - assert.True
   - require.NoError
@@ -130,6 +134,8 @@ objects:
   - require.True
   - assert.False
   calls:
+  - Checksum
+  - GetModule
   - assert.False
   - require.NoError
   - require.True

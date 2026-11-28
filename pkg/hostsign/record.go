@@ -1,6 +1,7 @@
 package hostsign
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -126,6 +127,20 @@ func InteractionsDigest(records []Record) (string, error) {
 type Log struct {
 	mu      sync.Mutex
 	records []Record
+}
+
+// logScopeKey is the context key of a scoped log.
+type logScopeKey struct{}
+
+// WithLog returns a context whose host interactions are recorded in l instead of the engine's own log.
+func WithLog(ctx context.Context, l *Log) context.Context {
+	return context.WithValue(ctx, logScopeKey{}, l)
+}
+
+// LogFrom returns the scoped log of ctx, if any.
+func LogFrom(ctx context.Context) (*Log, bool) {
+	l, ok := ctx.Value(logScopeKey{}).(*Log)
+	return l, ok && l != nil
 }
 
 // NewLog returns an empty log.

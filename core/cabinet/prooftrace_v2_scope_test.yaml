@@ -1,0 +1,75 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: scopeKey
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: scopingSource
+  kind: struct
+  description: 'scopingSource is a fakeSource that scopes every step: the step''s
+    context carries the step name, and the three per-step questions are asked with
+    that same context.'
+  implements: []
+  references: []
+- name: ScopeStep
+  kind: method
+  receiver: scopingSource
+  description: ''
+  references: []
+  calls: []
+- name: scopeOf
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: HostInteractions
+  kind: method
+  receiver: scopingSource
+  description: ''
+  references: []
+  calls: []
+- name: Authorization
+  kind: method
+  receiver: scopingSource
+  description: ''
+  references: []
+  calls:
+  - Authorization
+- name: ExecutionContext
+  kind: method
+  receiver: scopingSource
+  description: ''
+  references: []
+  calls:
+  - ExecutionContext
+- name: TestV2StepScopeReachesTheDispatchAndTheSealing
+  kind: func
+  description: 'INT-08: a step that is scoped by its source runs under the scoped
+    context, and is sealed with the same context.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.Len
+  calls:
+  - assert.Equal
+  - require.Len
+  - require.NoError
+- name: TestV2WithoutScopingTheContextIsUnchanged
+  kind: func
+  description: 'a source that is not a StepScoper changes nothing: the dispatch context
+    is the caller''s and sealing uses the run''s'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.NoError

@@ -78,6 +78,16 @@ func NewEngine(cfg Config) (*Engine, error) {
 	return e, nil
 }
 
+// logFor is the log a record of this call goes to: the scope's log when the caller put one into ctx (WithLog), else the
+// engine's own. The scope is how a step's interactions are kept apart: its list starts at seq 0 and its digest is the
+// step's host_interactions reference (O-1 INT-08).
+func (e *Engine) logFor(ctx context.Context) *Log {
+	if l, ok := ctx.Value(logScopeKey{}).(*Log); ok && l != nil {
+		return l
+	}
+	return e.cfg.Log
+}
+
 // Log returns the interaction log of this engine.
 func (e *Engine) Log() *Log { return e.cfg.Log }
 
@@ -259,7 +269,7 @@ func (e *Engine) Handle(ctx context.Context, raw []byte) []byte {
 	deny := func(code, detail string) []byte {
 		rec.Decision = "denied"
 		rec.Code = &code
-		return e.finish(rec, func(r Response) Response {
+		return e.finish(ctx, rec, func(r Response) Response {
 			r.Outcome, r.Denial = "denied", &Fault{Code: code, Detail: detail}
 			return r
 		})
@@ -268,7 +278,7 @@ func (e *Engine) Handle(ctx context.Context, raw []byte) []byte {
 		rec.Decision = "failed"
 		rec.Code = &code
 		rec.Status = status
-		return e.finish(rec, func(r Response) Response {
+		return e.finish(ctx, rec, func(r Response) Response {
 			r.Outcome, r.Failure = "failed", &Fault{Code: code, Detail: detail}
 			return r
 		})
@@ -381,7 +391,7 @@ func (e *Engine) Handle(ctx context.Context, raw []byte) []byte {
 			hdrs[lk] = resp.Header.Get(k)
 		}
 	}
-	return e.finish(rec, func(r Response) Response {
+	return e.finish(ctx, rec, func(r Response) Response {
 		r.Outcome = "completed"
 		r.HTTP = &HTTPResult{Status: status, Headers: hdrs, BodyBase64: base64.StdEncoding.EncodeToString(rb), BodySHA256: rd}
 		return r
@@ -389,8 +399,8 @@ func (e *Engine) Handle(ctx context.Context, raw []byte) []byte {
 }
 
 // finish appends the record and marshals the response that references it.
-func (e *Engine) finish(rec Record, fill func(Response) Response) []byte {
-	r, digest, err := e.cfg.Log.Append(rec)
+func (e *Engine) finish(ctx context.Context, rec Record, fill func(Response) Response) []byte {
+	r, digest, err := e.logFor(ctx).Append(rec)
 	if err != nil {
 		return invalid("interaction could not be recorded")
 	}

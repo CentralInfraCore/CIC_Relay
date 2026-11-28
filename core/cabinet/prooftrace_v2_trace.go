@@ -36,6 +36,14 @@ type TraceV2Source interface {
 	HostInteractions(ctx context.Context, step ExecutionGraphStep) (digest string, count int)
 }
 
+// StepScoper is an optional extension of a TraceV2Source: it is asked, once per step and before the step dispatches, for the
+// context the step runs under. A source uses it to keep the step's host interactions apart (O-1 INT-08): the scoped context
+// reaches the host functions the step calls, and the same context is handed back to the source's HostInteractions,
+// Authorization and ExecutionContext when the step is sealed.
+type StepScoper interface {
+	ScopeStep(ctx context.Context, step ExecutionGraphStep) context.Context
+}
+
 // TraceV2Sink receives the sealed V2 artifact of every run, successful or not.
 type TraceV2Sink func(ctx context.Context, artifact *ProofArtifactV2)
 
@@ -68,6 +76,8 @@ type stepRecord struct {
 	dispatched bool
 	outputHash string
 	done       bool
+	// ctx is the context the step ran under when the source scoped it (StepScoper); nil otherwise.
+	ctx context.Context
 }
 
 // traceV2Recorder collects the step records of one run.
@@ -101,6 +111,21 @@ func (r *traceV2Recorder) stepBegin(s ExecutionGraphStep) {
 	if r != nil {
 		r.begin(s)
 	}
+}
+
+// scopeStep returns the context the current step runs under: the source's scoped context when it is a StepScoper (it is also
+// kept for sealing the step), else base unchanged. Nil-safe: with V2 off the recorder is nil and nothing changes.
+func (r *traceV2Recorder) scopeStep(base context.Context, cfg *traceV2Config, step ExecutionGraphStep) context.Context {
+	if r == nil || cfg == nil || r.cur() == nil {
+		return base
+	}
+	sc, ok := cfg.source.(StepScoper)
+	if !ok {
+		return base
+	}
+	ctx := sc.ScopeStep(base, step)
+	r.cur().ctx = ctx
+	return ctx
 }
 
 // stepModule is one of the recorder hooks that tell the V2 trace how far a Setx step got; nil-safe, so the V1 path pays nothing.
@@ -166,8 +191,12 @@ func (r *traceV2Recorder) build(ctx context.Context, cfg *traceV2Config, workflo
 	for pos, rec := range r.steps {
 		last := pos == len(r.steps)-1
 		failed := runErr != nil && last
-		ctxDigest := src.ExecutionContext(ctx, workflowID)
-		hiDigest, hiCount := src.HostInteractions(ctx, rec.graph)
+		sctx := ctx // the step's own context when the source scoped it
+		if rec.ctx != nil {
+			sctx = rec.ctx
+		}
+		ctxDigest := src.ExecutionContext(sctx, workflowID)
+		hiDigest, hiCount := src.HostInteractions(sctx, rec.graph)
 		st := ProofStepV2{
 			Index:       pos,
 			Name:        rec.graph.Raw,
@@ -180,7 +209,7 @@ func (r *traceV2Recorder) build(ctx context.Context, cfg *traceV2Config, workflo
 		if st.InputDigest == "" {
 			st.InputDigest = digestOfRaw(rec.graph.Raw) // the input was never resolved: a placeholder bound to the step text
 		}
-		if out, dec := src.Authorization(ctx, rec.graph); out == AuthorizationAllowed || out == AuthorizationDenied {
+		if out, dec := src.Authorization(sctx, rec.graph); out == AuthorizationAllowed || out == AuthorizationDenied {
 			st.Outcome.Authorization = out
 			st.References.AuthorizationDecision = &DigestRefV2{Digest: dec}
 		}
@@ -199,7 +228,7 @@ func (r *traceV2Recorder) build(ctx context.Context, cfg *traceV2Config, workflo
 			if errors.Is(runErr, ErrUnauthorized) {
 				st.Outcome.Authorization = AuthorizationDenied
 				if st.References.AuthorizationDecision == nil {
-					_, dec := src.Authorization(ctx, rec.graph)
+					_, dec := src.Authorization(sctx, rec.graph)
 					st.References.AuthorizationDecision = &DigestRefV2{Digest: dec}
 				}
 			}
