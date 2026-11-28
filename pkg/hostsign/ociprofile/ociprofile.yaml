@@ -1,0 +1,70 @@
+---
+package: ociprofile
+description: 'Package ociprofile is the OCI draft-cavage HTTP Signatures signing profile
+  of the cic-flow.send host capability (D-11). It depends only on the hostsign seam
+  and the standard library: it must not import core/..., and neither the core nor
+  hostsign may import it (see hostsign/arch_test.go).'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Profile
+  kind: struct
+  description: Profile is the OCI signing profile.
+  implements: []
+  references: []
+- name: New
+  kind: func
+  description: New returns the OCI profile.
+  references: []
+  calls: []
+- name: ID
+  kind: method
+  receiver: Profile
+  description: ID implements hostsign.Profile.
+  references: []
+  calls: []
+- name: Digest
+  kind: method
+  receiver: Profile
+  description: 'Digest implements hostsign.Profile: sha256 of the domain-separated
+    profile descriptor.'
+  references: []
+  calls: []
+- name: Limits
+  kind: method
+  receiver: Profile
+  description: 'Limits implements hostsign.Profile: the OCI profile does not narrow
+    the operator limits.'
+  references:
+  - hostsign.Limits
+  calls: []
+- name: bodyMethod
+  kind: func
+  description: bodyMethod is a helper of the cic-flow.send host capability.
+  references: []
+  calls: []
+- name: Prepare
+  kind: method
+  receiver: Profile
+  description: 'Prepare implements hostsign.Profile: the draft-cavage canonical string,
+    the wire headers the host sets, and the Authorization assembler.'
+  references:
+  - hostsign.PrepRequest
+  - hostsign.Prepared
+  - hostsign.PrepRequest.Target
+  calls:
+  - EncodeToString
+  - hostsign.PrepRequest.Target
+- name: ProfileID
+  kind: const
+  description: ProfileID is the identifier a guest request names.
+  references: []
+- name: descriptor
+  kind: const
+  description: 'descriptor is the definition the profile digest covers: identity,
+    scheme, algorithm and the exact signed header sets. Changing any of them changes
+    the digest recorded in every interaction.'
+  references: []

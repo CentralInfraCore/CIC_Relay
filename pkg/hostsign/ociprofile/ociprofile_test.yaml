@@ -1,0 +1,136 @@
+---
+package: ociprofile_test
+description: ''
+tags:
+- interface
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: rsaSigner
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: doerFunc
+  kind: type
+  description: ''
+  references: []
+- name: TestIdentityAndDigest
+  kind: func
+  description: ''
+  references:
+  - ociprofile.New
+  - assert.Equal
+  - assert.Regexp
+  - assert.Zero
+  calls:
+  - Digest
+  - ID
+  - Limits
+  - assert.Equal
+  - assert.Regexp
+  - assert.Zero
+  - ociprofile.New
+- name: TestCanonicalGolden
+  kind: func
+  description: 'Golden strings: the same canonical form the guest used to build itself
+    (module oci_sign.go).'
+  references:
+  - ociprofile.New
+  - hostsign.PrepRequest
+  - require.NoError
+  - assert.Equal
+  - assert.Contains
+  - assert.Error
+  calls:
+  - Authorize
+  - EncodeToString
+  - Prepare
+  - assert.Contains
+  - assert.Equal
+  - assert.Error
+  - ociprofile.New
+  - require.NoError
+- name: Sign
+  kind: method
+  receiver: rsaSigner
+  description: ''
+  references: []
+  calls:
+  - EncodeToString
+- name: TestEndToEndVerifiesAsOCI
+  kind: func
+  description: 'End to end through the engine with a real RSA key: a fake OCI endpoint
+    re-derives the canonical string from the received request and verifies the signature
+    as OCI would; a PUT with a body is accepted, and the guest-visible response carries
+    no signature.'
+  references:
+  - require.NoError
+  - assert.Contains
+  - require.Len
+  - assert.Equal
+  - ociprofile.ProfileID
+  - hostsign.Response
+  - require.Equal
+  - assert.NotContains
+  - ociprofile.New
+  calls:
+  - DecodeString
+  - Digest
+  - EncodeToString
+  - FindStringSubmatch
+  - Get
+  - Handle
+  - Log
+  - Records
+  - RequestURI
+  - assert.Contains
+  - assert.Equal
+  - assert.NotContains
+  - ociprofile.New
+  - require.Equal
+  - require.Len
+  - require.NoError
+- name: newEngine
+  kind: func
+  description: ''
+  references:
+  - hostsign.Engine
+  - hostsign.Policy
+  - hostsign.OperationPolicy
+  - hostsign.Limits
+  - hostsign.NewEngine
+  - hostsign.Config
+  - hostsign.Profile
+  - ociprofile.New
+  - hostsign.Key
+  - require.NoError
+  calls:
+  - hostsign.NewEngine
+  - ociprofile.New
+  - require.NoError
+- name: Do
+  kind: method
+  receiver: doerFunc
+  description: ''
+  references: []
+  calls: []
+- name: sigRe
+  kind: var
+  description: ''
+  references: []
+- name: host
+  kind: const
+  description: ''
+  references: []
+- name: res
+  kind: const
+  description: ''
+  references: []
+- name: bind
+  kind: const
+  description: ''
+  references: []

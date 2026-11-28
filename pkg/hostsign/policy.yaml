@@ -1,0 +1,101 @@
+---
+package: hostsign
+description: ''
+tags:
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Limits
+  kind: struct
+  description: Limits are the timeout and size caps of one call. The operator policy
+    gives the upper bound; a profile can only narrow it; a guest request carries no
+    limit at all (SS-05).
+  implements: []
+  references: []
+- name: OperationPolicy
+  kind: struct
+  description: OperationPolicy is what the operator allows for one intent operation.
+  implements: []
+  references: []
+- name: Policy
+  kind: struct
+  description: Policy is the operator-owned deployment policy the host validates every
+    request against. It is NOT guest-supplied and not part of the module artifact.
+  implements: []
+  references: []
+- name: TargetIntent
+  kind: struct
+  description: TargetIntent is the intent part of a request as the target validation
+    sees it.
+  implements: []
+  references: []
+- name: effectiveLimits
+  kind: func
+  description: effectiveLimits is min(operator, profile) per field; a zero profile
+    field does not narrow. It fails if the profile limit is wider than the operator
+    cap.
+  references: []
+  calls: []
+- name: Validate
+  kind: method
+  receiver: Policy
+  description: Validate rejects a policy that cannot be enforced unambiguously (fail-closed
+    at configuration).
+  references: []
+  calls:
+  - MatchString
+- name: Digest
+  kind: method
+  receiver: Policy
+  description: 'Digest is the policy digest recorded in every host interaction: sha256
+    over a domain-separated canonical JSON form (encoding/json sorts map keys; list
+    fields are sorted copies).'
+  references: []
+  calls: []
+- name: sortedCopy
+  kind: func
+  description: sortedCopy is a helper of the cic-flow.send host capability.
+  references: []
+  calls: []
+- name: contains
+  kind: func
+  description: contains is a helper of the cic-flow.send host capability.
+  references: []
+  calls: []
+- name: ValidateTarget
+  kind: method
+  receiver: Policy
+  description: 'ValidateTarget is the normative host-side target validation (contract
+    SS-03). It returns "" when the request is within the policy, else the POLICY_*
+    code of the first failing step, in the fixed order: (1) operation, (2) host, (3)
+    method, (4) resource, (5) binding digest, (6) path+query.'
+  references: []
+  calls:
+  - MatchString
+- name: ErrLimitExceedsOperatorCap
+  kind: var
+  description: ErrLimitExceedsOperatorCap is returned when a profile limit is wider
+    than the operator cap.
+  references: []
+- name: sha256Re
+  kind: var
+  description: sha256Re is a package-level table or pattern of the cic-flow.send host
+    capability.
+  references: []
+- name: pathTrickRe
+  kind: var
+  description: pathTrickRe is a package-level table or pattern of the cic-flow.send
+    host capability.
+  references: []
+- name: validMethods
+  kind: var
+  description: validMethods is a package-level table or pattern of the cic-flow.send
+    host capability.
+  references: []
+- name: resourcePlaceholder
+  kind: const
+  description: resourcePlaceholder is a named constant of the cic-flow.send host capability.
+  references: []

@@ -27,6 +27,7 @@ type cicFlowRegistry struct {
 	doer    httpDoer             // egress transport shared by all modules
 	deps    map[string]flowGrant // per-module cic-flow deps, bound to the authenticated artifact; absent = denied
 	git     map[string]gitGrant  // per-module git reach, from the verified manifest; absent = denied
+	send    *sendConfig          // operator cic-flow.send configuration; nil → send modules are rejected at load
 }
 
 // flowGrant is a module's cic-flow deps, bound like a gitGrant to the artifact the cabinet stores and to the
@@ -162,7 +163,15 @@ func (r *cicFlowRegistry) publish(moduleID string, projectYAML []byte, artifact,
 		return err
 	}
 	var deps cicFlowDeps
-	if usesFlow {
+	if p.cicFlowImports()["send"] {
+		// A send module gets ONLY the send engine: no raw signer and no egress for sign/actuate, so a
+		// wasm that imports them anyway (beyond what project.yaml declares) is refused at call time.
+		eng, err := r.bindSend(p.CapabilityManifest, projectYAML)
+		if err != nil {
+			return err
+		}
+		deps = cicFlowDeps{send: eng}
+	} else if usesFlow {
 		deps, err = bindCICFlowDeps(p.CapabilityManifest, r.resolve, r.doer)
 		if err != nil {
 			return err
