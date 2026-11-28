@@ -1,0 +1,16 @@
+---
+package: ociprofile
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestDescriptorNamesTheProfileID
+  kind: func
+  description: 'The descriptor the digest covers names this profile''s own identifier:
+    a renamed profile can not keep the digest.'
+  references: []
+  calls: []

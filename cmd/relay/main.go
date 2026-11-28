@@ -739,6 +739,13 @@ func main() {
 	// relay-provisioned Vault key when CIC_OCI_SIGN_MOUNT/_KEY are set; nil (sign
 	// inert) otherwise.
 	cicFlowReg := newCICFlowRegistry(buildOCIKeyResolver(), nil)
+	// cic-flow.send: the operator deployment policy (CIC_HOSTSIGN_POLICY) + provider key identifier
+	// (CIC_OCI_SIGN_KEY_ID). Unset → modules importing cic-flow.send are rejected at load (fail-closed).
+	if sendCfg, err := sendConfigFromEnv(); err != nil {
+		logger.WithField("error", err).Fatal("FATAL: invalid cic-flow.send configuration")
+	} else if sendCfg != nil {
+		cicFlowReg.configureSend(sendCfg)
+	}
 	// loadModule binds each verified module's cic-flow capability into this
 	// registry via the package-level hook (fail-closed: only verified modules).
 	registerModuleCapability = cicFlowReg.stageVerified
