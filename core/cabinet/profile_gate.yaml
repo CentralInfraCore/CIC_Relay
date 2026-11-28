@@ -1,0 +1,172 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: ProfileGateError
+  kind: struct
+  description: ProfileGateError is a refusal of the profile gate.
+  implements: []
+  references: []
+- name: profileGate
+  kind: struct
+  description: profileGate is the outcome of a passed gate.
+  implements: []
+  references: []
+- name: authzDecision
+  kind: struct
+  description: 'authzDecision is the recorded decision of a step: the outcome and
+    the full record the digest is taken over.'
+  implements: []
+  references: []
+- name: gateEnvelope
+  kind: struct
+  description: gateEnvelope is the concrete execution a decision is bound to.
+  implements: []
+  references: []
+- name: PayloadValidator
+  kind: interface
+  description: PayloadValidator validates one JSON payload against the schema body
+    registered for exactly (schemaID, schemaDigest). It returns ErrSchemaUnavailable
+    (wrapped or not) when it has no body for that pair, and any other error for a
+    payload that does not conform.
+  references: []
+  methods:
+  - ValidatePayload
+- name: Error
+  kind: method
+  receiver: ProfileGateError
+  description: Error renders the code first.
+  references: []
+  calls: []
+- name: Unwrap
+  kind: method
+  receiver: ProfileGateError
+  description: Unwrap lets errors.Is see the base class (ErrInvalid).
+  references: []
+  calls: []
+- name: WithPayloadValidator
+  kind: func
+  description: 'WithPayloadValidator configures the operator''s payload validation
+    for profile-bound operations. Without it, a profile-bound step is refused (SCHEMA_VALIDATION_UNCONFIGURED):
+    an operation is never dispatched unvalidated.'
+  references: []
+  calls: []
+- name: WithEffectPolicy
+  kind: func
+  description: 'WithEffectPolicy configures the operator''s effect policy: the effect
+    classes a profile-bound operation may have. Setting it also lets sign+send operations
+    dispatch (their host boundary is then enforced host-side by the send engine);
+    unset, they fail closed as before. A nil or empty list allows nothing.'
+  references: []
+  calls: []
+- name: allowedEffects
+  kind: method
+  receiver: cabinetService
+  description: allowedEffects is the operator's allowed effect classes, sorted.
+  references: []
+  calls: []
+- name: resolveEffect
+  kind: func
+  description: resolveEffect returns the effect class of op for this input and how
+    it was resolved.
+  references: []
+  calls: []
+- name: decisionRecord
+  kind: method
+  receiver: cabinetService
+  description: 'decisionRecord builds the authorization record of a step: bound to
+    the authenticated principal (from the context the authentication layer set), the
+    module''s envelope, the profile, the operation and its resolved effect, the realization
+    context, the operator''s policy, the decision, and the concrete execution.'
+  references: []
+  calls:
+  - ModuleDescriptor.ID
+  - PolicyDigestOf
+  - PrincipalFrom
+  - PrincipalString
+- name: profileGateFor
+  kind: method
+  receiver: cabinetService
+  description: 'profileGateFor decides how a WASM step dispatches: (nil, nil) no binding,
+    legacy dispatch; (nil, err) the step is refused before execution; (gate, nil)
+    the profile-driven dispatch under the gate''s limits. It records the authorization
+    decision.'
+  references: []
+  calls:
+  - Operation
+- name: gateLimits
+  kind: method
+  receiver: cabinetService
+  description: gateLimits applies the profile's request ceiling and returns the response
+    ceiling and the timeout for the run.
+  references: []
+  calls: []
+- name: validatePayload
+  kind: func
+  description: validatePayload validates payload against the schema ref; invalidCode
+    is the code of a non-conforming payload.
+  references: []
+  calls:
+  - PayloadValidator.ValidatePayload
+- name: validateResponse
+  kind: method
+  receiver: profileGate
+  description: 'validateResponse validates a call''s response against the operation''s
+    response schema (nil: conforms).'
+  references: []
+  calls: []
+- name: ErrSchemaUnavailable
+  kind: var
+  description: ErrSchemaUnavailable is returned by a PayloadValidator when it holds
+    no schema body for the id and digest asked for.
+  references: []
+- name: EffectLocal
+  kind: const
+  description: EffectLocal changes nothing outside the module.
+  references: []
+- name: EffectExternalRead
+  kind: const
+  description: EffectExternalRead reads an external system.
+  references: []
+- name: EffectExternalWrite
+  kind: const
+  description: EffectExternalWrite changes an external system.
+  references: []
+- name: CodeEffectNotAuthorized
+  kind: const
+  description: 'CodeEffectNotAuthorized: the operation''s resolved effect is not allowed
+    by the operator''s effect policy.'
+  references: []
+- name: CodeRequestTooLarge
+  kind: const
+  description: 'CodeRequestTooLarge: the request exceeds the profile''s max_request_bytes.'
+  references: []
+- name: CodeSchemaValidationUnconfigured
+  kind: const
+  description: 'CodeSchemaValidationUnconfigured: a profile-bound step needs payload
+    validation and no validator is configured.'
+  references: []
+- name: CodeSchemaUnavailable
+  kind: const
+  description: 'CodeSchemaUnavailable: no schema body is available for the profile''s
+    schema id and digest.'
+  references: []
+- name: CodeRequestSchemaInvalid
+  kind: const
+  description: 'CodeRequestSchemaInvalid: the request does not conform to the operation''s
+    request schema.'
+  references: []
+- name: CodeResponseSchemaInvalid
+  kind: const
+  description: 'CodeResponseSchemaInvalid: the response does not conform to the operation''s
+    response schema.'
+  references: []
+- name: CodeResponseTooLarge
+  kind: const
+  description: 'CodeResponseTooLarge: the response exceeds the profile''s max_response_bytes.'
+  references: []

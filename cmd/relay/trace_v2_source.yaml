@@ -1,0 +1,289 @@
+---
+package: main
+description: ''
+tags:
+- executor
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: admittedIdentity
+  kind: struct
+  description: admittedIdentity is the admission record of one module, bound to the
+    artifact it was admitted for.
+  implements: []
+  references:
+  - cabinet.ExecutedIdentityV2
+- name: identityRegistry
+  kind: struct
+  description: identityRegistry holds the admission records, written by loadModule
+    and read by the trace source.
+  implements: []
+  references: []
+- name: traceSource
+  kind: struct
+  description: traceSource is the production cabinet.TraceV2Source (and StepScoper).
+  implements: []
+  references:
+  - hostsign.Record
+  - cabinet.AuthorizationRecordV2
+- name: recorderKey
+  kind: struct
+  description: 'recorderKey is the key a recorder attests persistence with. The attestation
+    is only ever made AFTER the artifact and its interaction lists were written and
+    flushed: a recorder that attested before the write would be attesting a hope.'
+  implements: []
+  references: []
+- name: newIdentityRegistry
+  kind: func
+  description: newIdentityRegistry returns an empty registry.
+  references: []
+  calls: []
+- name: set
+  kind: method
+  receiver: identityRegistry
+  description: set records the admission of moduleID; a reload replaces it.
+  references:
+  - cabinet.ExecutedIdentityV2
+  calls:
+  - Lock
+  - Unlock
+- name: forget
+  kind: method
+  receiver: identityRegistry
+  description: forget drops a module's record (a reload that is not admitted with
+    a profile must not leave the earlier one).
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: get
+  kind: method
+  receiver: identityRegistry
+  description: get returns the record only if it belongs to exactly this artifact.
+  references:
+  - cabinet.ExecutedIdentityV2
+  calls:
+  - RLock
+  - RUnlock
+- name: sha256Of
+  kind: func
+  description: sha256Of is the sha256:<hex> form of the O-1 digests.
+  references: []
+  calls: []
+- name: executedIdentityOf
+  kind: func
+  description: executedIdentityOf builds the admission record of a module from what
+    loadModule verified.
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.ModuleProfileBinding
+  - cabinet.ExecutedIdentityV2
+  - cabinet.ProfileRefV2
+  - cabinet.TrustStateAuthenticated
+  calls: []
+- name: newTraceSource
+  kind: func
+  description: newTraceSource builds the source. protected is the operator's protected-component
+    set (the cabinet's own).
+  references:
+  - hostsign.Record
+  - cabinet.AuthorizationRecordV2
+  calls: []
+- name: ExecutedIdentity
+  kind: method
+  receiver: traceSource
+  description: 'ExecutedIdentity implements cabinet.TraceV2Source. ok=false: the module
+    was not admitted with a profile binding, or the artifact is not the admitted one:
+    no executed identity may be claimed.'
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.ExecutedIdentityV2
+  - cabinet.ModuleDescriptor.ID
+  - cabinet.ModuleDescriptor.Checksum
+  calls:
+  - cabinet.ModuleDescriptor.Checksum
+  - cabinet.ModuleDescriptor.ID
+- name: Authorization
+  kind: method
+  receiver: traceSource
+  description: 'Authorization implements cabinet.TraceV2Source: a protected component
+    is refused at the execution boundary (the cabinet has no other authorization decision
+    outside the profile gate, which records its own), and that refusal gets an authorization
+    record; everything else is not evaluated here. The record states "none" for what
+    a refusal before admission cannot know (no envelope, no profile, no input).'
+  references:
+  - cabinet.ExecutionGraphStep
+  - cabinet.AuthorizationNotEvaluated
+  - cabinet.PrincipalFrom
+  - cabinet.AuthorizationRecordV2
+  - cabinet.None
+  - cabinet.PrincipalString
+  - cabinet.AuthorizationDenied
+  - cabinet.AuthorizationRecordV2.Digest
+  calls:
+  - cabinet.AuthorizationRecordV2.Digest
+  - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
+  - traceSource.ArchiveDecision
+- name: ArchiveDecision
+  kind: method
+  receiver: traceSource
+  description: 'ArchiveDecision implements cabinet.DecisionArchiver: the cabinet''s
+    own decision records are kept for the verifier.'
+  references:
+  - cabinet.AuthorizationRecordV2
+  calls:
+  - Lock
+  - Unlock
+- name: executionContextText
+  kind: func
+  description: executionContextText is the canonical text of the execution-context
+    record (CICEXECCTXv2).
+  references: []
+  calls:
+  - Replace
+- name: ExecutionContext
+  kind: method
+  receiver: traceSource
+  description: 'ExecutionContext implements cabinet.TraceV2Source. The record carries
+    what the relay knows, from the authentication layer and the operator''s pinned
+    realization context, and says "unavailable" or "none" where there is nothing:
+    the principal''s type, id and method are never taken from the request payload.'
+  references:
+  - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
+  calls:
+  - cabinet.PrincipalFrom
+  - cabinet.PrincipalString
+- name: putContext
+  kind: method
+  receiver: traceSource
+  description: putContext archives an execution-context record and returns its digest.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: ScopeStep
+  kind: method
+  receiver: traceSource
+  description: 'ScopeStep implements cabinet.StepScoper: the step''s host interactions
+    go to a log of their own.'
+  references:
+  - cabinet.ExecutionGraphStep
+  - hostsign.WithLog
+  - hostsign.NewLog
+  calls:
+  - hostsign.NewLog
+  - hostsign.WithLog
+- name: HostInteractions
+  kind: method
+  receiver: traceSource
+  description: 'HostInteractions implements cabinet.TraceV2Source: the digest and
+    count of the step''s list, denied and failed calls included. The records are archived
+    under the digest so that the verifier can be given exactly them.'
+  references:
+  - cabinet.ExecutionGraphStep
+  - hostsign.LogFrom
+  - cabinet.EmptyHostInteractionsDigestV2
+  - hostsign.InteractionsDigest
+  calls:
+  - Lock
+  - Records
+  - Unlock
+  - cabinet.EmptyHostInteractionsDigestV2
+  - hostsign.InteractionsDigest
+  - hostsign.LogFrom
+- name: Interactions
+  kind: method
+  receiver: traceSource
+  description: Interactions returns the archived records of an interaction-list digest.
+  references:
+  - hostsign.Record
+  calls:
+  - Lock
+  - Unlock
+- name: loadRecorderKey
+  kind: func
+  description: loadRecorderKey reads a PKCS#8 PEM ed25519 private key.
+  references: []
+  calls:
+  - Public
+- name: writeDurable
+  kind: func
+  description: 'writeDurable writes data to dir/name atomically and durably: temp
+    file, flush, rename, flush the directory.'
+  references: []
+  calls:
+  - Close
+  - Name
+  - Sync
+  - Write
+- name: persist
+  kind: method
+  receiver: traceSource
+  description: persist writes the artifact and its interaction lists durably and returns
+    the artifact file's digest.
+  references:
+  - cabinet.ProofArtifactV2
+  - hostsign.Record
+  - cabinet.AuthorizationRecordV2
+  calls:
+  - Lock
+  - Unlock
+  - traceSource.Interactions
+- name: traceSink
+  kind: method
+  receiver: traceSource
+  description: 'traceSink persists every sealed artifact and the interaction lists
+    it references into dir. With a recorder key it then, and only after both writes
+    succeeded, writes the persistence object and the attestation signature material
+    (<chain>.persistence.json, <chain>.attestation.json); when a write failed it records
+    persisted=false with an error code and NO attestation. Without a key the files
+    are plain evidence: no persistence is claimed.'
+  references:
+  - logrus.Logger
+  - cabinet.TraceV2Sink
+  - cabinet.ProofArtifactV2
+  - attest.RecorderSignedBytes
+  - attest.AlgEd25519
+  - o1verify.Persistence
+  - o1verify.Attestation
+  - logrus.Logger.WithError
+  calls:
+  - EncodeToString
+  - Error
+  - attest.RecorderSignedBytes
+  - logrus.Logger.WithError
+- name: traceV2OptionsFromEnv
+  kind: func
+  description: traceV2OptionsFromEnv returns the cabinet options of the V2 recording,
+    or none when it is not enabled.
+  references:
+  - logrus.Logger
+  - cabinet.CabinetOption
+  - logrus.Fields
+  - cabinet.WithTraceV2
+  - logrus.Logger.WithFields
+  calls:
+  - Info
+  - cabinet.WithTraceV2
+  - logrus.Logger.WithFields
+- name: moduleIdentities
+  kind: var
+  description: moduleIdentities is the process-wide registry loadModule writes to.
+  references: []
+- name: traceV2DirEnv
+  kind: const
+  description: 'traceV2DirEnv enables ProofTrace V2 recording: the directory the sealed
+    artifacts and their interaction records are written to. Unset: V2 is off and the
+    V1 path is exactly as before (production activation stays an operator decision).'
+  references: []
+- name: traceV2RecorderKeyEnv
+  kind: const
+  description: 'traceV2RecorderKeyEnv is the path of the recorder''s PKCS#8 PEM ed25519
+    key. Unset: artifacts are stored but no persistence is claimed or attested. The
+    key must hold recorder:attest in the pinned trust bundle for a verifier to accept
+    the attestation.'
+  references: []

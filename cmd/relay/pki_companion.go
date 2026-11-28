@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -80,5 +82,77 @@ func verifyCICFlowProvenance(cert *x509.Certificate, pkiAssets *PKIAssets) error
 	if err != nil {
 		return fmt.Errorf("provenance verification failed: %w", err)
 	}
+	return nil
+}
+
+// moduleSignAuthoritiesEnv names the operator's pinned authority bindings for module signing (#162 V2b): a detached
+// companion, like the CICSourceCA bundle, so it is part of the operator's trust domain and not of the binary.
+const moduleSignAuthoritiesEnv = "CIC_MODULE_SIGN_AUTHORITIES"
+
+// moduleSignAuthoritiesFile is the wire form of the authority bindings: which signer keys (by key_id = sha256 of the
+// DER SubjectPublicKeyInfo) hold which role. The only role the relay knows is module:sign.
+type moduleSignAuthoritiesFile struct {
+	Kind        string `json:"kind"`
+	Version     int    `json:"version"`
+	Authorities []struct {
+		KeyID string   `json:"key_id"`
+		Roles []string `json:"roles"`
+	} `json:"authorities"`
+}
+
+// parseModuleSignAuthorities decodes the authority bindings strictly. An unknown field, kind, version or role, a
+// malformed or duplicated key_id is an error: a typo must not silently grant or drop an authority.
+func parseModuleSignAuthorities(data []byte) (map[string]bool, error) {
+	if err := strictScan(data, authoritiesJSONShape); err != nil {
+		return nil, fmt.Errorf("module-sign authorities: %v", err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	var f moduleSignAuthoritiesFile
+	if err := dec.Decode(&f); err != nil {
+		return nil, fmt.Errorf("parse module-sign authorities: %w", err)
+	}
+	if f.Kind != "ModuleSignAuthorities" || f.Version != 1 {
+		return nil, fmt.Errorf("module-sign authorities: kind must be ModuleSignAuthorities and version 1")
+	}
+	out := map[string]bool{}
+	for i, a := range f.Authorities {
+		if !envDigestRE.MatchString(a.KeyID) {
+			return nil, fmt.Errorf("module-sign authorities: entry %d: key_id is not sha256:<64 lowercase hex>", i)
+		}
+		if _, dup := out[a.KeyID]; dup {
+			return nil, fmt.Errorf("module-sign authorities: entry %d: duplicate key_id", i)
+		}
+		granted := false
+		for _, r := range a.Roles {
+			if r != moduleSignRole {
+				return nil, fmt.Errorf("module-sign authorities: entry %d: unknown role %q", i, clipForError(r))
+			}
+			granted = true
+		}
+		out[a.KeyID] = granted
+	}
+	return out, nil
+}
+
+// loadModuleSignAuthorities loads the pinned module-sign authority bindings from CIC_MODULE_SIGN_AUTHORITIES into
+// pkiAssets. Unset: no signer is authorised, so no envelope is admitted (fail-closed). Set but unreadable or invalid:
+// an error (start-up failure).
+func loadModuleSignAuthorities(pkiAssets *PKIAssets, logger *logrus.Logger) error {
+	p := strings.TrimSpace(os.Getenv(moduleSignAuthoritiesEnv))
+	if p == "" {
+		logger.WithField("authorities", 0).Warn(moduleSignAuthoritiesEnv + " not configured — no module envelope can be authenticated")
+		return nil
+	}
+	data, err := os.ReadFile(p) // #nosec G304 — operator-supplied trust-domain path
+	if err != nil {
+		return fmt.Errorf("read module-sign authorities %q: %w", p, err)
+	}
+	auth, err := parseModuleSignAuthorities(data)
+	if err != nil {
+		return err
+	}
+	pkiAssets.ModuleSignAuthorities = auth
+	logger.WithFields(logrus.Fields{"authorities": len(auth), "path": p}).Info("module-sign authority bindings loaded (detached companion)")
 	return nil
 }

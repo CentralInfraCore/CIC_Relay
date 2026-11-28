@@ -1,0 +1,107 @@
+---
+package: schemalite
+description: ''
+tags:
+- schema
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: mustCompile
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Compile
+  - require.NoError
+- name: TestValidAndInvalidPayloads
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - Validate
+  - assert.Error
+  - assert.NoError
+- name: TestBoundariesAreInclusive
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - Validate
+  - assert.Error
+  - assert.NoError
+- name: TestTheSubsetIsClosed
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+  calls:
+  - Compile
+  - Error
+  - assert.Contains
+  - require.Error
+- name: TestMalformedSchemasAreRefused
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - Compile
+  - assert.Error
+- name: TestBooleanAndNullTypes
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - Validate
+  - assert.Error
+  - assert.NoError
+- name: TestNumbersAndEnumsCompareByValue
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - Validate
+  - assert.Error
+  - assert.NoError
+- name: TestAnIntegerIsANumberButANumberIsNotAlwaysAnInteger
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - Validate
+  - assert.Error
+  - assert.NoError
+- name: TestHugeNumbersDoNotCrashTheValidator
+  kind: func
+  description: ''
+  references:
+  - assert.Error
+  calls:
+  - Validate
+  - assert.Error
+- name: TestSizeKeywordBoundsAreInclusive
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - Compile
+  - Validate
+  - assert.Error
+  - assert.NoError

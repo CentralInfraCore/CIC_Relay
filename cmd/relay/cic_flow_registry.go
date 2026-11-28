@@ -23,10 +23,21 @@ import (
 // CICLicenseCA entitlement — see r3-plan.md.)
 type cicFlowRegistry struct {
 	mu      sync.RWMutex
-	resolve keyResolver // may be nil → sign stays inert until the OCI key is provisioned
-	doer    httpDoer    // egress transport shared by all modules
-	deps    map[string]cicFlowDeps
-	git     map[string]gitGrant // per-module git reach, from the verified manifest; absent = denied
+	resolve keyResolver          // may be nil → sign stays inert until the OCI key is provisioned
+	doer    httpDoer             // egress transport shared by all modules
+	deps    map[string]flowGrant // per-module cic-flow deps, bound to the authenticated artifact; absent = denied
+	git     map[string]gitGrant  // per-module git reach, from the verified manifest; absent = denied
+	send    *sendConfig          // operator cic-flow.send configuration; nil → send modules are rejected at load
+}
+
+// flowGrant is a module's cic-flow deps, bound like a gitGrant to the artifact the cabinet stores and to the
+// authenticated envelope identity (#162 V7, ENV-03). Only an active grant whose artifact and envelope digest are the
+// calling instance's authorises anything.
+type flowGrant struct {
+	deps           cicFlowDeps
+	artifact       string
+	envelopeDigest string
+	active         bool
 }
 
 // gitGrant is a module's verified git reach, bound to the exact artifact it was derived from: the wasm
@@ -37,6 +48,10 @@ type gitGrant struct {
 	rules          []gitRule
 	wasmDigest     string
 	manifestDigest string
+	// envelopeDigest is the authenticated module identity (#162 ENV-03: sha256 of the CICMODENVv1 signed bytes, which
+	// cover the raw and executed wasm, the full manifest and the signer). It is the instance binding: a grant
+	// without it is never usable.
+	envelopeDigest string
 	// artifact is the checksum of the module artifact the cabinet stores for the load that produced this
 	// grant. Published together with the grant; a grant without it is never usable.
 	artifact string
@@ -47,11 +62,12 @@ type gitGrant struct {
 }
 
 // registerModuleCapability, if set, is called by the module-load path
-// (`loadModule`) after a module's provenance verifies, to bind its cic-flow
-// capability. `main` wires it to a registry's registerVerified; it stays nil in
+// (`loadModule`) once a module is authenticated (#162: envelope, signer authority,
+// digests and provenance verified), to bind its capability under its authenticated
+// identity (moduleID, envelopeDigest). `main` wires it to a registry's registerVerified; it stays nil in
 // tests that do not exercise capability binding. A non-nil error rejects the
 // module at load (fail-closed). It is set once at startup before any load.
-var registerModuleCapability func(moduleID string, projectYAML []byte, artifact string) error
+var registerModuleCapability func(moduleID string, projectYAML []byte, artifact, envelopeDigest string) error
 
 // commitModuleCapability, if set, is called by loadModule once the module's artifact is stored in the
 // cabinet, to activate the grant staged for it. Set once at startup.
@@ -71,43 +87,31 @@ func newCICFlowRegistry(resolve keyResolver, doer httpDoer) *cicFlowRegistry {
 	if doer == nil {
 		doer = newEgressClient(false)
 	}
-	return &cicFlowRegistry{resolve: resolve, doer: doer, deps: map[string]cicFlowDeps{}, git: map[string]gitGrant{}}
+	return &cicFlowRegistry{resolve: resolve, doer: doer, deps: map[string]flowGrant{}, git: map[string]gitGrant{}}
 }
 
-// lookup returns the deps bound for moduleID, or false if the module is not
-// registered (→ the host function denies the call, fail-closed).
-func (r *cicFlowRegistry) lookup(moduleID string) (cicFlowDeps, bool) {
+// lookupFor returns the cic-flow deps of the calling instance, or false (→ the host function denies the call,
+// fail-closed). The identity comes from the runtime, never from the guest: the grant must be active and bound to
+// exactly the artifact the instance was compiled from and the envelope identity it started under (#162 V7), so a
+// reused module ID with another digest inherits nothing.
+func (r *cicFlowRegistry) lookupFor(instance cabinet.InstanceIdentity) (cicFlowDeps, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	d, ok := r.deps[moduleID]
-	return d, ok
+	g, ok := r.deps[instance.Name]
+	if !ok || !g.active || g.artifact == "" || g.artifact != instance.Artifact ||
+		g.envelopeDigest == "" || g.envelopeDigest != instance.Binding {
+		return cicFlowDeps{}, false
+	}
+	return g.deps, true
 }
 
-// registerVerified parses the module's signed project.yaml, checks its cic-flow
-// imports against the declared manifest, binds per-module deps, and registers
-// them under moduleID. It must be called only after the module's provenance has
-// verified (the caller's fail-closed gate).
-//
-//   - A module that does not import cic-flow registers nothing (returns nil).
-//   - A module that imports cic-flow but under-declares its manifest is rejected
-//     (error) — the load path surfaces this as a module-load failure.
-func (r *cicFlowRegistry) registerVerified(moduleID string, projectYAML []byte) error {
-	return r.publishVerified(moduleID, projectYAML, "")
-}
-
-// publishVerified is registerVerified with the checksum of the artifact the cabinet is about to store for
-// this module. The grant and the artifact it belongs to are published in ONE step under the registry lock,
-// so there is no moment at which a grant exists without its artifact, or with an artifact that came from
-// another load. A git grant published without an artifact ("") is never usable.
-func (r *cicFlowRegistry) publishVerified(moduleID string, projectYAML []byte, artifact string) error {
-	return r.publish(moduleID, projectYAML, artifact, true)
-}
-
-// stageVerified is publishVerified for the loader: the grant is recorded with its artifact but is NOT yet
-// active; commitGrant activates it once the module has been stored. Between the two nothing is authorised
-// by it, and an instance created in that window carries no binding, so it stays unauthorised for good.
-func (r *cicFlowRegistry) stageVerified(moduleID string, projectYAML []byte, artifact string) error {
-	return r.publish(moduleID, projectYAML, artifact, false)
+// stageVerified is the loader's registerModuleCapability: the grant is recorded with its artifact and its
+// authenticated envelope identity but is NOT yet active; commitGrant activates it once the module has been stored.
+// Between the two nothing is authorised by it, and an instance created in that window carries no binding, so it
+// stays unauthorised for good. The grant and the artifact it belongs to are published in ONE step under the
+// registry lock.
+func (r *cicFlowRegistry) stageVerified(moduleID string, projectYAML []byte, artifact, envelopeDigest string) error {
+	return r.publish(moduleID, projectYAML, artifact, envelopeDigest, false)
 }
 
 // commitGrant activates the staged grant of moduleID if, and only if, it is still the one staged for
@@ -118,26 +122,34 @@ func (r *cicFlowRegistry) commitGrant(moduleID, artifact string) {
 		g.active = true
 		r.git[moduleID] = g
 	}
+	if g, ok := r.deps[moduleID]; ok && !g.active && g.artifact == artifact {
+		g.active = true
+		r.deps[moduleID] = g
+	}
 	r.mu.Unlock()
 }
 
-// bindingFor is WasmManagerConfig.InstanceBinding: the digest of the manifest of the active grant for
-// moduleID, or "" if there is none. An instance carries it from the moment it is created, so a later reload
-// with a different manifest does not widen (or narrow) what that already-running instance may do.
+// bindingFor is WasmManagerConfig.InstanceBinding: the authenticated envelope digest of the active grant for
+// moduleID (#162 ENV-03; it covers the manifest digest), or "" if there is none. An instance carries it from the
+// moment it is created, so a later reload with a different manifest or artifact does not widen (or narrow) what
+// that already-running instance may do.
 func (r *cicFlowRegistry) bindingFor(moduleID string) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if g, ok := r.git[moduleID]; ok && g.active {
-		return g.manifestDigest
+		return g.envelopeDigest
+	}
+	if g, ok := r.deps[moduleID]; ok && g.active {
+		return g.envelopeDigest
 	}
 	return ""
 }
 
-// publish is the shared body of publishVerified and stageVerified. It parses the module's project.yaml and
+// publish is the body of stageVerified. It parses the module's project.yaml and
 // returns nil without binding anything when the module neither imports cic-flow nor touches git. Otherwise
 // it rejects imports the manifest does not declare, binds the cic-flow dependencies (egress, signer) and
 // records the git grant — its rules, the manifest digest and artifact, active or staged — under the lock.
-func (r *cicFlowRegistry) publish(moduleID string, projectYAML []byte, artifact string, active bool) error {
+func (r *cicFlowRegistry) publish(moduleID string, projectYAML []byte, artifact, envelopeDigest string, active bool) error {
 	p, err := parseModuleProject(projectYAML)
 	if err != nil {
 		return err
@@ -151,7 +163,15 @@ func (r *cicFlowRegistry) publish(moduleID string, projectYAML []byte, artifact 
 		return err
 	}
 	var deps cicFlowDeps
-	if usesFlow {
+	if p.cicFlowImports()["send"] {
+		// A send module gets ONLY the send engine: no raw signer and no egress for sign/actuate, so a
+		// wasm that imports them anyway (beyond what project.yaml declares) is refused at call time.
+		eng, err := r.bindSend(p.CapabilityManifest, projectYAML)
+		if err != nil {
+			return err
+		}
+		deps = cicFlowDeps{send: eng}
+	} else if usesFlow {
 		deps, err = bindCICFlowDeps(p.CapabilityManifest, r.resolve, r.doer)
 		if err != nil {
 			return err
@@ -160,13 +180,14 @@ func (r *cicFlowRegistry) publish(moduleID string, projectYAML []byte, artifact 
 	sum := sha256.Sum256(projectYAML)
 	r.mu.Lock()
 	if usesFlow {
-		r.deps[moduleID] = deps
+		r.deps[moduleID] = flowGrant{deps: deps, artifact: artifact, envelopeDigest: envelopeDigest, active: active}
 	}
 	if len(p.CapabilityManifest.Git) > 0 {
 		r.git[moduleID] = gitGrant{
 			rules:          append([]gitRule(nil), p.CapabilityManifest.Git...),
 			wasmDigest:     p.WasmDigest,
 			manifestDigest: hex.EncodeToString(sum[:]),
+			envelopeDigest: envelopeDigest,
 			artifact:       artifact,
 			active:         active,
 		}
@@ -220,8 +241,8 @@ func (r *cicFlowRegistry) authorizeGit(instance cabinet.InstanceIdentity, op str
 	// ...and under the manifest that was in force when the instance was created. The same wasm loaded
 	// again with another manifest is the same artifact; the instance still carries the manifest it started
 	// under, and an instance that started under a different one is refused.
-	if instance.Binding == "" || instance.Binding != g.manifestDigest {
-		return fmt.Errorf("git: the running module started under a different capability manifest")
+	if g.envelopeDigest == "" || instance.Binding != g.envelopeDigest {
+		return fmt.Errorf("git: the running module started under a different authenticated identity (envelope)")
 	}
 	for _, rule := range g.rules {
 		if rule.Repo != req.RepoID || !containsFold(rule.Ops, op) {

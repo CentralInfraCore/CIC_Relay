@@ -25,6 +25,12 @@ objects:
   description: IsUnauthorized checks if an error is an ErrUnauthorized.
   references: []
   calls: []
+- name: ValidPrincipalType
+  kind: func
+  description: ValidPrincipalType reports whether t is one of the known principal
+    types.
+  references: []
+  calls: []
 - name: WithPrincipal
   kind: func
   description: WithPrincipal returns a context that carries p as the authenticated
@@ -41,4 +47,22 @@ objects:
   kind: var
   description: 'ErrUnauthorized: the call reached a protected operation without an
     authenticated principal in its context.'
+  references: []
+- name: PrincipalTypeHuman
+  kind: const
+  description: PrincipalTypeHuman is an interactive person.
+  references: []
+- name: PrincipalTypeService
+  kind: const
+  description: PrincipalTypeService is a dedicated, authenticated service identity
+    (automated infrastructure management).
+  references: []
+- name: PrincipalTypeAgent
+  kind: const
+  description: PrincipalTypeAgent is a delegated agent acting for someone else.
+  references: []
+- name: PrincipalTypeSharedBearer
+  kind: const
+  description: 'PrincipalTypeSharedBearer is the shared CIC_API_TOKEN identity: a
+    restricted service identity that does not distinguish callers.'
   references: []

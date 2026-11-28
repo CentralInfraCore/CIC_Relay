@@ -1,0 +1,184 @@
+---
+package: main
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: profileOperatorConfig
+  kind: struct
+  description: 'profileOperatorConfig is the operator''s schema registry and limit
+    caps (ref 02 section 6: the store location is open; this is a file the operator
+    controls, loaded at start-up). A schema may also carry its BODY (body_file): the
+    file''s sha256 must equal the schema''s digest, so the body used for payload validation
+    is exactly the one the profile pinned.'
+  implements: []
+  references:
+  - cabinet.SchemaRegistry
+  - cabinet.OperatorLimits
+- name: operatorValidator
+  kind: struct
+  description: 'operatorValidator is the production cabinet.PayloadValidator: it reads
+    the loaded operator configuration at call time (the cabinet is built before the
+    configuration is loaded). No configuration, or no body for exactly the pinned
+    id and digest, is ErrSchemaUnavailable: fail closed.'
+  implements: []
+  references: []
+- name: bundleProfileVerifier
+  kind: struct
+  description: 'bundleProfileVerifier is the production cabinet.ProfileSignatureVerifier:
+    the signature is checked under the key that was presented with the profile, and
+    that key must hold profile:sign in the operator''s pinned bundle.'
+  implements: []
+  references: []
+- name: profileAuthError
+  kind: struct
+  description: profileAuthError marks a valid signature by a key without profile:sign.
+  implements: []
+  references: []
+- name: bodyStore
+  kind: type
+  description: bodyStore holds the compiled schema bodies by exactly (id, digest).
+  references:
+  - schemalite.Schema
+- name: has
+  kind: method
+  receiver: bodyStore
+  description: has reports whether a body is held for exactly this id and digest.
+  references:
+  - cabinet.AbiSchemaRef
+  calls: []
+- name: ValidatePayload
+  kind: method
+  receiver: operatorValidator
+  description: ValidatePayload implements cabinet.PayloadValidator.
+  references:
+  - cabinet.ErrSchemaUnavailable
+  calls:
+  - Validate
+- name: parseProfileOperatorConfig
+  kind: func
+  description: parseProfileOperatorConfig decodes the operator configuration strictly.
+  references:
+  - strictjson.Scan
+  - cabinet.InMemorySchemaRegistry
+  - cabinet.SchemaRegistryEntry
+  - schemalite.Compile
+  - cabinet.OperatorLimits
+  calls:
+  - MatchString
+  - schemalite.Compile
+  - strictjson.Scan
+- name: loadProfileOperatorConfig
+  kind: func
+  description: 'loadProfileOperatorConfig reads CIC_ABI_OPERATOR_CONFIG into profileOperator.
+    Unset: profile admission stays unconfigured and a module that names a profile
+    is rejected. Set but unreadable or invalid: start-up error.'
+  references: []
+  calls: []
+- name: VerifySignedProfile
+  kind: method
+  receiver: bundleProfileVerifier
+  description: VerifySignedProfile implements cabinet.ProfileSignatureVerifier.
+  references:
+  - cabinet.ProfileSignature
+  calls: []
+- name: Error
+  kind: method
+  receiver: profileAuthError
+  description: Error renders the unauthorized signer.
+  references: []
+  calls: []
+- name: profileCode
+  kind: func
+  description: profileCode maps an admission error to a result code of the loader.
+  references:
+  - cabinet.ABIProfileErrorCode
+  - cabinet.CodeProfileSignatureInvalid
+  calls:
+  - Error
+  - cabinet.ABIProfileErrorCode
+- name: admitModuleProfile
+  kind: func
+  description: admitModuleProfile runs the profile admission for a module whose manifest
+    names a profile and returns the binding. It returns (nil, nil) when the manifest
+    names none. envelopeDigest is the module's authenticated identity; an empty one
+    (a module that is not authenticated) is refused.
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.ModuleProfileBinding
+  - cabinet.CodeProfileAdmissionUnconfigured
+  - cabinet.PinnedProfile
+  - cabinet.NewProfileRegistry
+  - cabinet.ProfileSignature
+  - cabinet.AbiSchemaRef
+  - cabinet.CodeSchemaUnavailable
+  - cabinet.NewModuleProfileBinding
+  calls:
+  - Admit
+  - cabinet.NewModuleProfileBinding
+  - cabinet.NewProfileRegistry
+- name: effectPolicyOptionFromEnv
+  kind: func
+  description: effectPolicyOptionFromEnv returns the cabinet option of the effect
+    policy, or none when unset.
+  references:
+  - cabinet.CabinetOption
+  - cabinet.EffectLocal
+  - cabinet.EffectExternalRead
+  - cabinet.EffectExternalWrite
+  - cabinet.WithEffectPolicy
+  calls:
+  - cabinet.WithEffectPolicy
+- name: profileOperator
+  kind: var
+  description: profileOperator is the loaded configuration; nil means profile admission
+    is unconfigured (fail-closed).
+  references: []
+- name: operatorConfigShape
+  kind: var
+  description: operatorConfigShape is the exact wire shape of the operator configuration
+    file.
+  references: []
+- name: profileSuffix
+  kind: const
+  description: profileSuffix is the sidecar holding the profile artifact's raw bytes.
+  references: []
+- name: profileSigSuffix
+  kind: const
+  description: profileSigSuffix is the sidecar holding the detached CICABIPROFv1 signature
+    (one base64 line + LF).
+  references: []
+- name: profileSPKISuffix
+  kind: const
+  description: profileSPKISuffix is the sidecar holding the signer's DER SubjectPublicKeyInfo.
+  references: []
+- name: abiOperatorConfigEnv
+  kind: const
+  description: abiOperatorConfigEnv is the path of the operator's schema registry
+    and limit caps.
+  references: []
+- name: codeProfileMissing
+  kind: const
+  description: 'codeProfileMissing: the manifest names a profile but a sidecar file
+    is absent.'
+  references: []
+- name: codeProfileSignerNotAuthorized
+  kind: const
+  description: 'codeProfileSignerNotAuthorized: the profile''s signer key holds no
+    profile:sign authority in the pinned bundle.'
+  references: []
+- name: codeProfileRejected
+  kind: const
+  description: 'codeProfileRejected: any other profile admission failure.'
+  references: []
+- name: abiAllowedEffectsEnv
+  kind: const
+  description: 'abiAllowedEffectsEnv is the operator''s effect policy for profile-bound
+    operations: a comma-separated list of effect classes (local, external-read, external-write).
+    Unset: no policy, and sign+send operations fail closed in generic dispatch. The
+    observation PoC''s intended value is "local,external-read"; external-write is
+    a separate operator decision.'
+  references: []

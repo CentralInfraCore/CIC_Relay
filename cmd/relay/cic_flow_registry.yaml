@@ -23,6 +23,14 @@ objects:
     it with CICSourceCA provenance + CICLicenseCA entitlement — see r3-plan.md.)'
   implements: []
   references: []
+- name: flowGrant
+  kind: struct
+  description: flowGrant is a module's cic-flow deps, bound like a gitGrant to the
+    artifact the cabinet stores and to the authenticated envelope identity (#162 V7,
+    ENV-03). Only an active grant whose artifact and envelope digest are the calling
+    instance's authorises anything.
+  implements: []
+  references: []
 - name: gitGrant
   kind: struct
   description: 'gitGrant is a module''s verified git reach, bound to the exact artifact
@@ -47,44 +55,28 @@ objects:
     until the OCI-key provisioning path wires a real resolver.'
   references: []
   calls: []
-- name: lookup
+- name: lookupFor
   kind: method
   receiver: cicFlowRegistry
-  description: lookup returns the deps bound for moduleID, or false if the module
-    is not registered (→ the host function denies the call, fail-closed).
-  references: []
+  description: 'lookupFor returns the cic-flow deps of the calling instance, or false
+    (→ the host function denies the call, fail-closed). The identity comes from the
+    runtime, never from the guest: the grant must be active and bound to exactly the
+    artifact the instance was compiled from and the envelope identity it started under
+    (#162 V7), so a reused module ID with another digest inherits nothing.'
+  references:
+  - cabinet.InstanceIdentity
   calls:
   - RLock
   - RUnlock
-- name: registerVerified
-  kind: method
-  receiver: cicFlowRegistry
-  description: registerVerified parses the module's signed project.yaml, checks its
-    cic-flow imports against the declared manifest, binds per-module deps, and registers
-    them under moduleID. It must be called only after the module's provenance has
-    verified (the caller's fail-closed gate). - A module that does not import cic-flow
-    registers nothing (returns nil). - A module that imports cic-flow but under-declares
-    its manifest is rejected (error) — the load path surfaces this as a module-load
-    failure.
-  references: []
-  calls: []
-- name: publishVerified
-  kind: method
-  receiver: cicFlowRegistry
-  description: publishVerified is registerVerified with the checksum of the artifact
-    the cabinet is about to store for this module. The grant and the artifact it belongs
-    to are published in ONE step under the registry lock, so there is no moment at
-    which a grant exists without its artifact, or with an artifact that came from
-    another load. A git grant published without an artifact ("") is never usable.
-  references: []
-  calls: []
 - name: stageVerified
   kind: method
   receiver: cicFlowRegistry
-  description: 'stageVerified is publishVerified for the loader: the grant is recorded
-    with its artifact but is NOT yet active; commitGrant activates it once the module
-    has been stored. Between the two nothing is authorised by it, and an instance
-    created in that window carries no binding, so it stays unauthorised for good.'
+  description: 'stageVerified is the loader''s registerModuleCapability: the grant
+    is recorded with its artifact and its authenticated envelope identity but is NOT
+    yet active; commitGrant activates it once the module has been stored. Between
+    the two nothing is authorised by it, and an instance created in that window carries
+    no binding, so it stays unauthorised for good. The grant and the artifact it belongs
+    to are published in ONE step under the registry lock.'
   references: []
   calls: []
 - name: commitGrant
@@ -99,10 +91,11 @@ objects:
 - name: bindingFor
   kind: method
   receiver: cicFlowRegistry
-  description: 'bindingFor is WasmManagerConfig.InstanceBinding: the digest of the
-    manifest of the active grant for moduleID, or "" if there is none. An instance
-    carries it from the moment it is created, so a later reload with a different manifest
-    does not widen (or narrow) what that already-running instance may do.'
+  description: 'bindingFor is WasmManagerConfig.InstanceBinding: the authenticated
+    envelope digest of the active grant for moduleID (#162 ENV-03; it covers the manifest
+    digest), or "" if there is none. An instance carries it from the moment it is
+    created, so a later reload with a different manifest or artifact does not widen
+    (or narrow) what that already-running instance may do.'
   references: []
   calls:
   - RLock
@@ -110,12 +103,11 @@ objects:
 - name: publish
   kind: method
   receiver: cicFlowRegistry
-  description: publish is the shared body of publishVerified and stageVerified. It
-    parses the module's project.yaml and returns nil without binding anything when
-    the module neither imports cic-flow nor touches git. Otherwise it rejects imports
-    the manifest does not declare, binds the cic-flow dependencies (egress, signer)
-    and records the git grant — its rules, the manifest digest and artifact, active
-    or staged — under the lock.
+  description: publish is the body of stageVerified. It parses the module's project.yaml
+    and returns nil without binding anything when the module neither imports cic-flow
+    nor touches git. Otherwise it rejects imports the manifest does not declare, binds
+    the cic-flow dependencies (egress, signer) and records the git grant — its rules,
+    the manifest digest and artifact, active or staged — under the lock.
   references: []
   calls:
   - Lock
@@ -169,11 +161,13 @@ objects:
   calls: []
 - name: registerModuleCapability
   kind: var
-  description: registerModuleCapability, if set, is called by the module-load path
-    (`loadModule`) after a module's provenance verifies, to bind its cic-flow capability.
-    `main` wires it to a registry's registerVerified; it stays nil in tests that do
-    not exercise capability binding. A non-nil error rejects the module at load (fail-closed).
-    It is set once at startup before any load.
+  description: 'registerModuleCapability, if set, is called by the module-load path
+    (`loadModule`) once a module is authenticated (#162: envelope, signer authority,
+    digests and provenance verified), to bind its capability under its authenticated
+    identity (moduleID, envelopeDigest). `main` wires it to a registry''s registerVerified;
+    it stays nil in tests that do not exercise capability binding. A non-nil error
+    rejects the module at load (fail-closed). It is set once at startup before any
+    load.'
   references: []
 - name: commitModuleCapability
   kind: var

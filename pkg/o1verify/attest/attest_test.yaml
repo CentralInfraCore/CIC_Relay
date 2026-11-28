@@ -1,0 +1,142 @@
+---
+package: attest
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: edKey
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: newEd
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: recorderAttestation
+  kind: func
+  description: ''
+  references:
+  - o1verify.Attestation
+  calls:
+  - RecorderSignedBytes
+- name: recVerifier
+  kind: func
+  description: ''
+  references:
+  - o1verify.Attestation
+  calls: []
+- name: TestRecorderAttestationPositiveAndEveryNegative
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - o1verify.Attestation
+  - require.Error
+  - assert.Contains
+  calls:
+  - Error
+  - RecorderSignedBytes
+  - RecorderVerifier.VerifyAttestation
+  - VerifyAttestation
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestRecorderAttestationWithAnEcdsaKey
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - o1verify.Attestation
+  - assert.ErrorContains
+  calls:
+  - RecorderSignedBytes
+  - RecorderVerifier.VerifyAttestation
+  - assert.ErrorContains
+  - require.NoError
+- name: TestTheAttestationVerifierIsTheVerifiersTrustInput
+  kind: func
+  description: 'the attestation verifier plugs into the independent verifier: a persisted
+    claim is believed only through it'
+  references:
+  - o1verify.AttestationVerifier
+  calls: []
+- name: resultFixture
+  kind: func
+  description: ''
+  references:
+  - o1verify.Result
+  - o1verify.VerifierInfo
+  - o1verify.Subject
+  - o1verify.VerdictVerified
+  - o1verify.AcceptanceNotEvaluated
+  - o1verify.Dimensions
+  - o1verify.VerificationComplete
+  calls: []
+- name: signed
+  kind: func
+  description: ''
+  references:
+  - o1verify.Result
+  - require.NoError
+  calls:
+  - SignResult
+  - require.NoError
+- name: TestVerifierResultAttributionAndPinning
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - assert.ErrorContains
+  calls:
+  - VerifyResult
+  - assert.Equal
+  - assert.ErrorContains
+  - assert.False
+  - assert.True
+  - require.NoError
+- name: TestVerifierResultNegatives
+  kind: func
+  description: ''
+  references:
+  - o1verify.VerdictNotVerified
+  - assert.ErrorContains
+  - assert.Error
+  calls:
+  - VerifyResult
+  - assert.Error
+  - assert.ErrorContains
+- name: TestSignResultReportsSignerFailureAndBadKeys
+  kind: func
+  description: ''
+  references:
+  - assert.ErrorContains
+  - assert.Error
+  calls:
+  - SignResult
+  - assert.Error
+  - assert.ErrorContains
+- name: TestRuntimeImplementationDigestIsTheExecutablesDigest
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Regexp
+  calls:
+  - RuntimeImplementationDigest
+  - assert.Regexp
+  - require.NoError
+- name: chain
+  kind: const
+  description: ''
+  references: []

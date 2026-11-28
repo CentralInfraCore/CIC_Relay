@@ -1,0 +1,99 @@
+---
+package: hostsign
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: vectorCase
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: loadVectors
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.NotEmpty
+  calls:
+  - require.NoError
+  - require.NotEmpty
+- name: TestInteractionVectors
+  kind: func
+  description: 'AC-SS-09: the list digest on the shared (PROVISIONAL, test-key) vectors
+    is identical to the reference value, record by record and as a list; a seq gap
+    or a swap is rejected with the named error.'
+  references:
+  - require.Error
+  - assert.Equal
+  - require.NoError
+  calls:
+  - EncodeToString
+  - Error
+  - InteractionsDigest
+  - RecordBytes
+  - assert.Equal
+  - require.Error
+  - require.NoError
+- name: TestInteractionsDigestRefusals
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.NotEqual
+  - assert.ErrorIs
+  - assert.NoError
+  calls:
+  - InteractionsDigest
+  - assert.ErrorIs
+  - assert.NoError
+  - assert.NotEqual
+  - require.NoError
+- name: TestScopedLogReceivesTheRecords
+  kind: func
+  description: 'INT-08: a context-scoped log receives the record instead of the engine''s
+    own log, a denied call included, and its list starts at seq 0 independently of
+    what the engine''s own log already holds.'
+  references:
+  - require.NoError
+  - require.Len
+  - require.True
+  - assert.Same
+  - assert.False
+  - assert.Equal
+  - assert.Len
+  - assert.NoError
+  calls:
+  - Handle
+  - InteractionsDigest
+  - Log
+  - LogFrom
+  - NewLog
+  - Records
+  - WithLog
+  - assert.Equal
+  - assert.False
+  - assert.Len
+  - assert.NoError
+  - assert.Same
+  - require.Len
+  - require.NoError
+  - require.True
+- name: TestANilScopedLogFallsBackToTheEngineLog
+  kind: func
+  description: ''
+  references:
+  - assert.False
+  - assert.Len
+  calls:
+  - Handle
+  - Log
+  - LogFrom
+  - Records
+  - WithLog
+  - assert.False
+  - assert.Len

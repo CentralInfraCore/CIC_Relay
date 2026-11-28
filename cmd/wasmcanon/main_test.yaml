@@ -1,0 +1,106 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: failReader
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: failWriter
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: runCLI
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestExecIsTheSharedTransformation
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  calls:
+  - assert.Equal
+- name: TestDigestIsTheExecutedDigest
+  kind: func
+  description: ''
+  references:
+  - wasmcanon.ExecutedDigest
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - wasmcanon.ExecutedDigest
+- name: TestVersionNamesTheTransformAndTheLibrary
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.True
+  calls:
+  - assert.Equal
+  - assert.True
+- name: TestRefusals
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Empty
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Empty
+  - assert.Equal
+- name: TestWabinVersionIsPinned
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
+- name: Read
+  kind: method
+  receiver: failReader
+  description: ''
+  references: []
+  calls: []
+- name: Write
+  kind: method
+  receiver: failWriter
+  description: ''
+  references: []
+  calls: []
+- name: TestIOFailuresAreReported
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+- name: TestTheLimitIsInclusive
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.NotContains
+  calls:
+  - assert.Equal
+  - assert.NotContains
+- name: hdr
+  kind: var
+  description: ''
+  references: []
+- name: raw
+  kind: var
+  description: ''
+  references: []

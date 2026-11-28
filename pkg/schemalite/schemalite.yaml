@@ -1,0 +1,103 @@
+---
+package: schemalite
+description: 'Package schemalite validates JSON payloads against a small, closed subset
+  of JSON Schema (O-1 INT-07). The subset is deliberately closed and fails closed:
+  a schema that uses any keyword outside it is REFUSED AT COMPILE TIME, never silently
+  ignored, because an ignored keyword is a constraint the operator believes is enforced
+  and is not. Supported: type (object, array, string, integer, number, boolean, null),
+  properties, required, additionalProperties (boolean), items (one schema), enum,
+  const, minLength, maxLength, minimum, maximum, minItems, maxItems, pattern (RE2);
+  $schema, $id, title and description are annotations and have no effect. Everything
+  else (for example $ref, oneOf, allOf, format, patternProperties) is unsupported
+  and rejected. A payload is exactly one JSON value; trailing data is refused. Numbers
+  are read as json.Number, so an integer is recognised exactly and no precision is
+  lost on the way in.'
+tags:
+- schema
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Schema
+  kind: struct
+  description: Schema is a compiled schema.
+  implements: []
+  references: []
+- name: decodeOne
+  kind: func
+  description: decodeOne decodes exactly one JSON value, numbers as json.Number, and
+    refuses trailing data.
+  references: []
+  calls:
+  - Decode
+  - Token
+  - UseNumber
+- name: Compile
+  kind: func
+  description: Compile compiles a schema document. Any unsupported keyword or malformed
+    value is an error.
+  references: []
+  calls: []
+- name: compile
+  kind: func
+  description: compile compiles one schema object; path names it in errors.
+  references: []
+  calls: []
+- name: scalar
+  kind: func
+  description: scalar reports whether v is a JSON string, number, boolean or null.
+  references: []
+  calls: []
+- name: number
+  kind: func
+  description: number reads a JSON number as a finite float64.
+  references: []
+  calls:
+  - Float64
+- name: nonNegativeInt
+  kind: func
+  description: nonNegativeInt reads a JSON number as a non-negative int within int32.
+  references: []
+  calls:
+  - Int64
+- name: isInteger
+  kind: func
+  description: isInteger reports whether a json.Number is an integer value (1 and
+    1.0 and 1e2 are; 1.5 is not).
+  references: []
+  calls: []
+- name: Validate
+  kind: method
+  receiver: Schema
+  description: Validate checks one JSON payload against the schema.
+  references: []
+  calls: []
+- name: kindOf
+  kind: func
+  description: kindOf names the JSON kind of a decoded value (integer before number).
+  references: []
+  calls: []
+- name: check
+  kind: method
+  receiver: Schema
+  description: check validates one decoded value against s; path names it in errors.
+  references: []
+  calls:
+  - Float64
+  - MatchString
+- name: equal
+  kind: func
+  description: equal compares two decoded scalar JSON values (numbers by value).
+  references: []
+  calls:
+  - Float64
+- name: annotations
+  kind: var
+  description: annotations are accepted and ignored.
+  references: []
+- name: types
+  kind: var
+  description: types is the closed set of supported type names.
+  references: []

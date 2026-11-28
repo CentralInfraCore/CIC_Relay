@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"centralrelay/core/cabinet"
@@ -78,9 +79,40 @@ func unauthorized(w http.ResponseWriter, msg string) {
 	writeError(w, http.StatusUnauthorized, "unauthorized", msg)
 }
 
+// apiPrincipal is the identity the bearer token stands for. Default: the shared-token service identity. With
+// CIC_API_PRINCIPAL_ID the operator names a dedicated principal (human, service or agent) for the token; the identity always
+// comes from here, from the authentication layer, never from the request.
+var apiPrincipal = cabinet.Principal{ID: "api-token", Method: "bearer", Type: cabinet.PrincipalTypeSharedBearer}
+
+// apiPrincipalIDRE bounds a principal id: a stable identifier, not free text.
+var apiPrincipalIDRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$`)
+
+// apiPrincipalFromEnv reads CIC_API_PRINCIPAL_ID and CIC_API_PRINCIPAL_TYPE (human, service or agent; default service).
+// Unset id: the shared-bearer default. A type without an id, an unknown type or a malformed id is a start-up error.
+func apiPrincipalFromEnv() (cabinet.Principal, error) {
+	id := strings.TrimSpace(os.Getenv("CIC_API_PRINCIPAL_ID"))
+	typ := strings.TrimSpace(os.Getenv("CIC_API_PRINCIPAL_TYPE"))
+	if id == "" {
+		if typ != "" {
+			return cabinet.Principal{}, fmt.Errorf("CIC_API_PRINCIPAL_TYPE is set without CIC_API_PRINCIPAL_ID")
+		}
+		return apiPrincipal, nil
+	}
+	if !apiPrincipalIDRE.MatchString(id) {
+		return cabinet.Principal{}, fmt.Errorf("CIC_API_PRINCIPAL_ID is not a valid principal id")
+	}
+	if typ == "" {
+		typ = cabinet.PrincipalTypeService
+	}
+	if typ == cabinet.PrincipalTypeSharedBearer || !cabinet.ValidPrincipalType(typ) {
+		return cabinet.Principal{}, fmt.Errorf("CIC_API_PRINCIPAL_TYPE must be human, service or agent")
+	}
+	return cabinet.Principal{ID: id, Method: "bearer", Type: typ}, nil
+}
+
 // withAPIPrincipal returns r with the authenticated API principal in its context.
 func withAPIPrincipal(r *http.Request) *http.Request {
-	return r.WithContext(cabinet.WithPrincipal(r.Context(), cabinet.Principal{ID: "api-token", Method: "bearer"}))
+	return r.WithContext(cabinet.WithPrincipal(r.Context(), apiPrincipal))
 }
 
 // protectRoute wraps a route's handler by its access class. Any class that is not explicitly

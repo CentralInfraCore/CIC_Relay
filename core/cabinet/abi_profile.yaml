@@ -1,0 +1,132 @@
+---
+package: cabinet
+description: ''
+tags:
+- parser
+- schema
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: AbiSchemaRef
+  kind: struct
+  description: 'AbiSchemaRef is a (id, digest) reference to an operator-registered
+    request or response schema. A reference without a digest is invalid at the wire
+    level (ref 02 §2): there is no "trust the id alone" mode.'
+  implements: []
+  references: []
+- name: AbiEffectResolution
+  kind: struct
+  description: 'AbiEffectResolution is the "contract-dependent" effect resolver (ref
+    02 §2, D-3): the request field whose value selects the effect, the map from field
+    value to effect, and the fail-closed default for values the map does not list.'
+  implements: []
+  references: []
+- name: AbiOperation
+  kind: struct
+  description: AbiOperation is one entry of a profile's operations[] (ref 02 §2).
+  implements: []
+  references: []
+- name: AbiLimits
+  kind: struct
+  description: AbiLimits is a profile's optional resource ceilings (ref 02 §2); SS-05
+    requires every field to stay at or below the operator cap (LIMIT_EXCEEDS_OPERATOR_CAP).
+  implements: []
+  references: []
+- name: AbiProfile
+  kind: struct
+  description: 'AbiProfile is the parsed ABI-profile artifact (ref 02 §2; schema:
+    jobs/o1-wp03-abi-profile-dispatch/ref/schemas/abi-profile.schema.json).'
+  implements: []
+  references: []
+- name: FindOperation
+  kind: method
+  receiver: AbiProfile
+  description: FindOperation returns the named operation, if the profile declares
+    it.
+  references: []
+  calls: []
+- name: OperationNames
+  kind: method
+  receiver: AbiProfile
+  description: OperationNames returns the profile's declared operation names, in profile
+    order.
+  references: []
+  calls: []
+- name: ParseProfile
+  kind: func
+  description: 'ParseProfile parses and structurally validates a raw ABI-profile artifact.
+    This mirrors the structural ("the JSON Schema enforces this") half of the wire
+    contract (ref 02 §2, schemas/abi-profile.schema.json); the runtime-only semantic
+    rules (ABI-01..05, SS-05) that the schema cannot express are CheckProfileSemantics''s
+    job, not this function''s. ParseProfile deliberately does not accept partial/best-effort
+    profiles: any structural violation is ErrInvalid, matching "ismeretlen/nem befogadott
+    profil: elutasítás, nincs fallback" (ref 02 §1).'
+  references: []
+  calls:
+  - MatchString
+- name: validateOperationShape
+  kind: func
+  description: validateOperationShape checks the per-operation structural rules the
+    schema expresses (name pattern; host_boundary/effect enums; effect_resolution
+    required iff effect is contract-dependent; host_boundary "none" implies effect
+    "local"; schema refs carry a digest in sha256:<hex> form).
+  references: []
+  calls:
+  - MatchString
+- name: ProfileDigest
+  kind: func
+  description: 'ProfileDigest is ABI-05 (ref 02 §3): the sha256 of the profile artifact''s
+    published raw bytes, exactly as received — no re-serialization, no canonicalization.'
+  references: []
+  calls: []
+- name: ProfileSignedBytes
+  kind: func
+  description: 'ProfileSignedBytes builds the CICABIPROFv1 signed domain (ref 02 §3):
+    CICABIPROFv1 profile_sha256=sha256:<hex> signer_key_id=<signerKeyID> signer_alg=<signerAlg>
+    ASCII, LF-terminated, fixed field order, lowercase hex — the same family of rules
+    as CICMODENVv1 (ref 01 §2). This is the byte-exact input to signature verification;
+    ProfileRegistry.Admit passes it to the (currently mocked, see abi_profile_registry.go)
+    ProfileSignatureVerifier, never a re-derived form.'
+  references: []
+  calls:
+  - ProfileDigest
+- name: ResolveEffect
+  kind: func
+  description: 'ResolveEffect is the runtime half of ABI-02 (ref 02 §7): for a "contract-dependent"
+    operation, pick the effect for one concrete request by looking up requestFieldValue
+    in the operation''s effect_resolution.map, and falling back to the deterministic,
+    fail-closed default ("external-write") when the value is not in the map. For any
+    other operation, the effect is simply op.Effect. ResolveEffect is pure and component-level
+    only in this job (WP-03): it is not called from Setx''s dispatch path because
+    that path only executes "host_boundary: none" operations (host_boundary: "sign+send"
+    is WP-04 scope, see abi_profile_dispatch.go), and every "none" operation''s effect
+    is fixed to "local" by the ABI-01..04 rules this file enforces — so ResolveEffect
+    currently has no "contract-dependent" input to resolve in production. It is exported
+    and tested so WP-04 can call it unchanged.'
+  references: []
+  calls: []
+- name: profileIDPattern
+  kind: var
+  description: profileIDPattern is the profile_id wire pattern <namespace>:<name>@<semver>.
+  references: []
+- name: opNamePattern
+  kind: var
+  description: opNamePattern is the operation name wire pattern.
+  references: []
+- name: hostCapPattern
+  kind: var
+  description: hostCapPattern is the required_host_capabilities entry pattern <name>@<n>.
+  references: []
+- name: schemaDigestFormat
+  kind: var
+  description: 'schemaDigestFormat is the only accepted digest form: sha256: plus
+    64 lowercase hex.'
+  references: []
+- name: SignSendHostCapability
+  kind: const
+  description: 'SignSendHostCapability is the one host capability ABI-04 ties to the
+    "sign+send" host boundary (ref 02 §7 ABI-04): a profile with any "sign+send" operation
+    must declare it, and a profile with no such operation must not.'
+  references: []

@@ -921,10 +921,11 @@ func buildModuleFS(t *testing.T, wasmCode []byte, pemData []byte) (fstest.MapFS,
 kind: Module
 metadata:
   name: pki.test
-  version: "1.0"
+  version: "1.0.0"
+  buildHash: %s
 wasmDigest: %q
 wasmSize: %d
-`, digest, len(wasmCode))
+`, digest, digest, len(wasmCode))
 
 	m := fstest.MapFS{
 		"pki_test.yaml": {Data: []byte(yamlContent)},

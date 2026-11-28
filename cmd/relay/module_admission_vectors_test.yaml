@@ -1,0 +1,61 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: o1VectorCase
+  kind: struct
+  description: o1VectorCase is one envelope vector.
+  implements: []
+  references: []
+- name: loadO1Vectors
+  kind: func
+  description: loadO1Vectors reads the provisional vector file.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: b64
+  kind: func
+  description: b64 decodes a vector field.
+  references:
+  - require.NoError
+  calls:
+  - DecodeString
+  - require.NoError
+- name: TestO1EnvelopeVectors_WasmCanonV1
+  kind: func
+  description: Every vector gives its expected result code (nil = accepted), with
+    the vectors' own executed representation.
+  references:
+  - require.Len
+  - require.NoError
+  - require.Error
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.Error
+  - require.Len
+  - require.NoError
+- name: TestO1EnvelopeVectors_ExecutedIsTheRelaysTransformation
+  kind: func
+  description: 'The pinned transformation is an assertion, not a measurement: for
+    every vector that is meant to be accepted, the executed bytes the vector names
+    are exactly what the relay''s own wasm-canon/v1 derives from the vector''s raw
+    module, and the executed digest in the envelope is that value''s digest.'
+  references:
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - require.NoError
+  - assert.Equal
+  - require.Equal
+  calls:
+  - assert.Equal
+  - cabinet.NewModuleDescriptor
+  - require.Equal
+  - require.NoError

@@ -1,0 +1,148 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: tbEnv
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: tbBundle
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: tbSetup
+  kind: func
+  description: tbSetup writes a bundle and configures the environment; the pin is
+    that of the written bytes.
+  references:
+  - require.NoError
+  - trustbundle.Digest
+  calls:
+  - require.NoError
+  - trustbundle.Digest
+- name: tbLoad
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  calls:
+  - logrus.New
+- name: TestTrustBundleUnsetChangesNothing
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Nil
+  calls:
+  - assert.Nil
+  - require.NoError
+- name: TestTrustBundleFeedsTheAuthorityBindingsAndTheProfilePins
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - trustbundle.Profile
+  - trustbundle.LoadState
+  - assert.EqualValues
+  calls:
+  - assert.Equal
+  - assert.EqualValues
+  - require.NoError
+  - trustbundle.LoadState
+- name: TestTrustBundleDrivesSignerAuthorized
+  kind: func
+  description: 'the admission feeds the real signer-authority decision: a key the
+    bundle names is authorised, any other is not'
+  references:
+  - require.NoError
+  - assert.True
+  - assert.False
+  calls:
+  - assert.False
+  - assert.True
+  - require.NoError
+- name: TestTrustBundleConfigurationErrorsStopTheStart
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Nil
+  calls:
+  - assert.Nil
+  - require.Error
+  - require.NoError
+- name: TestTrustBundleAdmissionFailuresCarryTheirCodes
+  kind: func
+  description: ''
+  references:
+  - trustbundle.Digest
+  - assert.Equal
+  - trustbundle.CodeNotPinned
+  - trustbundle.CodeOf
+  - trustbundle.CodeStale
+  - trustbundle.CodeExpired
+  - require.NoError
+  - trustbundle.CodeRollback
+  - assert.Nil
+  - trustbundle.LoadState
+  - assert.EqualValues
+  calls:
+  - assert.Equal
+  - assert.EqualValues
+  - assert.Nil
+  - require.NoError
+  - trustbundle.CodeOf
+  - trustbundle.Digest
+  - trustbundle.LoadState
+- name: TestTrustBundleSameVersionDifferentContent
+  kind: func
+  description: 'TB-01 at the loader: the same version re-admitted is fine, a different
+    bundle under the same version is a conflict.'
+  references:
+  - require.NoError
+  - trustbundle.Digest
+  - assert.Equal
+  - trustbundle.CodeConflict
+  - trustbundle.CodeOf
+  calls:
+  - assert.Equal
+  - require.NoError
+  - trustbundle.CodeOf
+  - trustbundle.Digest
+- name: TestTrustBundleSecondInstanceOnTheSameStateFile
+  kind: func
+  description: 'TB-03: a second admission against the same state file is refused while
+    the first holds it.'
+  references:
+  - trustbundle.Lock
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - require.Error
+  - require.NoError
+  - trustbundle.Lock
+- name: tbNow
+  kind: var
+  description: ''
+  references: []
+- name: tbKey
+  kind: const
+  description: ''
+  references: []
+- name: tbProfile
+  kind: const
+  description: ''
+  references: []

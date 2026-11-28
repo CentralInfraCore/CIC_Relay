@@ -29,6 +29,7 @@ objects:
     instance. This allows for mocking in unit tests.
   references: []
   methods:
+  - Call
   - Close
   - Get
   - Init
@@ -113,6 +114,53 @@ objects:
     outage is then reported in SetResponse.Proof only.'
   references: []
   calls: []
+- name: WithGenericDispatch
+  kind: func
+  description: 'WithGenericDispatch turns on profile-driven dispatch (WP-03) for modules
+    that have an admitted ABI-profile binding (see WithModuleProfileBindings). Off
+    by default: Setx then always uses the legacy built-in four-op dispatch below,
+    exactly as before this option existed, including for a module that has a binding.
+    Even when enabled, a module without a binding is unaffected: it still goes through
+    the legacy dispatch. Turning this on in production is a separate decision, gated
+    on the #162 acceptance (WP-02; see jobs/o1-wp03-abi-profile-dispatch/ref/02-abi-profile-wire.md
+    §7); this job only provides the switch. See cmd/relay/main.go''s genericDispatchFromEnv
+    for the production wiring (default off).'
+  references: []
+  calls: []
+- name: WithProfileRequiredModules
+  kind: func
+  description: WithProfileRequiredModules declares which modules need an admitted
+    profile binding (their manifest names a profile). With generic dispatch on, such
+    a module without a valid binding is rejected, not run legacy.
+  references: []
+  calls: []
+- name: SetModuleProfile
+  kind: method
+  receiver: cabinetService
+  description: SetModuleProfile records the outcome of a module's ABI-profile admission
+    at load time (INT-05). A non-nil binding registers it and marks the module as
+    needing a profile; nil clears both (a reload of the module without a profile must
+    not keep the earlier binding). It is the runtime counterpart of WithProfileRequiredModules
+    and WithModuleProfileBindings.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: ModuleProfile
+  kind: method
+  receiver: cabinetService
+  description: ModuleProfile returns the admitted profile binding of a module, if
+    any (diagnostics and acceptance tests).
+  references: []
+  calls:
+  - RLock
+  - RUnlock
+- name: WithModuleProfileBindings
+  kind: func
+  description: WithModuleProfileBindings registers admitted ABI-profile bindings (one
+    per module). A binding is inert unless WithGenericDispatch(true) is also given.
+  references: []
+  calls: []
 - name: WithObsSinks
   kind: func
   description: 'WithObsSinks wires observability sinks into the underlying WasmManager.
@@ -137,6 +185,17 @@ objects:
   description: Setx executes a workflow based on the function-oriented model, resolving
     components, validating input schemas, dispatching to native or WASM implementations,
     and recording ProofTrace steps with input/output hashing.
+  references:
+  - logrus.WithFields
+  - logrus.Fields
+  calls:
+  - Warn
+  - logrus.WithFields
+- name: setxRun
+  kind: method
+  receiver: cabinetService
+  description: setxRun is the execution itself; rec (nil when V2 recording is off)
+    is told how far each step got.
   references: []
   calls:
   - Call
@@ -237,3 +296,19 @@ objects:
   references: []
   calls:
   - Get
+- name: profileBindingFor
+  kind: method
+  receiver: cabinetService
+  description: 'profileBindingFor decides which dispatch a module uses (review F2).
+    Four distinct states: - generic dispatch off, or an explicit legacy module (no
+    binding, no profile required): (nil, nil), legacy; - a valid binding for exactly
+    this module content: (binding, nil), profile-driven; - a binding that belongs
+    to different content of the same module ID (stale), or a module that is declared
+    to need a profile but has no admitted binding: (nil, error), rejected, never a
+    legacy fallback.'
+  references: []
+  calls:
+  - ModuleDescriptor.Checksum
+  - ModuleDescriptor.ID
+  - RLock
+  - RUnlock

@@ -1,0 +1,515 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: o1EnvelopeCase
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: o1EnvelopeVectors
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: o1WasmMeasurement
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: o1ChainVectors
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: o1ReadPinned
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Equal
+  calls:
+  - require.Equal
+  - require.NoError
+- name: o1DecodeJSON
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Decode
+  - UseNumber
+  - require.NoError
+- name: o1LoadEnvelopeVectors
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  calls:
+  - require.Equal
+- name: o1Str
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1EnvelopeSignedBytes
+  kind: func
+  description: o1EnvelopeSignedBytes builds the CICMODENVv1 signed domain of an envelope.
+  references: []
+  calls: []
+- name: o1ParseSignedBytes
+  kind: func
+  description: o1ParseSignedBytes is the strict parser of the CICMODENVv1 domain;
+    the error string is the reference reason (NON_ASCII, CR_PRESENT, ...).
+  references: []
+  calls:
+  - MatchString
+- name: o1SHA
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1VerifyEnvelopeCase
+  kind: func
+  description: 'o1VerifyEnvelopeCase runs the reference verifier steps, in the reference
+    order: version -> form -> alg<->key type -> key_id -> signature encoding -> signature
+    -> raw digest -> executed digest -> manifest digest. It returns "" on accept or
+    the error code.'
+  references: []
+  calls:
+  - DecodeString
+  - EncodeToString
+  - Strict
+  - String
+- name: o1Expect
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1TestEd25519Key
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1TestECDSAKey
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - FillBytes
+  - Lsh
+  - Mod
+  - SetBytes
+  - require.NoError
+- name: o1SPKI
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: o1RunEnvelopeVectors
+  kind: func
+  description: ''
+  references:
+  - require.Len
+  - require.False
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - require.False
+  - require.Len
+- name: TestO1EnvelopeVectors
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestO1EnvelopeVectorsWasmCanonV1
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - require.NoError
+  - assert.Equal
+  calls:
+  - DecodeString
+  - assert.Equal
+  - require.Equal
+  - require.NoError
+- name: TestO1TestKeysDeriveTheVectorKeyIDs
+  kind: func
+  description: The key ids and SPKIs of the vectors derive from the public test constants.
+  references:
+  - assert.Equal
+  calls:
+  - Public
+  - assert.Equal
+- name: TestO1Ed25519SignaturesReproduceByteForByte
+  kind: func
+  description: 'Ed25519 is deterministic: the stored signatures are reproduced byte
+    for byte. The four signature-encoding/bit-flip cases are checked as "canonical
+    signature + the documented mutation".'
+  references: []
+  calls: []
+- name: o1CheckEd25519Reproduction
+  kind: func
+  description: ''
+  references:
+  - require.Len
+  - require.NoError
+  - assert.Equal
+  calls:
+  - EncodeToString
+  - assert.Equal
+  - require.Len
+  - require.NoError
+- name: TestO1ECDSAFixedSignatureVerifies
+  kind: func
+  description: (a) the fixed (stored) ECDSA signature verifies, deterministically,
+    on every run.
+  references: []
+  calls: []
+- name: o1CheckECDSAFixed
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  - require.NoError
+  - assert.True
+  - assert.Equal
+  calls:
+  - DecodeString
+  - assert.Equal
+  - assert.True
+  - require.Equal
+  - require.NoError
+- name: TestO1ECDSAFreshSignatureVerifies
+  kind: func
+  description: (b) a fresh ECDSA signature made with the test key verifies; it need
+    not equal the stored one.
+  references:
+  - require.Equal
+  - require.NoError
+  - assert.Equal
+  calls:
+  - EncodeToString
+  - assert.Equal
+  - require.Equal
+  - require.NoError
+- name: TestO1ECDSAOtherCurveIsAlgMismatch
+  kind: func
+  description: 'Stricter than the reference: an EC key on another curve presented
+    for ecdsa-p256-sha256.'
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - EncodeToString
+  - assert.Equal
+  - require.NoError
+- name: o1Custom
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1Cat
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1ByteLevelStrip
+  kind: func
+  description: 'o1ByteLevelStrip is the reference transformation of make_o1_vectors.py:
+    byte-level removal of every custom section (id 0), all other bytes kept as they
+    are.'
+  references: []
+  calls: []
+- name: o1WasmMeasurements
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Equal
+  calls:
+  - DecodeString
+  - require.Equal
+  - require.NoError
+- name: TestO1WasmCanonV1Measurement
+  kind: func
+  description: TestO1WasmCanonV1Measurement measures the production stripWasmModuleFunc
+    (pinned wabin, CoreFeaturesV2) on the vector module and six further inputs and
+    pins the result.
+  references:
+  - require.NotEmpty
+  - assert.Contains
+  - require.Empty
+  - assert.Equal
+  - require.NoError
+  calls:
+  - Error
+  - assert.Contains
+  - assert.Equal
+  - require.Empty
+  - require.NoError
+  - require.NotEmpty
+- name: TestO1OriginalVectorExecutedIsNotWasmCanonV1
+  kind: func
+  description: The original vectors' wasm_executed_b64 is not the wasm-canon/v1 output
+    of their raw module.
+  references:
+  - require.Error
+  - assert.Contains
+  - assert.EqualError
+  calls:
+  - DecodeString
+  - Error
+  - assert.Contains
+  - assert.EqualError
+  - require.Error
+- name: o1Get
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1Value
+  kind: func
+  description: 'o1Value renders a scalar like the reference (_cv / _val): null literal,
+    decimal integers, strings as-is; a value with CR/LF or a non-ASCII byte is rejected.
+    Booleans and containers are not defined by the normative text and are rejected
+    (the reference would render Python''s str()).'
+  references: []
+  calls:
+  - Int64
+  - String
+- name: o1Required
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1ChainBytes
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1RecordBytes
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1InteractionsDigest
+  kind: func
+  description: ''
+  references: []
+  calls:
+  - Int64
+- name: o1ProfileSignedBytes
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: o1LoadChainVectors
+  kind: func
+  description: ''
+  references:
+  - require.Equal
+  calls:
+  - require.Equal
+- name: TestO1ChainVectors
+  kind: func
+  description: ''
+  references:
+  - require.Len
+  - require.NoError
+  - assert.Equal
+  - assert.NotEqual
+  calls:
+  - DecodeString
+  - assert.Equal
+  - assert.NotEqual
+  - require.Len
+  - require.NoError
+- name: TestO1ChainRejectsBadValues
+  kind: func
+  description: A value with a line break or a non-ASCII byte is rejected (V2-03),
+    with the named reason.
+  references:
+  - assert.ErrorIs
+  - assert.NoError
+  calls:
+  - assert.ErrorIs
+  - assert.NoError
+- name: TestO1HostInteractionVectors
+  kind: func
+  description: ''
+  references:
+  - require.Len
+  - assert.Error
+  - assert.Equal
+  - require.NoError
+  - assert.ErrorIs
+  calls:
+  - DecodeString
+  - Error
+  - assert.Equal
+  - assert.Error
+  - assert.ErrorIs
+  - require.Len
+  - require.NoError
+- name: TestO1ProfileDomainVector
+  kind: func
+  description: ''
+  references:
+  - require.Len
+  - require.NoError
+  - assert.Equal
+  calls:
+  - DecodeString
+  - assert.Equal
+  - require.Len
+  - require.NoError
+- name: o1EnvFields
+  kind: var
+  description: ''
+  references: []
+- name: o1DigestRe
+  kind: var
+  description: ''
+  references: []
+- name: o1ModuleRe
+  kind: var
+  description: ''
+  references: []
+- name: o1WasmHeader
+  kind: var
+  description: ''
+  references: []
+- name: o1WasmAddBody
+  kind: var
+  description: (module (func (export "add") (param i32 i32) (result i32) local.get
+    0 local.get 1 i32.add))
+  references: []
+- name: o1StepCommon
+  kind: var
+  description: ''
+  references: []
+- name: o1ExecFields
+  kind: var
+  description: ''
+  references: []
+- name: o1RecFields
+  kind: var
+  description: ''
+  references: []
+- name: errBadValue
+  kind: var
+  description: ''
+  references: []
+- name: errSeqGap
+  kind: var
+  description: ''
+  references: []
+- name: errBadType
+  kind: var
+  description: ''
+  references: []
+- name: o1EnvelopeVectorsFile
+  kind: const
+  description: ''
+  references: []
+- name: o1EnvelopeVectorsSHA256
+  kind: const
+  description: ''
+  references: []
+- name: o1CanonVectorsFile
+  kind: const
+  description: ''
+  references: []
+- name: o1CanonVectorsSHA256
+  kind: const
+  description: ''
+  references: []
+- name: o1ChainVectorsFile
+  kind: const
+  description: ''
+  references: []
+- name: o1ChainVectorsSHA256
+  kind: const
+  description: ''
+  references: []
+- name: o1EnvelopeExpectedCases
+  kind: const
+  description: ''
+  references: []
+- name: o1EnvelopeSignedDomain
+  kind: const
+  description: ''
+  references: []
+- name: o1ProfileSignedDomain
+  kind: const
+  description: ''
+  references: []
+- name: o1ChainDomain
+  kind: const
+  description: ''
+  references: []
+- name: o1HostInteractionsDomain
+  kind: const
+  description: ''
+  references: []
+- name: codeEnvelopeVersion
+  kind: const
+  description: ''
+  references: []
+- name: codeEnvelopeInvalid
+  kind: const
+  description: ''
+  references: []
+- name: codeAlgMismatch
+  kind: const
+  description: ''
+  references: []
+- name: codeKeyMismatch
+  kind: const
+  description: ''
+  references: []
+- name: codeSigEncoding
+  kind: const
+  description: ''
+  references: []
+- name: codeSignatureInvalid
+  kind: const
+  description: ''
+  references: []
+- name: codeWasmDigestMismatch
+  kind: const
+  description: ''
+  references: []
+- name: codeExecutedDigestMismatch
+  kind: const
+  description: ''
+  references: []
+- name: codeManifestDigestMismatch
+  kind: const
+  description: ''
+  references: []
+- name: codeKeyUnparsable
+  kind: const
+  description: 'codeKeyUnparsable is NOT a reference code: the reference raises an
+    uncaught exception on an unparsable SPKI. No vector exercises it.'
+  references: []
+- name: algECDSAP256
+  kind: const
+  description: ''
+  references: []
+- name: algEd25519
+  kind: const
+  description: ''
+  references: []

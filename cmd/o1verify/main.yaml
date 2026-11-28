@@ -1,0 +1,70 @@
+---
+package: main
+description: 'Command o1verify is the standalone independent verifier of ProofTrace
+  V2 artifacts (O-1 INT-10). o1verify --artifact A.json [--interactions I.json] [--decisions
+  D.json] [--contexts C.json] [--persistence P.json --attestation-material M.json]
+  [--bundle B.json --bundle-pin sha256:… ] [--policy-digest sha256:… --require-persistence]
+  [--sign-key K.pem] [--pinned-implementation sha256:…,…] It reads the artifact as
+  generic JSON and shares no code with the cabinet that produced it. The trust inputs
+  are the operator''s: the trust bundle (admitted by its pinned digest) says which
+  keys may attest persistence and sign verifier results. Output is the VerificationResult
+  (and, with --sign-key, its signature). Exit 0: the evidence is VERIFIED; 1: NOT_VERIFIED;
+  2: a usage or input error. VERIFIED is not ACCEPTED: acceptance needs --policy-digest
+  and is reported separately.'
+tags:
+- core
+- gateway
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: readJSON
+  kind: func
+  description: readJSON reads one JSON file with numbers as json.Number (the verifier
+    reads integers exactly).
+  references: []
+  calls:
+  - Decode
+  - Token
+  - UseNumber
+- name: run
+  kind: func
+  description: run executes the command; it returns the exit code.
+  references:
+  - attest.RuntimeImplementationDigest
+  - o1verify.Options
+  - o1verify.VerifierInfo
+  - o1verify.InteractionsDigest
+  - trustbundle.Admitted
+  - trustbundle.Admit
+  - trustbundle.Policy
+  - trustbundle.State
+  - o1verify.Persistence
+  - attest.RecorderVerifier
+  - attest.Material
+  - o1verify.Verify
+  - attest.SignResult
+  - attest.VerifyResult
+  - o1verify.VerdictVerified
+  calls:
+  - Bool
+  - DecodeString
+  - Encode
+  - EncodeToString
+  - Parse
+  - Public
+  - SetIndent
+  - SetOutput
+  - String
+  - attest.RuntimeImplementationDigest
+  - attest.SignResult
+  - attest.VerifyResult
+  - o1verify.InteractionsDigest
+  - o1verify.Verify
+  - trustbundle.Admit
+- name: main
+  kind: func
+  description: main runs the command against the process streams.
+  references: []
+  calls: []

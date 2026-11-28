@@ -1,0 +1,170 @@
+---
+package: o1verify
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: authzFixture
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: variant
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: decodeFile
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - Decode
+  - UseNumber
+  - require.NoError
+- name: loadAuthz
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: step
+  kind: method
+  receiver: authzFixture
+  description: ''
+  references: []
+  calls: []
+- name: refs
+  kind: method
+  receiver: authzFixture
+  description: ''
+  references: []
+  calls: []
+- name: decisionRef
+  kind: method
+  receiver: authzFixture
+  description: ''
+  references: []
+  calls: []
+- name: contextRef
+  kind: method
+  receiver: authzFixture
+  description: ''
+  references: []
+  calls: []
+- name: clone
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: build
+  kind: func
+  description: build applies a variant and returns the artifact bytes and the options'
+    maps.
+  references:
+  - require.True
+  - require.NoError
+  calls:
+  - ChainHash
+  - require.NoError
+  - require.True
+- name: run
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - InteractionsDigest
+  - Verify
+  - require.NoError
+- name: joined
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestAuthorizationContentPositive
+  kind: func
+  description: ''
+  references:
+  - assert.Empty
+  - assert.Equal
+  calls:
+  - assert.Empty
+  - assert.Equal
+- name: TestARecordThatIsMissingOrBrokenIsNotPassed
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.Equal
+  calls:
+  - assert.Contains
+  - assert.Equal
+- name: TestEveryBindingOfTheDecisionIsChecked
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.Equal
+  calls:
+  - assert.Contains
+  - assert.Equal
+- name: TestTheDecisionMustAgreeWithTheStepsOutcome
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  calls:
+  - assert.Contains
+- name: TestAnAllowedDecisionMustBeFullyBound
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - assert.Contains
+  - assert.NotContains
+- name: TestTheDecisionIsCrossCheckedAgainstTheExecutionContext
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.Empty
+  calls:
+  - assert.Contains
+  - assert.Empty
+- name: TestADeniedStepMayLackWhatAnUnadmittedModuleCannotKnow
+  kind: func
+  description: 'a refusal before admission cannot know the envelope, the profile or
+    the input: those fields may say none on a DENIED step, and only there'
+  references:
+  - assert.NotContains
+  calls:
+  - assert.NotContains
+- name: TestTheLegacyOptionSkipsTheContentChecksAndNothingElse
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.NotContains
+  - assert.Empty
+  calls:
+  - assert.Contains
+  - assert.Empty
+  - assert.NotContains
+- name: TestFieldTextAndRecordDigestHandleOddInput
+  kind: func
+  description: ''
+  references:
+  - assert.True
+  - assert.Equal
+  - assert.False
+  calls:
+  - assert.Equal
+  - assert.False
+  - assert.True

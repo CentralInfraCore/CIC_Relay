@@ -1,0 +1,185 @@
+---
+package: hostsign
+description: ''
+tags:
+- interface
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Config
+  kind: struct
+  description: Config is everything one Engine needs. The guest supplies none of it.
+  implements: []
+  references: []
+- name: Engine
+  kind: struct
+  description: Engine runs the fixed sign+send step order for one module. Safe for
+    concurrent use.
+  implements: []
+  references: []
+- name: wireBody
+  kind: struct
+  description: wireBody is a type of the cic-flow.send host capability.
+  implements: []
+  references: []
+- name: wireRequest
+  kind: struct
+  description: wireRequest is a type of the cic-flow.send host capability.
+  implements: []
+  references: []
+- name: Fault
+  kind: struct
+  description: Fault is a denial or failure entry of a response.
+  implements: []
+  references: []
+- name: HTTPResult
+  kind: struct
+  description: HTTPResult is the allowed part of the upstream response a guest sees.
+  implements: []
+  references: []
+- name: Response
+  kind: struct
+  description: 'Response is the guest-visible answer (wire: sign-send-response.schema.json).
+    It has no field that could carry a signature or an Authorization header.'
+  implements: []
+  references: []
+- name: InvalidResponse
+  kind: struct
+  description: InvalidResponse is the answer to a request that is not a well-formed
+    v1 request.
+  implements: []
+  references: []
+- name: NewEngine
+  kind: func
+  description: NewEngine validates the configuration (fail-closed) and returns an
+    Engine.
+  references: []
+  calls:
+  - Digest
+  - ID
+  - Limits
+  - MatchString
+  - NewLog
+  - Validate
+- name: logFor
+  kind: method
+  receiver: Engine
+  description: 'logFor is the log a record of this call goes to: the scope''s log
+    when the caller put one into ctx (WithLog), else the engine''s own. The scope
+    is how a step''s interactions are kept apart: its list starts at seq 0 and its
+    digest is the step''s host_interactions reference (O-1 INT-08).'
+  references: []
+  calls: []
+- name: Log
+  kind: method
+  receiver: Engine
+  description: Log returns the interaction log of this engine.
+  references: []
+  calls: []
+- name: sha
+  kind: func
+  description: sha is a helper of the cic-flow.send host capability.
+  references: []
+  calls: []
+- name: invalid
+  kind: func
+  description: invalid is a helper of the cic-flow.send host capability.
+  references: []
+  calls: []
+- name: parse
+  kind: func
+  description: parse decodes and structurally validates the request (schema step);
+    the forbidden-header check is separate so that it can be recorded as a denial.
+  references: []
+  calls:
+  - Decode
+  - DecodeString
+  - DisallowUnknownFields
+  - MatchString
+  - More
+- name: Handle
+  kind: method
+  receiver: Engine
+  description: 'Handle runs one sign+send call in the enforced order and returns the
+    JSON the guest receives: schema → forbidden headers → body size → profile → key_ref
+    → target policy (SS-03) → egress → profile canonicalisation → signature → controlled
+    HTTP → interaction record → response Nothing is signed or sent before the policy
+    steps have passed. Every well-formed request, refused or not, gets exactly one
+    interaction record.'
+  references: []
+  calls:
+  - Authorize
+  - Close
+  - Digest
+  - Do
+  - Egress
+  - EncodeToString
+  - Error
+  - Format
+  - Get
+  - Keys
+  - Limits
+  - Now
+  - PrepRequest.Target
+  - Prepare
+  - Set
+  - Sign
+  - UTC
+  - ValidateTarget
+- name: finish
+  kind: method
+  receiver: Engine
+  description: finish appends the record and marshals the response that references
+    it.
+  references: []
+  calls:
+  - Append
+- name: profileRe
+  kind: var
+  description: profileRe is a package-level table or pattern of the cic-flow.send
+    host capability.
+  references: []
+- name: keyRefRe
+  kind: var
+  description: keyRefRe is a package-level table or pattern of the cic-flow.send host
+    capability.
+  references: []
+- name: hostRe
+  kind: var
+  description: hostRe is a package-level table or pattern of the cic-flow.send host
+    capability.
+  references: []
+- name: pathRe
+  kind: var
+  description: pathRe is a package-level table or pattern of the cic-flow.send host
+    capability.
+  references: []
+- name: headerRe
+  kind: var
+  description: headerRe is a package-level table or pattern of the cic-flow.send host
+    capability.
+  references: []
+- name: tokenRe
+  kind: var
+  description: tokenRe is a package-level table or pattern of the cic-flow.send host
+    capability.
+  references: []
+- name: hdrValueRe
+  kind: var
+  description: hdrValueRe is a package-level table or pattern of the cic-flow.send
+    host capability.
+  references: []
+- name: ErrEgressBlockedAddr
+  kind: var
+  description: ErrEgressBlockedAddr is the error a Doer returns when a connection
+    would reach a blocked address range; cmd/relay wraps its egress client's error
+    to match (errors.Is or the message).
+  references: []
+- name: zeroDigest
+  kind: const
+  description: zeroDigest stands in for the signing profile digest of a request that
+    named an unknown profile (there is no profile to take a digest from; the record
+    schema requires one).
+  references: []

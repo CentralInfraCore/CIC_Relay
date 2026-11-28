@@ -41,7 +41,7 @@ func TestGitPush_NoManifestCanGrantItAndNoModuleCanImportIt(t *testing.T) {
 		err := loadModule(context.Background(), svc, fsys, "m.yaml", y, loadedPKIWithSource(t), int64(16*1024*1024), newDiscardLogger())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "git.push")
-		_, err = svc.GetModule("gitmod@1.0")
+		_, err = svc.GetModule("gitmod@1.0.0")
 		assert.Error(t, err, "the module was not stored")
 	})
 }
@@ -54,6 +54,7 @@ func TestGitPush_NeverAuthorisedEvenByAForgedGrant(t *testing.T) {
 		rules:          []gitRule{{Repo: "infra", Ops: []string{"push", "status"}, Remotes: []string{"origin"}, Refs: []string{"main"}}},
 		artifact:       "art-1",
 		manifestDigest: "d",
+		envelopeDigest: "d",
 		active:         true,
 	}
 	id := inst("m@1", "art-1")

@@ -64,15 +64,18 @@ objects:
   - wazero.Runtime.NewHostModuleBuilder
 - name: perModule
   kind: func
-  description: perModule wraps a deps-bound host-function factory so the exported
-    host function resolves the *calling* guest's deps from the registry by `mod.Name()`
-    (the guest is instantiated `WithName(moduleID)`). A module with no verified capability
-    is denied — fail-closed.
+  description: 'perModule wraps a deps-bound host-function factory so the exported
+    host function resolves the *calling* instance''s deps from the registry by the
+    runtime-assigned InstanceIdentity (name, artifact, envelope binding; #162 V7),
+    which must also name the calling guest (`mod.Name()`). A module with no authenticated
+    capability for exactly that instance is denied — fail-closed.'
   references:
   - api.Module
+  - cabinet.InstanceIdentityFrom
   - api.Module.Name
   calls:
   - api.Module.Name
+  - cabinet.InstanceIdentityFrom
 - name: makeSignFn
   kind: func
   description: makeSignFn signs the caller-built canonical string (base64 in `data_base64`)

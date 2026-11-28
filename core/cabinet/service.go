@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -20,6 +21,9 @@ type cicWasmHost interface {
 	Get(ctx context.Context, authContextJson, queryJson string) (string, string)
 	Init(ctx context.Context, authContextJson, configJson string) (string, string)
 	Notify(ctx context.Context, authContextJson, eventJson string) (string, string)
+	// Call invokes an arbitrary named guest function; it is the generic-dispatch
+	// (WP-03) counterpart of the four fixed-name methods above.
+	Call(ctx context.Context, op, authContextJson, inputJson string) (string, string)
 	Close(ctx context.Context) error
 }
 
@@ -107,6 +111,31 @@ type cabinetService struct {
 	// authenticated principal may run. Setx is the one execution boundary every entry path
 	// (HTTP routes, the activator, tests) goes through, so the decision is made here, once.
 	protected map[string]bool
+
+	// genericDispatch gates profile-driven dispatch (WP-03): off by default, so Setx always
+	// uses the legacy built-in four-op dispatch (init/process/get/notify) below regardless of
+	// whether a module carries an AbiProfile. See WithGenericDispatch.
+	genericDispatch bool
+
+	// profileBindings maps a module ID to its admitted ABI-profile binding (WP-03). Only
+	// consulted when genericDispatch is on; a module without a binding, or whose current
+	// checksum differs from the bound one, always uses the legacy dispatch.
+	profileBindings map[string]*ModuleProfileBinding
+	// profileMu guards profileBindings and profileRequired: SetModuleProfile writes them at module load, execution reads them.
+	profileMu sync.RWMutex
+	// effectPolicy is the operator's allowed effect classes for profile-bound operations (WithEffectPolicy); nil = not configured.
+	effectPolicy map[string]bool
+	// realizationDigest yields the digest of the operator's realization context (WithRealizationContext).
+	realizationDigest func() string
+	// payloadValidator validates the request and response of profile-bound operations against the schema bodies (WithPayloadValidator).
+	payloadValidator PayloadValidator
+
+	// profileRequired lists the modules whose manifest declares an ABI profile (abi.profile): with generic
+	// dispatch on they run only through an admitted binding, never through the legacy dispatch.
+	profileRequired map[string]bool
+
+	// traceV2, when set, records a ProofTrace V2 artifact for every run (WithTraceV2); nil = off, V1 only.
+	traceV2 *traceV2Config
 }
 
 // CabinetOption is a functional option for configuring a cabinetService.
@@ -143,6 +172,78 @@ func WithEvidenceRequired(required bool) CabinetOption {
 	}
 }
 
+// WithGenericDispatch turns on profile-driven dispatch (WP-03) for modules that
+// have an admitted ABI-profile binding (see WithModuleProfileBindings). Off by
+// default: Setx then always uses the legacy built-in four-op dispatch below,
+// exactly as before this option existed, including for a module that has a
+// binding. Even when enabled, a module without a binding is unaffected: it still
+// goes through the legacy dispatch.
+//
+// Turning this on in production is a separate decision, gated on the #162
+// acceptance (WP-02; see jobs/o1-wp03-abi-profile-dispatch/ref/02-abi-profile-wire.md
+// §7); this job only provides the switch. See cmd/relay/main.go's
+// genericDispatchFromEnv for the production wiring (default off).
+func WithGenericDispatch(enabled bool) CabinetOption {
+	return func(s *cabinetService) {
+		s.genericDispatch = enabled
+	}
+}
+
+// WithProfileRequiredModules declares which modules need an admitted profile binding (their manifest names a
+// profile). With generic dispatch on, such a module without a valid binding is rejected, not run legacy.
+func WithProfileRequiredModules(ids ...string) CabinetOption {
+	return func(s *cabinetService) {
+		if s.profileRequired == nil {
+			s.profileRequired = make(map[string]bool, len(ids))
+		}
+		for _, id := range ids {
+			s.profileRequired[id] = true
+		}
+	}
+}
+
+// SetModuleProfile records the outcome of a module's ABI-profile admission at load time (INT-05). A non-nil binding
+// registers it and marks the module as needing a profile; nil clears both (a reload of the module without a profile must
+// not keep the earlier binding). It is the runtime counterpart of WithProfileRequiredModules and WithModuleProfileBindings.
+func (c *cabinetService) SetModuleProfile(moduleID string, b *ModuleProfileBinding) {
+	c.profileMu.Lock()
+	defer c.profileMu.Unlock()
+	if b == nil {
+		delete(c.profileBindings, moduleID)
+		delete(c.profileRequired, moduleID)
+		return
+	}
+	if c.profileBindings == nil {
+		c.profileBindings = map[string]*ModuleProfileBinding{}
+	}
+	if c.profileRequired == nil {
+		c.profileRequired = map[string]bool{}
+	}
+	c.profileBindings[moduleID] = b
+	c.profileRequired[moduleID] = true
+}
+
+// ModuleProfile returns the admitted profile binding of a module, if any (diagnostics and acceptance tests).
+func (c *cabinetService) ModuleProfile(moduleID string) (*ModuleProfileBinding, bool) {
+	c.profileMu.RLock()
+	defer c.profileMu.RUnlock()
+	b, ok := c.profileBindings[moduleID]
+	return b, ok
+}
+
+// WithModuleProfileBindings registers admitted ABI-profile bindings (one per module).
+// A binding is inert unless WithGenericDispatch(true) is also given.
+func WithModuleProfileBindings(bindings ...*ModuleProfileBinding) CabinetOption {
+	return func(s *cabinetService) {
+		if s.profileBindings == nil {
+			s.profileBindings = make(map[string]*ModuleProfileBinding, len(bindings))
+		}
+		for _, b := range bindings {
+			s.profileBindings[b.ModuleID] = b
+		}
+	}
+}
+
 // WithObsSinks wires observability sinks into the underlying WasmManager.
 // Both arguments are nil-safe: passing nil disables the corresponding emissions.
 func WithObsSinks(logSink obs.LogSink, metricSink obs.MetricSink) CabinetOption {
@@ -176,6 +277,23 @@ func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleS
 // Setx executes a workflow based on the function-oriented model, resolving components, validating input schemas,
 // dispatching to native or WASM implementations, and recording ProofTrace steps with input/output hashing.
 func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse, error) {
+	if c.traceV2 == nil {
+		return c.setxRun(ctx, in, nil)
+	}
+	// V2 trace recording is on: the run's result and error are returned exactly as without it; the V2 artifact is an
+	// additional evidence stream for the sink, for a failed run too (trace-on-failure).
+	rec := &traceV2Recorder{}
+	resp, err := c.setxRun(ctx, in, rec)
+	if art, aerr := rec.build(ctx, c.traceV2, in.WorkflowID, in.SourceDigest, err); aerr != nil {
+		logrus.WithFields(logrus.Fields{"workflow_id": in.WorkflowID, "error": aerr}).Warn("ProofTrace V2 not recorded")
+	} else {
+		c.traceV2.sink(ctx, art)
+	}
+	return resp, err
+}
+
+// setxRun is the execution itself; rec (nil when V2 recording is off) is told how far each step got.
+func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *traceV2Recorder) (*SetResponse, error) {
 	// 1. Resolve the workflow itself.
 	workflow, err := c.GetWorkflow(in.WorkflowID)
 	if err != nil {
@@ -187,6 +305,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	if err != nil {
 		return nil, fmt.Errorf("workflow %q: %w", workflow.ID(), err)
 	}
+	rec.setGraph(graph.Steps)
 
 	// 2b. The authorization decision, at the execution boundary: before any step runs, so a
 	// refused call has no side effects. The set of protected components is the operator's.
@@ -204,12 +323,17 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	execCtx := NewExecutionContext(in.Payload)
 	traceSteps := make([]ProofTraceStep, 0, len(graph.Steps))
 
-	for _, step := range graph.Steps {
+	baseCtx := ctx
+	for stepIndex, step := range graph.Steps {
+		rec.stepBegin(step)
+		ctx = rec.scopeStep(baseCtx, c.traceV2, step) // the step's own context when V2 recording scopes it (INT-08)
 		// 3a. Resolve the component.
 		moduleDesc, err := c.GetModule(step.ComponentID)
 		if err != nil {
 			return nil, fmt.Errorf("workflow %q failed: could not resolve component %q: %w", workflow.ID(), step.ComponentID, err)
 		}
+
+		rec.stepModule(moduleDesc)
 
 		// 3b. Resolve input from the execution context.
 		inputData, ok := execCtx.Get(step.InputKey)
@@ -228,7 +352,20 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			return nil, fmt.Errorf("failed to hash input at step %q: %w", step.Raw, err)
 		}
 
+		rec.stepInput(inputHash)
+
+		// 3d'. The ABI-profile gate (INT-06/07): effect authorization and the request ceiling, BEFORE the execution phase.
+		var gate *profileGate
+		if moduleDesc.NativeImpl == nil && moduleDesc.WasmCode != nil {
+			g, gerr := c.profileGateFor(ctx, moduleDesc, step, inputData, rec, gateEnvelope{workflowID: in.WorkflowID, stepIndex: stepIndex, inputDigest: "sha256:" + inputHash})
+			if gerr != nil {
+				return nil, gerr
+			}
+			gate = g
+		}
+
 		// 3e. Dispatch the call based on the module type.
+		rec.stepDispatched()
 		var result interface{}
 		var execErr error
 
@@ -274,17 +411,39 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			normalizedFn := strings.ToLower(step.FunctionName)
 
 			var dataResult, errorResult string
-			switch normalizedFn {
-			case "init":
-				dataResult, errorResult = host.Init(ctx, authContextJson, string(inputJson))
-			case "process":
-				dataResult, errorResult = host.Process(ctx, authContextJson, string(inputJson))
-			case "get":
-				dataResult, errorResult = host.Get(ctx, authContextJson, string(inputJson))
-			case "notify":
-				dataResult, errorResult = host.Notify(ctx, authContextJson, string(inputJson))
-			default:
-				execErr = fmt.Errorf("WASM module %q does not support operation %q", step.ComponentID, step.FunctionName)
+			if gate != nil {
+				// --- PROFILE-DRIVEN GENERIC DISPATCH (WP-03, off unless WithGenericDispatch(true)) ---
+				// Exact operation identity (D-7); the gate already checked the manifest op-set, the effect and the request
+				// ceiling. The response ceiling and the timeout are enforced around the call.
+				runCtx := ctx
+				if gate.timeout > 0 {
+					var cancel context.CancelFunc
+					runCtx, cancel = context.WithTimeout(ctx, gate.timeout)
+					defer cancel()
+				}
+				dataResult, errorResult = host.Call(runCtx, gate.op.Name, authContextJson, string(inputJson))
+				if gate.maxResponse > 0 && len(dataResult) > gate.maxResponse {
+					execErr = &ProfileGateError{Phase: RejectionPhaseDispatch, Code: CodeResponseTooLarge, base: ErrInvalid,
+						Detail: fmt.Sprintf("the response is %d bytes, the profile allows %d", len(dataResult), gate.maxResponse)}
+					dataResult, errorResult = "", ""
+				} else if verr := gate.validateResponse(dataResult, errorResult); verr != nil {
+					execErr = verr
+					dataResult, errorResult = "", ""
+				}
+			} else {
+				// --- LEGACY FOUR-OP DISPATCH (the Relay's built-in core lifecycle profile) ---
+				switch normalizedFn {
+				case "init":
+					dataResult, errorResult = host.Init(ctx, authContextJson, string(inputJson))
+				case "process":
+					dataResult, errorResult = host.Process(ctx, authContextJson, string(inputJson))
+				case "get":
+					dataResult, errorResult = host.Get(ctx, authContextJson, string(inputJson))
+				case "notify":
+					dataResult, errorResult = host.Notify(ctx, authContextJson, string(inputJson))
+				default:
+					execErr = fmt.Errorf("WASM module %q does not support operation %q", step.ComponentID, step.FunctionName)
+				}
 			}
 
 			if execErr == nil {
@@ -316,6 +475,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		if err != nil {
 			return nil, fmt.Errorf("failed to hash output at step %q: %w", step.Raw, err)
 		}
+		rec.stepDone(outputHash)
 		traceSteps = append(traceSteps, ProofTraceStep{
 			Name:       step.Raw,
 			Module:     step.ComponentID,
@@ -439,4 +599,29 @@ func (c *cabinetService) GetWorkflow(id string) (*Workflow, error) {
 		return w, nil
 	}
 	return nil, ErrNotFound
+}
+
+// profileBindingFor decides which dispatch a module uses (review F2). Four distinct states:
+//   - generic dispatch off, or an explicit legacy module (no binding, no profile required): (nil, nil), legacy;
+//   - a valid binding for exactly this module content: (binding, nil), profile-driven;
+//   - a binding that belongs to different content of the same module ID (stale), or a module that is declared
+//     to need a profile but has no admitted binding: (nil, error), rejected, never a legacy fallback.
+func (c *cabinetService) profileBindingFor(m *ModuleDescriptor) (*ModuleProfileBinding, error) {
+	if !c.genericDispatch {
+		return nil, nil
+	}
+	c.profileMu.RLock()
+	b, ok := c.profileBindings[m.ID()]
+	required := c.profileRequired[m.ID()]
+	c.profileMu.RUnlock()
+	if ok {
+		if b.ModuleChecksum != m.Checksum() {
+			return nil, fmt.Errorf("%w: module %q has an ABI-profile binding for different content (stale binding); refusing to run it", ErrInvalid, m.ID())
+		}
+		return b, nil
+	}
+	if required {
+		return nil, fmt.Errorf("%w: module %q declares an ABI profile but none is admitted for it; refusing to run it", ErrInvalid, m.ID())
+	}
+	return nil, nil
 }

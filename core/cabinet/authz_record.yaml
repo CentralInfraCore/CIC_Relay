@@ -1,0 +1,86 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: AuthorizationRecordV2
+  kind: struct
+  description: 'AuthorizationRecordV2 is the authorization decision of one step, with
+    everything the decision is about (O-1 G-2). A digest of a record proves only that
+    the bytes are those bytes; the verifier checks the record''s CONTENT against the
+    artifact it belongs to: the principal, the module envelope, the profile, the operation,
+    the effect, the realization context, the policy, the decision and the concrete
+    execution (workflow, step position, input digest) must be the ones of that step.'
+  implements: []
+  references: []
+- name: DecisionArchiver
+  kind: interface
+  description: 'DecisionArchiver is an optional extension of a TraceV2Source: it receives
+    every authorization record the cabinet itself produced for a sealed artifact,
+    so that the records can be kept and handed to the verifier with the artifact.'
+  references: []
+  methods:
+  - ArchiveDecision
+- name: Canonical
+  kind: method
+  receiver: AuthorizationRecordV2
+  description: 'Canonical is the byte-exact text the record''s digest is taken over:
+    the header, then the sixteen fields in this fixed order as key=value lines, LF-terminated.
+    Values never contain a line break (see sanitize).'
+  references: []
+  calls: []
+- name: sanitize
+  kind: func
+  description: sanitize keeps a value on one line (a line break would let one field
+    forge the next).
+  references: []
+  calls:
+  - Replace
+- name: Digest
+  kind: method
+  receiver: AuthorizationRecordV2
+  description: Digest is the sha256:<hex> of the canonical text.
+  references: []
+  calls:
+  - AuthorizationRecordV2.Canonical
+- name: PolicyDigestOf
+  kind: func
+  description: 'PolicyDigestOf is the digest of the operator''s effect policy: the
+    sorted allowed effect classes.'
+  references: []
+  calls: []
+- name: PrincipalString
+  kind: func
+  description: 'PrincipalString is how a principal is written into a record: type:id/method,
+    or "unavailable".'
+  references: []
+  calls: []
+- name: WithRealizationContext
+  kind: func
+  description: WithRealizationContext gives the cabinet the digest of the operator's
+    realization context (the authenticated, content-addressed object the observation
+    is realised in). It is a function because the context is loaded after the cabinet
+    is built; None is used when it returns "".
+  references: []
+  calls: []
+- name: realization
+  kind: method
+  receiver: cabinetService
+  description: realization is the realization-context digest the cabinet binds decisions
+    to, or None.
+  references: []
+  calls: []
+- name: AuthzRecordHeader
+  kind: const
+  description: AuthzRecordHeader heads the canonical text of an authorization record.
+  references: []
+- name: None
+  kind: const
+  description: None is the value of a record field for which there is no value (an
+    unadmitted module has no envelope, an unconfigured build has no realization context).
+    It is explicit text, never an empty string.
+  references: []

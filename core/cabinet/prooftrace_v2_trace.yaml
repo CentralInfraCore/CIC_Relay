@@ -1,0 +1,165 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: traceV2Config
+  kind: struct
+  description: traceV2Config is a type of the ProofTrace V2 trace recording.
+  implements: []
+  references: []
+- name: stepRecord
+  kind: struct
+  description: stepRecord is what Setx tells the recorder about one step as it goes.
+  implements: []
+  references: []
+- name: traceV2Recorder
+  kind: struct
+  description: traceV2Recorder collects the step records of one run.
+  implements: []
+  references: []
+- name: TraceV2Source
+  kind: interface
+  description: 'TraceV2Source supplies what the cabinet cannot know by itself: the
+    authenticated identity of an executed module (the envelope digest of the admission,
+    the ABI profile, the trust state), the authorization decision record, the context
+    reference and the host-interaction list. Production wiring of these is integration
+    work (the admission and the host-interaction record live in other work packages);
+    the cabinet only asks.'
+  references: []
+  methods:
+  - Authorization
+  - ExecutedIdentity
+  - ExecutionContext
+  - HostInteractions
+- name: StepScoper
+  kind: interface
+  description: 'StepScoper is an optional extension of a TraceV2Source: it is asked,
+    once per step and before the step dispatches, for the context the step runs under.
+    A source uses it to keep the step''s host interactions apart (O-1 INT-08): the
+    scoped context reaches the host functions the step calls, and the same context
+    is handed back to the source''s HostInteractions, Authorization and ExecutionContext
+    when the step is sealed.'
+  references: []
+  methods:
+  - ScopeStep
+- name: TraceV2Sink
+  kind: type
+  description: TraceV2Sink receives the sealed V2 artifact of every run, successful
+    or not.
+  references: []
+- name: EmptyHostInteractionsDigestV2
+  kind: func
+  description: EmptyHostInteractionsDigestV2 is the CICHOSTINTv1 digest of an empty
+    list.
+  references: []
+  calls: []
+- name: WithTraceV2
+  kind: func
+  description: WithTraceV2 turns on V2 trace recording for every Setx run (off by
+    default). It needs both a source of the identities and a sink; a missing one is
+    a programming error and panics at construction time, not at run time.
+  references: []
+  calls: []
+- name: begin
+  kind: method
+  receiver: traceV2Recorder
+  description: begin is one of the recorder hooks that tell the V2 trace how far a
+    Setx step got; nil-safe, so the V1 path pays nothing.
+  references: []
+  calls: []
+- name: cur
+  kind: method
+  receiver: traceV2Recorder
+  description: cur is one of the recorder hooks that tell the V2 trace how far a Setx
+    step got; nil-safe, so the V1 path pays nothing.
+  references: []
+  calls: []
+- name: setGraph
+  kind: method
+  receiver: traceV2Recorder
+  description: The four hooks below are no-ops on a nil recorder, so the V1 path pays
+    nothing and changes nothing.
+  references: []
+  calls: []
+- name: stepBegin
+  kind: method
+  receiver: traceV2Recorder
+  description: stepBegin is one of the recorder hooks that tell the V2 trace how far
+    a Setx step got; nil-safe, so the V1 path pays nothing.
+  references: []
+  calls: []
+- name: scopeStep
+  kind: method
+  receiver: traceV2Recorder
+  description: 'scopeStep returns the context the current step runs under: the source''s
+    scoped context when it is a StepScoper (it is also kept for sealing the step),
+    else base unchanged. Nil-safe: with V2 off the recorder is nil and nothing changes.'
+  references: []
+  calls:
+  - ScopeStep
+- name: stepDecision
+  kind: method
+  receiver: traceV2Recorder
+  description: stepDecision records the authorization decision of the profile gate
+    for the current step; nil-safe.
+  references: []
+  calls: []
+- name: stepModule
+  kind: method
+  receiver: traceV2Recorder
+  description: stepModule is one of the recorder hooks that tell the V2 trace how
+    far a Setx step got; nil-safe, so the V1 path pays nothing.
+  references: []
+  calls: []
+- name: stepInput
+  kind: method
+  receiver: traceV2Recorder
+  description: stepInput is one of the recorder hooks that tell the V2 trace how far
+    a Setx step got; nil-safe, so the V1 path pays nothing.
+  references: []
+  calls: []
+- name: stepDispatched
+  kind: method
+  receiver: traceV2Recorder
+  description: stepDispatched is one of the recorder hooks that tell the V2 trace
+    how far a Setx step got; nil-safe, so the V1 path pays nothing.
+  references: []
+  calls: []
+- name: stepDone
+  kind: method
+  receiver: traceV2Recorder
+  description: stepDone is one of the recorder hooks that tell the V2 trace how far
+    a Setx step got; nil-safe, so the V1 path pays nothing.
+  references: []
+  calls: []
+- name: rejectionOf
+  kind: func
+  description: rejectionOf classifies an error that stopped a step before its execution
+    phase was reached.
+  references: []
+  calls: []
+- name: digestOfRaw
+  kind: func
+  description: digestOfRaw is a small helper of the ProofTrace V2 implementation.
+  references: []
+  calls: []
+- name: build
+  kind: method
+  receiver: traceV2Recorder
+  description: build assembles the V2 artifact of one run from the recorded steps
+    and the run's error (nil = success).
+  references: []
+  calls:
+  - ArchiveDecision
+  - Authorization
+  - Digest
+  - EmptyHostInteractionsDigestV2
+  - ExecutedIdentity
+  - ExecutionContext
+  - HostInteractions
+  - SealArtifactV2

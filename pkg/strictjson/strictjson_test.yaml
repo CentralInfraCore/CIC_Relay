@@ -1,0 +1,58 @@
+---
+package: strictjson
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestScanAcceptsTheExactShape
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  calls:
+  - Scan
+  - assert.NoError
+- name: TestScanRefusesForTheNamedReason
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+  calls:
+  - Error
+  - Scan
+  - assert.Contains
+  - require.Error
+- name: TestAnOffendingKeyIsClippedInTheMessage
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - assert.Contains
+  - assert.NotContains
+  - assert.Equal
+  calls:
+  - Error
+  - Scan
+  - assert.Contains
+  - assert.Equal
+  - assert.NotContains
+  - require.Error
+- name: TestANilShapeIsAnyOneValue
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Error
+  calls:
+  - Scan
+  - assert.Error
+  - require.NoError
+- name: testShape
+  kind: var
+  description: ''
+  references: []

@@ -130,11 +130,8 @@ func TestHardeningIntegration_ProdComponentsOnBothLoadPaths(t *testing.T) {
 			ins := loadVia(t, "installed", files, fresh())
 			assert.Equal(t, ins, emb, "the embedded and the installed path must reach the same verdict")
 			assert.Equal(t, c.wantLoaded, emb.registered)
-			if c.wantLoaded {
-				assert.Equal(t, []string{sharedTrustModuleID}, emb.bound, "a verified module gets its capability on both paths")
-			} else {
-				assert.Empty(t, emb.bound, "a rejected module gets no capability")
-			}
+			// No envelope: a loaded module is transitional (#162) and gets no capability on either path.
+			assert.Empty(t, emb.bound, "a module without an authenticated envelope gets no capability")
 		})
 	}
 }

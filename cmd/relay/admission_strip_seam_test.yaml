@@ -1,0 +1,18 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestAdmission_AC18_ChangedTransformationIsRejected
+  kind: func
+  description: TestAdmission_AC18_ChangedTransformationIsRejected replaces the transformation
+    after the release was signed.
+  references:
+  - cabinet.SetStripWasmModuleFunc
+  calls:
+  - cabinet.SetStripWasmModuleFunc

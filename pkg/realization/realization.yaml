@@ -1,0 +1,99 @@
+---
+package: realization
+description: 'Package realization is the realization context of an observation (O-1
+  G-3): an authenticated, content-addressed object that says in which concrete infrastructure
+  environment an abstract object is realised or observed: which provider, region,
+  host, API base path and scope. It is NOT part of the module manifest, NOT a modification
+  of the intent and NOT a property of the ABI profile: it is an external input the
+  operator pins. Authentication is the operator''s pin of the content digest (the
+  object does not vouch for itself), exactly as for the trust bundle. The authorization
+  decision and the execution context record carry its digest, so a verifier can tell
+  which environment a decision was about. This is the MINIMAL context the observation
+  PoC needs. It is the only realization model: there is no second one, and it carries
+  nothing about changing infrastructure.'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Error
+  kind: struct
+  description: Error is a named admission failure.
+  implements: []
+  references: []
+- name: Context
+  kind: struct
+  description: Context is the realization context.
+  implements: []
+  references: []
+- name: Admitted
+  kind: struct
+  description: Admitted is a context that passed admission, with its content digest.
+  implements: []
+  references: []
+- name: Error
+  kind: method
+  receiver: Error
+  description: Error renders the code and the message.
+  references: []
+  calls: []
+- name: fail
+  kind: func
+  description: fail builds a named admission error.
+  references: []
+  calls: []
+- name: Digest
+  kind: func
+  description: 'Digest is the sha256:<hex> of the raw bytes: the content address.'
+  references: []
+  calls: []
+- name: Admit
+  kind: func
+  description: Admit checks raw against the operator's pinned digest (first, on the
+    raw bytes) and then the exact wire shape.
+  references:
+  - strictjson.Scan
+  calls:
+  - Digest
+  - MatchString
+  - strictjson.Scan
+- name: digestRE
+  kind: var
+  description: digestRE is the closed form of a digest.
+  references: []
+- name: idRE
+  kind: var
+  description: 'idRE bounds identifiers: lowercase, digits, dot, dash, colon.'
+  references: []
+- name: hostRE
+  kind: var
+  description: hostRE is a lowercase DNS name.
+  references: []
+- name: pathRE
+  kind: var
+  description: pathRE is an absolute path without query, fragment, whitespace or dot
+    segments.
+  references: []
+- name: scopeRE
+  kind: var
+  description: 'scopeRE is a provider scope identifier (for example an OCID): printable,
+    no whitespace.'
+  references: []
+- name: shape
+  kind: var
+  description: shape is the exact wire shape of the context.
+  references: []
+- name: Kind
+  kind: const
+  description: Kind is the wire kind.
+  references: []
+- name: CodeNotPinned
+  kind: const
+  description: 'CodeNotPinned: the presented bytes are not the object the operator
+    pinned.'
+  references: []
+- name: CodeInvalid
+  kind: const
+  description: 'CodeInvalid: the pinned bytes do not have the exact wire shape.'
+  references: []

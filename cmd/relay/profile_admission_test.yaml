@@ -1,0 +1,303 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: profFixture
+  kind: struct
+  description: profFixture is an authenticated module (the AC-162 fixture) whose manifest
+    pins the profile, with the three sidecars and a trust context in which the profile
+    is accepted and its signer holds profile:sign.
+  implements: []
+  references: []
+- name: dg
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: profileFixtureOperator
+  kind: func
+  description: ''
+  references:
+  - cabinet.InMemorySchemaRegistry
+  - cabinet.OperatorLimits
+  calls: []
+- name: compileBody
+  kind: func
+  description: compileBody compiles a test schema body.
+  references:
+  - schemalite.Schema
+  - schemalite.Compile
+  calls:
+  - schemalite.Compile
+- name: profileJSON
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: manifestWithProfile
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: newProfFixture
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProfileDigest
+  - require.NoError
+  - trustbundle.Profile
+  calls:
+  - cabinet.ProfileDigest
+  - require.NoError
+- name: writeSidecars
+  kind: method
+  receiver: profFixture
+  description: ''
+  references:
+  - cabinet.ProfileSignedBytes
+  calls:
+  - EncodeToString
+  - cabinet.ProfileSignedBytes
+- name: binding
+  kind: method
+  receiver: profFixture
+  description: ''
+  references:
+  - cabinet.ModuleProfileBinding
+  calls:
+  - ModuleProfile
+- name: TestINT05_PositiveAuthenticatedProfileBinding
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.True
+  - assert.Equal
+  - assert.True
+  - cabinet.ProfileRefV2
+  - cabinet.TrustStateAuthenticated
+  calls:
+  - Checksum
+  - GetModule
+  - assert.Equal
+  - assert.True
+  - require.NoError
+  - require.True
+- name: TestINT05_Negatives
+  kind: func
+  description: ''
+  references:
+  - cabinet.CodeProfileUnknown
+  - trustbundle.Profile
+  - cabinet.CodeProfileDigestMismatch
+  - cabinet.CodeProfileSignatureInvalid
+  - cabinet.CodeProfileAdmissionUnconfigured
+  - cabinet.CodeLimitExceedsOperatorCap
+  - cabinet.InMemorySchemaRegistry
+  - cabinet.CodeSchemaRefUnresolved
+  - assert.False
+  calls:
+  - EncodeToString
+  - assert.False
+- name: TestINT05_ManifestCannotWidenTheProfile
+  kind: func
+  description: ''
+  references:
+  - cabinet.CodeManifestOpNotInProfile
+  calls: []
+- name: TestINT05_ManifestPinMustNameTheAdmittedProfile
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProfileDigest
+  - cabinet.CodeProfileDigestMismatch
+  calls:
+  - cabinet.ProfileDigest
+- name: TestINT05_AProfileNeedsAnAuthenticatedModule
+  kind: func
+  description: 'a profile cannot be bound to a module that is not authenticated: the
+    binding is tied to the envelope digest'
+  references:
+  - require.Error
+  - assert.Equal
+  - assert.False
+  calls:
+  - assert.Equal
+  - assert.False
+  - require.Error
+- name: TestINT05_NoProfileNamedAndReloadClearsTheBinding
+  kind: func
+  description: 'no profile named: nothing changes, and a reload without a profile
+    drops the earlier binding'
+  references:
+  - require.NoError
+  - require.True
+  - assert.False
+  calls:
+  - Checksum
+  - GetModule
+  - assert.False
+  - require.NoError
+  - require.True
+- name: TestINT05_EcdsaSignerAlsoVerifies
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - cabinet.ProfileSignedBytes
+  calls:
+  - EncodeToString
+  - cabinet.ProfileSignedBytes
+  - require.NoError
+- name: TestINT05_VerifierRefusals
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProfileSignature
+  - require.NoError
+  - assert.ErrorContains
+  calls:
+  - VerifySignedProfile
+  - assert.ErrorContains
+  - bundleProfileVerifier.VerifySignedProfile
+  - require.NoError
+- name: TestINT05_OperatorConfig
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - cabinet.OperatorLimits
+  - require.True
+  - assert.Error
+  calls:
+  - Resolve
+  - assert.Equal
+  - assert.Error
+  - require.NoError
+  - require.True
+- name: TestINT05_OperatorConfigFromTheEnvironment
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Nil
+  - require.NotNil
+  - assert.Error
+  calls:
+  - assert.Error
+  - assert.Nil
+  - require.NoError
+  - require.NotNil
+- name: TestINT05_ProfileCode
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.AnError
+  - cabinet.CodeProfileUnknown
+  - cabinet.ABIProfileError
+  calls:
+  - assert.Equal
+- name: osWriteFile
+  kind: func
+  description: osWriteFile writes a small test file.
+  references: []
+  calls: []
+- name: TestINT06_EffectPolicyFromTheEnvironment
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+  - assert.Len
+  - assert.Error
+  calls:
+  - assert.Empty
+  - assert.Error
+  - assert.Len
+  - require.NoError
+- name: TestINT07_ProfileNeedsItsSchemaBodies
+  kind: func
+  description: 'INT-07: a profile is not admitted whose schema bodies the operator
+    does not hold, and a body must be exactly the digest.'
+  references:
+  - cabinet.CodeSchemaUnavailable
+  calls: []
+- name: TestINT07_BodyFilesAreDigestBoundAndCompiled
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True
+  - cabinet.AbiSchemaRef
+  - assert.False
+  - assert.ErrorContains
+  - assert.Error
+  - assert.Len
+  calls:
+  - assert.Error
+  - assert.ErrorContains
+  - assert.False
+  - assert.Len
+  - assert.True
+  - require.NoError
+- name: TestINT07_OperatorValidator
+  kind: func
+  description: ''
+  references:
+  - assert.ErrorIs
+  - cabinet.ErrSchemaUnavailable
+  - assert.NoError
+  - require.Error
+  - assert.NotErrorIs
+  calls:
+  - ValidatePayload
+  - assert.ErrorIs
+  - assert.NoError
+  - assert.NotErrorIs
+  - require.Error
+- name: TestG1_APIPrincipalFromTheEnvironment
+  kind: func
+  description: 'G-1: the principal''s type comes from the authentication layer; a
+    dedicated service principal is valid, the shared bearer token stays the restricted
+    default, and a misconfiguration stops the start.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - cabinet.Principal
+  - cabinet.PrincipalTypeSharedBearer
+  - cabinet.PrincipalTypeService
+  - assert.Error
+  calls:
+  - assert.Equal
+  - assert.Error
+  - require.NoError
+- name: TestG1_ThePrincipalInTheRequestContextIsTheConfiguredOne
+  kind: func
+  description: ''
+  references:
+  - cabinet.Principal
+  - cabinet.PrincipalTypeService
+  - cabinet.PrincipalFrom
+  - require.True
+  - assert.Equal
+  - assert.True
+  - cabinet.ValidPrincipalType
+  - assert.False
+  calls:
+  - Context
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - cabinet.PrincipalFrom
+  - cabinet.ValidPrincipalType
+  - require.True

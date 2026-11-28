@@ -525,6 +525,21 @@ func evidenceRequiredFromEnv() (bool, error) {
 	}
 }
 
+// genericDispatchFromEnv reads CIC_ABI_GENERIC_DISPATCH. Unset or empty means
+// false — Setx keeps using only the legacy built-in four-op dispatch
+// (init/process/get/notify), today's behavior (WP-03, AC-03-5). Only "true" and
+// "false" are accepted, so a typo cannot silently turn it on.
+func genericDispatchFromEnv() (bool, error) {
+	switch v := strings.TrimSpace(os.Getenv("CIC_ABI_GENERIC_DISPATCH")); v {
+	case "", "false":
+		return false, nil
+	case "true":
+		return true, nil
+	default:
+		return false, fmt.Errorf("invalid CIC_ABI_GENERIC_DISPATCH %q (valid: \"true\", \"false\")", v)
+	}
+}
+
 // buildRecorderOption constructs a cabinet.WithRecorder option from the provided VaultSecrets.
 // If secrets is nil (Vault not configured), returns a no-op option.
 func buildRecorderOption(logger *logrus.Logger, secrets *VaultSecrets) cabinet.CabinetOption {
@@ -701,6 +716,18 @@ func main() {
 	if evidenceRequired {
 		logger.Info("Evidence required: a workflow whose ProofTrace is not persisted fails with 503 evidence_required")
 	}
+	genericDispatch, err := genericDispatchFromEnv()
+	if err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid generic-dispatch configuration")
+	}
+	if genericDispatch {
+		// No production code path registers a ModuleProfileBinding yet
+		// (WP-03 does not activate this; the #162/WP-02 acceptance gates that, see
+		// jobs/o1-wp03-abi-profile-dispatch/ref/02-abi-profile-wire.md §7), so this flag
+		// is currently a no-op even when set — logged so that a future change to that
+		// no-op status shows up as a behavior change, not a silent one.
+		logger.Warn("Generic ABI-profile dispatch enabled: no ABI-profile binding is registered in this build, so this currently has no effect")
+	}
 
 	// Build artifact signer for cic.artifact.sign — uses the same Vault key as the recorder.
 	// Nil if Vault is not configured; cic_sign will be "unavailable" in that case (non-fatal).
@@ -739,6 +766,13 @@ func main() {
 	// relay-provisioned Vault key when CIC_OCI_SIGN_MOUNT/_KEY are set; nil (sign
 	// inert) otherwise.
 	cicFlowReg := newCICFlowRegistry(buildOCIKeyResolver(), nil)
+	// cic-flow.send: the operator deployment policy (CIC_HOSTSIGN_POLICY) + provider key identifier
+	// (CIC_OCI_SIGN_KEY_ID). Unset → modules importing cic-flow.send are rejected at load (fail-closed).
+	if sendCfg, err := sendConfigFromEnv(); err != nil {
+		logger.WithField("error", err).Fatal("FATAL: invalid cic-flow.send configuration")
+	} else if sendCfg != nil {
+		cicFlowReg.configureSend(sendCfg)
+	}
 	// loadModule binds each verified module's cic-flow capability into this
 	// registry via the package-level hook (fail-closed: only verified modules).
 	registerModuleCapability = cicFlowReg.stageVerified
@@ -754,7 +788,18 @@ func main() {
 	metricSink := obs.NewMultiMetricSink(logrusSink, promSink)
 	gitOps.SetObsSinks(logrusSink, metricSink) // relay.git.op_duration_ms + WARN logok
 	obsOpt := cabinet.WithObsSinks(logrusSink, metricSink)
-	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), cabinet.WithProtectedModules(protectedModuleIDs...), obsOpt)
+	traceOpts, err := traceV2OptionsFromEnv(logger, protectedModuleIDs)
+	if err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid ProofTrace V2 configuration")
+	}
+	effectOpts, err := effectPolicyOptionFromEnv()
+	if err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid ABI effect policy")
+	}
+	traceOpts = append(traceOpts, effectOpts...)
+	traceOpts = append(traceOpts, cabinet.WithRealizationContext(realizationDigest))
+	traceOpts = append(traceOpts, cabinet.WithPayloadValidator(operatorValidator{})) // INT-07: payloads are validated against the pinned schema bodies
+	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, append(traceOpts, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), cabinet.WithProtectedModules(protectedModuleIDs...), cabinet.WithGenericDispatch(genericDispatch), obsOpt)...)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")
 	}
@@ -781,6 +826,22 @@ func main() {
 	// fail-closed. A configured-but-unreadable bundle is fatal.
 	if err := loadProvenanceAnchors(pkiAssets, logger); err != nil {
 		logger.WithError(err).Fatal("FATAL: cic-flow trust anchor load failed")
+	}
+	// INT-12: the operator-pinned trust bundle, when configured, is the one source of the authority bindings.
+	if err := loadTrustBundle(pkiAssets, logger, time.Now()); err != nil {
+		logger.WithError(err).Fatal("FATAL: trust bundle admission failed")
+	}
+	// G-3: the operator's pinned realization context (absent: the records say none).
+	if err := loadRealizationContext(); err != nil {
+		logger.WithError(err).Fatal("FATAL: realization context admission failed")
+	}
+	// INT-05: the operator's schema registry and limit caps for ABI-profile admission (absent: profile admission fails closed).
+	if err := loadProfileOperatorConfig(); err != nil {
+		logger.WithError(err).Fatal("FATAL: ABI operator config load failed")
+	}
+	// #162 V2b: the pinned module-sign authority bindings. Absent → no envelope is authenticated (fail-closed).
+	if err := loadModuleSignAuthorities(pkiAssets, logger); err != nil {
+		logger.WithError(err).Fatal("FATAL: module-sign authority load failed")
 	}
 
 	// M34+M36: build context for Merkle-root verification hash.
@@ -830,6 +891,9 @@ func main() {
 	// logrusSink/metricSink/promSink are already declared above (wired into
 	// cabinetSvc + gitOps via WithObsSinks/SetObsSinks). Reuse them here so
 	// /metrics aggregates across every component, not just cmd/relay.
+	if apiPrincipal, err = apiPrincipalFromEnv(); err != nil {
+		logger.WithError(err).Fatal("FATAL: invalid API principal configuration")
+	}
 	apiToken, err := apiTokenFromEnv()
 	if err != nil {
 		logger.WithError(err).Fatal("FATAL: invalid API token configuration")

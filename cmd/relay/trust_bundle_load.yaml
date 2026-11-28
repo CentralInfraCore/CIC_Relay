@@ -1,0 +1,55 @@
+---
+package: main
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: loadTrustBundle
+  kind: func
+  description: 'loadTrustBundle admits the operator-pinned trust bundle into pkiAssets.
+    Unset (CIC_TRUST_BUNDLE empty): nothing changes and the standalone authority file
+    (CIC_MODULE_SIGN_AUTHORITIES) stays the source. Set: the pin and the state path
+    are required, the standalone authority file must not be set (two sources of authority
+    are one too many), the bundle must pass every admission check, and only then is
+    the high-water mark advanced and persisted. Any failure is an error and the caller
+    stops the start-up.'
+  references:
+  - logrus.Logger
+  - trustbundle.Policy
+  - trustbundle.Lock
+  - trustbundle.LoadState
+  - trustbundle.Admit
+  - trustbundle.Commit
+  - logrus.Fields
+  - logrus.Logger.WithFields
+  calls:
+  - Info
+  - logrus.Logger.WithFields
+  - trustbundle.Admit
+  - trustbundle.Commit
+  - trustbundle.LoadState
+  - trustbundle.Lock
+- name: trustBundleEnv
+  kind: const
+  description: trustBundleEnv is the path of the bundle file.
+  references: []
+- name: trustBundlePinEnv
+  kind: const
+  description: trustBundlePinEnv is the sha256:<hex> of the exact bundle bytes (required).
+  references: []
+- name: trustBundleMinVerEnv
+  kind: const
+  description: trustBundleMinVerEnv is minimum_bundle_version (optional, default 0).
+  references: []
+- name: trustBundleMaxAgeEnv
+  kind: const
+  description: 'trustBundleMaxAgeEnv is a Go duration such as 720h (optional: no age
+    limit).'
+  references: []
+- name: trustBundleStateEnv
+  kind: const
+  description: trustBundleStateEnv is the path of the persisted high-water mark (required).
+  references: []

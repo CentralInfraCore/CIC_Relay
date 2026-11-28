@@ -1,0 +1,302 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: d64
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: rec
+  kind: func
+  description: a record as the engine writes it (the log assigns seq and interaction_id)
+  references:
+  - hostsign.Record
+  - hostsign.RecordIntent
+  calls: []
+- name: TestTraceSourceHostInteractionsAreScopedPerStep
+  kind: func
+  description: ''
+  references:
+  - cabinet.ExecutionGraphStep
+  - hostsign.LogFrom
+  - require.True
+  - require.NoError
+  - assert.Equal
+  - cabinet.EmptyHostInteractionsDigestV2
+  - assert.NotEqual
+  - hostsign.InteractionsDigest
+  - assert.False
+  calls:
+  - Append
+  - HostInteractions
+  - Interactions
+  - ScopeStep
+  - assert.Equal
+  - assert.False
+  - assert.NotEqual
+  - cabinet.EmptyHostInteractionsDigestV2
+  - hostsign.InteractionsDigest
+  - hostsign.LogFrom
+  - require.NoError
+  - require.True
+- name: TestIdentityIsBoundToTheAdmittedArtifact
+  kind: func
+  description: ''
+  references:
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - require.NoError
+  - cabinet.ModuleProfileBinding
+  - assert.Equal
+  - cabinet.ProfileRefV2
+  - cabinet.TrustStateAuthenticated
+  - assert.False
+  - require.True
+  calls:
+  - Checksum
+  - ExecutedIdentity
+  - ID
+  - assert.Equal
+  - assert.False
+  - cabinet.NewModuleDescriptor
+  - require.NoError
+  - require.True
+- name: TestAuthorizationAndContextRecords
+  kind: func
+  description: ''
+  references:
+  - cabinet.ExecutionGraphStep
+  - assert.Equal
+  - cabinet.AuthorizationDenied
+  - assert.Regexp
+  - cabinet.AuthorizationNotEvaluated
+  - assert.Empty
+  - assert.NotEqual
+  - cabinet.WithPrincipal
+  - cabinet.Principal
+  - cabinet.PrincipalTypeSharedBearer
+  - cabinet.PrincipalTypeService
+  calls:
+  - Authorization
+  - ExecutionContext
+  - assert.Empty
+  - assert.Equal
+  - assert.NotEqual
+  - assert.Regexp
+  - cabinet.WithPrincipal
+- name: TestProductionSourceEndToEndWithTheIndependentVerifier
+  kind: func
+  description: 'The whole chain: a Setx run through the real cabinet with the production
+    source; the module''s host calls write into the step''s scope the way the send
+    engine does; the sealed artifact is accepted by the INDEPENDENT verifier with
+    exactly the archived records, and the executed identity is the admission record.'
+  references:
+  - cabinet.ProofArtifactV2
+  - cabinet.NewMemModuleStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - require.NoError
+  - cabinet.NativeFunctions
+  - hostsign.LogFrom
+  - require.True
+  - cabinet.ModuleProfileBinding
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - cabinet.WithTraceV2
+  - cabinet.NewWorkflow
+  - cabinet.WorkflowIdentity
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowSigning
+  - cabinet.SetPayload
+  - require.Len
+  - require.NotNil
+  - assert.Equal
+  - cabinet.TrustStateAuthenticated
+  - o1verify.Verify
+  - o1verify.Options
+  - o1verify.VerifierInfo
+  - assert.Empty
+  - o1verify.VerdictVerified
+  - assert.NotEmpty
+  - assert.NotEqual
+  calls:
+  - Append
+  - Checksum
+  - Decode
+  - ID
+  - Interactions
+  - Put
+  - PutWorkflow
+  - Setx
+  - UseNumber
+  - assert.Empty
+  - assert.Equal
+  - assert.NotEmpty
+  - assert.NotEqual
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWorkflow
+  - cabinet.WithTraceV2
+  - hostsign.LogFrom
+  - o1verify.Verify
+  - require.Len
+  - require.NoError
+  - require.NotNil
+  - require.True
+- name: TestTraceV2OptionsAndSink
+  kind: func
+  description: ''
+  references:
+  - logrus.New
+  - require.NoError
+  - assert.Empty
+  - assert.Len
+  - assert.NoError
+  - assert.Error
+  - cabinet.ProofArtifactV2
+  - assert.Equal
+  calls:
+  - Mode
+  - Perm
+  - assert.Empty
+  - assert.Equal
+  - assert.Error
+  - assert.Len
+  - assert.NoError
+  - logrus.New
+  - require.NoError
+- name: productionArtifact
+  kind: func
+  description: productionArtifact runs one step through the real cabinet with the
+    production source and returns the sealed artifact, the interaction lists the verifier
+    needs, and the source.
+  references:
+  - cabinet.ProofArtifactV2
+  - cabinet.NewMemModuleStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - require.NoError
+  - cabinet.NativeFunctions
+  - hostsign.LogFrom
+  - cabinet.ModuleProfileBinding
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - cabinet.WithTraceV2
+  - cabinet.NewWorkflow
+  - cabinet.WorkflowIdentity
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowSigning
+  - cabinet.SetPayload
+  - require.Len
+  calls:
+  - Append
+  - Checksum
+  - Decode
+  - ID
+  - Interactions
+  - Put
+  - PutWorkflow
+  - Setx
+  - UseNumber
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWorkflow
+  - cabinet.WithTraceV2
+  - hostsign.LogFrom
+  - require.Len
+  - require.NoError
+- name: TestINT10_AttestedPersistenceAndAttributableVerifierResult
+  kind: func
+  description: 'INT-10: the persistence claim of a production artifact is believed
+    only through a recorder key the bundle authorises, and the verifier''s own result
+    is attributable to a verifier key the bundle authorises. VERIFIED is not ACCEPTED.'
+  references:
+  - require.NoError
+  - attest.RecorderSignedBytes
+  - attest.AlgEd25519
+  - o1verify.Persistence
+  - o1verify.Attestation
+  - attest.Material
+  - o1verify.Result
+  - o1verify.Verify
+  - o1verify.Options
+  - o1verify.VerifierInfo
+  - attest.RecorderVerifier
+  - assert.Empty
+  - assert.Equal
+  - o1verify.EvidencePersisted
+  - o1verify.VerdictVerified
+  - o1verify.AcceptanceNotAccepted
+  - assert.NotEqual
+  - assert.NotEmpty
+  - o1verify.VerdictNotVerified
+  - attest.SignResult
+  - attest.VerifyResult
+  - assert.False
+  - assert.True
+  - assert.Error
+  calls:
+  - assert.Empty
+  - assert.Equal
+  - assert.Error
+  - assert.False
+  - assert.NotEmpty
+  - assert.NotEqual
+  - assert.True
+  - attest.RecorderSignedBytes
+  - attest.SignResult
+  - attest.VerifyResult
+  - o1verify.Verify
+  - require.NoError
+- name: TestRecorderAttestsOnlyAfterPersistence
+  kind: func
+  description: 'INT-10: the recorder attests only after a successful, durable persistence,
+    and the attestation it writes is the one the independent verifier accepts for
+    exactly that artifact.'
+  references:
+  - logrus.New
+  - require.NoError
+  - o1verify.Persistence
+  - assert.True
+  - assert.Equal
+  calls:
+  - DecodeString
+  - Replace
+  - assert.Equal
+  - assert.True
+  - logrus.New
+  - require.NoError
+- name: TestRecorderKeyLoading
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Error
+  - assert.ErrorContains
+  - logrus.New
+  - assert.Len
+  calls:
+  - assert.Equal
+  - assert.Error
+  - assert.ErrorContains
+  - assert.Len
+  - logrus.New
+  - require.NoError

@@ -16,6 +16,7 @@ objects:
   implements: []
   references:
   - cabinet.CRLFreshness
+  - trustbundle.Profile
 - name: ComponentHeader
   kind: struct
   description: ComponentHeader defines the common fields for identifying a component
@@ -209,6 +210,7 @@ objects:
   - logrus.Logger
   - yaml.Unmarshal
   - cabinet.ModuleDescriptor
+  - cabinet.ModuleProfileBinding
   - logrus.Fields
   - cabinet.VerifyOptions
   - cabinet.VerifyCertificateChain
@@ -222,6 +224,7 @@ objects:
   calls:
   - Error
   - Info
+  - SetModuleProfile
   - Size
   - String
   - Sum

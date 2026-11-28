@@ -1,0 +1,20 @@
+{
+ "sha256:f9fbd28d69fe0e115ddae521c881b9a84955ed75306410aa80446a76022f7eb0": {
+  "decision": "ALLOWED",
+  "effect": "local",
+  "effect_resolved": "static",
+  "envelope_digest": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+  "host_boundary": "none",
+  "input_digest": "sha256:666c1aa02e8068c6d5cc1d3295009432c16790bec28ec8ce119d0d1a18d61319",
+  "module_id": "e2e.mod@1.0",
+  "operation": "describe",
+  "policy_digest": "sha256:5a33651bea4b8e20943749099d5825a60b41d5d5a41c375815733621cf3bce66",
+  "principal": "service:observer-1/bearer",
+  "profile_digest": "sha256:6587c50aed943a565b184f5134ec672703e5a365395bf55ce7b3e067302be179",
+  "profile_id": "cic:provider@0.1.0",
+  "realization_context_digest": "sha256:8c2051ed0e042d5ab37cdee6437fa1aa0e1f987b04e0d74ab28c86fb2fe27575",
+  "reason": "effect_allowed",
+  "step_index": 0,
+  "workflow_id": "wf.e2e.o1@1.0"
+ }
+}

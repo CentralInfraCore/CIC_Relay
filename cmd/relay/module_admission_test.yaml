@@ -1,0 +1,372 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: admFixture
+  kind: struct
+  description: admFixture is one enveloped release of module adm.mod@1.0.0 with the
+    given manifest and wasm, signed by the test module signer, and a prod trust context
+    in which that signer is a module:sign authority.
+  implements: []
+  references:
+  - cabinet.Cabinet
+- name: countingFS
+  kind: struct
+  description: 'countingFS serves a MapFS but counts content reads per path and, for
+    the paths in swap, serves the replacement from the second read on: an attacker
+    who swaps a file after the relay read it once.'
+  implements: []
+  references: []
+- name: newAdmFixture
+  kind: func
+  description: newAdmFixture builds the fixture; the registry hooks are installed
+    for the test's lifetime.
+  references: []
+  calls: []
+- name: setWasm
+  kind: func
+  description: setWasm replaces the module's wasm and rewrites wasmDigest, wasmSize
+    and buildHash to match it.
+  references: []
+  calls:
+  - Replace
+- name: load
+  kind: method
+  receiver: admFixture
+  description: load runs loadModule on the fixture's current files and returns the
+    captured log and the error.
+  references:
+  - logrus.New
+  - logrus.JSONFormatter
+  calls:
+  - SetFormatter
+  - SetOutput
+  - logrus.New
+- name: resign
+  kind: method
+  receiver: admFixture
+  description: resign re-signs the current files (after a legitimate rebuild) with
+    the fixture signer.
+  references: []
+  calls: []
+- name: registered
+  kind: method
+  receiver: admFixture
+  description: registered reports whether adm.mod@1.0.0 is in the cabinet.
+  references: []
+  calls:
+  - GetModule
+- name: requireRejected
+  kind: func
+  description: requireRejected asserts the load failed with code, left no module and
+    no grant.
+  references:
+  - require.Error
+  - assert.Equal
+  - assert.False
+  calls:
+  - assert.Equal
+  - assert.False
+  - require.Error
+- name: TestAdmission_AC10_PositiveAuthenticated
+  kind: func
+  description: 'AC-162-10 (positive control of every negative below): a valid envelope,
+    authorised signer, verified chain and provenance and matching digests → authenticated,
+    capability bound to (module_id, envelope_digest).'
+  references:
+  - require.NoError
+  - assert.Contains
+  - assert.True
+  - assert.Equal
+  - cabinet.InstanceIdentity
+  - assert.NoError
+  calls:
+  - Checksum
+  - GetModule
+  - assert.Contains
+  - assert.Equal
+  - assert.NoError
+  - assert.True
+  - require.NoError
+- name: TestAdmission_AC01_ForeignBuildWithValidCertificate
+  kind: func
+  description: 'AC-162-01: a module built by someone else, presented with the genuine
+    (valid, trusted) certificate: the envelope names the right digests and key, but
+    the signature is not by the certificate''s key.'
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: TestAdmission_AC02_ManifestEditedAfterSigning
+  kind: func
+  description: 'AC-162-02: the manifest edited after signing (wider egress, an extra
+    secret) → MANIFEST_DIGEST_MISMATCH.'
+  references: []
+  calls: []
+- name: TestAdmission_AC03_AC16_WasmReplaced
+  kind: func
+  description: 'AC-162-03 / AC-162-16: the wasm replaced while the manifest and the
+    certificate stay → WASM_DIGEST_MISMATCH, on every route the replacement can take.'
+  references: []
+  calls: []
+- name: TestAdmission_AC09_BuildHashOnTheLoadPath
+  kind: func
+  description: 'AC-162-09 (functional half; the call path is in the report): verifyBuildHash
+    runs on the load path. A signed release whose metadata.buildHash does not name
+    the raw wasm is rejected even though wasmDigest and the envelope agree; a release
+    without buildHash is rejected too.'
+  references:
+  - require.Error
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - assert.Equal
+  - require.Error
+- name: TestAdmission_AC04_ReusedModuleIDDoesNotInherit
+  kind: func
+  description: 'AC-162-04: a reused module ID with another digest does not inherit
+    the earlier module''s capability: neither a running instance of the old artifact
+    nor the new artifact under the old identity is authorised.'
+  references:
+  - require.NoError
+  - cabinet.InstanceIdentity
+  - require.True
+  - require.NotEqual
+  - assert.False
+  - assert.Error
+  - assert.Contains
+  - assert.Equal
+  calls:
+  - Checksum
+  - GetModule
+  - assert.Contains
+  - assert.Equal
+  - assert.Error
+  - assert.False
+  - require.NoError
+  - require.NotEqual
+  - require.True
+- name: TestAdmission_AC05_UnknownEnvelopeVersion
+  kind: func
+  description: 'AC-162-05: an unknown envelope_version → ENVELOPE_VERSION (even when
+    it is signed).'
+  references: []
+  calls: []
+- name: TestAdmission_AC06_KeyIDNotTheCertificateKey
+  kind: func
+  description: 'AC-162-06: the envelope''s key_id is not the presented certificate''s
+    key → KEY_MISMATCH.'
+  references: []
+  calls: []
+- name: TestAdmission_AC07_MissingSignatureInProd
+  kind: func
+  description: 'AC-162-07: in prod, a cic-flow module without its .sig is rejected,
+    never loaded without its capability; without any envelope it is rejected too (V6).
+    In dev the envelope-less module loads as transitional, with no capability.'
+  references:
+  - require.NoError
+  - assert.Contains
+  - assert.False
+  calls:
+  - assert.Contains
+  - assert.False
+  - require.NoError
+- name: TestAdmission_AC08_DevOptIn
+  kind: func
+  description: 'AC-162-08: the dev opt-in admits a module with NO signature material
+    only: trust_state dev, no capability, the registry is never asked. Envelope or
+    .sig without a certificate is not "unsigned" and is refused.'
+  references:
+  - require.NoError
+  - assert.Contains
+  - assert.NotContains
+  - assert.False
+  - assert.True
+  calls:
+  - assert.Contains
+  - assert.False
+  - assert.NotContains
+  - assert.True
+  - require.NoError
+- name: TestAdmission_AC11_Issue155FailClosed
+  kind: func
+  description: 'AC-162-11: #155 does not regress: with a valid envelope present, a
+    garbage or unparsable certificate, an untrusted chain or no trust store is still
+    refused (the certificate is checked before the envelope).'
+  references:
+  - require.Error
+  - assert.False
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - assert.False
+  - require.Error
+- name: TestAdmission_AC12_AC17_ExecutedRepresentationDiffers
+  kind: func
+  description: 'AC-162-12 / AC-162-17: the executed (stripped) representation differs
+    from executed_wasm_sha256 while the raw digest matches → EXECUTED_DIGEST_MISMATCH.'
+  references:
+  - require.NotEqual
+  - require.NoError
+  - assert.Equal
+  calls:
+  - GetModule
+  - assert.Equal
+  - require.NoError
+  - require.NotEqual
+- name: TestAdmission_AC13_SignerNotAuthorized
+  kind: func
+  description: 'AC-162-13: a key present in a valid certificate but without the module:sign
+    authority → SIGNER_NOT_AUTHORIZED.'
+  references: []
+  calls: []
+- name: TestAdmission_AC15_MetadataSignStaysSeparate
+  kind: func
+  description: 'AC-162-15: metadata.sign stays its own claim. The relay neither treats
+    it as an envelope (with it but without an envelope a prod cic-flow module is still
+    rejected) nor lets the envelope free it (editing it after the envelope was signed
+    is a manifest change).'
+  references:
+  - require.NoError
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.NoError
+- name: ReadFile
+  kind: method
+  receiver: countingFS
+  description: ReadFile counts the read and serves the swapped content after the first
+    read.
+  references: []
+  calls:
+  - Lock
+  - ReadFile
+  - Unlock
+- name: Open
+  kind: method
+  receiver: countingFS
+  description: Open counts an open of a file as a read too (fs.ReadFile falls back
+    to Open on other filesystems).
+  references: []
+  calls:
+  - Lock
+  - Open
+  - Unlock
+- name: TestAdmission_AC14_AC19_SingleReadNoTOCTOU
+  kind: func
+  description: 'AC-162-14 / 14b / 19: one read. Through the production walker (loadComponentsFromFS)
+    the manifest and the wasm are each read exactly once; the bytes hashed are the
+    bytes stored and the bytes the capability parse sees, so a file swapped after
+    that read can not get in.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Zero
+  - require.True
+  calls:
+  - GetModule
+  - assert.Equal
+  - assert.Zero
+  - require.NoError
+  - require.True
+- name: TestAdmission_EnvelopeAndSignatureForm
+  kind: func
+  description: 'The envelope file''s strict form (V1): every malformed envelope is
+    ENVELOPE_INVALID (or ENVELOPE_VERSION) before any signature work, and the signature
+    file''s form is SIG_ENCODING.'
+  references:
+  - require.NoError
+  calls:
+  - EncodeToString
+  - Replace
+  - require.NoError
+- name: TestAdmission_EnvelopeModuleIDMustMatchManifest
+  kind: func
+  description: 'The envelope module_id must be the manifest''s module ID: a valid
+    signature over another module''s identity does not admit this one.'
+  references: []
+  calls: []
+- name: TestAdmission_Ed25519Signer
+  kind: func
+  description: An Ed25519 signer is admitted the same way (ENV-02 allowlist).
+  references:
+  - require.NoError
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - require.NoError
+- name: TestAdmission_AC18_StripSeamNotInProductionBuild
+  kind: func
+  description: 'AC-162-18 (default build): SetStripWasmModuleFunc is not part of any
+    production build of core/cabinet, and no non-test file there assigns the transformation.
+    (The tagged half, cic_test_seams, is admission_strip_seam_test.go.)'
+  references:
+  - require.NoError
+  - assert.NotEqual
+  - assert.Zero
+  - assert.Contains
+  - assert.NotContains
+  calls:
+  - ImportDir
+  - assert.Contains
+  - assert.NotContains
+  - assert.NotEqual
+  - assert.Zero
+  - require.NoError
+- name: TestAdmission_RSASignerCanNotSignAnEnvelope
+  kind: func
+  description: 'The testdata module signer is RSA: no envelope it could sign is admissible
+    (ENV-02 allowlist; the declared algorithm must match the certificate key type),
+    so an RSA-keyed release is refused with ALG_MISMATCH.'
+  references:
+  - require.NoError
+  calls:
+  - EncodeToString
+  - require.NoError
+- name: TestModuleSignAuthorities_ParseAndLoad
+  kind: func
+  description: 'The pinned module-sign authority bindings (V2b): strict parsing, and
+    the start-up loader.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Error
+  - assert.Nil
+  - assert.True
+  calls:
+  - assert.Equal
+  - assert.Error
+  - assert.Nil
+  - assert.True
+  - require.NoError
+- name: TestBootstrapTrust_RecordsTrustMode
+  kind: func
+  description: 'bootstrapTrust records the trust mode in the assets: the V6 rule reads
+    it.'
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.False
+  - assert.True
+  calls:
+  - assert.Equal
+  - assert.False
+  - assert.True
+  - require.NoError
+- name: wasmWithCustom
+  kind: var
+  description: 'wasmWithCustom is a minimal module with one custom section ("x", payload
+    0xaa): its executed (stripped) representation differs from the raw bytes.'
+  references: []
+- name: gitOnlyManifest
+  kind: const
+  description: gitOnlyManifest is a manifest that grants git status (no cic-flow import).
+  references: []

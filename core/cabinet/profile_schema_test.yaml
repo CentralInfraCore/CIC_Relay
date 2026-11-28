@@ -1,0 +1,154 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+- test
+- validator
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: schemaBodies
+  kind: type
+  description: schemaBodies is a PayloadValidator over compiled schemalite bodies,
+    keyed by exactly (id, digest).
+  references:
+  - schemalite.Schema
+- name: ValidatePayload
+  kind: method
+  receiver: schemaBodies
+  description: ''
+  references: []
+  calls:
+  - Validate
+- name: compiled
+  kind: func
+  description: ''
+  references:
+  - schemalite.Schema
+  - schemalite.Compile
+  - require.NoError
+  calls:
+  - require.NoError
+  - schemalite.Compile
+- name: referenceBodies
+  kind: func
+  description: 'referenceBodies gives every schema of the reference profile a body:
+    requests are objects that, for observe and invoke, require a field; responses
+    require a "data" string.'
+  references: []
+  calls: []
+- name: schemaSvc
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestSchemaValidationIsMandatoryOnTheProfilePath
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  calls:
+  - AssertNotCalled
+- name: TestARequestThatDoesNotConformIsRejectedBeforeExecution
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.Len
+  - assert.Equal
+  - assert.Nil
+  - require.NoError
+  calls:
+  - AssertNotCalled
+  - ValidateArtifactV2
+  - assert.Equal
+  - assert.Nil
+  - require.Len
+  - require.NoError
+- name: TestAConformingRequestAndResponsePass
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  calls:
+  - 'On'
+  - Once
+  - Return
+  - require.NoError
+- name: TestAResponseThatDoesNotConformFailsTheStepAndIsNotReturned
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.Nil
+  - require.Len
+  - assert.Equal
+  - require.NotNil
+  calls:
+  - 'On'
+  - Once
+  - Return
+  - assert.Equal
+  - assert.Nil
+  - require.Len
+  - require.NotNil
+- name: TestAMissingOrMismatchedSchemaBodyFailsClosed
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  calls:
+  - AssertNotCalled
+  - 'On'
+  - Once
+  - Return
+- name: TestAGuestErrorIsNotAResponseSchemaFailure
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.Error
+  - assert.False
+  calls:
+  - 'On'
+  - Once
+  - Return
+  - assert.False
+  - require.Error
+- name: TestTheProfileTimeoutInterruptsARunningGuest
+  kind: func
+  description: 'INT-07: the profile timeout actually interrupts a guest that does
+    not return. A guest that spins for ~2e9 iterations would run far past the timeout;
+    the call must be cut short by the profile''s 200 ms, not by the (much longer)
+    default.'
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Less
+  - assert.True
+  - assert.GreaterOrEqual
+  calls:
+  - Close
+  - ID
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - NewModuleDescriptor
+  - NewModuleProfileBinding
+  - NewWorkflow
+  - Put
+  - PutWorkflow
+  - Setx
+  - WithGenericDispatch
+  - WithModuleProfileBindings
+  - WithPayloadValidator
+  - assert.GreaterOrEqual
+  - assert.Less
+  - assert.True
+  - require.Error
+  - require.NoError

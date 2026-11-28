@@ -341,7 +341,7 @@ func TestLoadModule_ConcurrentLoadsOfOneIDLeaveGrantAndArtifactTogether(t *testi
 	reg := newCICFlowRegistry(nil, &stubDoer{})
 	defer hooks(reg)()
 	svc := newCabinetForTest(t)
-	const id = "gitmod@1.0"
+	const id = "gitmod@1.0.0"
 	pki := loadedPKIWithSource(t)
 	fsX, yX := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra"}`))
 	fsY, yY := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra" }`))
@@ -406,9 +406,9 @@ func TestLoadModule_LoadsOfOneIDDoNotInterleave(t *testing.T) {
 	require.NoError(t, <-firstDone)
 	require.NoError(t, <-secondDone)
 
-	stored, err := svc.GetModule("gitmod@1.0")
+	stored, err := svc.GetModule("gitmod@1.0.0")
 	require.NoError(t, err)
-	assert.Equal(t, stored.Checksum(), reg.git["gitmod@1.0"].artifact, "grant and artifact belong to the same (the second) load")
+	assert.Equal(t, stored.Checksum(), reg.git["gitmod@1.0.0"].artifact, "grant and artifact belong to the same (the second) load")
 }
 
 // A module whose artifact can not be built gets no grant, and loses the one it had.
@@ -417,7 +417,7 @@ func TestLoadModule_NoArtifactNoGrant(t *testing.T) {
 	defer hooks(reg)()
 	svc := newCabinetForTest(t)
 	pki := loadedPKIWithSource(t)
-	const id = "gitmod@1.0"
+	const id = "gitmod@1.0.0"
 
 	good, yGood := gitModuleFS(t, guestWithStartSection(`{"repo_id":"infra"}`))
 	require.NoError(t, loadModule(context.Background(), svc, good, "m.yaml", yGood, pki, int64(16*1024*1024), newDiscardLogger()))
@@ -451,8 +451,8 @@ func TestGitCapabilityLifecycle_LoadThenInstantiate(t *testing.T) {
 	require.NoError(t, err)
 	defer mgr.Close(ctx)
 
-	const id = "gitmod@1.0"
-	verified, unverified := loadedPKIWithSource(t), buildLoadedPKIAssets(t)
+	const id = "gitmod@1.0.0"
+	verified, unverified := loadedPKIWithSource(t), loadedPKIWithoutSource(t)
 	load := func(wasm []byte, pki *PKIAssets) {
 		fsys, y := gitModuleFS(t, wasm)
 		require.NoError(t, loadModule(ctx, svc, fsys, "m.yaml", y, pki, int64(16*1024*1024), newDiscardLogger()))
@@ -468,8 +468,11 @@ func TestGitCapabilityLifecycle_LoadThenInstantiate(t *testing.T) {
 	assert.Equal(t, 1, servedOnStart(), "verified load: the instance's start section is served")
 	load(y, verified)
 	assert.Equal(t, 1, servedOnStart(), "verified reload with another artifact: served, under the new artifact's grant")
-	load(x, unverified)
-	assert.Equal(t, 0, servedOnStart(), "unverified reload: no grant, nothing is served, nothing is inherited")
+	fsysU, yU := gitModuleFS(t, x)
+	errU := loadModule(ctx, svc, fsysU, "m.yaml", yU, unverified, int64(16*1024*1024), newDiscardLogger())
+	require.Error(t, errU, "a verified envelope without provenance is a failed authenticated admission")
+	assert.Equal(t, codeProvenanceUnverified, admissionCode(errU), errU.Error())
+	assert.Equal(t, 0, servedOnStart(), "rejected unverified reload: no grant, nothing is served, nothing is inherited")
 	load(y, verified)
 	assert.Equal(t, 1, servedOnStart(), "verified again: served")
 
@@ -575,7 +578,7 @@ func newLifecycleEnv(t *testing.T) *lifecycleEnv {
 	require.NoError(t, err)
 	t.Cleanup(func() { mgr.Close(ctx) })
 	return &lifecycleEnv{t: t, ctx: ctx, reg: reg, svc: svc, mgr: mgr, ops: ops,
-		wasm: callingGuest(`{"repo_id":"infra"}`), pki: loadedPKIWithSource(t), unver: buildLoadedPKIAssets(t)}
+		wasm: callingGuest(`{"repo_id":"infra"}`), pki: loadedPKIWithSource(t), unver: loadedPKIWithoutSource(t)}
 }
 
 func (e *lifecycleEnv) load(manifest string, pki *PKIAssets) {
@@ -598,7 +601,7 @@ func (e *lifecycleEnv) call(h interface {
 // one, whether wider or narrower, and an instance created after is served under the new one.
 func TestGitCapability_SameArtifactDifferentManifest(t *testing.T) {
 	e := newLifecycleEnv(t)
-	const id = "gitmod@1.0"
+	const id = "gitmod@1.0.0"
 
 	e.load(manifestStatusOnly, e.pki)
 	old, err := e.mgr.NewHostInstance(e.ctx, id)
@@ -630,7 +633,7 @@ func TestGitCapability_SameArtifactDifferentManifest(t *testing.T) {
 // an instance created in that window carries no binding and stays refused, even for the same artifact.
 func TestGitCapability_StagedGrantAuthorisesNothingUntilStored(t *testing.T) {
 	e := newLifecycleEnv(t)
-	const id = "gitmod@1.0"
+	const id = "gitmod@1.0.0"
 	e.load(manifestStatusOnly, e.pki)
 
 	held, release := make(chan struct{}), make(chan struct{})
@@ -666,7 +669,7 @@ func TestGitCapability_StagedGrantAuthorisesNothingUntilStored(t *testing.T) {
 // commitGrant activates only the grant staged for exactly that artifact.
 func TestGitGrant_CommitIsBoundToTheStagedArtifact(t *testing.T) {
 	reg := newCICFlowRegistry(nil, &stubDoer{})
-	require.NoError(t, reg.stageVerified("m@1", []byte(gitManifestYAML), "art-1"))
+	require.NoError(t, reg.stageVerified("m@1", []byte(gitManifestYAML), "art-1", testManifestBinding([]byte(gitManifestYAML))))
 	i := inst("m@1", "art-1")
 	assert.Error(t, reg.authorizeGit(i, "status", gitAuthRequest{RepoID: "infra"}), "staged: not active")
 	reg.commitGrant("m@1", "some-other-artifact")

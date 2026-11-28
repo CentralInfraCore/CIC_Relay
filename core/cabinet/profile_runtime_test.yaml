@@ -1,0 +1,32 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: TestSetModuleProfileSetsAndClearsTheBinding
+  kind: func
+  description: 'SetModuleProfile is the runtime registration of an admitted binding
+    (INT-05): set marks the module as profile-bound and required, nil clears both.'
+  references:
+  - require.NoError
+  - assert.False
+  - require.True
+  - assert.Same
+  - assert.True
+  calls:
+  - ModuleProfile
+  - NewCabinetService
+  - NewMemModuleStore
+  - NewMemSchemaStore
+  - NewMemWorkflowStore
+  - SetModuleProfile
+  - assert.False
+  - assert.Same
+  - assert.True
+  - require.NoError
+  - require.True

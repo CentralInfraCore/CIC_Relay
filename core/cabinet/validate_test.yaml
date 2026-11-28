@@ -26,7 +26,6 @@ objects:
   - require.Error
   calls:
   - Error
-  - SetStripWasmModuleFunc
   - canonicaljson.SetToJSONMock
   - require.Error
   - require.NoError

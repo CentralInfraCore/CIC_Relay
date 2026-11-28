@@ -1,0 +1,181 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: envelopeSigner
+  kind: struct
+  description: 'envelopeSigner is a test signer: a certificate, its private key and
+    the derived key_id.'
+  implements: []
+  references: []
+- name: testModuleSigner
+  kind: func
+  description: 'testModuleSigner returns the process-wide test module signer: a fresh
+    ECDSA P-256 code-signing leaf under its own test root (TEST KEY). The testdata
+    module signer (pki/signers/sources/module/ee.pem) is RSA, which the envelope''s
+    algorithm allowlist (ENV-02: ecdsa-p256-sha256, ed25519) does not admit, so it
+    can not sign an envelope; see TestAdmission_RSASignerCanNotSignAnEnvelope. authorize
+    also adds this root to the trust store.'
+  references: []
+  calls: []
+- name: newECDSATestSigner
+  kind: func
+  description: newECDSATestSigner issues an ECDSA P-256 code-signing leaf under a
+    fresh ECDSA root.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: selfSignedTestRoot
+  kind: func
+  description: selfSignedTestRoot creates a CA certificate for key.
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - require.NoError
+- name: issueCodeSigningLeaf
+  kind: func
+  description: issueCodeSigningLeaf issues a code-signing leaf for pub under root
+    and returns it as PEM.
+  references:
+  - require.NoError
+  calls:
+  - Add
+  - require.NoError
+- name: newEnvelopeSigner
+  kind: func
+  description: newEnvelopeSigner wraps a certificate PEM and its private key.
+  references:
+  - require.NotNil
+  - require.NoError
+  calls:
+  - require.NoError
+  - require.NotNil
+- name: sign
+  kind: method
+  receiver: envelopeSigner
+  description: sign returns the detached .sig file content (one base64 line + LF)
+    over env's signed bytes.
+  references:
+  - require.NoError
+  calls:
+  - EncodeToString
+  - require.NoError
+- name: authorize
+  kind: method
+  receiver: envelopeSigner
+  description: authorize pins s as a module:sign authority in assets and adds its
+    test root to the trust store (and to the CICSourceCA pool when one is loaded).
+  references: []
+  calls:
+  - AddCert
+- name: executedOf
+  kind: func
+  description: executedOf is the executed representation the relay derives from raw
+    (the descriptor's WasmCode). A wasm the relay can not decode has none; the raw
+    bytes stand in so that a fixture for an unbuildable module can be signed.
+  references:
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  calls:
+  - cabinet.NewModuleDescriptor
+- name: envelopeFor
+  kind: func
+  description: envelopeFor builds the envelope of the module at yamlPath in fsys,
+    from the bytes in fsys.
+  references:
+  - require.NoError
+  - yaml.Unmarshal
+  calls:
+  - require.NoError
+  - yaml.Unmarshal
+- name: writeEnvelope
+  kind: func
+  description: writeEnvelope writes env and its signature by s beside the module;
+    it returns the envelope digest.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: addEnvelope
+  kind: func
+  description: addEnvelope signs the module at yamlPath with s (after the optional
+    mutate) and writes the envelope, its signature and the signer certificate (<base>.pem)
+    into fsys. It returns the envelope digest.
+  references: []
+  calls: []
+- name: hexSHA
+  kind: func
+  description: hexSHA is the lower-hex sha256 of b.
+  references: []
+  calls: []
+- name: testManifestBinding
+  kind: func
+  description: 'testManifestBinding is the envelope digest stand-in of registry-level
+    tests that publish a grant without loading a module (publishVerified): the hex
+    digest of the manifest, so instUnder keeps naming the binding.'
+  references: []
+  calls: []
+- name: registerVerified
+  kind: method
+  receiver: cicFlowRegistry
+  description: 'registerVerified publishes an active grant with no artifact and no
+    envelope identity (it authorises nothing): the registry-level tests use it to
+    exercise manifest parsing and import checks.'
+  references: []
+  calls: []
+- name: publishVerified
+  kind: method
+  receiver: cicFlowRegistry
+  description: publishVerified publishes an active grant for artifact under the testManifestBinding
+    identity.
+  references: []
+  calls: []
+- name: lookup
+  kind: method
+  receiver: cicFlowRegistry
+  description: lookup returns the cic-flow deps recorded for moduleID, whatever their
+    state (registry-level inspection only; the host functions use lookupFor).
+  references: []
+  calls:
+  - RLock
+  - RUnlock
+- name: ed25519TestSigner
+  kind: func
+  description: ed25519TestSigner returns a fresh ECDSA root and an Ed25519 code-signing
+    leaf issued by it, as a signer.
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: loadedPKIWithoutSource
+  kind: func
+  description: 'loadedPKIWithoutSource is a trust store in which the test module signer''s
+    chain verifies and the signer holds module:sign, but no CICSourceCA provenance
+    anchor is loaded: an enveloped module loads as transitional.'
+  references: []
+  calls: []
+- name: instOf
+  kind: func
+  description: instOf is the identity of an instance of artifact started while the
+    release in fsys (its envelope) was in force.
+  references:
+  - cabinet.InstanceIdentity
+  - require.NoError
+  calls:
+  - require.NoError
+- name: testSignerOnce
+  kind: var
+  description: ''
+  references: []
+- name: testSigner
+  kind: var
+  description: ''
+  references: []

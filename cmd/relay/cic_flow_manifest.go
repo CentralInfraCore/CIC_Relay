@@ -126,7 +126,14 @@ type moduleProject struct {
 		CICSign   string `yaml:"cicSign"` // verified in R3b (pki_verify.go)
 	} `yaml:"metadata"`
 	ABI struct {
-		Imports []struct {
+		// Profile is the ABI profile the module pins (abi.profile {id, digest}); empty: no profile (legacy dispatch).
+		Profile struct {
+			ID     string `yaml:"id"`
+			Digest string `yaml:"digest"`
+		} `yaml:"profile"`
+		// Operations is the module's declared operation set: a subset of the profile's.
+		Operations []string `yaml:"operations"`
+		Imports    []struct {
 			Module    string   `yaml:"module"`
 			Functions []string `yaml:"functions"`
 		} `yaml:"imports"`
@@ -285,6 +292,19 @@ func (p *moduleProject) gitImports() map[string]bool {
 // at call time.
 func (p *moduleProject) checkImportsWithinManifest() error {
 	imports := p.cicFlowImports()
+	if imports["send"] {
+		// send is the host-side sign+send capability: the guest must not also hold the raw primitives,
+		// or it could build its own Authorization header around the host's back.
+		if imports["sign"] || imports["actuate"] {
+			return fmt.Errorf("module imports cic-flow.send together with cic-flow.sign/actuate: a send module may not import the raw primitives")
+		}
+		if !p.CapabilityManifest.grantsSign() {
+			return fmt.Errorf("module imports cic-flow.send but declares no secrets entry with ops:[sign]")
+		}
+		if len(p.CapabilityManifest.Egress) == 0 {
+			return fmt.Errorf("module imports cic-flow.send but declares no egress")
+		}
+	}
 	if imports["sign"] && !p.CapabilityManifest.grantsSign() {
 		return fmt.Errorf("module imports cic-flow.sign but declares no secrets entry with ops:[sign]")
 	}

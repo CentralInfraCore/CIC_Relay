@@ -1,0 +1,74 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestAdmissionReview_F1_StrictEnvelopeReading
+  kind: func
+  description: 'F1: the envelope is read strictly. The same bytes must mean the same
+    thing to the producer and to the consumer.'
+  references:
+  - require.NoError
+  - require.GreaterOrEqual
+  - require.NotEqual
+  - require.Error
+  - assert.Equal
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - assert.Equal
+  - require.Error
+  - require.GreaterOrEqual
+  - require.NoError
+  - require.NotEqual
+- name: TestAdmissionReview_F4_StrictAuthoritiesReading
+  kind: func
+  description: 'F4: the authority bindings are read with the same strictness, including
+    the end of the input.'
+  references:
+  - require.NoError
+  - assert.True
+  - require.NotEqual
+  - require.Error
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - assert.True
+  - require.Error
+  - require.NoError
+  - require.NotEqual
+- name: TestAdmissionReview_F2_FailedProvenanceIsRejectedNotTransitional
+  kind: func
+  description: 'F2: an envelope that verifies but whose signer chain has no CICSourceCA
+    provenance is a FAILED authenticated admission: rejected, never quietly downgraded
+    to transitional (D-1). The legacy envelope-less transitional path is a different
+    case and is unchanged (see TestAdmission_AC07_MissingSignatureInProd).'
+  references: []
+  calls: []
+- name: wasmImporting
+  kind: func
+  description: wasmImporting builds a minimal wasm module that imports one function
+    (module/name) of type () -> ().
+  references: []
+  calls: []
+- name: TestAdmissionReview_F3_ActualImportsMustBeDeclared
+  kind: func
+  description: 'F3: what the wasm actually imports must be declared. A declaration
+    alone decided V6 and the capability before.'
+  references:
+  - require.NoError
+  - assert.True
+  calls:
+  - assert.True
+  - require.NoError
+- name: cicFlowSignOnlyManifest
+  kind: const
+  description: ''
+  references: []
