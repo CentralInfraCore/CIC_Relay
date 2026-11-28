@@ -124,6 +124,9 @@ type cabinetService struct {
 	// profileRequired lists the modules whose manifest declares an ABI profile (abi.profile): with generic
 	// dispatch on they run only through an admitted binding, never through the legacy dispatch.
 	profileRequired map[string]bool
+
+	// traceV2, when set, records a ProofTrace V2 artifact for every run (WithTraceV2); nil = off, V1 only.
+	traceV2 *traceV2Config
 }
 
 // CabinetOption is a functional option for configuring a cabinetService.
@@ -236,6 +239,23 @@ func NewCabinetService(ctx context.Context, schemas SchemaStore, modules ModuleS
 // Setx executes a workflow based on the function-oriented model, resolving components, validating input schemas,
 // dispatching to native or WASM implementations, and recording ProofTrace steps with input/output hashing.
 func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse, error) {
+	if c.traceV2 == nil {
+		return c.setxRun(ctx, in, nil)
+	}
+	// V2 trace recording is on: the run's result and error are returned exactly as without it; the V2 artifact is an
+	// additional evidence stream for the sink, for a failed run too (trace-on-failure).
+	rec := &traceV2Recorder{}
+	resp, err := c.setxRun(ctx, in, rec)
+	if art, aerr := rec.build(ctx, c.traceV2, in.WorkflowID, in.SourceDigest, err); aerr != nil {
+		logrus.WithFields(logrus.Fields{"workflow_id": in.WorkflowID, "error": aerr}).Warn("ProofTrace V2 not recorded")
+	} else {
+		c.traceV2.sink(ctx, art)
+	}
+	return resp, err
+}
+
+// setxRun is the execution itself; rec (nil when V2 recording is off) is told how far each step got.
+func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *traceV2Recorder) (*SetResponse, error) {
 	// 1. Resolve the workflow itself.
 	workflow, err := c.GetWorkflow(in.WorkflowID)
 	if err != nil {
@@ -247,6 +267,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	if err != nil {
 		return nil, fmt.Errorf("workflow %q: %w", workflow.ID(), err)
 	}
+	rec.setGraph(graph.Steps)
 
 	// 2b. The authorization decision, at the execution boundary: before any step runs, so a
 	// refused call has no side effects. The set of protected components is the operator's.
@@ -265,11 +286,14 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 	traceSteps := make([]ProofTraceStep, 0, len(graph.Steps))
 
 	for _, step := range graph.Steps {
+		rec.stepBegin(step)
 		// 3a. Resolve the component.
 		moduleDesc, err := c.GetModule(step.ComponentID)
 		if err != nil {
 			return nil, fmt.Errorf("workflow %q failed: could not resolve component %q: %w", workflow.ID(), step.ComponentID, err)
 		}
+
+		rec.stepModule(moduleDesc)
 
 		// 3b. Resolve input from the execution context.
 		inputData, ok := execCtx.Get(step.InputKey)
@@ -288,7 +312,10 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			return nil, fmt.Errorf("failed to hash input at step %q: %w", step.Raw, err)
 		}
 
+		rec.stepInput(inputHash)
+
 		// 3e. Dispatch the call based on the module type.
+		rec.stepDispatched()
 		var result interface{}
 		var execErr error
 
@@ -399,6 +426,7 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 		if err != nil {
 			return nil, fmt.Errorf("failed to hash output at step %q: %w", step.Raw, err)
 		}
+		rec.stepDone(outputHash)
 		traceSteps = append(traceSteps, ProofTraceStep{
 			Name:       step.Raw,
 			Module:     step.ComponentID,

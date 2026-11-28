@@ -1,0 +1,229 @@
+---
+package: o1verify
+description: 'Package o1verify is an independent verifier of ProofTrace V2 artifacts
+  (O-1 WP-05, AC-V2-08/10/12/13/15). Independence is structural, not a claim: this
+  package imports nothing from core/cabinet (the producer), reads the artifact as
+  generic JSON, and derives the CICCHAINv2 hash input and the CICHOSTINTv1 list digest
+  from its own code. Its agreement with the producer is therefore evidence of two
+  implementations reading the same contract, checked against the shared vectors, not
+  of shared code. It makes two separate assertions (V2-02): EvidenceVerdict (the evidence
+  is authentic and a complete representation of what happened, whatever happened)
+  and Acceptance (the operation met the mandatory policy and evidence conditions).
+  The Relay cannot make either about its own artifact. What a schema cannot prove
+  is proved here: the chain hash is recomputed, the host-interaction list is recomputed
+  from the records and compared, and a persistence claim counts only if its attestation
+  is verified by a verifier the caller supplies (the trust input), against this very
+  artifact''s chain hash. The verifier''s own identity (VerifierInfo.ImplementationDigest)
+  is a DECLARATION; that the declared implementation is the one that ran is not proved
+  by this package and must be established separately (AC-V2-13).'
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: Dimensions
+  kind: struct
+  description: Dimensions are the four independent result dimensions.
+  implements: []
+  references: []
+- name: VerifierInfo
+  kind: struct
+  description: VerifierInfo identifies the verifier. ImplementationDigest is a declaration,
+    not a proof (see the package doc).
+  implements: []
+  references: []
+- name: Subject
+  kind: struct
+  description: Subject names what was verified.
+  implements: []
+  references: []
+- name: Result
+  kind: struct
+  description: Result is the VerificationResult (verification-result.schema.json).
+  implements: []
+  references: []
+- name: Attestation
+  kind: struct
+  description: Attestation is the persistence attestation as carried by the persistence
+    object.
+  implements: []
+  references: []
+- name: Persistence
+  kind: struct
+  description: Persistence is the persistence object kept outside the artifact (prooftrace-v2-persistence.schema.json).
+  implements: []
+  references: []
+- name: Options
+  kind: struct
+  description: Options are the inputs of one verification besides the artifact itself.
+  implements: []
+  references: []
+- name: AttestationVerifier
+  kind: interface
+  description: 'AttestationVerifier is the verifier''s trust input: it checks, cryptographically
+    and against the caller''s pinned recorder keys, that the attestation really binds
+    chainHash. A nil verifier means the attestation cannot be checked.'
+  references: []
+  methods:
+  - VerifyAttestation
+- name: sha
+  kind: func
+  description: sha is a small helper of the ProofTrace V2 implementation.
+  references: []
+  calls: []
+- name: walk
+  kind: func
+  description: walk reads a dotted path from a decoded JSON object; absent and null
+    are both (nil, false).
+  references: []
+  calls: []
+- name: scalar
+  kind: func
+  description: 'scalar renders one hash-input value: null for absent/null, the string,
+    or the decimal integer; anything else (a bool, a float, a container, a line break,
+    a non-ASCII byte) cannot be represented and is refused.'
+  references: []
+  calls:
+  - String
+- name: decode
+  kind: func
+  description: decode is a small helper of the ProofTrace V2 implementation.
+  references: []
+  calls:
+  - Decode
+  - Token
+  - UseNumber
+- name: ChainInput
+  kind: func
+  description: ChainInput derives the CICCHAINv2 hash input of an artifact document
+    from its own reading of the JSON.
+  references: []
+  calls: []
+- name: chainInput
+  kind: func
+  description: chainInput is a small helper of the ProofTrace V2 implementation.
+  references: []
+  calls: []
+- name: ChainHash
+  kind: func
+  description: ChainHash is sha256 of the hash input, in the sha256:<hex> form.
+  references: []
+  calls:
+  - ChainInput
+- name: InteractionsDigest
+  kind: func
+  description: InteractionsDigest recomputes the CICHOSTINTv1 list digest from the
+    records (sequence contiguous from 0).
+  references: []
+  calls: []
+- name: Verify
+  kind: func
+  description: 'Verify checks one artifact document and returns the VerificationResult.
+    It never panics on hostile input: every refusal is a named problem on a FAILED
+    verification.'
+  references: []
+  calls:
+  - ChainHash
+  - Int64
+  - InteractionsDigest
+- name: orUnknown
+  kind: func
+  description: orUnknown is a small helper of the ProofTrace V2 implementation.
+  references: []
+  calls: []
+- name: checkStep
+  kind: func
+  description: checkStep applies the V2-01 identity rules and the authenticated /
+    authorization-decision rules.
+  references: []
+  calls:
+  - MatchString
+- name: checkPersistence
+  kind: func
+  description: checkPersistence decides the evidence dimension. A persistence claim
+    counts only if it names this artifact's chain hash and, when it says "persisted",
+    its attestation is verified by the caller's trust input.
+  references: []
+  calls:
+  - Error
+  - VerifyAttestation
+- name: finish
+  kind: func
+  description: finish derives verification, the evidence verdict and the acceptance
+    from the collected findings.
+  references: []
+  calls: []
+- name: digestRE
+  kind: var
+  description: digestRE is a package-level lookup table or pattern of the ProofTrace
+    V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: rejCodeRE
+  kind: var
+  description: rejCodeRE is a package-level lookup table or pattern of the ProofTrace
+    V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: stepCommon
+  kind: var
+  description: stepCommon is a package-level lookup table or pattern of the ProofTrace
+    V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: executedFld
+  kind: var
+  description: executedFld is a package-level lookup table or pattern of the ProofTrace
+    V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: recordFld
+  kind: var
+  description: recordFld is a package-level lookup table or pattern of the ProofTrace
+    V2 contract (04-prooftrace-v2-wire.md).
+  references: []
+- name: VerificationComplete
+  kind: const
+  description: VerificationComplete is a value of a VerificationResult field (V2-02).
+  references: []
+- name: VerificationIncomplete
+  kind: const
+  description: VerificationIncomplete is a value of a VerificationResult field (V2-02).
+  references: []
+- name: VerificationFailed
+  kind: const
+  description: VerificationFailed is a value of a VerificationResult field (V2-02).
+  references: []
+- name: EvidencePersisted
+  kind: const
+  description: EvidencePersisted is a value of a VerificationResult field (V2-02).
+  references: []
+- name: EvidenceNotPersisted
+  kind: const
+  description: EvidenceNotPersisted is a value of a VerificationResult field (V2-02).
+  references: []
+- name: EvidenceNotRequired
+  kind: const
+  description: EvidenceNotRequired is a value of a VerificationResult field (V2-02).
+  references: []
+- name: EvidenceUnknown
+  kind: const
+  description: EvidenceUnknown is a value of a VerificationResult field (V2-02).
+  references: []
+- name: VerdictVerified
+  kind: const
+  description: VerdictVerified is a value of a VerificationResult field (V2-02).
+  references: []
+- name: VerdictNotVerified
+  kind: const
+  description: VerdictNotVerified is a value of a VerificationResult field (V2-02).
+  references: []
+- name: AcceptanceAccepted
+  kind: const
+  description: AcceptanceAccepted is a value of a VerificationResult field (V2-02).
+  references: []
+- name: AcceptanceNotAccepted
+  kind: const
+  description: AcceptanceNotAccepted is a value of a VerificationResult field (V2-02).
+  references: []
+- name: AcceptanceNotEvaluated
+  kind: const
+  description: AcceptanceNotEvaluated is a value of a VerificationResult field (V2-02).
+  references: []
