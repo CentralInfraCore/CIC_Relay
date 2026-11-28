@@ -294,15 +294,17 @@ objects:
   - assert.Contains
   - assert.True
   - require.Error
-- name: TestReusedModuleIDWithDifferentContentDoesNotInheritBinding
+- name: TestStaleBindingIsRejectedNotLegacy
   kind: func
-  description: A reused module ID with different content does not inherit the binding
-    (it falls back to the legacy dispatch, whose op-set is the four).
+  description: 'A binding that belongs to different content of the same module ID
+    is stale: the module is rejected, it does NOT silently run through the legacy
+    dispatch (review F2).'
   references:
   - require.NoError
   - require.Equal
   - require.NotEqual
   - require.Error
+  - assert.True
   - assert.Contains
   - mock.Anything
   calls:
@@ -312,10 +314,94 @@ objects:
   - MockCicWasmHost.AssertNotCalled
   - NewModuleDescriptor
   - assert.Contains
+  - assert.True
   - require.Equal
   - require.Error
   - require.NoError
   - require.NotEqual
+- name: TestProfileRequiredModuleWithoutBindingIsRejected
+  kind: func
+  description: A module whose manifest declares a profile but has no admitted binding
+    is rejected (review F2).
+  references:
+  - require.Error
+  - assert.True
+  - assert.Contains
+  - mock.Anything
+  - require.NoError
+  calls:
+  - Error
+  - ID
+  - MockCicWasmHost.AssertNotCalled
+  - MockCicWasmHost.On
+  - Once
+  - Return
+  - WithProfileRequiredModules
+  - assert.Contains
+  - assert.True
+  - require.Error
+  - require.NoError
+- name: TestGenericDispatchUsesExactOperationIdentity
+  kind: func
+  description: 'D-7: the profile path matches the operation name exactly; the legacy
+    lower-casing stays on the legacy path only (review F1).'
+  references:
+  - require.Error
+  - assert.Contains
+  - mock.Anything
+  - require.NoError
+  calls:
+  - Error
+  - MockCicWasmHost.AssertNotCalled
+  - MockCicWasmHost.On
+  - Once
+  - Return
+  - assert.Contains
+  - require.Error
+  - require.NoError
+- name: TestBindingRequiresEnvelopeDigestAndSnapshotsTheProfile
+  kind: func
+  description: 'F3: the binding needs the authenticated envelope digest, and holds
+    an immutable snapshot of the admitted profile.'
+  references:
+  - require.Error
+  - assert.True
+  - require.NoError
+  - assert.Equal
+  calls:
+  - NewModuleProfileBinding
+  - assert.Equal
+  - assert.True
+  - require.Error
+  - require.NoError
+- name: TestParseProfileStrictWire
+  kind: func
+  description: 'F4: strict wire reading: the unknown, the case-variant, the duplicate
+    and the incomplete are all refused.'
+  references:
+  - require.NotEqual
+  - require.Error
+  - assert.True
+  - assert.Contains
+  - require.NoError
+  calls:
+  - Error
+  - ParseProfile
+  - assert.Contains
+  - assert.True
+  - require.Error
+  - require.NoError
+  - require.NotEqual
+- name: TestAdmitFailsClosedWhenUnconfigured
+  kind: func
+  description: 'F5: a missing verifier or schema registry is a controlled fail-closed
+    error, not a nil dereference.'
+  references:
+  - assert.NotPanics
+  calls:
+  - NewProfileRegistry
+  - ProfileDigest
+  - assert.NotPanics
 - name: TestLegacyModuleUnaffectedWhenSwitchIsOn
   kind: func
   description: ''
@@ -356,6 +442,10 @@ objects:
   description: ''
   references: []
 - name: tdOpResult
+  kind: var
+  description: ''
+  references: []
+- name: tdEnvelope
   kind: var
   description: ''
   references: []

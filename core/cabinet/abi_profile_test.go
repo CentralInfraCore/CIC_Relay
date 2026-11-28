@@ -24,6 +24,7 @@ var (
 	tdObservation = "sha256:" + strings.Repeat("12", 32)
 	tdOpReq       = "sha256:" + strings.Repeat("34", 32)
 	tdOpResult    = "sha256:" + strings.Repeat("56", 32)
+	tdEnvelope    = "sha256:" + strings.Repeat("ae", 32)
 )
 
 func testSchemas() InMemorySchemaRegistry {
@@ -311,32 +312,32 @@ func TestAC03_2_ManifestPinAndOpSet(t *testing.T) {
 	pr, digest, pin := admittedBase(t)
 	mod := plainModule(t, "prov.wasm")
 
-	b, err := NewModuleProfileBinding(mod, pr, digest, pin, []string{"describe"})
+	b, err := NewModuleProfileBinding(mod, tdEnvelope, pr, digest, pin, []string{"describe"})
 	require.NoError(t, err)
 	assert.Equal(t, pin.ID, b.ProfileID)
 	assert.Equal(t, pin.Digest, b.ProfileDigest)
 	assert.Equal(t, mod.Checksum(), b.ModuleChecksum)
 
 	// a subset is fine, the whole set is fine
-	_, err = NewModuleProfileBinding(mod, pr, digest, pin, []string{"describe", "observe", "invoke"})
+	_, err = NewModuleProfileBinding(mod, tdEnvelope, pr, digest, pin, []string{"describe", "observe", "invoke"})
 	require.NoError(t, err)
 
 	// the manifest pin differs: digest, then id
-	_, err = NewModuleProfileBinding(mod, pr, digest, PinnedProfile{ID: pin.ID, Digest: "sha256:" + strings.Repeat("00", 32)}, []string{"describe"})
+	_, err = NewModuleProfileBinding(mod, tdEnvelope, pr, digest, PinnedProfile{ID: pin.ID, Digest: "sha256:" + strings.Repeat("00", 32)}, []string{"describe"})
 	requireCode(t, err, CodeProfilePinMismatch)
-	_, err = NewModuleProfileBinding(mod, pr, digest, PinnedProfile{ID: "cic:other@0.1.0", Digest: digest}, []string{"describe"})
+	_, err = NewModuleProfileBinding(mod, tdEnvelope, pr, digest, PinnedProfile{ID: "cic:other@0.1.0", Digest: digest}, []string{"describe"})
 	requireCode(t, err, CodeProfilePinMismatch)
 
 	// an extra manifest op that the pinned profile does not have
-	_, err = NewModuleProfileBinding(mod, pr, digest, pin, []string{"describe", "destroy"})
+	_, err = NewModuleProfileBinding(mod, tdEnvelope, pr, digest, pin, []string{"describe", "destroy"})
 	requireCode(t, err, CodeManifestOpNotInProfile)
 
 	// empty op declaration, a missing profile and a missing module are rejected, not defaulted
-	_, err = NewModuleProfileBinding(mod, pr, digest, pin, nil)
+	_, err = NewModuleProfileBinding(mod, tdEnvelope, pr, digest, pin, nil)
 	require.Error(t, err)
-	_, err = NewModuleProfileBinding(mod, nil, digest, pin, []string{"describe"})
+	_, err = NewModuleProfileBinding(mod, tdEnvelope, nil, digest, pin, []string{"describe"})
 	require.Error(t, err)
-	_, err = NewModuleProfileBinding(nil, pr, digest, pin, []string{"describe"})
+	_, err = NewModuleProfileBinding(nil, tdEnvelope, pr, digest, pin, []string{"describe"})
 	require.Error(t, err)
 }
 
@@ -345,7 +346,7 @@ func TestBindingDoesNotChangeModuleIdentity(t *testing.T) {
 	pr, digest, pin := admittedBase(t)
 	mod := plainModule(t, "prov.wasm")
 	before := mod.Checksum()
-	_, err := NewModuleProfileBinding(mod, pr, digest, pin, []string{"describe"})
+	_, err := NewModuleProfileBinding(mod, tdEnvelope, pr, digest, pin, []string{"describe"})
 	require.NoError(t, err)
 	assert.Equal(t, before, mod.Checksum())
 	assert.Equal(t, before, plainModule(t, "prov.wasm").Checksum())
@@ -377,7 +378,7 @@ func dispatchSvc(enabled bool, mod *ModuleDescriptor, host *MockCicWasmHost, bin
 func profiledModule(t *testing.T, declared []string) (*ModuleDescriptor, *ModuleProfileBinding) {
 	pr, digest, pin := admittedBase(t)
 	mod := plainModule(t, "prov.wasm")
-	b, err := NewModuleProfileBinding(mod, pr, digest, pin, declared)
+	b, err := NewModuleProfileBinding(mod, tdEnvelope, pr, digest, pin, declared)
 	require.NoError(t, err)
 	return mod, b
 }
@@ -441,8 +442,9 @@ func TestDispatchHonoursTheManifestOpSet(t *testing.T) {
 	host.AssertNotCalled(t, "Call", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
-// A reused module ID with different content does not inherit the binding (it falls back to the legacy dispatch, whose op-set is the four).
-func TestReusedModuleIDWithDifferentContentDoesNotInheritBinding(t *testing.T) {
+// A binding that belongs to different content of the same module ID is stale: the module is rejected, it does
+// NOT silently run through the legacy dispatch (review F2).
+func TestStaleBindingIsRejectedNotLegacy(t *testing.T) {
 	_, b := profiledModule(t, []string{"describe"})
 	other, err := NewModuleDescriptor(context.Background(), BaseBlock{Name: "prov.wasm", Version: "1.0"}, "wasm/test", nil, []string{"x"}, wasmHeader)
 	require.NoError(t, err)
@@ -450,10 +452,124 @@ func TestReusedModuleIDWithDifferentContentDoesNotInheritBinding(t *testing.T) {
 	require.NotEqual(t, b.ModuleChecksum, other.Checksum())
 	host := new(MockCicWasmHost)
 	svc := dispatchSvc(true, other, host, b)
-	_, err = runStep(t, svc, other, "describe")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not support operation")
+	for _, op := range []string{"describe", "process"} { // a profile op and a legacy op: both refused
+		_, err = runStep(t, svc, other, op)
+		require.Error(t, err, op)
+		assert.True(t, errors.Is(err, ErrInvalid), op)
+		assert.Contains(t, err.Error(), "stale binding", op)
+	}
 	host.AssertNotCalled(t, "Call", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	host.AssertNotCalled(t, "Process", mock.Anything, mock.Anything, mock.Anything)
+}
+
+// A module whose manifest declares a profile but has no admitted binding is rejected (review F2).
+func TestProfileRequiredModuleWithoutBindingIsRejected(t *testing.T) {
+	mod := plainModule(t, "needs.wasm")
+	host := new(MockCicWasmHost)
+	svc := dispatchSvc(true, mod, host)
+	WithProfileRequiredModules(mod.ID())(svc)
+	_, err := runStep(t, svc, mod, "process")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrInvalid))
+	assert.Contains(t, err.Error(), "none is admitted")
+	host.AssertNotCalled(t, "Process", mock.Anything, mock.Anything, mock.Anything)
+
+	// the same module is not touched when generic dispatch is off (default): legacy behaviour as before
+	svcOff := dispatchSvc(false, mod, host)
+	WithProfileRequiredModules(mod.ID())(svcOff)
+	host.On("Process", mock.Anything, mock.Anything, mock.Anything).Return(`{"data":"ok"}`, "null").Once()
+	_, err = runStep(t, svcOff, mod, "process")
+	require.NoError(t, err)
+}
+
+// D-7: the profile path matches the operation name exactly; the legacy lower-casing stays on the legacy path only (review F1).
+func TestGenericDispatchUsesExactOperationIdentity(t *testing.T) {
+	mod, b := profiledModule(t, []string{"describe"})
+	host := new(MockCicWasmHost)
+	svc := dispatchSvc(true, mod, host, b)
+	for _, spelled := range []string{"Describe", "DESCRIBE"} {
+		_, err := runStep(t, svc, mod, spelled)
+		require.Error(t, err, spelled)
+		assert.Contains(t, err.Error(), "does not declare operation", spelled)
+	}
+	host.AssertNotCalled(t, "Call", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	host.On("Call", mock.Anything, "describe", mock.Anything, mock.Anything).Return(`{"data":"d"}`, "null").Once()
+	_, err := runStep(t, svc, mod, "describe")
+	require.NoError(t, err)
+
+	// the legacy path keeps its lower-casing: "Process" still reaches Process
+	legacy := plainModule(t, "legacy2.wasm")
+	hostL := new(MockCicWasmHost)
+	svcL := dispatchSvc(true, legacy, hostL)
+	hostL.On("Process", mock.Anything, mock.Anything, mock.Anything).Return(`{"data":"ok"}`, "null").Once()
+	_, err = runStep(t, svcL, legacy, "Process")
+	require.NoError(t, err)
+}
+
+// F3: the binding needs the authenticated envelope digest, and holds an immutable snapshot of the admitted profile.
+func TestBindingRequiresEnvelopeDigestAndSnapshotsTheProfile(t *testing.T) {
+	pr, digest, pin := admittedBase(t)
+	mod := plainModule(t, "prov.wasm")
+	_, err := NewModuleProfileBinding(mod, "", pr, digest, pin, []string{"describe"})
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrInvalid))
+
+	b, err := NewModuleProfileBinding(mod, tdEnvelope, pr, digest, pin, []string{"describe"})
+	require.NoError(t, err)
+	assert.Equal(t, tdEnvelope, b.EnvelopeDigest)
+	// mutating the caller's admitted profile afterwards must not reach the binding
+	pr.Operations[0].Name = "mutated"
+	pr.Operations[2].EffectResolution.Map["read"] = "external-write"
+	pr.RequiredHostCapabilities[0] = "other@1"
+	pr.Limits.TimeoutMs = 1
+	assert.Equal(t, "describe", b.Profile.Operations[0].Name)
+	assert.Equal(t, "external-read", b.Profile.Operations[2].EffectResolution.Map["read"])
+	assert.Equal(t, "provider-http@1", b.Profile.RequiredHostCapabilities[0])
+	assert.Equal(t, 30000, b.Profile.Limits.TimeoutMs)
+}
+
+// F4: strict wire reading: the unknown, the case-variant, the duplicate and the incomplete are all refused.
+func TestParseProfileStrictWire(t *testing.T) {
+	good := string(rawOf(t, refProfile()))
+	cases := []struct{ name, raw, want string }{
+		{"unknown-top-level-key", strings.Replace(good, `{"kind"`, `{"extra":1,"kind"`, 1), "unknown or differently spelled"},
+		{"case-variant-key", strings.Replace(good, `"kind":"AbiProfile"`, `"Kind":"AbiProfile"`, 1), "unknown or differently spelled"},
+		{"duplicate-key", strings.Replace(good, `"kind":"AbiProfile"`, `"kind":"AbiProfile","kind":"AbiProfile"`, 1), "duplicate key"},
+		{"duplicate-key-in-effect-map", strings.Replace(good, `"read":"external-read"`, `"read":"external-read","read":"external-write"`, 1), "duplicate key"},
+		{"missing-required-key", strings.Replace(good, `"profile_version":1,`, ``, 1), "required key"},
+		{"trailing-data", good + ` {}`, "after the profile object"},
+		{"unknown-key-in-operation", strings.Replace(good, `"name":"describe"`, `"name":"describe","x":1`, 1), "unknown or differently spelled"},
+		{"unknown-key-in-schema-ref", strings.Replace(good, `"id":"cic:provider:describe-request"`, `"id":"cic:provider:describe-request","x":1`, 1), "unknown or differently spelled"},
+		{"zero-limit", strings.Replace(good, `"timeout_ms":30000`, `"timeout_ms":0`, 1), "positive integer"},
+		{"negative-limit", strings.Replace(good, `"timeout_ms":30000`, `"timeout_ms":-5`, 1), "positive integer"},
+		{"duplicate-host-capability", strings.Replace(good, `["provider-http@1"]`, `["provider-http@1","provider-http@1"]`, 1), "duplicate required_host_capabilities"},
+		{"not-an-object", `[]`, "an object is required"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.NotEqual(t, good, c.raw, "the mutation did not apply")
+			_, err := ParseProfile([]byte(c.raw))
+			require.Error(t, err)
+			assert.True(t, errors.Is(err, ErrInvalid))
+			assert.Contains(t, err.Error(), c.want)
+		})
+	}
+	_, err := ParseProfile([]byte(good))
+	require.NoError(t, err, "the unmodified profile still parses")
+}
+
+// F5: a missing verifier or schema registry is a controlled fail-closed error, not a nil dereference.
+func TestAdmitFailsClosedWhenUnconfigured(t *testing.T) {
+	p := refProfile()
+	pin := []PinnedProfile{{ID: "cic:provider@0.1.0", Digest: ProfileDigest(rawOf(t, p))}}
+	for name, reg := range map[string]*ProfileRegistry{
+		"no verifier": NewProfileRegistry(pin, nil, testSchemas(), testCaps),
+		"no schemas":  NewProfileRegistry(pin, MockProfileSignatureVerifier{}, nil, testCaps),
+	} {
+		_, _, err := admit(t, reg, p)
+		assert.NotPanics(t, func() { _, _, _ = admit(t, reg, p) }, name)
+		requireCode(t, err, CodeProfileAdmissionUnconfigured)
+	}
 }
 
 func TestLegacyModuleUnaffectedWhenSwitchIsOn(t *testing.T) {

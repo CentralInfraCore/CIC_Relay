@@ -127,6 +127,13 @@ objects:
     for the production wiring (default off).'
   references: []
   calls: []
+- name: WithProfileRequiredModules
+  kind: func
+  description: WithProfileRequiredModules declares which modules need an admitted
+    profile binding (their manifest names a profile). With generic dispatch on, such
+    a module without a valid binding is rejected, not run legacy.
+  references: []
+  calls: []
 - name: WithModuleProfileBindings
   kind: func
   description: WithModuleProfileBindings registers admitted ABI-profile bindings (one
@@ -261,10 +268,13 @@ objects:
 - name: profileBindingFor
   kind: method
   receiver: cabinetService
-  description: profileBindingFor returns the module's admitted ABI-profile binding
-    if generic dispatch is on and the binding belongs to exactly this module content
-    (same ID and same current checksum); otherwise nil, and the legacy four-op dispatch
-    applies. A reused module ID with different content never inherits a binding.
+  description: 'profileBindingFor decides which dispatch a module uses (review F2).
+    Four distinct states: - generic dispatch off, or an explicit legacy module (no
+    binding, no profile required): (nil, nil), legacy; - a valid binding for exactly
+    this module content: (binding, nil), profile-driven; - a binding that belongs
+    to different content of the same module ID (stale), or a module that is declared
+    to need a profile but has no admitted binding: (nil, error), rejected, never a
+    legacy fallback.'
   references: []
   calls:
   - ModuleDescriptor.Checksum

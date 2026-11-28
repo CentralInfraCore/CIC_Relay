@@ -106,6 +106,12 @@ var (
 // ErrInvalid, matching "ismeretlen/nem befogadott profil: elutasítás, nincs
 // fallback" (ref 02 §1).
 func ParseProfile(raw []byte) (*AbiProfile, error) {
+	if err := strictScan(raw); err != nil {
+		return nil, fmt.Errorf("%w: abi profile: %v", ErrInvalid, err)
+	}
+	if err := checkStrictLimits(raw); err != nil {
+		return nil, fmt.Errorf("%w: abi profile: %v", ErrInvalid, err)
+	}
 	var p AbiProfile
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, fmt.Errorf("%w: abi profile: invalid JSON: %v", ErrInvalid, err)
@@ -127,7 +133,12 @@ func ParseProfile(raw []byte) (*AbiProfile, error) {
 			return nil, fmt.Errorf("%w: abi profile: operation %d (%q): %v", ErrInvalid, i, op.Name, err)
 		}
 	}
+	seenCap := map[string]bool{}
 	for _, c := range p.RequiredHostCapabilities {
+		if seenCap[c] {
+			return nil, fmt.Errorf("%w: abi profile: duplicate required_host_capabilities entry %q", ErrInvalid, c)
+		}
+		seenCap[c] = true
 		if !hostCapPattern.MatchString(c) {
 			return nil, fmt.Errorf("%w: abi profile: required_host_capabilities entry %q does not match <name>@<n>", ErrInvalid, c)
 		}

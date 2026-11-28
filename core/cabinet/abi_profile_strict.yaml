@@ -1,0 +1,44 @@
+---
+package: cabinet
+description: ''
+tags:
+- schema
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: shape
+  kind: struct
+  description: shape describes one JSON value of the profile artifact.
+  implements: []
+  references: []
+- name: strictScan
+  kind: func
+  description: strictScan validates raw against the shape and rejects any trailing
+    data.
+  references: []
+  calls:
+  - Token
+- name: scanValue
+  kind: func
+  description: scanValue consumes one JSON value from dec against sh, rejecting what
+    the shape does not allow.
+  references: []
+  calls: []
+- name: checkStrictLimits
+  kind: func
+  description: checkStrictLimits requires every declared limit to be a positive integer
+    (the schema's minimum is 1); a zero or negative limit must not pass as "unset".
+  references: []
+  calls: []
+- name: schemaRefShape
+  kind: var
+  description: 'schemaRefShape is the shape of a request/response schema reference:
+    exactly id and digest, both required.'
+  references: []
+- name: profileShape
+  kind: var
+  description: profileShape is the exact wire shape of an AbiProfile artifact (abi-profile.schema.json,
+    additionalProperties false).
+  references: []

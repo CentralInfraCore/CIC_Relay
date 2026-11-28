@@ -120,6 +120,10 @@ type cabinetService struct {
 	// consulted when genericDispatch is on; a module without a binding, or whose current
 	// checksum differs from the bound one, always uses the legacy dispatch.
 	profileBindings map[string]*ModuleProfileBinding
+
+	// profileRequired lists the modules whose manifest declares an ABI profile (abi.profile): with generic
+	// dispatch on they run only through an admitted binding, never through the legacy dispatch.
+	profileRequired map[string]bool
 }
 
 // CabinetOption is a functional option for configuring a cabinetService.
@@ -170,6 +174,19 @@ func WithEvidenceRequired(required bool) CabinetOption {
 func WithGenericDispatch(enabled bool) CabinetOption {
 	return func(s *cabinetService) {
 		s.genericDispatch = enabled
+	}
+}
+
+// WithProfileRequiredModules declares which modules need an admitted profile binding (their manifest names a
+// profile). With generic dispatch on, such a module without a valid binding is rejected, not run legacy.
+func WithProfileRequiredModules(ids ...string) CabinetOption {
+	return func(s *cabinetService) {
+		if s.profileRequired == nil {
+			s.profileRequired = make(map[string]bool, len(ids))
+		}
+		for _, id := range ids {
+			s.profileRequired[id] = true
+		}
 	}
 }
 
@@ -317,9 +334,15 @@ func (c *cabinetService) Setx(ctx context.Context, in *SetPayload) (*SetResponse
 			normalizedFn := strings.ToLower(step.FunctionName)
 
 			var dataResult, errorResult string
-			if binding := c.profileBindingFor(moduleDesc); binding != nil {
+			binding, bindErr := c.profileBindingFor(moduleDesc)
+			if bindErr != nil {
+				// A module that needs a profile (or whose binding is stale) is rejected: it never
+				// falls back to the legacy dispatch (review F2).
+				execErr = bindErr
+			} else if binding != nil {
 				// --- PROFILE-DRIVEN GENERIC DISPATCH (WP-03, off unless WithGenericDispatch(true)) ---
-				op, found := binding.Operation(normalizedFn)
+				// Exact operation identity: the legacy lower-casing above does not apply here (D-7).
+				op, found := binding.Operation(step.FunctionName)
 				switch {
 				case !found:
 					execErr = fmt.Errorf("%w: module %q ABI profile %q does not declare operation %q for this module", ErrInvalid, step.ComponentID, binding.Profile.ProfileID, step.FunctionName)
@@ -501,16 +524,24 @@ func (c *cabinetService) GetWorkflow(id string) (*Workflow, error) {
 	return nil, ErrNotFound
 }
 
-// profileBindingFor returns the module's admitted ABI-profile binding if generic dispatch is on and the
-// binding belongs to exactly this module content (same ID and same current checksum); otherwise nil, and
-// the legacy four-op dispatch applies. A reused module ID with different content never inherits a binding.
-func (c *cabinetService) profileBindingFor(m *ModuleDescriptor) *ModuleProfileBinding {
+// profileBindingFor decides which dispatch a module uses (review F2). Four distinct states:
+//   - generic dispatch off, or an explicit legacy module (no binding, no profile required): (nil, nil), legacy;
+//   - a valid binding for exactly this module content: (binding, nil), profile-driven;
+//   - a binding that belongs to different content of the same module ID (stale), or a module that is declared
+//     to need a profile but has no admitted binding: (nil, error), rejected, never a legacy fallback.
+func (c *cabinetService) profileBindingFor(m *ModuleDescriptor) (*ModuleProfileBinding, error) {
 	if !c.genericDispatch {
-		return nil
+		return nil, nil
 	}
 	b, ok := c.profileBindings[m.ID()]
-	if !ok || b.ModuleChecksum != m.Checksum() {
-		return nil
+	if ok {
+		if b.ModuleChecksum != m.Checksum() {
+			return nil, fmt.Errorf("%w: module %q has an ABI-profile binding for different content (stale binding); refusing to run it", ErrInvalid, m.ID())
+		}
+		return b, nil
 	}
-	return b
+	if c.profileRequired[m.ID()] {
+		return nil, fmt.Errorf("%w: module %q declares an ABI profile but none is admitted for it; refusing to run it", ErrInvalid, m.ID())
+	}
+	return nil, nil
 }

@@ -18,6 +18,8 @@ const (
 	CodeProfileDigestMismatch = "PROFILE_DIGEST_MISMATCH"
 	// CodeProfileSignatureInvalid: the CICABIPROFv1 signature check failed.
 	CodeProfileSignatureInvalid = "PROFILE_SIGNATURE_INVALID"
+	// CodeProfileAdmissionUnconfigured: no signature verifier or schema registry is configured; admission fails closed.
+	CodeProfileAdmissionUnconfigured = "PROFILE_ADMISSION_UNCONFIGURED"
 )
 
 // PinnedProfile is one entry of the operator's pinned profile list
@@ -44,26 +46,13 @@ type ProfileSignature struct {
 // át (ha az még nincs kész, interfész mögötti, mockolt trust-bundle, jelölve)")
 // — WP-02 has not landed in this repository snapshot (CIC_Relay 86ea1ab), so
 // there is no real trust bundle to call here yet. This interface is that seam;
-// MockProfileSignatureVerifier below is the explicit, clearly-labelled stand-in
+// MockProfileSignatureVerifier (test files only: abi_profile_mock_test.go, never compiled into the production build) is the explicit, clearly-labelled stand-in
 // the job input calls for. No production code in this job wires the mock in —
 // it exists so ProfileRegistry.Admit's pinning/semantics logic can be tested
 // without waiting on WP-02, and so WP-02 can later supply the real
 // implementation without any change to ProfileRegistry itself.
 type ProfileSignatureVerifier interface {
 	VerifySignedProfile(signedBytes []byte, sig ProfileSignature) error
-}
-
-// MockProfileSignatureVerifier is a placeholder ProfileSignatureVerifier: it
-// returns Err unconditionally (nil = accept, non-nil = the given rejection).
-// MOCK, PROVIZÓRIUS — not a real signature check; see ProfileSignatureVerifier's
-// doc comment. The name says MOCK: if this ever appears as an argument to
-// NewProfileRegistry in a production call path, that is a defect in the caller,
-// not something this job authorized.
-type MockProfileSignatureVerifier struct{ Err error }
-
-// VerifySignedProfile returns the configured Err unconditionally (MOCK, see the type).
-func (m MockProfileSignatureVerifier) VerifySignedProfile(signedBytes []byte, sig ProfileSignature) error {
-	return m.Err
 }
 
 // ProfileRegistry is the Relay's ABI-profile loader (ref 02 §1/§3): admission
@@ -111,6 +100,9 @@ func (r *ProfileRegistry) Admit(raw []byte, sig ProfileSignature) (*AbiProfile, 
 		return nil, digest, &ABIProfileError{Code: CodeProfileDigestMismatch}
 	}
 
+	if r.verifier == nil || r.schemas == nil {
+		return nil, digest, &ABIProfileError{Code: CodeProfileAdmissionUnconfigured}
+	}
 	signedBytes := ProfileSignedBytes(raw, sig.SignerKeyID, sig.SignerAlg)
 	if err := r.verifier.VerifySignedProfile(signedBytes, sig); err != nil {
 		return nil, digest, fmt.Errorf("%w: %s: %v", ErrInvalid, CodeProfileSignatureInvalid, err)

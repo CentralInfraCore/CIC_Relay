@@ -34,6 +34,13 @@ objects:
   calls:
   - ModuleDescriptor.Checksum
   - ModuleDescriptor.ID
+- name: snapshot
+  kind: method
+  receiver: AbiProfile
+  description: snapshot returns a deep copy of the profile (no shared slices, maps
+    or pointers).
+  references: []
+  calls: []
 - name: CodeProfilePinMismatch
   kind: const
   description: 'CodeProfilePinMismatch: the manifest''s abi.profile {id, digest} does

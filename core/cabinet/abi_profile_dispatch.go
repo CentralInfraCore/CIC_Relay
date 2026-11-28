@@ -27,11 +27,15 @@ const (
 // ModuleProfileBinding ties one module's content to an admitted ABI profile.
 type ModuleProfileBinding struct {
 	ModuleID       string
-	ModuleChecksum string // the module's Checksum() at binding time; a different content does not inherit the binding
-	Profile        *AbiProfile
-	ProfileID      string
-	ProfileDigest  string
-	Operations     []string // the manifest's declared op-set, a non-empty subset of the profile's
+	ModuleChecksum string // the module's Checksum() at binding time; a different content is a stale binding and is rejected
+	// EnvelopeDigest is the authenticated release-envelope identity of the module (#162/WP-02, CICMODENVv1 digest);
+	// it is required, so a binding can not exist for a module whose artifact was not admitted (review F3).
+	EnvelopeDigest string
+	// Profile is an immutable snapshot (a deep copy taken at admission): later changes to the caller's value do not reach it.
+	Profile       *AbiProfile
+	ProfileID     string
+	ProfileDigest string
+	Operations    []string // the manifest's declared op-set, a non-empty subset of the profile's
 }
 
 // Operation returns the profile operation with that name only if the module's manifest also declares it.
@@ -55,7 +59,10 @@ func (b *ModuleProfileBinding) Operation(name string) (AbiOperation, bool) {
 //   - declaredOps (the manifest's own op declaration) must be non-empty and a
 //     subset of the profile's operation names; any other name is rejected
 //     (CodeManifestOpNotInProfile).
-func NewModuleProfileBinding(mod *ModuleDescriptor, profile *AbiProfile, admittedDigest string, pin PinnedProfile, declaredOps []string) (*ModuleProfileBinding, error) {
+func NewModuleProfileBinding(mod *ModuleDescriptor, envelopeDigest string, profile *AbiProfile, admittedDigest string, pin PinnedProfile, declaredOps []string) (*ModuleProfileBinding, error) {
+	if envelopeDigest == "" {
+		return nil, fmt.Errorf("%w: a profile binding requires the module's authenticated envelope digest", ErrInvalid)
+	}
 	if mod == nil || profile == nil {
 		return nil, fmt.Errorf("%w: a module and an admitted AbiProfile are required", ErrInvalid)
 	}
@@ -75,7 +82,30 @@ func NewModuleProfileBinding(mod *ModuleDescriptor, profile *AbiProfile, admitte
 		}
 	}
 	return &ModuleProfileBinding{
-		ModuleID: mod.ID(), ModuleChecksum: mod.Checksum(), Profile: profile,
+		ModuleID: mod.ID(), ModuleChecksum: mod.Checksum(), EnvelopeDigest: envelopeDigest, Profile: profile.snapshot(),
 		ProfileID: pin.ID, ProfileDigest: pin.Digest, Operations: append([]string(nil), declaredOps...),
 	}, nil
+}
+
+// snapshot returns a deep copy of the profile (no shared slices, maps or pointers).
+func (p *AbiProfile) snapshot() *AbiProfile {
+	c := *p
+	c.RequiredHostCapabilities = append([]string(nil), p.RequiredHostCapabilities...)
+	if p.Limits != nil {
+		l := *p.Limits
+		c.Limits = &l
+	}
+	c.Operations = make([]AbiOperation, len(p.Operations))
+	for i, op := range p.Operations {
+		if op.EffectResolution != nil {
+			er := *op.EffectResolution
+			er.Map = make(map[string]string, len(op.EffectResolution.Map))
+			for k, v := range op.EffectResolution.Map {
+				er.Map[k] = v
+			}
+			op.EffectResolution = &er
+		}
+		c.Operations[i] = op
+	}
+	return &c
 }
