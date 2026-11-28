@@ -318,6 +318,18 @@ func (h *CicWasmHost) Notify(ctx context.Context, authContextJson, eventJson str
 	return h.callGuest(ctx, "notify", authContextJson, eventJson)
 }
 
+// Call invokes the named guest function with the given auth context and input
+// JSON, returning the result data and error JSON as strings. It is the
+// profile-driven dispatch path's entry point (WP-03): Process/Get/Init/Notify
+// above are all callGuest with one of four fixed op names; Call is the same
+// mechanism with the op name taken from an AbiProfile operation instead of
+// being one of those four. The guest-side ABI (the exported "Call" wazero
+// function, see newCicWasmHost) was already op-name-generic before this job;
+// this method only exposes that genericity on the Go side.
+func (h *CicWasmHost) Call(ctx context.Context, op, authContextJson, inputJson string) (string, string) {
+	return h.callGuest(ctx, op, authContextJson, inputJson)
+}
+
 // callGuest invokes a named guest function with auth context and input JSON, handling memory allocation,
 // timeout enforcement, and response parsing. It returns data and error JSON strings.
 func (h *CicWasmHost) callGuest(ctx context.Context, op, authContextJson, inputJson string) (string, string) {

@@ -1,0 +1,24 @@
+---
+package: main
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: TestGenericDispatchFromEnv
+  kind: func
+  description: 'AC-03-5: the generic ABI-profile dispatch is off unless explicitly,
+    and exactly, "true".'
+  references:
+  - require.Error
+  - assert.False
+  - require.NoError
+  - assert.Equal
+  calls:
+  - assert.Equal
+  - assert.False
+  - require.Error
+  - require.NoError
