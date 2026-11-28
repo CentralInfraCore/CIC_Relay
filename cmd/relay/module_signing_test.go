@@ -78,7 +78,7 @@ func TestModuleSigning_DecisionTable(t *testing.T) {
 		for i, e := range envs {
 			for _, path := range []string{"embedded", "installed"} {
 				t.Run(c.name+" / "+e.name+" / "+path, func(t *testing.T) {
-					files, _ := buildModuleFS(t, wasm, c.pem) // the module is pki.test@1.0 = sharedTrustModuleID
+					files, _ := buildModuleFS(t, wasm, c.pem) // the module is pki.test@1.0.0 = sharedTrustModuleID
 					assets := signingTrust(t, e.mode, e.optIn)
 					got := loadVia(t, path, files, assets)
 					assert.Equal(t, c.allowed[i], got.registered, "%s in %s via %s", c.name, e.name, path)

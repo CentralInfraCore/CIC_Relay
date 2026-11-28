@@ -330,6 +330,15 @@ type PKIAssets struct {
 	SourceLoaded  bool
 	LicenseRoots  *x509.CertPool
 	LicenseLoaded bool
+
+	// #162 V2b: the operator's pinned authority bindings for module signing. A key ID (sha256 of the signer's DER
+	// SubjectPublicKeyInfo) is authorised to sign module release envelopes only if it is listed here with the
+	// module:sign role (loadModuleSignAuthorities); a key merely present in a verified certificate is not. Nil or
+	// empty: no envelope is admitted (SIGNER_NOT_AUTHORIZED).
+	ModuleSignAuthorities map[string]bool
+	// TrustMode is the CIC_TRUST_MODE the assets were bootstrapped for (bootstrapTrust). Anything other than
+	// TrustModeDev, the empty value included, is treated as prod by the module admission (V6): fail-closed.
+	TrustMode string
 }
 
 // ComponentHeader defines the common fields for identifying a component type.
@@ -518,15 +527,20 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 	if file.WasmSize != fileInfo.Size() {
 		return fmt.Errorf("WASM size mismatch for %q (expected: %d, got: %d)", wasmPath, file.WasmSize, fileInfo.Size())
 	}
+	// The ONE read of the wasm (#162 V4, AC-162-14): this buffer is hashed, verified against the envelope and the
+	// manifest, and is the only input of the module descriptor that gets stored and compiled. Nothing re-reads it.
 	wasmCode, err := fs.ReadFile(fsys, wasmPath)
 	if err != nil {
 		return fmt.Errorf("read WASM file %q: %w", wasmPath, err)
+	}
+	if int64(len(wasmCode)) != file.WasmSize {
+		return fmt.Errorf("WASM size mismatch for %q (expected: %d, read: %d)", wasmPath, file.WasmSize, len(wasmCode))
 	}
 	hasher := sha256.New()
 	hasher.Write(wasmCode)
 	calculatedDigest := hex.EncodeToString(hasher.Sum(nil))
 	if file.WasmDigest != calculatedDigest {
-		return fmt.Errorf("WASM digest mismatch for %q (expected: %s, got: %s)", wasmPath, file.WasmDigest, calculatedDigest)
+		return reject(codeWasmDigestMismatch, "WASM digest mismatch for %q (expected: %s, got: %s)", wasmPath, file.WasmDigest, calculatedDigest)
 	}
 
 	moduleID := file.Metadata.Name + "@" + file.Metadata.Version
@@ -586,27 +600,39 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 			"chain_length":   len(chains[0]),
 		}).Info("Certificate chain verified.")
 
-		// R3a/R3b: bind the module's cic-flow and git capabilities from its signed manifest, but only once its
-		// provenance verifies against the CICSourceCA anchor (feature-011). No SourceCA / no provenance: the
-		// module loads but gets no capability (fail-closed). A verified module that over-declares is rejected.
-		if registerModuleCapability != nil {
-			if provErr := verifyCICFlowProvenance(cert, pkiAssets); provErr != nil {
-				auditLogger.WithField("outcome", "skipped").WithError(provErr).Warn("Capability not bound — provenance not verified.")
-			} else if moduleDesc, err = cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode); err != nil {
-				// The artifact the capability would belong to can not be built: nothing is granted.
-				return fmt.Errorf("module validation: %w", err)
-			} else if err := registerModuleCapability(moduleID, yamlContent, moduleDesc.Checksum()); err != nil {
+		// #162: the module artifact admission. The descriptor is built ONCE, from the buffer hashed above; its
+		// WasmCode is what the cabinet stores and compiles, so it is the executed identity the envelope must name.
+		if moduleDesc, err = cabinet.NewModuleDescriptor(ctx, file.Metadata, file.Type, file.Accepts, file.OutputKeys, wasmCode); err != nil {
+			return fmt.Errorf("module validation: %w", err)
+		}
+		trustState, envelopeDigest, admErr := admitModuleArtifact(fsys, yamlPath, moduleID, calculatedDigest, yamlContent, wasmCode, moduleDesc.WasmCode, cert, pkiAssets, auditLogger)
+		if admErr != nil {
+			auditLogger.WithFields(logrus.Fields{"outcome": "rejected", "code": admissionCode(admErr)}).WithError(admErr).Error("Module artifact admission failed — module rejected.")
+			return fmt.Errorf("module %q rejected: %w", moduleID, admErr)
+		}
+		auditLogger = auditLogger.WithFields(logrus.Fields{"trust_state": trustState, "envelope_digest": envelopeDigest})
+		// R3a/R3b + #162 V7: a capability is bound only to an authenticated module, and under its authenticated
+		// identity (module_id, envelope_digest). A verified module that over-declares is rejected.
+		if trustState == trustAuthenticated && registerModuleCapability != nil {
+			if err := registerModuleCapability(moduleID, yamlContent, moduleDesc.Checksum(), envelopeDigest); err != nil {
 				auditLogger.WithField("outcome", "rejected").WithError(err).Error("Capability binding failed — module rejected.")
 				return fmt.Errorf("capability binding failed for %q: %w", moduleID, err)
 			}
 		}
+		auditLogger.WithField("outcome", "admitted").Info("Module admitted.")
 	case errors.Is(err, fs.ErrNotExist):
+		// No signer certificate. The dev opt-in covers a module WITHOUT any signature material only: a module that
+		// carries an envelope or a .sig but no certificate is incomplete, not unsigned.
+		if present, statErr := signatureMaterialPresent(fsys, yamlPath); statErr != nil || present {
+			auditLogger.WithFields(logrus.Fields{"outcome": "rejected", "code": codeModuleRejected}).Error("Envelope or signature without a signer certificate — module rejected.")
+			return fmt.Errorf("module %q rejected: %w", moduleID, reject(codeModuleRejected, "envelope or signature present without a signer certificate (%s)", filepath.Base(sigPath)))
+		}
 		// No signature file. Refused unless the operator explicitly opted in (dev mode only).
 		if !pkiAssets.AllowUnsignedModules {
 			auditLogger.WithField("outcome", "rejected").Error("No signature file: unsigned modules are refused.")
 			return fmt.Errorf("module %q is unsigned (no %s); unsigned modules are refused (dev mode only: %s=1)", moduleID, filepath.Base(sigPath), allowUnsignedEnv)
 		}
-		auditLogger.WithFields(logrus.Fields{"outcome": "allowed-unsigned", "reason": "explicit operator opt-in " + allowUnsignedEnv + "=1 (dev)"}).
+		auditLogger.WithFields(logrus.Fields{"outcome": "allowed-unsigned", "trust_state": trustDev, "reason": "explicit operator opt-in " + allowUnsignedEnv + "=1 (dev)"}).
 			Warn("Unsigned module admitted by explicit opt-in: it gets no capability.")
 	default:
 		// The signature file exists but cannot be read: that is not "unsigned", it is a failure.

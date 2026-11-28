@@ -125,13 +125,16 @@ objects:
   - assert.NotEmpty
   - assert.Equal
   - require.NotEqual
+  - require.Error
   calls:
   - Checksum
+  - Error
   - GetModule
   - assert.Equal
   - assert.Error
   - assert.NoError
   - assert.NotEmpty
+  - require.Error
   - require.NoError
   - require.NotEqual
 - name: TestGitGrant_ConcurrentReloadNeverAuthorizesAStaleInstance

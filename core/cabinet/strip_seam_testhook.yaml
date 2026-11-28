@@ -1,0 +1,19 @@
+---
+package: cabinet
+description: ''
+tags: []
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: SetStripWasmModuleFunc
+  kind: func
+  description: 'SetStripWasmModuleFunc overrides the wasm-canon/v1 transformation.
+    It exists ONLY in a build with the cic_test_seams tag (#162 AC-162-18): no production
+    build can reach it, so the executed identity of a module can not be changed at
+    run time. Tests built with the tag use it to prove that a changed transformation
+    output is rejected by the admission (EXECUTED_DIGEST_MISMATCH). It returns the
+    previous transformation, to restore it.'
+  references: []
+  calls: []

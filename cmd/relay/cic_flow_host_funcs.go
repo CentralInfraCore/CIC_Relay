@@ -13,6 +13,8 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+
+	"centralrelay/core/cabinet"
 )
 
 // cic-flow is the decomposed, guest-facing, pure-Go counterpart of the FFI
@@ -92,13 +94,15 @@ func registerCICFlowHostFunctions(ctx context.Context, r wazero.Runtime, reg *ci
 }
 
 // perModule wraps a deps-bound host-function factory so the exported host
-// function resolves the *calling* guest's deps from the registry by `mod.Name()`
-// (the guest is instantiated `WithName(moduleID)`). A module with no verified
-// capability is denied — fail-closed.
+// function resolves the *calling* instance's deps from the registry by the
+// runtime-assigned InstanceIdentity (name, artifact, envelope binding; #162 V7),
+// which must also name the calling guest (`mod.Name()`). A module with no
+// authenticated capability for exactly that instance is denied — fail-closed.
 func perModule(reg *cicFlowRegistry, make func(cicFlowDeps) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32) func(context.Context, api.Module, uint32, uint32, uint32, uint32) int32 {
 	return func(ctx context.Context, mod api.Module, reqPtr, reqLen, outPtr, outLen uint32) int32 {
-		deps, ok := reg.lookup(mod.Name())
-		if !ok {
+		id, _ := cabinet.InstanceIdentityFrom(ctx)
+		deps, ok := reg.lookupFor(id)
+		if !ok || id.Name != mod.Name() {
 			return gitWriteError(mod, outPtr, outLen, "cic-flow: module has no verified capability")
 		}
 		return make(deps)(ctx, mod, reqPtr, reqLen, outPtr, outLen)

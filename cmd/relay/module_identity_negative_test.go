@@ -171,6 +171,6 @@ func TestLoadModule_RejectedSigner_LeavesNoModuleRegistered(t *testing.T) {
 	moduleFS, yamlPath := buildModuleFS(t, wasm, signer)
 	err = loadModule(context.Background(), svc, moduleFS, yamlPath, moduleFS[yamlPath].Data, ca.assets(), int64(16*1024*1024), newDiscardLogger())
 	require.Error(t, err)
-	_, getErr := svc.GetModule("pki.test@1.0")
+	_, getErr := svc.GetModule("pki.test@1.0.0")
 	assert.Error(t, getErr, "a module whose signer was rejected must not be in the registry")
 }
