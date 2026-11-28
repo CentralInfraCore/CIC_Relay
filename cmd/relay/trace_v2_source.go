@@ -2,9 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +20,8 @@ import (
 
 	"centralrelay/core/cabinet"
 	"centralrelay/pkg/hostsign"
+	"centralrelay/pkg/o1verify"
+	"centralrelay/pkg/o1verify/attest"
 )
 
 // INT-08/09: the production TraceV2Source. It answers the four questions the cabinet cannot answer itself, from what
@@ -143,9 +150,15 @@ func (s *traceSource) Authorization(_ context.Context, step cabinet.ExecutionGra
 
 // ExecutionContext implements cabinet.TraceV2Source. The record carries what the relay knows; it states that the principal
 // and the realization context are not available instead of leaving them out.
-func (s *traceSource) ExecutionContext(_ context.Context, workflowID string) string {
+func (s *traceSource) ExecutionContext(ctx context.Context, workflowID string) string {
+	principal := "unavailable"
+	if p, ok := cabinet.PrincipalFrom(ctx); ok {
+		// what the relay actually has: the id and method the HTTP layer established. In this build that is the shared
+		// bearer-token principal ("api-token"), a service identity, NOT an individual caller.
+		principal = p.ID + "/" + p.Method
+	}
 	return recordDigest("CICEXECCTXv1",
-		"workflow", workflowID, "trust_mode", s.trustMode, "principal", "unavailable", "realization_context", "unavailable")
+		"workflow", workflowID, "trust_mode", s.trustMode, "principal", principal, "realization_context", "unavailable")
 }
 
 // ScopeStep implements cabinet.StepScoper: the step's host interactions go to a log of their own.
@@ -181,30 +194,135 @@ func (s *traceSource) Interactions(digest string) ([]hostsign.Record, bool) {
 	return r, ok
 }
 
-// traceSink persists every sealed artifact and the interaction records it references into dir. The files are plain
-// evidence, NOT yet an attested persistence object (the recorder attestation is INT-10's identity work).
-func (s *traceSource) traceSink(dir string, logger *logrus.Logger) cabinet.TraceV2Sink {
+// recorderKey is the key a recorder attests persistence with. The attestation is only ever made AFTER the artifact and its
+// interaction lists were written and flushed: a recorder that attested before the write would be attesting a hope.
+type recorderKey struct {
+	priv ed25519.PrivateKey
+	spki []byte
+	id   string
+}
+
+// loadRecorderKey reads a PKCS#8 PEM ed25519 private key.
+func loadRecorderKey(path string) (*recorderKey, error) {
+	data, err := os.ReadFile(path) // #nosec G304 -- operator-supplied key path
+	if err != nil {
+		return nil, fmt.Errorf("read recorder key: %w", err)
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, errors.New("recorder key: not PEM")
+	}
+	k, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("recorder key: %w", err)
+	}
+	priv, ok := k.(ed25519.PrivateKey)
+	if !ok {
+		return nil, errors.New("recorder key: only ed25519 is supported")
+	}
+	spki, err := x509.MarshalPKIXPublicKey(priv.Public())
+	if err != nil {
+		return nil, err
+	}
+	return &recorderKey{priv: priv, spki: spki, id: sha256Of(spki)}, nil
+}
+
+// writeDurable writes data to dir/name atomically and durably: temp file, flush, rename, flush the directory.
+func writeDurable(dir, name string, data []byte) error {
+	tmp, err := os.CreateTemp(dir, ".v2-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name()) // no-op after the rename
+	if err := os.Chmod(tmp.Name(), 0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), filepath.Join(dir, name)); err != nil {
+		return err
+	}
+	d, err := os.Open(dir) // #nosec G304 -- the evidence directory
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
+}
+
+// persist writes the artifact and its interaction lists durably and returns the artifact file's digest.
+func (s *traceSource) persist(dir string, a *cabinet.ProofArtifactV2) (string, error) {
+	name := strings.TrimPrefix(a.ChainHash, "sha256:")
+	doc, err := json.Marshal(a)
+	if err != nil {
+		return "", err
+	}
+	lists := map[string][]hostsign.Record{}
+	for _, st := range a.Steps {
+		if recs, ok := s.Interactions(st.References.HostInteractions.Digest); ok {
+			lists[st.References.HostInteractions.Digest] = recs
+		}
+	}
+	lj, err := json.Marshal(lists)
+	if err != nil {
+		return "", err
+	}
+	if err := writeDurable(dir, name+".json", doc); err != nil {
+		return "", err
+	}
+	if err := writeDurable(dir, name+".interactions.json", lj); err != nil {
+		return "", err
+	}
+	return sha256Of(doc), nil
+}
+
+// traceSink persists every sealed artifact and the interaction lists it references into dir. With a recorder key it then,
+// and only after both writes succeeded, writes the persistence object and the attestation signature material
+// (<chain>.persistence.json, <chain>.attestation.json); when a write failed it records persisted=false with an error code
+// and NO attestation. Without a key the files are plain evidence: no persistence is claimed.
+func (s *traceSource) traceSink(dir string, rk *recorderKey, logger *logrus.Logger) cabinet.TraceV2Sink {
 	return func(_ context.Context, a *cabinet.ProofArtifactV2) {
 		name := strings.TrimPrefix(a.ChainHash, "sha256:")
-		doc, err := json.Marshal(a)
+		fileDigest, err := s.persist(dir, a)
 		if err != nil {
-			logger.WithError(err).Error("trace v2: artifact not persisted")
-			return
-		}
-		lists := map[string][]hostsign.Record{}
-		for _, st := range a.Steps {
-			if recs, ok := s.Interactions(st.References.HostInteractions.Digest); ok {
-				lists[st.References.HostInteractions.Digest] = recs
+			logger.WithError(err).Error("trace v2: not persisted")
+			if rk != nil {
+				p := map[string]any{"artifact_chain_hash": a.ChainHash, "persisted": false, "recorder": "relay", "error_code": "PERSIST_FAILED"}
+				if pj, merr := json.Marshal(p); merr == nil {
+					_ = writeDurable(dir, name+".persistence.json", pj)
+				}
 			}
-		}
-		lj, err := json.Marshal(lists)
-		if err != nil {
-			logger.WithError(err).Error("trace v2: interactions not persisted")
 			return
 		}
-		for suffix, data := range map[string][]byte{".json": doc, ".interactions.json": lj} {
-			if err := os.WriteFile(filepath.Join(dir, name+suffix), data, 0o600); err != nil {
-				logger.WithError(err).Error(fmt.Sprintf("trace v2: %s not persisted", name+suffix))
+		if rk == nil {
+			return
+		}
+		sig := ed25519.Sign(rk.priv, attest.RecorderSignedBytes(a.ChainHash, rk.id, attest.AlgEd25519))
+		p := o1verify.Persistence{ArtifactChainHash: a.ChainHash, Persisted: true, Recorder: "relay", Commit: "file:" + fileDigest,
+			Attestation: &o1verify.Attestation{Kind: "recorder-signature", SignerKeyID: rk.id, SignatureDigest: sha256Of(sig)}}
+		pj, err := json.Marshal(p)
+		if err != nil {
+			logger.WithError(err).Error("trace v2: persistence object not written")
+			return
+		}
+		mj, err := json.Marshal(map[string]string{"signature_b64": base64.StdEncoding.EncodeToString(sig), "spki_b64": base64.StdEncoding.EncodeToString(rk.spki)})
+		if err != nil {
+			return
+		}
+		for n, data := range map[string][]byte{name + ".attestation.json": mj, name + ".persistence.json": pj} {
+			if err := writeDurable(dir, n, data); err != nil {
+				logger.WithError(err).Error("trace v2: " + n + " not written")
+				return
 			}
 		}
 	}
@@ -213,6 +331,10 @@ func (s *traceSource) traceSink(dir string, logger *logrus.Logger) cabinet.Trace
 // traceV2DirEnv enables ProofTrace V2 recording: the directory the sealed artifacts and their interaction records are
 // written to. Unset: V2 is off and the V1 path is exactly as before (production activation stays an operator decision).
 const traceV2DirEnv = "CIC_TRACE_V2_DIR"
+
+// traceV2RecorderKeyEnv is the path of the recorder's PKCS#8 PEM ed25519 key. Unset: artifacts are stored but no persistence
+// is claimed or attested. The key must hold recorder:attest in the pinned trust bundle for a verifier to accept the attestation.
+const traceV2RecorderKeyEnv = "CIC_TRACE_V2_RECORDER_KEY"
 
 // traceV2OptionsFromEnv returns the cabinet options of the V2 recording, or none when it is not enabled.
 func traceV2OptionsFromEnv(logger *logrus.Logger, protected []string) ([]cabinet.CabinetOption, error) {
@@ -224,6 +346,13 @@ func traceV2OptionsFromEnv(logger *logrus.Logger, protected []string) ([]cabinet
 		return nil, fmt.Errorf("%s: %w", traceV2DirEnv, err)
 	}
 	src := newTraceSource(moduleIdentities, strings.TrimSpace(os.Getenv("CIC_TRUST_MODE")), protected)
-	logger.WithField("dir", dir).Info("ProofTrace V2 recording enabled")
-	return []cabinet.CabinetOption{cabinet.WithTraceV2(src, src.traceSink(dir, logger))}, nil
+	var rk *recorderKey
+	if kp := strings.TrimSpace(os.Getenv(traceV2RecorderKeyEnv)); kp != "" {
+		var err error
+		if rk, err = loadRecorderKey(kp); err != nil {
+			return nil, err
+		}
+	}
+	logger.WithFields(logrus.Fields{"dir": dir, "attesting": rk != nil}).Info("ProofTrace V2 recording enabled")
+	return []cabinet.CabinetOption{cabinet.WithTraceV2(src, src.traceSink(dir, rk, logger))}, nil
 }

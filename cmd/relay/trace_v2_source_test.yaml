@@ -79,6 +79,8 @@ objects:
   - cabinet.AuthorizationNotEvaluated
   - assert.Empty
   - assert.NotEqual
+  - cabinet.WithPrincipal
+  - cabinet.Principal
   calls:
   - Authorization
   - ExecutionContext
@@ -86,6 +88,7 @@ objects:
   - assert.Equal
   - assert.NotEqual
   - assert.Regexp
+  - cabinet.WithPrincipal
 - name: TestProductionSourceEndToEndWithTheIndependentVerifier
   kind: func
   description: 'The whole chain: a Setx run through the real cabinet with the production
@@ -259,4 +262,39 @@ objects:
   - attest.SignResult
   - attest.VerifyResult
   - o1verify.Verify
+  - require.NoError
+- name: TestRecorderAttestsOnlyAfterPersistence
+  kind: func
+  description: 'INT-10: the recorder attests only after a successful, durable persistence,
+    and the attestation it writes is the one the independent verifier accepts for
+    exactly that artifact.'
+  references:
+  - logrus.New
+  - require.NoError
+  - o1verify.Persistence
+  - assert.True
+  - assert.Equal
+  calls:
+  - DecodeString
+  - Replace
+  - assert.Equal
+  - assert.True
+  - logrus.New
+  - require.NoError
+- name: TestRecorderKeyLoading
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.Error
+  - assert.ErrorContains
+  - logrus.New
+  - assert.Len
+  calls:
+  - assert.Equal
+  - assert.Error
+  - assert.ErrorContains
+  - assert.Len
+  - logrus.New
   - require.NoError

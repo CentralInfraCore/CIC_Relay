@@ -27,6 +27,13 @@ objects:
   implements: []
   references:
   - hostsign.Record
+- name: recorderKey
+  kind: struct
+  description: 'recorderKey is the key a recorder attests persistence with. The attestation
+    is only ever made AFTER the artifact and its interaction lists were written and
+    flushed: a recorder that attested before the write would be attesting a hope.'
+  implements: []
+  references: []
 - name: newIdentityRegistry
   kind: func
   description: newIdentityRegistry returns an empty registry.
@@ -119,8 +126,10 @@ objects:
   description: ExecutionContext implements cabinet.TraceV2Source. The record carries
     what the relay knows; it states that the principal and the realization context
     are not available instead of leaving them out.
-  references: []
-  calls: []
+  references:
+  - cabinet.PrincipalFrom
+  calls:
+  - cabinet.PrincipalFrom
 - name: ScopeStep
   kind: method
   receiver: traceSource
@@ -160,22 +169,55 @@ objects:
   calls:
   - Lock
   - Unlock
+- name: loadRecorderKey
+  kind: func
+  description: loadRecorderKey reads a PKCS#8 PEM ed25519 private key.
+  references: []
+  calls:
+  - Public
+- name: writeDurable
+  kind: func
+  description: 'writeDurable writes data to dir/name atomically and durably: temp
+    file, flush, rename, flush the directory.'
+  references: []
+  calls:
+  - Close
+  - Name
+  - Sync
+  - Write
+- name: persist
+  kind: method
+  receiver: traceSource
+  description: persist writes the artifact and its interaction lists durably and returns
+    the artifact file's digest.
+  references:
+  - cabinet.ProofArtifactV2
+  - hostsign.Record
+  calls:
+  - traceSource.Interactions
 - name: traceSink
   kind: method
   receiver: traceSource
-  description: traceSink persists every sealed artifact and the interaction records
-    it references into dir. The files are plain evidence, NOT yet an attested persistence
-    object (the recorder attestation is INT-10's identity work).
+  description: 'traceSink persists every sealed artifact and the interaction lists
+    it references into dir. With a recorder key it then, and only after both writes
+    succeeded, writes the persistence object and the attestation signature material
+    (<chain>.persistence.json, <chain>.attestation.json); when a write failed it records
+    persisted=false with an error code and NO attestation. Without a key the files
+    are plain evidence: no persistence is claimed.'
   references:
   - logrus.Logger
   - cabinet.TraceV2Sink
   - cabinet.ProofArtifactV2
-  - hostsign.Record
+  - attest.RecorderSignedBytes
+  - attest.AlgEd25519
+  - o1verify.Persistence
+  - o1verify.Attestation
   - logrus.Logger.WithError
   calls:
+  - EncodeToString
   - Error
+  - attest.RecorderSignedBytes
   - logrus.Logger.WithError
-  - traceSource.Interactions
 - name: traceV2OptionsFromEnv
   kind: func
   description: traceV2OptionsFromEnv returns the cabinet options of the V2 recording,
@@ -183,12 +225,13 @@ objects:
   references:
   - logrus.Logger
   - cabinet.CabinetOption
+  - logrus.Fields
   - cabinet.WithTraceV2
-  - logrus.Logger.WithField
+  - logrus.Logger.WithFields
   calls:
   - Info
   - cabinet.WithTraceV2
-  - logrus.Logger.WithField
+  - logrus.Logger.WithFields
 - name: moduleIdentities
   kind: var
   description: moduleIdentities is the process-wide registry loadModule writes to.
@@ -198,4 +241,11 @@ objects:
   description: 'traceV2DirEnv enables ProofTrace V2 recording: the directory the sealed
     artifacts and their interaction records are written to. Unset: V2 is off and the
     V1 path is exactly as before (production activation stays an operator decision).'
+  references: []
+- name: traceV2RecorderKeyEnv
+  kind: const
+  description: 'traceV2RecorderKeyEnv is the path of the recorder''s PKCS#8 PEM ed25519
+    key. Unset: artifacts are stored but no persistence is claimed or attested. The
+    key must hold recorder:attest in the pinned trust bundle for a verifier to accept
+    the attestation.'
   references: []

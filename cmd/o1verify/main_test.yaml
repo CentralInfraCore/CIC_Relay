@@ -1,0 +1,215 @@
+---
+package: main
+description: ''
+tags:
+- executor
+- test
+category: []
+used_in: []
+entrypoint: true
+related_nodes: []
+objects:
+- name: src
+  kind: struct
+  description: src is a minimal TraceV2Source for building a real artifact.
+  implements: []
+  references: []
+- name: key
+  kind: struct
+  description: ''
+  implements: []
+  references: []
+- name: rig
+  kind: struct
+  description: ''
+  implements: []
+  references:
+  - cabinet.ProofArtifactV2
+- name: sha
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: d
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: ExecutedIdentity
+  kind: method
+  receiver: src
+  description: ''
+  references:
+  - cabinet.ModuleDescriptor
+  - cabinet.ExecutedIdentityV2
+  - cabinet.ProfileRefV2
+  - cabinet.TrustStateAuthenticated
+  calls: []
+- name: Authorization
+  kind: method
+  receiver: src
+  description: ''
+  references:
+  - cabinet.ExecutionGraphStep
+  - cabinet.AuthorizationNotEvaluated
+  calls: []
+- name: ExecutionContext
+  kind: method
+  receiver: src
+  description: ''
+  references: []
+  calls: []
+- name: HostInteractions
+  kind: method
+  receiver: src
+  description: ''
+  references:
+  - cabinet.ExecutionGraphStep
+  - cabinet.EmptyHostInteractionsDigestV2
+  calls:
+  - cabinet.EmptyHostInteractionsDigestV2
+- name: artifact
+  kind: func
+  description: ''
+  references:
+  - cabinet.ProofArtifactV2
+  - cabinet.NewMemModuleStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.BaseBlock
+  - require.NoError
+  - cabinet.NativeFunctions
+  - cabinet.NewCabinetService
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.WasmManagerConfig
+  - cabinet.WithTraceV2
+  - cabinet.NewWorkflow
+  - cabinet.WorkflowIdentity
+  - cabinet.WorkflowConfig
+  - cabinet.WorkflowSigning
+  - cabinet.SetPayload
+  - require.Len
+  calls:
+  - ID
+  - Put
+  - PutWorkflow
+  - Setx
+  - cabinet.NewCabinetService
+  - cabinet.NewMemModuleStore
+  - cabinet.NewMemSchemaStore
+  - cabinet.NewMemWorkflowStore
+  - cabinet.NewModuleDescriptor
+  - cabinet.NewWorkflow
+  - cabinet.WithTraceV2
+  - require.Len
+  - require.NoError
+- name: newKey
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: newRig
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - trustbundle.Digest
+  calls:
+  - require.NoError
+  - trustbundle.Digest
+- name: persistence
+  kind: method
+  receiver: rig
+  description: persistence writes the persistence object and attestation material
+    for the rig's artifact, signed by k.
+  references:
+  - attest.RecorderSignedBytes
+  - attest.AlgEd25519
+  - o1verify.Persistence
+  - o1verify.Attestation
+  - require.NoError
+  calls:
+  - EncodeToString
+  - attest.RecorderSignedBytes
+  - require.NoError
+- name: exec
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - require.NoError
+- name: resultOf
+  kind: func
+  description: ''
+  references: []
+  calls: []
+- name: TestVerifiesAnArtifactAndReportsVerifiedNotAccepted
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Regexp
+  calls:
+  - assert.Equal
+  - assert.Regexp
+- name: TestATamperedArtifactIsNotVerified
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - require.NotEqual
+  calls:
+  - assert.Equal
+  - require.NoError
+  - require.NotEqual
+- name: TestAttestedPersistenceNeedsTheBundleAndItsAuthority
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Contains
+  - assert.NotEqual
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - assert.NotEqual
+- name: TestSigningTheResultNeedsVerifierAuthority
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Equal
+  - assert.Equal
+  - o1verify.Result
+  - attest.VerifyResult
+  - attest.SignedResult
+  - attest.AlgEd25519
+  - assert.NoError
+  - assert.Contains
+  calls:
+  - DecodeString
+  - assert.Contains
+  - assert.Equal
+  - assert.NoError
+  - attest.VerifyResult
+  - require.Equal
+  - require.NoError
+- name: TestUsageAndInputErrors
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - require.NoError
+  - assert.Contains
+  calls:
+  - assert.Contains
+  - assert.Equal
+  - require.NoError
+- name: now
+  kind: var
+  description: ''
+  references: []
