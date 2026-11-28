@@ -137,6 +137,17 @@ objects:
   description: Setx executes a workflow based on the function-oriented model, resolving
     components, validating input schemas, dispatching to native or WASM implementations,
     and recording ProofTrace steps with input/output hashing.
+  references:
+  - logrus.WithFields
+  - logrus.Fields
+  calls:
+  - Warn
+  - logrus.WithFields
+- name: setxRun
+  kind: method
+  receiver: cabinetService
+  description: setxRun is the execution itself; rec (nil when V2 recording is off)
+    is told how far each step got.
   references: []
   calls:
   - Call
