@@ -42,6 +42,7 @@ func (*Profile) Digest() string {
 // Limits implements hostsign.Profile: the OCI profile does not narrow the operator limits.
 func (*Profile) Limits() hostsign.Limits { return hostsign.Limits{} }
 
+// bodyMethod is a helper of the cic-flow.send host capability.
 func bodyMethod(m string) bool { return m == "POST" || m == "PUT" || m == "PATCH" }
 
 // Prepare implements hostsign.Profile: the draft-cavage canonical string, the wire headers the

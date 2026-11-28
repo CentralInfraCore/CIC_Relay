@@ -20,24 +20,38 @@ import (
 
 // Denial codes: the request was refused before anything was signed or sent.
 const (
-	CodePolicyHost         = "POLICY_HOST"
-	CodePolicyPath         = "POLICY_PATH"
-	CodePolicyMethod       = "POLICY_METHOD"
-	CodePolicyTarget       = "POLICY_TARGET"
-	CodePolicyBinding      = "POLICY_BINDING"
-	CodeHeaderForbidden    = "HEADER_FORBIDDEN"
-	CodeBodyTooLarge       = "BODY_TOO_LARGE"
-	CodeProfileUnknown     = "PROFILE_UNKNOWN"
+	// CodePolicyHost is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodePolicyHost = "POLICY_HOST"
+	// CodePolicyPath is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodePolicyPath = "POLICY_PATH"
+	// CodePolicyMethod is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodePolicyMethod = "POLICY_METHOD"
+	// CodePolicyTarget is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodePolicyTarget = "POLICY_TARGET"
+	// CodePolicyBinding is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodePolicyBinding = "POLICY_BINDING"
+	// CodeHeaderForbidden is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodeHeaderForbidden = "HEADER_FORBIDDEN"
+	// CodeBodyTooLarge is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodeBodyTooLarge = "BODY_TOO_LARGE"
+	// CodeProfileUnknown is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodeProfileUnknown = "PROFILE_UNKNOWN"
+	// CodeKeyRefUnauthorized is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
 	CodeKeyRefUnauthorized = "KEY_REF_UNAUTHORIZED"
-	CodeEgressBlocked      = "EGRESS_BLOCKED"
+	// CodeEgressBlocked is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodeEgressBlocked = "EGRESS_BLOCKED"
 )
 
 // Failure codes: the call was admitted but did not complete.
 const (
-	CodeSignerError      = "SIGNER_ERROR"
-	CodeTransportError   = "TRANSPORT_ERROR"
+	// CodeSignerError is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodeSignerError = "SIGNER_ERROR"
+	// CodeTransportError is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodeTransportError = "TRANSPORT_ERROR"
+	// CodeResponseTooLarge is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
 	CodeResponseTooLarge = "RESPONSE_TOO_LARGE"
-	CodeTimeout          = "TIMEOUT"
+	// CodeTimeout is a named denial or failure code of the cic-flow.send host capability (03 section 6, SS-01..05).
+	CodeTimeout = "TIMEOUT"
 )
 
 // CodeRequestInvalid answers a request that is not a well-formed v1 sign+send request at all. It is

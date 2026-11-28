@@ -69,11 +69,15 @@ type Policy struct {
 }
 
 var (
-	sha256Re     = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	pathTrickRe  = regexp.MustCompile(`(?i)(^|/)\.\.?(/|$)|//|%2[ef]|%5c|\\`)
+	// sha256Re is a package-level table or pattern of the cic-flow.send host capability.
+	sha256Re = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+	// pathTrickRe is a package-level table or pattern of the cic-flow.send host capability.
+	pathTrickRe = regexp.MustCompile(`(?i)(^|/)\.\.?(/|$)|//|%2[ef]|%5c|\\`)
+	// validMethods is a package-level table or pattern of the cic-flow.send host capability.
 	validMethods = map[string]bool{"GET": true, "HEAD": true, "POST": true, "PUT": true, "PATCH": true, "DELETE": true}
 )
 
+// resourcePlaceholder is a named constant of the cic-flow.send host capability.
 const resourcePlaceholder = "{resource_id}"
 
 // Validate rejects a policy that cannot be enforced unambiguously (fail-closed at configuration).
@@ -140,12 +144,14 @@ func (p Policy) Digest() string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
+// sortedCopy is a helper of the cic-flow.send host capability.
 func sortedCopy(in []string) []string {
 	out := append([]string{}, in...)
 	sort.Strings(out)
 	return out
 }
 
+// contains is a helper of the cic-flow.send host capability.
 func contains(list []string, v string) bool {
 	for _, x := range list {
 		if x == v {

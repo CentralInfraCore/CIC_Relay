@@ -81,10 +81,12 @@ func NewEngine(cfg Config) (*Engine, error) {
 // Log returns the interaction log of this engine.
 func (e *Engine) Log() *Log { return e.cfg.Log }
 
+// wireBody is a type of the cic-flow.send host capability.
 type wireBody struct {
 	Base64 string `json:"base64"`
 }
 
+// wireRequest is a type of the cic-flow.send host capability.
 type wireRequest struct {
 	V              int    `json:"v"`
 	SigningProfile string `json:"signing_profile"`
@@ -134,20 +136,29 @@ type InvalidResponse struct {
 }
 
 var (
-	profileRe  = regexp.MustCompile(`^[a-z][a-z0-9-]*:[a-z0-9-]+:[a-z0-9-]+@[0-9]+$`)
-	keyRefRe   = regexp.MustCompile(`^[a-z]+/[a-z0-9-]+$`)
-	hostRe     = regexp.MustCompile(`^[a-z0-9.-]+$`)
-	pathRe     = regexp.MustCompile(`^/[^?#\s]*$`)
-	headerRe   = regexp.MustCompile(`^[a-z0-9-]+$`)
-	tokenRe    = regexp.MustCompile(`^[\x21-\x7e]+$`)
+	// profileRe is a package-level table or pattern of the cic-flow.send host capability.
+	profileRe = regexp.MustCompile(`^[a-z][a-z0-9-]*:[a-z0-9-]+:[a-z0-9-]+@[0-9]+$`)
+	// keyRefRe is a package-level table or pattern of the cic-flow.send host capability.
+	keyRefRe = regexp.MustCompile(`^[a-z]+/[a-z0-9-]+$`)
+	// hostRe is a package-level table or pattern of the cic-flow.send host capability.
+	hostRe = regexp.MustCompile(`^[a-z0-9.-]+$`)
+	// pathRe is a package-level table or pattern of the cic-flow.send host capability.
+	pathRe = regexp.MustCompile(`^/[^?#\s]*$`)
+	// headerRe is a package-level table or pattern of the cic-flow.send host capability.
+	headerRe = regexp.MustCompile(`^[a-z0-9-]+$`)
+	// tokenRe is a package-level table or pattern of the cic-flow.send host capability.
+	tokenRe = regexp.MustCompile(`^[\x21-\x7e]+$`)
+	// hdrValueRe is a package-level table or pattern of the cic-flow.send host capability.
 	hdrValueRe = regexp.MustCompile(`^[\x20-\x7e]*$`)
 )
 
+// sha is a helper of the cic-flow.send host capability.
 func sha(b []byte) string {
 	s := sha256.Sum256(b)
 	return "sha256:" + hex.EncodeToString(s[:])
 }
 
+// invalid is a helper of the cic-flow.send host capability.
 func invalid(msg string) []byte {
 	b, _ := json.Marshal(InvalidResponse{Error: msg, Code: CodeRequestInvalid})
 	return b

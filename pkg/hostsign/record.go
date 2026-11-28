@@ -42,6 +42,7 @@ var ErrSeqGapOrOrder = errors.New("SEQ_GAP_OR_ORDER")
 // ErrBadValue is returned by RecordBytes for a value with a line break or a non-ASCII byte.
 var ErrBadValue = errors.New("BAD_VALUE")
 
+// recVal is a helper of the cic-flow.send host capability.
 func recVal(s *string) string {
 	if s == nil {
 		return "null"
@@ -49,6 +50,7 @@ func recVal(s *string) string {
 	return *s
 }
 
+// asciiLine is a helper of the cic-flow.send host capability.
 func asciiLine(s string) (string, error) {
 	if strings.ContainsAny(s, "\n\r") {
 		return "", ErrBadValue
