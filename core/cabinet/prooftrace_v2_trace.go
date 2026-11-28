@@ -76,6 +76,8 @@ type stepRecord struct {
 	dispatched bool
 	outputHash string
 	done       bool
+	// decision is the authorization decision the cabinet itself took for the step (the profile gate), if any.
+	decision *authzDecision
 	// ctx is the context the step ran under when the source scoped it (StepScoper); nil otherwise.
 	ctx context.Context
 }
@@ -128,6 +130,13 @@ func (r *traceV2Recorder) scopeStep(base context.Context, cfg *traceV2Config, st
 	return ctx
 }
 
+// stepDecision records the authorization decision of the profile gate for the current step; nil-safe.
+func (r *traceV2Recorder) stepDecision(outcome, digest string) {
+	if r != nil && r.cur() != nil {
+		r.cur().decision = &authzDecision{outcome: outcome, digest: digest}
+	}
+}
+
 // stepModule is one of the recorder hooks that tell the V2 trace how far a Setx step got; nil-safe, so the V1 path pays nothing.
 func (r *traceV2Recorder) stepModule(m *ModuleDescriptor) {
 	if r != nil && r.cur() != nil {
@@ -158,7 +167,10 @@ func (r *traceV2Recorder) stepDone(outputHash string) {
 
 // rejectionOf classifies an error that stopped a step before its execution phase was reached.
 func rejectionOf(err error, hadModule bool) RejectionV2 {
+	var ge *ProfileGateError
 	switch {
+	case errors.As(err, &ge):
+		return RejectionV2{Phase: ge.Phase, Code: ge.Code}
 	case errors.Is(err, ErrUnauthorized):
 		return RejectionV2{Phase: RejectionPhasePolicy, Code: "PROTECTED_OPERATION"}
 	case errors.Is(err, ErrNotFound) || !hadModule:
@@ -212,6 +224,10 @@ func (r *traceV2Recorder) build(ctx context.Context, cfg *traceV2Config, workflo
 		if out, dec := src.Authorization(sctx, rec.graph); out == AuthorizationAllowed || out == AuthorizationDenied {
 			st.Outcome.Authorization = out
 			st.References.AuthorizationDecision = &DigestRefV2{Digest: dec}
+		}
+		if rec.decision != nil { // the cabinet's own decision (the profile gate) outranks the source's
+			st.Outcome.Authorization = rec.decision.outcome
+			st.References.AuthorizationDecision = &DigestRefV2{Digest: rec.decision.digest}
 		}
 		var exe ExecutedIdentityV2
 		hasExe := false

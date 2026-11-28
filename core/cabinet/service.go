@@ -123,6 +123,8 @@ type cabinetService struct {
 	profileBindings map[string]*ModuleProfileBinding
 	// profileMu guards profileBindings and profileRequired: SetModuleProfile writes them at module load, execution reads them.
 	profileMu sync.RWMutex
+	// effectPolicy is the operator's allowed effect classes for profile-bound operations (WithEffectPolicy); nil = not configured.
+	effectPolicy map[string]bool
 
 	// profileRequired lists the modules whose manifest declares an ABI profile (abi.profile): with generic
 	// dispatch on they run only through an admitted binding, never through the legacy dispatch.
@@ -348,6 +350,16 @@ func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *trace
 
 		rec.stepInput(inputHash)
 
+		// 3d'. The ABI-profile gate (INT-06/07): effect authorization and the request ceiling, BEFORE the execution phase.
+		var gate *profileGate
+		if moduleDesc.NativeImpl == nil && moduleDesc.WasmCode != nil {
+			g, gerr := c.profileGateFor(moduleDesc, step, inputData, rec)
+			if gerr != nil {
+				return nil, gerr
+			}
+			gate = g
+		}
+
 		// 3e. Dispatch the call based on the module type.
 		rec.stepDispatched()
 		var result interface{}
@@ -395,25 +407,21 @@ func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *trace
 			normalizedFn := strings.ToLower(step.FunctionName)
 
 			var dataResult, errorResult string
-			binding, bindErr := c.profileBindingFor(moduleDesc)
-			if bindErr != nil {
-				// A module that needs a profile (or whose binding is stale) is rejected: it never
-				// falls back to the legacy dispatch (review F2).
-				execErr = bindErr
-			} else if binding != nil {
+			if gate != nil {
 				// --- PROFILE-DRIVEN GENERIC DISPATCH (WP-03, off unless WithGenericDispatch(true)) ---
-				// Exact operation identity: the legacy lower-casing above does not apply here (D-7).
-				op, found := binding.Operation(step.FunctionName)
-				switch {
-				case !found:
-					execErr = fmt.Errorf("%w: module %q ABI profile %q does not declare operation %q for this module", ErrInvalid, step.ComponentID, binding.Profile.ProfileID, step.FunctionName)
-				case op.HostBoundary != "none":
-					// sign+send dispatch is WP-04 scope (sign+send contract, host capability
-					// invocation); failing closed here, not falling back to the legacy switch,
-					// keeps "no implementation" from masquerading as "ran, did nothing".
-					execErr = fmt.Errorf("%w: operation %q has host_boundary %q, which generic dispatch does not execute in this build (sign+send is WP-04 scope)", ErrInvalid, op.Name, op.HostBoundary)
-				default:
-					dataResult, errorResult = host.Call(ctx, op.Name, authContextJson, string(inputJson))
+				// Exact operation identity (D-7); the gate already checked the manifest op-set, the effect and the request
+				// ceiling. The response ceiling and the timeout are enforced around the call.
+				runCtx := ctx
+				if gate.timeout > 0 {
+					var cancel context.CancelFunc
+					runCtx, cancel = context.WithTimeout(ctx, gate.timeout)
+					defer cancel()
+				}
+				dataResult, errorResult = host.Call(runCtx, gate.op.Name, authContextJson, string(inputJson))
+				if gate.maxResponse > 0 && len(dataResult) > gate.maxResponse {
+					execErr = &ProfileGateError{Phase: RejectionPhaseDispatch, Code: CodeResponseTooLarge, base: ErrInvalid,
+						Detail: fmt.Sprintf("the response is %d bytes, the profile allows %d", len(dataResult), gate.maxResponse)}
+					dataResult, errorResult = "", ""
 				}
 			} else {
 				// --- LEGACY FOUR-OP DISPATCH (the Relay's built-in core lifecycle profile) ---

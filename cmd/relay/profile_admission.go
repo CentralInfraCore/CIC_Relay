@@ -248,3 +248,27 @@ func admitModuleProfile(fsys fs.FS, yamlPath string, project *moduleProject, mod
 	}
 	return b, nil
 }
+
+// abiAllowedEffectsEnv is the operator's effect policy for profile-bound operations: a comma-separated list of effect
+// classes (local, external-read, external-write). Unset: no policy, and sign+send operations fail closed in generic
+// dispatch. The observation PoC's intended value is "local,external-read"; external-write is a separate operator decision.
+const abiAllowedEffectsEnv = "CIC_ABI_ALLOWED_EFFECTS"
+
+// effectPolicyOptionFromEnv returns the cabinet option of the effect policy, or none when unset.
+func effectPolicyOptionFromEnv() ([]cabinet.CabinetOption, error) {
+	v := strings.TrimSpace(os.Getenv(abiAllowedEffectsEnv))
+	if v == "" {
+		return nil, nil
+	}
+	var allowed []string
+	for _, e := range strings.Split(v, ",") {
+		e = strings.TrimSpace(e)
+		switch e {
+		case cabinet.EffectLocal, cabinet.EffectExternalRead, cabinet.EffectExternalWrite:
+			allowed = append(allowed, e)
+		default:
+			return nil, fmt.Errorf("%s: unknown effect class %q (want local, external-read, external-write)", abiAllowedEffectsEnv, e)
+		}
+	}
+	return []cabinet.CabinetOption{cabinet.WithEffectPolicy(allowed...)}, nil
+}

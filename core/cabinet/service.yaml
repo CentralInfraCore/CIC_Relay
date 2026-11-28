@@ -215,7 +215,6 @@ objects:
   - Notify
   - NumIn
   - NumOut
-  - Operation
   - Out
   - ParseExecutionGraph
   - PrincipalFrom

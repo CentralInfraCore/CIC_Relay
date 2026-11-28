@@ -339,3 +339,21 @@ func TestINT05_ProfileCode(t *testing.T) {
 
 // osWriteFile writes a small test file.
 func osWriteFile(path, content string) error { return os.WriteFile(path, []byte(content), 0o600) }
+
+func TestINT06_EffectPolicyFromTheEnvironment(t *testing.T) {
+	t.Setenv(abiAllowedEffectsEnv, "")
+	opts, err := effectPolicyOptionFromEnv()
+	require.NoError(t, err)
+	assert.Empty(t, opts, "unset: no policy")
+
+	t.Setenv(abiAllowedEffectsEnv, " local , external-read ")
+	opts, err = effectPolicyOptionFromEnv()
+	require.NoError(t, err)
+	assert.Len(t, opts, 1)
+
+	for _, bad := range []string{"local,external-admin", "write", "local,,external-read"} {
+		t.Setenv(abiAllowedEffectsEnv, bad)
+		_, err = effectPolicyOptionFromEnv()
+		assert.Error(t, err, bad)
+	}
+}

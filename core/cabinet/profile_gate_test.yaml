@@ -1,0 +1,156 @@
+---
+package: cabinet
+description: ''
+tags:
+- test
+category: []
+used_in: []
+entrypoint: false
+related_nodes: []
+objects:
+- name: gateSvc
+  kind: func
+  description: gateSvc is a dispatch service with generic dispatch on, the reference
+    profile bound, the given effect policy, and V2 recording with the reference source.
+  references: []
+  calls:
+  - ID
+  - WithEffectPolicy
+  - WithTraceV2
+- name: runWith
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  calls:
+  - ID
+  - NewWorkflow
+  - Put
+  - cabinetService.Setx
+  - require.NoError
+- name: requireGateError
+  kind: func
+  description: ''
+  references:
+  - require.Error
+  - require.True
+  - assert.Equal
+  - assert.True
+  calls:
+  - assert.Equal
+  - assert.True
+  - require.Error
+  - require.True
+- name: TestGateEffectPolicyAllowsAndDeniesByTheResolvedEffect
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  calls:
+  - AssertNumberOfCalls
+  - 'On'
+  - Once
+  - Return
+  - require.NoError
+- name: TestGateAnEmptyPolicyAllowsNothing
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  calls:
+  - AssertNotCalled
+- name: TestGateWriteIsAllowedOnlyWhenTheOperatorSaysSo
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - require.NoError
+  calls:
+  - 'On'
+  - Once
+  - Return
+  - require.NoError
+- name: TestGateDecisionsReachTheV2Artifact
+  kind: func
+  description: the decision is evidence, allowed and denied alike, and a denial is
+    a REJECTED step (never executed)
+  references:
+  - mock.Anything
+  - require.NoError
+  - require.Error
+  - require.Len
+  - assert.Equal
+  - require.NotNil
+  - assert.Nil
+  - assert.NotEqual
+  - o1verify.Verify
+  - o1verify.Options
+  - o1verify.VerifierInfo
+  - assert.Empty
+  calls:
+  - EmptyHostInteractionsDigestV2
+  - 'On'
+  - Once
+  - Return
+  - ValidateArtifactV2
+  - assert.Empty
+  - assert.Equal
+  - assert.Nil
+  - assert.NotEqual
+  - o1verify.Verify
+  - require.Error
+  - require.Len
+  - require.NoError
+  - require.NotNil
+- name: TestGateRequestAndResponseCeilingsAndTheTimeout
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - mock.MatchedBy
+  - assert.NoError
+  calls:
+  - AssertExpectations
+  - AssertNotCalled
+  - 'On'
+  - Once
+  - Return
+  - assert.NoError
+  - mock.MatchedBy
+- name: TestGateWithoutLimitsInTheProfileEnforcesNone
+  kind: func
+  description: ''
+  references:
+  - mock.Anything
+  - assert.NoError
+  calls:
+  - 'On'
+  - Once
+  - Return
+  - assert.NoError
+- name: TestResolveEffectAndTheDecisionDigest
+  kind: func
+  description: ''
+  references:
+  - assert.Equal
+  - assert.Regexp
+  - assert.NotEqual
+  calls:
+  - assert.Equal
+  - assert.NotEqual
+  - assert.Regexp
+- name: TestProfileGateErrorRendersItsCode
+  kind: func
+  description: ''
+  references:
+  - assert.Contains
+  - assert.True
+  calls:
+  - ProfileGateError.Error
+  - assert.Contains
+  - assert.True
+- name: gateModuleID
+  kind: var
+  description: gateModuleID is the id of the module gateSvc built.
+  references: []

@@ -86,6 +86,18 @@ objects:
   - Admit
   - cabinet.NewModuleProfileBinding
   - cabinet.NewProfileRegistry
+- name: effectPolicyOptionFromEnv
+  kind: func
+  description: effectPolicyOptionFromEnv returns the cabinet option of the effect
+    policy, or none when unset.
+  references:
+  - cabinet.CabinetOption
+  - cabinet.EffectLocal
+  - cabinet.EffectExternalRead
+  - cabinet.EffectExternalWrite
+  - cabinet.WithEffectPolicy
+  calls:
+  - cabinet.WithEffectPolicy
 - name: profileOperator
   kind: var
   description: profileOperator is the loaded configuration; nil means profile admission
@@ -127,4 +139,12 @@ objects:
 - name: codeProfileRejected
   kind: const
   description: 'codeProfileRejected: any other profile admission failure.'
+  references: []
+- name: abiAllowedEffectsEnv
+  kind: const
+  description: 'abiAllowedEffectsEnv is the operator''s effect policy for profile-bound
+    operations: a comma-separated list of effect classes (local, external-read, external-write).
+    Unset: no policy, and sign+send operations fail closed in generic dispatch. The
+    observation PoC''s intended value is "local,external-read"; external-write is
+    a separate operator decision.'
   references: []

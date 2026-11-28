@@ -204,3 +204,16 @@ objects:
   description: osWriteFile writes a small test file.
   references: []
   calls: []
+- name: TestINT06_EffectPolicyFromTheEnvironment
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Empty
+  - assert.Len
+  - assert.Error
+  calls:
+  - assert.Empty
+  - assert.Error
+  - assert.Len
+  - require.NoError

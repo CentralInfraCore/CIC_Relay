@@ -102,6 +102,13 @@ objects:
   references: []
   calls:
   - ScopeStep
+- name: stepDecision
+  kind: method
+  receiver: traceV2Recorder
+  description: stepDecision records the authorization decision of the profile gate
+    for the current step; nil-safe.
+  references: []
+  calls: []
 - name: stepModule
   kind: method
   receiver: traceV2Recorder
