@@ -8,24 +8,14 @@ used_in: []
 entrypoint: false
 related_nodes: []
 objects:
-- name: shape
-  kind: struct
-  description: shape describes one JSON value of the profile artifact.
-  implements: []
-  references: []
 - name: strictScan
   kind: func
-  description: strictScan validates raw against the shape and rejects any trailing
-    data.
-  references: []
+  description: strictScan validates raw against the profile's exact wire shape and
+    rejects any trailing data.
+  references:
+  - strictjson.Scan
   calls:
-  - Token
-- name: scanValue
-  kind: func
-  description: scanValue consumes one JSON value from dec against sh, rejecting what
-    the shape does not allow.
-  references: []
-  calls: []
+  - strictjson.Scan
 - name: checkStrictLimits
   kind: func
   description: checkStrictLimits requires every declared limit to be a positive integer

@@ -537,7 +537,7 @@ func TestParseProfileStrictWire(t *testing.T) {
 		{"duplicate-key", strings.Replace(good, `"kind":"AbiProfile"`, `"kind":"AbiProfile","kind":"AbiProfile"`, 1), "duplicate key"},
 		{"duplicate-key-in-effect-map", strings.Replace(good, `"read":"external-read"`, `"read":"external-read","read":"external-write"`, 1), "duplicate key"},
 		{"missing-required-key", strings.Replace(good, `"profile_version":1,`, ``, 1), "required key"},
-		{"trailing-data", good + ` {}`, "after the profile object"},
+		{"trailing-data", good + ` {}`, "after the JSON value"},
 		{"unknown-key-in-operation", strings.Replace(good, `"name":"describe"`, `"name":"describe","x":1`, 1), "unknown or differently spelled"},
 		{"unknown-key-in-schema-ref", strings.Replace(good, `"id":"cic:provider:describe-request"`, `"id":"cic:provider:describe-request","x":1`, 1), "unknown or differently spelled"},
 		{"zero-limit", strings.Replace(good, `"timeout_ms":30000`, `"timeout_ms":0`, 1), "positive integer"},
