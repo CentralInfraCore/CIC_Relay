@@ -126,7 +126,14 @@ type moduleProject struct {
 		CICSign   string `yaml:"cicSign"` // verified in R3b (pki_verify.go)
 	} `yaml:"metadata"`
 	ABI struct {
-		Imports []struct {
+		// Profile is the ABI profile the module pins (abi.profile {id, digest}); empty: no profile (legacy dispatch).
+		Profile struct {
+			ID     string `yaml:"id"`
+			Digest string `yaml:"digest"`
+		} `yaml:"profile"`
+		// Operations is the module's declared operation set: a subset of the profile's.
+		Operations []string `yaml:"operations"`
+		Imports    []struct {
 			Module    string   `yaml:"module"`
 			Functions []string `yaml:"functions"`
 		} `yaml:"imports"`

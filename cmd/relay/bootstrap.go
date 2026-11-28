@@ -340,6 +340,9 @@ type PKIAssets struct {
 	// AcceptedProfiles are the ABI-profile pins (id, digest) of the admitted trust bundle (INT-12). Nil when no bundle is
 	// configured. Consuming them for profile admission is INT-05.
 	AcceptedProfiles []trustbundle.Profile
+	// ProfileSignAuthorities holds, per signer key_id, whether the bundle grants profile:sign (INT-05). Nil: no profile
+	// signature is accepted.
+	ProfileSignAuthorities map[string]bool
 	// TrustMode is the CIC_TRUST_MODE the assets were bootstrapped for (bootstrapTrust). Anything other than
 	// TrustModeDev, the empty value included, is treated as prod by the module admission (V6): fail-closed.
 	TrustMode string
@@ -559,6 +562,7 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 		revokeModuleCapability(moduleID)
 	}
 	var moduleDesc *cabinet.ModuleDescriptor
+	var profileBinding *cabinet.ModuleProfileBinding
 	auditLogger := logger.WithFields(logrus.Fields{"module_id": moduleID, "checksum": calculatedDigest})
 
 	sigPath := strings.TrimSuffix(yamlPath, filepath.Ext(yamlPath)) + ".pem"
@@ -615,6 +619,16 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 			return fmt.Errorf("module %q rejected: %w", moduleID, admErr)
 		}
 		auditLogger = auditLogger.WithFields(logrus.Fields{"trust_state": trustState, "envelope_digest": envelopeDigest})
+		// INT-05: a module that names an ABI profile is admitted only with an authenticated profile binding, before any
+		// capability is published. A failure rejects the module; there is no fallback to legacy dispatch.
+		project, perr := parseModuleProject(yamlContent)
+		if perr != nil {
+			return fmt.Errorf("module %q rejected: %w", moduleID, reject(codeEnvelopeInvalid, "%v", perr))
+		}
+		if profileBinding, err = admitModuleProfile(fsys, yamlPath, project, moduleDesc, envelopeDigest, pkiAssets); err != nil {
+			auditLogger.WithFields(logrus.Fields{"outcome": "rejected", "code": admissionCode(err)}).WithError(err).Error("ABI profile admission failed — module rejected.")
+			return fmt.Errorf("module %q rejected: %w", moduleID, err)
+		}
 		// R3a/R3b + #162 V7: a capability is bound only to an authenticated module, and under its authenticated
 		// identity (module_id, envelope_digest). A verified module that over-declares is rejected.
 		if trustState == trustAuthenticated && registerModuleCapability != nil {
@@ -663,6 +677,12 @@ func loadModule(ctx context.Context, svc cabinet.Cabinet, fsys fs.FS, yamlPath s
 			revokeModuleCapability(moduleID)
 		}
 		return err
+	}
+	// The profile binding (nil for a module without a profile: this also clears one from an earlier load).
+	if reg, ok := svc.(interface {
+		SetModuleProfile(string, *cabinet.ModuleProfileBinding)
+	}); ok {
+		reg.SetModuleProfile(moduleDesc.ID(), profileBinding)
 	}
 	// Stored: the staged grant becomes active, for exactly this artifact.
 	if commitModuleCapability != nil {

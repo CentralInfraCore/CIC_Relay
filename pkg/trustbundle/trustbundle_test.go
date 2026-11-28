@@ -37,8 +37,21 @@ func TestAdmitsThePinnedBundleAndReadsItsContent(t *testing.T) {
 	assert.Equal(t, Digest([]byte(good)), a.Digest)
 	assert.EqualValues(t, 5, a.Version)
 	assert.Equal(t, map[string]bool{k1: true, k2: false}, a.ModuleSign, "a key listed without the role holds no authority")
+	assert.Equal(t, map[string]bool{k1: false, k2: false}, a.ProfileSign, "module:sign is not profile:sign")
 	assert.Equal(t, []Profile{{ID: "oci-1", Digest: pd}}, a.Profiles)
 	assert.True(t, a.IssuedAt.Equal(time.Date(2026, 11, 28, 10, 0, 0, 0, time.UTC)))
+}
+
+func TestProfileSignIsAnIndependentRole(t *testing.T) {
+	raw := strings.Replace(good, `"roles":[]`, `"roles":["profile:sign"]`, 1)
+	a, err := Admit([]byte(raw), pol(raw), State{}, now)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{k1: false, k2: true}, a.ProfileSign)
+	assert.Equal(t, map[string]bool{k1: true, k2: false}, a.ModuleSign, "a profile signer is not a module signer")
+	both := strings.Replace(good, `"roles":["module:sign"]`, `"roles":["module:sign","profile:sign"]`, 1)
+	a, err = Admit([]byte(both), pol(both), State{}, now)
+	require.NoError(t, err)
+	assert.True(t, a.ModuleSign[k1] && a.ProfileSign[k1])
 }
 
 func TestNotPinned(t *testing.T) {

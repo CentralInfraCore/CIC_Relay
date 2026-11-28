@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -120,6 +121,8 @@ type cabinetService struct {
 	// consulted when genericDispatch is on; a module without a binding, or whose current
 	// checksum differs from the bound one, always uses the legacy dispatch.
 	profileBindings map[string]*ModuleProfileBinding
+	// profileMu guards profileBindings and profileRequired: SetModuleProfile writes them at module load, execution reads them.
+	profileMu sync.RWMutex
 
 	// profileRequired lists the modules whose manifest declares an ABI profile (abi.profile): with generic
 	// dispatch on they run only through an admitted binding, never through the legacy dispatch.
@@ -191,6 +194,35 @@ func WithProfileRequiredModules(ids ...string) CabinetOption {
 			s.profileRequired[id] = true
 		}
 	}
+}
+
+// SetModuleProfile records the outcome of a module's ABI-profile admission at load time (INT-05). A non-nil binding
+// registers it and marks the module as needing a profile; nil clears both (a reload of the module without a profile must
+// not keep the earlier binding). It is the runtime counterpart of WithProfileRequiredModules and WithModuleProfileBindings.
+func (c *cabinetService) SetModuleProfile(moduleID string, b *ModuleProfileBinding) {
+	c.profileMu.Lock()
+	defer c.profileMu.Unlock()
+	if b == nil {
+		delete(c.profileBindings, moduleID)
+		delete(c.profileRequired, moduleID)
+		return
+	}
+	if c.profileBindings == nil {
+		c.profileBindings = map[string]*ModuleProfileBinding{}
+	}
+	if c.profileRequired == nil {
+		c.profileRequired = map[string]bool{}
+	}
+	c.profileBindings[moduleID] = b
+	c.profileRequired[moduleID] = true
+}
+
+// ModuleProfile returns the admitted profile binding of a module, if any (diagnostics and acceptance tests).
+func (c *cabinetService) ModuleProfile(moduleID string) (*ModuleProfileBinding, bool) {
+	c.profileMu.RLock()
+	defer c.profileMu.RUnlock()
+	b, ok := c.profileBindings[moduleID]
+	return b, ok
 }
 
 // WithModuleProfileBindings registers admitted ABI-profile bindings (one per module).
@@ -561,14 +593,17 @@ func (c *cabinetService) profileBindingFor(m *ModuleDescriptor) (*ModuleProfileB
 	if !c.genericDispatch {
 		return nil, nil
 	}
+	c.profileMu.RLock()
 	b, ok := c.profileBindings[m.ID()]
+	required := c.profileRequired[m.ID()]
+	c.profileMu.RUnlock()
 	if ok {
 		if b.ModuleChecksum != m.Checksum() {
 			return nil, fmt.Errorf("%w: module %q has an ABI-profile binding for different content (stale binding); refusing to run it", ErrInvalid, m.ID())
 		}
 		return b, nil
 	}
-	if c.profileRequired[m.ID()] {
+	if required {
 		return nil, fmt.Errorf("%w: module %q declares an ABI profile but none is admitted for it; refusing to run it", ErrInvalid, m.ID())
 	}
 	return nil, nil

@@ -162,6 +162,12 @@ objects:
   description: RoleModuleSign is the authority a signer key must hold to sign module
     releases (#162 V2b).
   references: []
+- name: RoleProfileSign
+  kind: const
+  description: RoleProfileSign is the authority a signer key must hold to sign an
+    ABI-profile artifact (INT-05). It extends the closed role vocabulary of the bundle;
+    the profile's signed domain is CICABIPROFv1 (ref 02 section 3).
+  references: []
 - name: MaxClockSkew
   kind: const
   description: MaxClockSkew is how far in the future an issued_at may lie before the

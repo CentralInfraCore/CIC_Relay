@@ -40,6 +40,10 @@ const Kind = "CICTrustBundle"
 // RoleModuleSign is the authority a signer key must hold to sign module releases (#162 V2b).
 const RoleModuleSign = "module:sign"
 
+// RoleProfileSign is the authority a signer key must hold to sign an ABI-profile artifact (INT-05). It extends the
+// closed role vocabulary of the bundle; the profile's signed domain is CICABIPROFv1 (ref 02 section 3).
+const RoleProfileSign = "profile:sign"
+
 // MaxClockSkew is how far in the future an issued_at may lie before the bundle is refused.
 const MaxClockSkew = 5 * time.Minute
 
@@ -127,7 +131,9 @@ type Admitted struct {
 	IssuedAt time.Time
 	// ModuleSign holds, per signer key_id, whether module:sign is granted.
 	ModuleSign map[string]bool
-	Profiles   []Profile
+	// ProfileSign holds, per signer key_id, whether profile:sign is granted.
+	ProfileSign map[string]bool
+	Profiles    []Profile
 }
 
 // wire is the decoded bundle, read only after the strict scan.
@@ -174,7 +180,7 @@ func Admit(raw []byte, pol Policy, st State, now time.Time) (*Admitted, error) {
 	if err != nil {
 		return nil, fail(CodeInvalid, "issued_at is not RFC 3339: %v", err)
 	}
-	out := &Admitted{Digest: got, Version: w.Version, IssuedAt: issued, ModuleSign: map[string]bool{}}
+	out := &Admitted{Digest: got, Version: w.Version, IssuedAt: issued, ModuleSign: map[string]bool{}, ProfileSign: map[string]bool{}}
 	for i, a := range w.Authorities {
 		if !digestRE.MatchString(a.KeyID) {
 			return nil, fail(CodeInvalid, "authorities[%d].key_id is not sha256:<64 lowercase hex>", i)
@@ -182,14 +188,19 @@ func Admit(raw []byte, pol Policy, st State, now time.Time) (*Admitted, error) {
 		if _, dup := out.ModuleSign[a.KeyID]; dup {
 			return nil, fail(CodeInvalid, "authorities[%d]: duplicate key_id", i)
 		}
-		granted := false
+		var module, profile bool
 		for _, r := range a.Roles {
-			if r != RoleModuleSign {
+			switch r {
+			case RoleModuleSign:
+				module = true
+			case RoleProfileSign:
+				profile = true
+			default:
 				return nil, fail(CodeInvalid, "authorities[%d]: unknown role %q", i, clip(r))
 			}
-			granted = true
 		}
-		out.ModuleSign[a.KeyID] = granted
+		out.ModuleSign[a.KeyID] = module
+		out.ProfileSign[a.KeyID] = profile
 	}
 	seen := map[string]bool{}
 	for i, p := range w.Profiles {

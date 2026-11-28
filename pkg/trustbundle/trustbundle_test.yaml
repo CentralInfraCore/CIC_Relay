@@ -39,6 +39,18 @@ objects:
   - assert.EqualValues
   - assert.True
   - require.NoError
+- name: TestProfileSignIsAnIndependentRole
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  - assert.True
+  calls:
+  - Admit
+  - assert.Equal
+  - assert.True
+  - require.NoError
 - name: TestNotPinned
   kind: func
   description: ''

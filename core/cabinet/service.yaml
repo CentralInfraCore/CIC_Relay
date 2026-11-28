@@ -134,6 +134,27 @@ objects:
     a module without a valid binding is rejected, not run legacy.
   references: []
   calls: []
+- name: SetModuleProfile
+  kind: method
+  receiver: cabinetService
+  description: SetModuleProfile records the outcome of a module's ABI-profile admission
+    at load time (INT-05). A non-nil binding registers it and marks the module as
+    needing a profile; nil clears both (a reload of the module without a profile must
+    not keep the earlier binding). It is the runtime counterpart of WithProfileRequiredModules
+    and WithModuleProfileBindings.
+  references: []
+  calls:
+  - Lock
+  - Unlock
+- name: ModuleProfile
+  kind: method
+  receiver: cabinetService
+  description: ModuleProfile returns the admitted profile binding of a module, if
+    any (diagnostics and acceptance tests).
+  references: []
+  calls:
+  - RLock
+  - RUnlock
 - name: WithModuleProfileBindings
   kind: func
   description: WithModuleProfileBindings registers admitted ABI-profile bindings (one
@@ -290,3 +311,5 @@ objects:
   calls:
   - ModuleDescriptor.Checksum
   - ModuleDescriptor.ID
+  - RLock
+  - RUnlock
