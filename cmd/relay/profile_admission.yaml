@@ -11,11 +11,21 @@ objects:
   kind: struct
   description: 'profileOperatorConfig is the operator''s schema registry and limit
     caps (ref 02 section 6: the store location is open; this is a file the operator
-    controls, loaded at start-up).'
+    controls, loaded at start-up). A schema may also carry its BODY (body_file): the
+    file''s sha256 must equal the schema''s digest, so the body used for payload validation
+    is exactly the one the profile pinned.'
   implements: []
   references:
   - cabinet.SchemaRegistry
   - cabinet.OperatorLimits
+- name: operatorValidator
+  kind: struct
+  description: 'operatorValidator is the production cabinet.PayloadValidator: it reads
+    the loaded operator configuration at call time (the cabinet is built before the
+    configuration is loaded). No configuration, or no body for exactly the pinned
+    id and digest, is ErrSchemaUnavailable: fail closed.'
+  implements: []
+  references: []
 - name: bundleProfileVerifier
   kind: struct
   description: 'bundleProfileVerifier is the production cabinet.ProfileSignatureVerifier:
@@ -28,6 +38,26 @@ objects:
   description: profileAuthError marks a valid signature by a key without profile:sign.
   implements: []
   references: []
+- name: bodyStore
+  kind: type
+  description: bodyStore holds the compiled schema bodies by exactly (id, digest).
+  references:
+  - schemalite.Schema
+- name: has
+  kind: method
+  receiver: bodyStore
+  description: has reports whether a body is held for exactly this id and digest.
+  references:
+  - cabinet.AbiSchemaRef
+  calls: []
+- name: ValidatePayload
+  kind: method
+  receiver: operatorValidator
+  description: ValidatePayload implements cabinet.PayloadValidator.
+  references:
+  - cabinet.ErrSchemaUnavailable
+  calls:
+  - Validate
 - name: parseProfileOperatorConfig
   kind: func
   description: parseProfileOperatorConfig decodes the operator configuration strictly.
@@ -35,9 +65,11 @@ objects:
   - strictjson.Scan
   - cabinet.InMemorySchemaRegistry
   - cabinet.SchemaRegistryEntry
+  - schemalite.Compile
   - cabinet.OperatorLimits
   calls:
   - MatchString
+  - schemalite.Compile
   - strictjson.Scan
 - name: loadProfileOperatorConfig
   kind: func
@@ -81,6 +113,8 @@ objects:
   - cabinet.PinnedProfile
   - cabinet.NewProfileRegistry
   - cabinet.ProfileSignature
+  - cabinet.AbiSchemaRef
+  - cabinet.CodeSchemaUnavailable
   - cabinet.NewModuleProfileBinding
   calls:
   - Admit

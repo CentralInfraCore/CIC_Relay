@@ -15,6 +15,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -23,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/pkg/schemalite"
 	"centralrelay/pkg/trustbundle"
 )
 
@@ -35,7 +37,20 @@ func profileFixtureOperator() *profileOperatorConfig {
 			"cic:provider:observe-request": {Digest: dg("ef")}, "cic:provider:observation": {Digest: dg("12")},
 		},
 		Caps: cabinet.OperatorLimits{MaxRequestBytes: 1048576, MaxResponseBytes: 1048576, TimeoutMs: 60000},
+		Bodies: bodyStore{
+			{"cic:provider:describe-request", dg("ab")}: compileBody(`{"type":"object"}`), {"cic:provider:module-manifest", dg("cd")}: compileBody(`{"type":"object"}`),
+			{"cic:provider:observe-request", dg("ef")}: compileBody(`{"type":"object"}`), {"cic:provider:observation", dg("12")}: compileBody(`{"type":"object"}`),
+		},
 	}
+}
+
+// compileBody compiles a test schema body.
+func compileBody(doc string) *schemalite.Schema {
+	s, err := schemalite.Compile([]byte(doc))
+	if err != nil {
+		panic(err)
+	}
+	return s
 }
 
 func profileJSON(t *testing.T, mutate func(map[string]any)) []byte {
@@ -286,7 +301,7 @@ func TestINT05_VerifierRefusals(t *testing.T) {
 func TestINT05_OperatorConfig(t *testing.T) {
 	ok := `{"kind":"AbiOperatorConfig","version":1,"limits":{"max_request_bytes":10,"max_response_bytes":20,"timeout_ms":30},` +
 		`"schemas":[{"id":"s1","digest":"` + dg("ab") + `","fields":{"operation_role":["read","action"]}},{"id":"s2","digest":"` + dg("cd") + `"}]}`
-	cfg, err := parseProfileOperatorConfig([]byte(ok))
+	cfg, err := parseProfileOperatorConfig([]byte(ok), t.TempDir())
 	require.NoError(t, err)
 	assert.Equal(t, cabinet.OperatorLimits{MaxRequestBytes: 10, MaxResponseBytes: 20, TimeoutMs: 30}, cfg.Caps)
 	e, found := cfg.Schemas.Resolve("s1")
@@ -305,7 +320,7 @@ func TestINT05_OperatorConfig(t *testing.T) {
 		"trailing data":    ok + "{}",
 		"limit missing":    strings.Replace(ok, `"timeout_ms":30`, `"x":30`, 1),
 	} {
-		_, err := parseProfileOperatorConfig([]byte(bad))
+		_, err := parseProfileOperatorConfig([]byte(bad), t.TempDir())
 		assert.Error(t, err, name)
 	}
 }
@@ -356,4 +371,48 @@ func TestINT06_EffectPolicyFromTheEnvironment(t *testing.T) {
 		_, err = effectPolicyOptionFromEnv()
 		assert.Error(t, err, bad)
 	}
+}
+
+// INT-07: a profile is not admitted whose schema bodies the operator does not hold, and a body must be exactly the digest.
+func TestINT07_ProfileNeedsItsSchemaBodies(t *testing.T) {
+	f := newProfFixture(t, nil, "[describe, observe]")
+	delete(profileOperator.Bodies, [2]string{"cic:provider:observation", dg("12")})
+	requireRejected(t, f.admFixture, cabinet.CodeSchemaUnavailable)
+}
+
+func TestINT07_BodyFilesAreDigestBoundAndCompiled(t *testing.T) {
+	dir := t.TempDir()
+	body := []byte(`{"type":"object","required":["a"]}`)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "s.json"), body, 0o600))
+	cfg := func(digest, file string) string {
+		return `{"kind":"AbiOperatorConfig","version":1,"limits":{"max_request_bytes":1,"max_response_bytes":1,"timeout_ms":1},"schemas":[{"id":"s","digest":"` + digest + `","body_file":"` + file + `"}]}`
+	}
+	good, err := parseProfileOperatorConfig([]byte(cfg(sha256Ref(body), "s.json")), dir)
+	require.NoError(t, err)
+	assert.True(t, good.Bodies.has(cabinet.AbiSchemaRef{ID: "s", Digest: sha256Ref(body)}))
+	assert.False(t, good.Bodies.has(cabinet.AbiSchemaRef{ID: "s", Digest: dg("00")}))
+	assert.False(t, good.Bodies.has(cabinet.AbiSchemaRef{ID: "other", Digest: sha256Ref(body)}))
+
+	_, err = parseProfileOperatorConfig([]byte(cfg(dg("aa"), "s.json")), dir)
+	assert.ErrorContains(t, err, "pinned digest", "a body that is not the pinned digest is refused at start-up")
+	_, err = parseProfileOperatorConfig([]byte(cfg(sha256Ref(body), "absent.json")), dir)
+	assert.Error(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "bad.json"), []byte(`{"$ref":"x"}`), 0o600))
+	_, err = parseProfileOperatorConfig([]byte(cfg(sha256Ref([]byte(`{"$ref":"x"}`)), "bad.json")), dir)
+	assert.ErrorContains(t, err, "not supported", "a schema outside the supported subset is refused, not ignored")
+	abs, err := parseProfileOperatorConfig([]byte(cfg(sha256Ref(body), filepath.Join(dir, "s.json"))), "/nonexistent")
+	require.NoError(t, err, "an absolute body path ignores the config directory")
+	assert.Len(t, abs.Bodies, 1)
+}
+
+func TestINT07_OperatorValidator(t *testing.T) {
+	t.Cleanup(func() { profileOperator = nil })
+	profileOperator = nil
+	assert.ErrorIs(t, operatorValidator{}.ValidatePayload("s", dg("aa"), []byte(`{}`)), cabinet.ErrSchemaUnavailable, "no configuration: fail closed")
+	profileOperator = &profileOperatorConfig{Bodies: bodyStore{{"s", dg("aa")}: compileBody(`{"type":"object","required":["a"]}`)}}
+	assert.NoError(t, operatorValidator{}.ValidatePayload("s", dg("aa"), []byte(`{"a":1}`)))
+	err := operatorValidator{}.ValidatePayload("s", dg("aa"), []byte(`{}`))
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, cabinet.ErrSchemaUnavailable, "a non-conforming payload is not an unavailable schema")
+	assert.ErrorIs(t, operatorValidator{}.ValidatePayload("s", dg("bb"), []byte(`{}`)), cabinet.ErrSchemaUnavailable, "another digest is not the pinned body")
 }

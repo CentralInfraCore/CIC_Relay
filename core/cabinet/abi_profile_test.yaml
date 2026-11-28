@@ -9,6 +9,12 @@ used_in: []
 entrypoint: false
 related_nodes: []
 objects:
+- name: anyPayload
+  kind: struct
+  description: anyPayload is a PayloadValidator that accepts every payload (the dispatch
+    tests are not about schemas).
+  implements: []
+  references: []
 - name: testSchemas
   kind: func
   description: ''
@@ -230,6 +236,7 @@ objects:
   - Return
   - WithGenericDispatch
   - WithModuleProfileBindings
+  - WithPayloadValidator
 - name: profiledModule
   kind: func
   description: ''
@@ -421,6 +428,12 @@ objects:
   - assert.Equal
   - require.Error
   - require.NoError
+- name: ValidatePayload
+  kind: method
+  receiver: anyPayload
+  description: ''
+  references: []
+  calls: []
 - name: tdDescribeReq
   kind: var
   description: ''

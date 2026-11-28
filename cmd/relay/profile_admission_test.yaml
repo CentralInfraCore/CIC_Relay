@@ -27,6 +27,14 @@ objects:
   - cabinet.InMemorySchemaRegistry
   - cabinet.OperatorLimits
   calls: []
+- name: compileBody
+  kind: func
+  description: compileBody compiles a test schema body.
+  references:
+  - schemalite.Schema
+  - schemalite.Compile
+  calls:
+  - schemalite.Compile
 - name: profileJSON
   kind: func
   description: ''
@@ -217,3 +225,43 @@ objects:
   - assert.Error
   - assert.Len
   - require.NoError
+- name: TestINT07_ProfileNeedsItsSchemaBodies
+  kind: func
+  description: 'INT-07: a profile is not admitted whose schema bodies the operator
+    does not hold, and a body must be exactly the digest.'
+  references:
+  - cabinet.CodeSchemaUnavailable
+  calls: []
+- name: TestINT07_BodyFilesAreDigestBoundAndCompiled
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.True
+  - cabinet.AbiSchemaRef
+  - assert.False
+  - assert.ErrorContains
+  - assert.Error
+  - assert.Len
+  calls:
+  - assert.Error
+  - assert.ErrorContains
+  - assert.False
+  - assert.Len
+  - assert.True
+  - require.NoError
+- name: TestINT07_OperatorValidator
+  kind: func
+  description: ''
+  references:
+  - assert.ErrorIs
+  - cabinet.ErrSchemaUnavailable
+  - assert.NoError
+  - require.Error
+  - assert.NotErrorIs
+  calls:
+  - ValidatePayload
+  - assert.ErrorIs
+  - assert.NoError
+  - assert.NotErrorIs
+  - require.Error

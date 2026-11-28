@@ -797,6 +797,7 @@ func main() {
 		logger.WithError(err).Fatal("FATAL: invalid ABI effect policy")
 	}
 	traceOpts = append(traceOpts, effectOpts...)
+	traceOpts = append(traceOpts, cabinet.WithPayloadValidator(operatorValidator{})) // INT-07: payloads are validated against the pinned schema bodies
 	cabinetSvc, err := cabinet.NewCabinetService(context.Background(), schemaStore, moduleStore, workflowStore, wasmConfig, append(traceOpts, recorderOpt, cabinet.WithEvidenceRequired(evidenceRequired), cabinet.WithProtectedModules(protectedModuleIDs...), cabinet.WithGenericDispatch(genericDispatch), obsOpt)...)
 	if err != nil {
 		logger.WithField("error", err).Fatal("FATAL: Failed to create cabinet service")

@@ -22,6 +22,15 @@ objects:
   description: authzDecision is the recorded decision of a step.
   implements: []
   references: []
+- name: PayloadValidator
+  kind: interface
+  description: PayloadValidator validates one JSON payload against the schema body
+    registered for exactly (schemaID, schemaDigest). It returns ErrSchemaUnavailable
+    (wrapped or not) when it has no body for that pair, and any other error for a
+    payload that does not conform.
+  references: []
+  methods:
+  - ValidatePayload
 - name: Error
   kind: method
   receiver: ProfileGateError
@@ -32,6 +41,13 @@ objects:
   kind: method
   receiver: ProfileGateError
   description: Unwrap lets errors.Is see the base class (ErrInvalid).
+  references: []
+  calls: []
+- name: WithPayloadValidator
+  kind: func
+  description: 'WithPayloadValidator configures the operator''s payload validation
+    for profile-bound operations. Without it, a profile-bound step is refused (SCHEMA_VALIDATION_UNCONFIGURED):
+    an operation is never dispatched unvalidated.'
   references: []
   calls: []
 - name: WithEffectPolicy
@@ -76,6 +92,25 @@ objects:
     ceiling and the timeout for the run.
   references: []
   calls: []
+- name: validatePayload
+  kind: func
+  description: validatePayload validates payload against the schema ref; invalidCode
+    is the code of a non-conforming payload.
+  references: []
+  calls:
+  - PayloadValidator.ValidatePayload
+- name: validateResponse
+  kind: method
+  receiver: profileGate
+  description: 'validateResponse validates a call''s response against the operation''s
+    response schema (nil: conforms).'
+  references: []
+  calls: []
+- name: ErrSchemaUnavailable
+  kind: var
+  description: ErrSchemaUnavailable is returned by a PayloadValidator when it holds
+    no schema body for the id and digest asked for.
+  references: []
 - name: EffectLocal
   kind: const
   description: EffectLocal changes nothing outside the module.
@@ -96,6 +131,26 @@ objects:
 - name: CodeRequestTooLarge
   kind: const
   description: 'CodeRequestTooLarge: the request exceeds the profile''s max_request_bytes.'
+  references: []
+- name: CodeSchemaValidationUnconfigured
+  kind: const
+  description: 'CodeSchemaValidationUnconfigured: a profile-bound step needs payload
+    validation and no validator is configured.'
+  references: []
+- name: CodeSchemaUnavailable
+  kind: const
+  description: 'CodeSchemaUnavailable: no schema body is available for the profile''s
+    schema id and digest.'
+  references: []
+- name: CodeRequestSchemaInvalid
+  kind: const
+  description: 'CodeRequestSchemaInvalid: the request does not conform to the operation''s
+    request schema.'
+  references: []
+- name: CodeResponseSchemaInvalid
+  kind: const
+  description: 'CodeResponseSchemaInvalid: the response does not conform to the operation''s
+    response schema.'
   references: []
 - name: CodeResponseTooLarge
   kind: const

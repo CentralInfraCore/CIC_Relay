@@ -125,6 +125,8 @@ type cabinetService struct {
 	profileMu sync.RWMutex
 	// effectPolicy is the operator's allowed effect classes for profile-bound operations (WithEffectPolicy); nil = not configured.
 	effectPolicy map[string]bool
+	// payloadValidator validates the request and response of profile-bound operations against the schema bodies (WithPayloadValidator).
+	payloadValidator PayloadValidator
 
 	// profileRequired lists the modules whose manifest declares an ABI profile (abi.profile): with generic
 	// dispatch on they run only through an admitted binding, never through the legacy dispatch.
@@ -421,6 +423,9 @@ func (c *cabinetService) setxRun(ctx context.Context, in *SetPayload, rec *trace
 				if gate.maxResponse > 0 && len(dataResult) > gate.maxResponse {
 					execErr = &ProfileGateError{Phase: RejectionPhaseDispatch, Code: CodeResponseTooLarge, base: ErrInvalid,
 						Detail: fmt.Sprintf("the response is %d bytes, the profile allows %d", len(dataResult), gate.maxResponse)}
+					dataResult, errorResult = "", ""
+				} else if verr := gate.validateResponse(dataResult, errorResult); verr != nil {
+					execErr = verr
 					dataResult, errorResult = "", ""
 				}
 			} else {

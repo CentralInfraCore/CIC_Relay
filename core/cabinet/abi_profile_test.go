@@ -372,6 +372,7 @@ func dispatchSvc(enabled bool, mod *ModuleDescriptor, host *MockCicWasmHost, bin
 	svc := &cabinetService{modules: modStore, workflows: NewMemWorkflowStore(), wasmManager: mgr}
 	WithGenericDispatch(enabled)(svc)
 	WithModuleProfileBindings(bindings...)(svc)
+	WithPayloadValidator(anyPayload{})(svc) // these tests are about dispatch, not about the schema bodies
 	return svc
 }
 
@@ -585,3 +586,8 @@ func TestLegacyModuleUnaffectedWhenSwitchIsOn(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support operation")
 }
+
+// anyPayload is a PayloadValidator that accepts every payload (the dispatch tests are not about schemas).
+type anyPayload struct{}
+
+func (anyPayload) ValidatePayload(string, string, []byte) error { return nil }

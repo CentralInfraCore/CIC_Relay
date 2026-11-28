@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"centralrelay/core/cabinet"
+	"centralrelay/pkg/schemalite"
 	"centralrelay/pkg/strictjson"
 )
 
@@ -53,10 +54,38 @@ const (
 )
 
 // profileOperatorConfig is the operator's schema registry and limit caps (ref 02 section 6: the store location is open;
-// this is a file the operator controls, loaded at start-up).
+// this is a file the operator controls, loaded at start-up). A schema may also carry its BODY (body_file): the file's
+// sha256 must equal the schema's digest, so the body used for payload validation is exactly the one the profile pinned.
 type profileOperatorConfig struct {
 	Schemas cabinet.SchemaRegistry
 	Caps    cabinet.OperatorLimits
+	Bodies  bodyStore
+}
+
+// bodyStore holds the compiled schema bodies by exactly (id, digest).
+type bodyStore map[[2]string]*schemalite.Schema
+
+// has reports whether a body is held for exactly this id and digest.
+func (b bodyStore) has(ref cabinet.AbiSchemaRef) bool {
+	_, ok := b[[2]string{ref.ID, ref.Digest}]
+	return ok
+}
+
+// operatorValidator is the production cabinet.PayloadValidator: it reads the loaded operator configuration at call time
+// (the cabinet is built before the configuration is loaded). No configuration, or no body for exactly the pinned id and
+// digest, is ErrSchemaUnavailable: fail closed.
+type operatorValidator struct{}
+
+// ValidatePayload implements cabinet.PayloadValidator.
+func (operatorValidator) ValidatePayload(id, digest string, payload []byte) error {
+	if profileOperator == nil {
+		return fmt.Errorf("%w: no operator configuration is loaded (%s)", cabinet.ErrSchemaUnavailable, abiOperatorConfigEnv)
+	}
+	s, ok := profileOperator.Bodies[[2]string{id, digest}]
+	if !ok {
+		return fmt.Errorf("%w: no body for %s %s", cabinet.ErrSchemaUnavailable, id, digest)
+	}
+	return s.Validate(payload)
 }
 
 // profileOperator is the loaded configuration; nil means profile admission is unconfigured (fail-closed).
@@ -68,13 +97,13 @@ var operatorConfigShape = &strictjson.Shape{
 		"kind": nil, "version": nil,
 		"limits": {Keys: map[string]*strictjson.Shape{"max_request_bytes": nil, "max_response_bytes": nil, "timeout_ms": nil},
 			Required: []string{"max_request_bytes", "max_response_bytes", "timeout_ms"}},
-		"schemas": {Elem: &strictjson.Shape{Keys: map[string]*strictjson.Shape{"id": nil, "digest": nil, "fields": {Free: true}}, Required: []string{"id", "digest"}}},
+		"schemas": {Elem: &strictjson.Shape{Keys: map[string]*strictjson.Shape{"id": nil, "digest": nil, "fields": {Free: true}, "body_file": nil}, Required: []string{"id", "digest"}}},
 	},
 	Required: []string{"kind", "version", "limits", "schemas"},
 }
 
 // parseProfileOperatorConfig decodes the operator configuration strictly.
-func parseProfileOperatorConfig(data []byte) (*profileOperatorConfig, error) {
+func parseProfileOperatorConfig(data []byte, baseDir string) (*profileOperatorConfig, error) {
 	if err := strictjson.Scan(data, operatorConfigShape); err != nil {
 		return nil, fmt.Errorf("abi operator config: %v", err)
 	}
@@ -90,6 +119,7 @@ func parseProfileOperatorConfig(data []byte) (*profileOperatorConfig, error) {
 			ID     string              `json:"id"`
 			Digest string              `json:"digest"`
 			Fields map[string][]string `json:"fields"`
+			Body   string              `json:"body_file"`
 		} `json:"schemas"`
 	}
 	if err := json.Unmarshal(data, &f); err != nil {
@@ -102,6 +132,7 @@ func parseProfileOperatorConfig(data []byte) (*profileOperatorConfig, error) {
 		return nil, fmt.Errorf("abi operator config: every limit cap must be positive")
 	}
 	reg := cabinet.InMemorySchemaRegistry{}
+	bodies := bodyStore{}
 	for i, s := range f.Schemas {
 		if s.ID == "" || !envDigestRE.MatchString(s.Digest) {
 			return nil, fmt.Errorf("abi operator config: schemas[%d]: id or digest is malformed", i)
@@ -110,8 +141,27 @@ func parseProfileOperatorConfig(data []byte) (*profileOperatorConfig, error) {
 			return nil, fmt.Errorf("abi operator config: schemas[%d]: duplicate id", i)
 		}
 		reg[s.ID] = cabinet.SchemaRegistryEntry{Digest: s.Digest, Fields: s.Fields}
+		if s.Body == "" {
+			continue
+		}
+		path := s.Body
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(baseDir, path)
+		}
+		raw, err := os.ReadFile(path) // #nosec G304 -- operator-supplied trust-domain path
+		if err != nil {
+			return nil, fmt.Errorf("abi operator config: schemas[%d]: %w", i, err)
+		}
+		if got := sha256Ref(raw); got != s.Digest {
+			return nil, fmt.Errorf("abi operator config: schemas[%d] %s: the body file is %s, the pinned digest is %s", i, s.ID, got, s.Digest)
+		}
+		compiled, err := schemalite.Compile(raw)
+		if err != nil {
+			return nil, fmt.Errorf("abi operator config: schemas[%d] %s: %w", i, s.ID, err)
+		}
+		bodies[[2]string{s.ID, s.Digest}] = compiled
 	}
-	return &profileOperatorConfig{Schemas: reg, Caps: cabinet.OperatorLimits{MaxRequestBytes: f.Limits.Req, MaxResponseBytes: f.Limits.Resp, TimeoutMs: f.Limits.Ms}}, nil
+	return &profileOperatorConfig{Schemas: reg, Bodies: bodies, Caps: cabinet.OperatorLimits{MaxRequestBytes: f.Limits.Req, MaxResponseBytes: f.Limits.Resp, TimeoutMs: f.Limits.Ms}}, nil
 }
 
 // loadProfileOperatorConfig reads CIC_ABI_OPERATOR_CONFIG into profileOperator. Unset: profile admission stays
@@ -125,7 +175,7 @@ func loadProfileOperatorConfig() error {
 	if err != nil {
 		return fmt.Errorf("read abi operator config %q: %w", p, err)
 	}
-	cfg, err := parseProfileOperatorConfig(data)
+	cfg, err := parseProfileOperatorConfig(data, filepath.Dir(p))
 	if err != nil {
 		return err
 	}
@@ -241,6 +291,14 @@ func admitModuleProfile(fsys fs.FS, yamlPath string, project *moduleProject, mod
 	profile, digest, err := reg.Admit(files[profileSuffix], cabinet.ProfileSignature{SignerKeyID: sha256Ref(spki), SignerAlg: alg, Signature: rawSig})
 	if err != nil {
 		return nil, reject(profileCode(err), "ABI profile %q: %v", pin.ID, err)
+	}
+	// every schema the profile's operations name must have its body: a profile is not admitted whose payloads cannot be validated
+	for _, op := range profile.Operations {
+		for _, ref := range []cabinet.AbiSchemaRef{op.RequestSchema, op.ResponseSchema} {
+			if !profileOperator.Bodies.has(ref) {
+				return nil, reject(cabinet.CodeSchemaUnavailable, "ABI profile %q: operation %q: no schema body for %s (%s) in the operator configuration", pin.ID, op.Name, ref.ID, ref.Digest)
+			}
+		}
 	}
 	b, err := cabinet.NewModuleProfileBinding(mod, envelopeDigest, profile, digest, cabinet.PinnedProfile{ID: pin.ID, Digest: pin.Digest}, project.ABI.Operations)
 	if err != nil {
