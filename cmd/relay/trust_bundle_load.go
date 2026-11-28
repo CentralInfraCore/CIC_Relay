@@ -66,6 +66,11 @@ func loadTrustBundle(pkiAssets *PKIAssets, logger *logrus.Logger, now time.Time)
 	if err != nil {
 		return fmt.Errorf("read trust bundle %q: %w", path, err)
 	}
+	unlock, err := trustbundle.Lock(statePath)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	st, err := trustbundle.LoadState(statePath)
 	if err != nil {
 		return err

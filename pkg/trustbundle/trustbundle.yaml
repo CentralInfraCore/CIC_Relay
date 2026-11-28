@@ -12,11 +12,14 @@ description: 'Package trustbundle admits the operator''s trust bundle (O-1 INT-1
   do not have the exact wire shape (strict JSON, closed vocabulary, no duplicates)
   BUNDLE_STALE bundle_version is below the operator''s minimum_bundle_version BUNDLE_ROLLBACK
   bundle_version is below the highest version this relay has already admitted (anti-rollback)
-  BUNDLE_EXPIRED the bundle is older than the operator''s max age, or is issued in
-  the future The first two codes and the minimum version are the draft''s; the anti-rollback
-  high-water mark and the age check are the owner''s INT-12 list (digest pin, minimum
-  version, freshness, anti-rollback) given a code each. The high-water mark is advanced
-  by the caller only through Commit, after every check passed, and is persisted atomically.'
+  BUNDLE_CONFLICT bundle_version equals the highest admitted version but the content
+  differs (TB-01): one version names one bundle; re-admitting the same bytes is fine,
+  different bytes under the same version is not BUNDLE_EXPIRED the bundle is older
+  than the operator''s max age, or is issued in the future The first two codes and
+  the minimum version are the draft''s; the anti-rollback high-water mark and the
+  age check are the owner''s INT-12 list (digest pin, minimum version, freshness,
+  anti-rollback) given a code each. The high-water mark is advanced by the caller
+  only through Commit, after every check passed, and is persisted atomically.'
 tags:
 - loader
 category: []
@@ -100,8 +103,8 @@ objects:
     resetting the high-water mark would re-open a rollback.'
   references:
   - strictjson.Scan
-  - strictjson.Shape
   calls:
+  - MatchString
   - strictjson.Scan
 - name: Commit
   kind: func
@@ -114,6 +117,25 @@ objects:
   - Name
   - Sync
   - Write
+- name: syncDir
+  kind: func
+  description: syncDir flushes a directory's entries to stable storage.
+  references: []
+  calls:
+  - Close
+  - Sync
+- name: Lock
+  kind: func
+  description: 'Lock takes an exclusive, non-blocking lock beside the state file for
+    the duration of one admission (TB-03). The supported operating boundary is one
+    relay instance per state file: the lock makes a second instance that starts against
+    the same file fail instead of racing the load-admit-commit sequence. It does not
+    make a shared state file a supported multi-instance design (see the contract note).
+    The returned function releases the lock.'
+  references: []
+  calls:
+  - Close
+  - Fd
 - name: digestRE
   kind: var
   description: 'digestRE is the closed form of a digest: sha256: and 64 lowercase
@@ -126,6 +148,10 @@ objects:
 - name: bundleShape
   kind: var
   description: bundleShape is the exact wire shape of the bundle.
+  references: []
+- name: stateShape
+  kind: var
+  description: stateShape is the exact wire shape of the persisted state.
   references: []
 - name: Kind
   kind: const
@@ -157,6 +183,11 @@ objects:
 - name: CodeRollback
   kind: const
   description: 'CodeRollback: bundle_version is below the highest admitted version.'
+  references: []
+- name: CodeConflict
+  kind: const
+  description: 'CodeConflict: the version equals the admitted high-water mark but
+    the digest differs.'
   references: []
 - name: CodeExpired
   kind: const

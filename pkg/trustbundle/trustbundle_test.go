@@ -91,9 +91,24 @@ func TestStaleBelowTheOperatorMinimum(t *testing.T) {
 }
 
 func TestRollbackBelowTheHighWatermark(t *testing.T) {
-	assert.Equal(t, CodeRollback, code(t, good, pol(good), State{HighWatermark: 6}))
-	_, err := Admit([]byte(good), pol(good), State{HighWatermark: 5}, now)
+	assert.Equal(t, CodeRollback, code(t, good, pol(good), State{HighWatermark: 6, HighWatermarkDigest: pd}))
+	_, err := Admit([]byte(good), pol(good), State{HighWatermark: 5, HighWatermarkDigest: Digest([]byte(good))}, now)
 	assert.NoError(t, err, "the same version again (a restart) is not a rollback")
+}
+
+// TB-01: one version names one bundle.
+func TestSameVersionDifferentContentIsAConflict(t *testing.T) {
+	st := State{HighWatermark: 5, HighWatermarkDigest: Digest([]byte(good))}
+	other := strings.Replace(good, `"roles":[]`, `"roles":["module:sign"]`, 1) // same version 5, different authorities
+	require.NotEqual(t, good, other)
+	assert.Equal(t, CodeConflict, code(t, other, pol(other), st))
+	_, err := Admit([]byte(good), pol(good), st, now)
+	assert.NoError(t, err, "the identical bundle again")
+	higher := strings.Replace(other, `"bundle_version":5`, `"bundle_version":6`, 1)
+	_, err = Admit([]byte(higher), pol(higher), st, now)
+	assert.NoError(t, err, "a different bundle under a higher version")
+	_, err = Admit([]byte(other), pol(other), State{}, now)
+	assert.NoError(t, err, "no mark yet: nothing to conflict with")
 }
 
 func TestFreshness(t *testing.T) {
@@ -121,9 +136,9 @@ func TestCheckOrder(t *testing.T) {
 	p := pol(good)
 	p.MinVersion = 9
 	p.MaxAge = time.Second
-	assert.Equal(t, CodeStale, code(t, good, p, State{HighWatermark: 7}))
+	assert.Equal(t, CodeStale, code(t, good, p, State{HighWatermark: 7, HighWatermarkDigest: pd}))
 	p.MinVersion = 1
-	assert.Equal(t, CodeRollback, code(t, good, p, State{HighWatermark: 7}))
+	assert.Equal(t, CodeRollback, code(t, good, p, State{HighWatermark: 7, HighWatermarkDigest: pd}))
 	assert.Equal(t, CodeExpired, code(t, good, p, State{}))
 }
 
@@ -148,6 +163,7 @@ func TestStateLifecycle(t *testing.T) {
 	again, err := LoadState(path)
 	require.NoError(t, err)
 	assert.EqualValues(t, 5, again.HighWatermark, "persisted")
+	assert.Equal(t, adm.Digest, again.HighWatermarkDigest, "with the digest of the admitted bundle")
 
 	// never lowered, and nothing is written for a lower version
 	before, _ := os.ReadFile(path)
@@ -169,16 +185,28 @@ func TestStateLifecycle(t *testing.T) {
 	assert.Empty(t, left, "no temporary file is left behind")
 }
 
+func TestAZeroStateFileIsAValidFirstStart(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "state.json")
+	require.NoError(t, os.WriteFile(p, []byte(`{"high_watermark":0,"high_watermark_digest":""}`), 0o600))
+	st, err := LoadState(p)
+	require.NoError(t, err)
+	assert.Equal(t, State{}, st)
+}
+
 func TestACorruptStateIsNeverAReset(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{
-		"garbage":    `nope`,
-		"empty":      ``,
-		"unknown":    `{"high_watermark":3,"x":1}`,
-		"duplicate":  `{"high_watermark":3,"high_watermark":0}`,
-		"negative":   `{"high_watermark":-1}`,
-		"missing":    `{}`,
-		"wrong type": `{"high_watermark":"3"}`,
+		"garbage":             `nope`,
+		"empty":               ``,
+		"unknown":             `{"high_watermark":3,"x":1}`,
+		"duplicate":           `{"high_watermark":3,"high_watermark":0}`,
+		"negative":            `{"high_watermark":-1}`,
+		"missing":             `{}`,
+		"mark without digest": `{"high_watermark":3,"high_watermark_digest":""}`,
+		"digest without mark": `{"high_watermark":0,"high_watermark_digest":"sha256:` + strings.Repeat("a", 64) + `"}`,
+		"malformed digest":    `{"high_watermark":3,"high_watermark_digest":"sha256:zz"}`,
+		"old shape":           `{"high_watermark":3}`,
+		"wrong type":          `{"high_watermark":"3"}`,
 	} {
 		p := filepath.Join(dir, name)
 		require.NoError(t, os.WriteFile(p, []byte(content), 0o600))
@@ -206,6 +234,26 @@ func TestCommitFailsLoudly(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(target, "x"), []byte("x"), 0o600))
 	_, err = Commit(target, State{}, &Admitted{Version: 1})
 	assert.Error(t, err)
+}
+
+func TestLockAllowsOneAdmissionPerStateFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	unlock, err := Lock(path)
+	require.NoError(t, err)
+	_, err = Lock(path)
+	require.Error(t, err, "a second instance on the same state file")
+	assert.Contains(t, err.Error(), "one relay instance per state file")
+	unlock()
+	unlock2, err := Lock(path)
+	require.NoError(t, err, "released")
+	unlock2()
+	_, err = Lock(filepath.Join(t.TempDir(), "absent", "state.json"))
+	assert.Error(t, err)
+}
+
+func TestSyncDirReportsAMissingDirectory(t *testing.T) {
+	assert.NoError(t, syncDir(t.TempDir()))
+	assert.Error(t, syncDir(filepath.Join(t.TempDir(), "absent")))
 }
 
 func TestClip(t *testing.T) {

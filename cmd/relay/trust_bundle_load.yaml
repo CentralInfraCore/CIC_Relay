@@ -19,6 +19,7 @@ objects:
   references:
   - logrus.Logger
   - trustbundle.Policy
+  - trustbundle.Lock
   - trustbundle.LoadState
   - trustbundle.Admit
   - trustbundle.Commit
@@ -30,6 +31,7 @@ objects:
   - trustbundle.Admit
   - trustbundle.Commit
   - trustbundle.LoadState
+  - trustbundle.Lock
 - name: trustBundleEnv
   kind: const
   description: trustBundleEnv is the path of the bundle file.

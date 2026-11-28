@@ -104,6 +104,36 @@ objects:
   - trustbundle.CodeOf
   - trustbundle.Digest
   - trustbundle.LoadState
+- name: TestTrustBundleSameVersionDifferentContent
+  kind: func
+  description: 'TB-01 at the loader: the same version re-admitted is fine, a different
+    bundle under the same version is a conflict.'
+  references:
+  - require.NoError
+  - trustbundle.Digest
+  - assert.Equal
+  - trustbundle.CodeConflict
+  - trustbundle.CodeOf
+  calls:
+  - assert.Equal
+  - require.NoError
+  - trustbundle.CodeOf
+  - trustbundle.Digest
+- name: TestTrustBundleSecondInstanceOnTheSameStateFile
+  kind: func
+  description: 'TB-03: a second admission against the same state file is refused while
+    the first holds it.'
+  references:
+  - trustbundle.Lock
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  calls:
+  - Error
+  - assert.Contains
+  - require.Error
+  - require.NoError
+  - trustbundle.Lock
 - name: tbNow
   kind: var
   description: ''

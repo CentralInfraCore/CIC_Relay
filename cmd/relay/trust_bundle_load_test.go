@@ -135,3 +135,29 @@ func TestTrustBundleAdmissionFailuresCarryTheirCodes(t *testing.T) {
 		assert.EqualValues(t, 7, st.HighWatermark, "a refused bundle does not move the mark")
 	})
 }
+
+// TB-01 at the loader: the same version re-admitted is fine, a different bundle under the same version is a conflict.
+func TestTrustBundleSameVersionDifferentContent(t *testing.T) {
+	e := tbSetup(t, tbBundle("7"))
+	_, err := tbLoad()
+	require.NoError(t, err)
+	_, err = tbLoad()
+	require.NoError(t, err, "a restart with the same bundle")
+
+	other := strings.Replace(tbBundle("7"), `"roles":["module:sign"]`, `"roles":[]`, 1)
+	require.NoError(t, os.WriteFile(e.bundle, []byte(other), 0o600))
+	t.Setenv(trustBundlePinEnv, trustbundle.Digest([]byte(other)))
+	_, err = tbLoad()
+	assert.Equal(t, trustbundle.CodeConflict, trustbundle.CodeOf(err))
+}
+
+// TB-03: a second admission against the same state file is refused while the first holds it.
+func TestTrustBundleSecondInstanceOnTheSameStateFile(t *testing.T) {
+	e := tbSetup(t, tbBundle("5"))
+	unlock, err := trustbundle.Lock(e.state)
+	require.NoError(t, err)
+	defer unlock()
+	_, err = tbLoad()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "one relay instance per state file")
+}

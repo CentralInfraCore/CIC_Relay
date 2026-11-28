@@ -80,8 +80,22 @@ objects:
   - assert.NoError
   calls:
   - Admit
+  - Digest
   - assert.Equal
   - assert.NoError
+- name: TestSameVersionDifferentContentIsAConflict
+  kind: func
+  description: 'TB-01: one version names one bundle.'
+  references:
+  - require.NotEqual
+  - assert.Equal
+  - assert.NoError
+  calls:
+  - Admit
+  - Digest
+  - assert.Equal
+  - assert.NoError
+  - require.NotEqual
 - name: TestFreshness
   kind: func
   description: ''
@@ -135,6 +149,16 @@ objects:
   - assert.Equal
   - assert.EqualValues
   - require.NoError
+- name: TestAZeroStateFileIsAValidFirstStart
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - assert.Equal
+  calls:
+  - LoadState
+  - assert.Equal
+  - require.NoError
 - name: TestACorruptStateIsNeverAReset
   kind: func
   description: ''
@@ -165,6 +189,30 @@ objects:
   - Commit
   - assert.Error
   - require.NoError
+- name: TestLockAllowsOneAdmissionPerStateFile
+  kind: func
+  description: ''
+  references:
+  - require.NoError
+  - require.Error
+  - assert.Contains
+  - assert.Error
+  calls:
+  - Error
+  - Lock
+  - assert.Contains
+  - assert.Error
+  - require.Error
+  - require.NoError
+- name: TestSyncDirReportsAMissingDirectory
+  kind: func
+  description: ''
+  references:
+  - assert.NoError
+  - assert.Error
+  calls:
+  - assert.Error
+  - assert.NoError
 - name: TestClip
   kind: func
   description: ''

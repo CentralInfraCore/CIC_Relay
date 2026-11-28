@@ -10,6 +10,8 @@
 //	BUNDLE_INVALID     the pinned bytes do not have the exact wire shape (strict JSON, closed vocabulary, no duplicates)
 //	BUNDLE_STALE       bundle_version is below the operator's minimum_bundle_version
 //	BUNDLE_ROLLBACK    bundle_version is below the highest version this relay has already admitted (anti-rollback)
+//	BUNDLE_CONFLICT    bundle_version equals the highest admitted version but the content differs (TB-01): one version
+//	                   names one bundle; re-admitting the same bytes is fine, different bytes under the same version is not
 //	BUNDLE_EXPIRED     the bundle is older than the operator's max age, or is issued in the future
 //
 // The first two codes and the minimum version are the draft's; the anti-rollback high-water mark and the age check are the
@@ -26,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"syscall"
 	"time"
 
 	"centralrelay/pkg/strictjson"
@@ -50,6 +53,8 @@ const (
 	CodeStale = "BUNDLE_STALE"
 	// CodeRollback: bundle_version is below the highest admitted version.
 	CodeRollback = "BUNDLE_ROLLBACK"
+	// CodeConflict: the version equals the admitted high-water mark but the digest differs.
+	CodeConflict = "BUNDLE_CONFLICT"
 	// CodeExpired: the bundle is older than the operator's limit or issued in the future.
 	CodeExpired = "BUNDLE_EXPIRED"
 )
@@ -108,6 +113,8 @@ type Policy struct {
 type State struct {
 	// HighWatermark is the highest bundle_version this relay has admitted.
 	HighWatermark uint64 `json:"high_watermark"`
+	// HighWatermarkDigest is the digest of the bundle admitted at the mark (empty only on a first start, mark 0).
+	HighWatermarkDigest string `json:"high_watermark_digest"`
 }
 
 // Profile is one accepted ABI profile pin.
@@ -201,6 +208,9 @@ func Admit(raw []byte, pol Policy, st State, now time.Time) (*Admitted, error) {
 	if w.Version < st.HighWatermark {
 		return nil, fail(CodeRollback, "bundle_version %d is below the highest admitted version %d", w.Version, st.HighWatermark)
 	}
+	if w.Version == st.HighWatermark && st.HighWatermarkDigest != "" && got != st.HighWatermarkDigest {
+		return nil, fail(CodeConflict, "bundle_version %d was admitted as %s, this bundle with the same version is %s", w.Version, st.HighWatermarkDigest, got)
+	}
 	if issued.After(now.Add(MaxClockSkew)) {
 		return nil, fail(CodeExpired, "issued_at %s is in the future", w.IssuedAt)
 	}
@@ -218,6 +228,12 @@ func clip(s string) string {
 	return s
 }
 
+// stateShape is the exact wire shape of the persisted state.
+var stateShape = &strictjson.Shape{
+	Keys:     map[string]*strictjson.Shape{"high_watermark": nil, "high_watermark_digest": nil},
+	Required: []string{"high_watermark", "high_watermark_digest"},
+}
+
 // LoadState reads the persisted state. A missing file is the zero state (first start); an unreadable or malformed file
 // is an error, never a silent reset: resetting the high-water mark would re-open a rollback.
 func LoadState(path string) (State, error) {
@@ -228,12 +244,15 @@ func LoadState(path string) (State, error) {
 	if err != nil {
 		return State{}, fmt.Errorf("read trust-bundle state: %w", err)
 	}
-	if err := strictjson.Scan(data, &strictjson.Shape{Keys: map[string]*strictjson.Shape{"high_watermark": nil}, Required: []string{"high_watermark"}}); err != nil {
+	if err := strictjson.Scan(data, stateShape); err != nil {
 		return State{}, fmt.Errorf("trust-bundle state: %w", err)
 	}
 	var st State
 	if err := json.Unmarshal(data, &st); err != nil {
 		return State{}, fmt.Errorf("trust-bundle state: %w", err)
+	}
+	if (st.HighWatermark == 0) != (st.HighWatermarkDigest == "") || (st.HighWatermark > 0 && !digestRE.MatchString(st.HighWatermarkDigest)) {
+		return State{}, fmt.Errorf("trust-bundle state: the mark and its digest are inconsistent")
 	}
 	return st, nil
 }
@@ -245,6 +264,7 @@ func Commit(path string, st State, adm *Admitted) (State, error) {
 		return st, nil
 	}
 	st.HighWatermark = adm.Version
+	st.HighWatermarkDigest = adm.Digest
 	data, err := json.Marshal(st)
 	if err != nil {
 		return st, err
@@ -268,5 +288,35 @@ func Commit(path string, st State, adm *Admitted) (State, error) {
 	if err := os.Rename(tmp.Name(), path); err != nil {
 		return st, fmt.Errorf("persist trust-bundle state: %w", err)
 	}
+	// The rename is atomic but not yet durable: the directory entry must reach the disk too (TB-02).
+	if err := syncDir(filepath.Dir(path)); err != nil {
+		return st, fmt.Errorf("persist trust-bundle state: %w", err)
+	}
 	return st, nil
+}
+
+// syncDir flushes a directory's entries to stable storage.
+func syncDir(dir string) error {
+	d, err := os.Open(dir) // #nosec G304 -- the directory of the operator-supplied state path
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
+}
+
+// Lock takes an exclusive, non-blocking lock beside the state file for the duration of one admission (TB-03). The
+// supported operating boundary is one relay instance per state file: the lock makes a second instance that starts
+// against the same file fail instead of racing the load-admit-commit sequence. It does not make a shared state file a
+// supported multi-instance design (see the contract note). The returned function releases the lock.
+func Lock(statePath string) (func(), error) {
+	f, err := os.OpenFile(statePath+".lock", os.O_CREATE|os.O_RDWR, 0o600) // #nosec G304 -- operator-supplied path
+	if err != nil {
+		return nil, fmt.Errorf("trust-bundle state lock: %w", err)
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("trust-bundle state %q is locked by another admission (one relay instance per state file): %w", statePath, err)
+	}
+	return func() { syscall.Flock(int(f.Fd()), syscall.LOCK_UN); f.Close() }, nil
 }
